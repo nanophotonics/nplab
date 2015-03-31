@@ -20,7 +20,7 @@ import nplab.utils.gui
 
 def attributes_from_dict(group_or_dataset, dict_of_attributes):
     """Update the metadata of an HDF5 object with a dictionary."""
-    attr = group_or_dataset.attrs
+    attrs = group_or_dataset.attrs
     for key, value in dict_of_attributes.iteritems():
         if key in attrs.keys():
             attrs.modify(key, value)
@@ -72,7 +72,10 @@ class Group(h5py.Group):
         g = super(Group, self).create_group(name)
         if attrs is not None:
             attributes_from_dict(g, attrs)
-        return g
+        return Group(g.id) #make sure it's wrapped!
+    def require_group(self, name):
+        """Return a subgroup, creating it if it does not exist."""
+        return Group(super(Group, self).require_group(name).id) #wrap the returned group
 
     def create_dataset(self, name, auto_increment=True, shape=None,dtype=None,data=None,attrs=None,*args,**kwargs):
         """Create a new dataset, optionally with an auto-incrementing name."""

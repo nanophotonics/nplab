@@ -8,7 +8,7 @@ classes.
 
 from nplab.utils.thread_utils import locked_action_decorator, background_action_decorator
 import nplab
-from traitsui.api import HasTraits
+from traits.api import HasTraits
 
 
 class Instrument(HasTraits):
@@ -26,10 +26,10 @@ class Instrument(HasTraits):
     @classmethod
     def get_instances(cls):
         """Return a list of all available instances of this class."""
-        return [i for i in Instrument.__instances where instanceof(i, cls)]
+        return [i for i in Instrument.__instances if isinstance(i, cls)]
 
     @classmethod
-    def get_instance(cls):
+    def get_instance(cls, create=True, exceptions=True):
         """Return an instance of this class, if one exists.  
         
         Usually returns the first available instance.
@@ -38,7 +38,13 @@ class Instrument(HasTraits):
         if len(instances)>0:
             return instances[0]
         else:
-            return None
+            if create:
+                return cls()
+            else:
+                if exceptions:
+                    raise IndexError("There is no available instance!")
+                else:
+                    return None
 
     @classmethod
     def get_root_data_folder(cls):
@@ -47,14 +53,14 @@ class Instrument(HasTraits):
         return f.require_group(cls.__name__)
 
     @classmethod
-    def get_data_folder(cls, name):
-        """Return a folder to store a reading.
+    def create_data_group(cls, name, *args, **kwargs):
+        """Return a group to store a reading.
 
         :param name: should be a noun describing what the reading is (image,
         spectrum, etc.)
         """
         df = cls.get_root_data_folder()
-        return df.create_group(name+'_%d', auto_increment=True)
+        return df.create_group(name+'_%d', auto_increment=True, *args, **kwargs)
 
     @classmethod
     def create_dataset(cls, name, *args, **kwargs):
