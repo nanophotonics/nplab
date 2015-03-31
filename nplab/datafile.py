@@ -11,7 +11,21 @@ This module provides the DataFile class, a subclass of h5py's File class with a 
 __author__ = "rwb27"
 
 import h5py
-from traitsui.file_dialog import save_file
+import os
+import datetime
+from pyface.qt import QtCore as qt
+from pyface.qt import QtGui as qtgui
+
+import nplab.utils.gui
+
+def attributes_from_dict(group_or_dataset, dict_of_attributes):
+    """Update the metadata of an HDF5 object with a dictionary."""
+    attr = group_or_dataset.attrs
+    for key, value in dict_of_attributes.iteritems():
+        if key in attrs.keys():
+            attrs.modify(key, value)
+        else:
+            attrs.create(key, value)
 
 class Group(h5py.Group):
     """HDF5 Group, a collection of datasets and subgroups.
@@ -40,7 +54,7 @@ class Group(h5py.Group):
                 n += 1 #increase the number until the name's unique
             return (name % n)
 
-    def create_group(self, name, auto_increment=True):
+    def create_group(self, name, attrs=None, auto_increment=True):
         """Create a new group, ensuring we don't overwrite old ones.
 
         A new group is created within this group, with the specified name.
@@ -55,13 +69,23 @@ class Group(h5py.Group):
         """
         if auto_increment:
             name = self.find_unique_name(name)
-        return super(Group, self).create_group(name)
+        g = super(Group, self).create_group(name)
+        if attrs is not None:
+            attributes_from_dict(g, attrs)
+        return g
 
-    def create_dataset(self, name, auto_increment=True, shape=None,dtype=None,data=None,*args,**kwargs):
+    def create_dataset(self, name, auto_increment=True, shape=None,dtype=None,data=None,attrs=None,*args,**kwargs):
         """Create a new dataset, optionally with an auto-incrementing name."""
         if auto_increment:
             name = self.find_unique_name(name)
-        return super(Group, self).create_dataset(name, shape, dtype, data, *args, **kwargs)
+        dset = super(Group, self).create_dataset(name, shape, dtype, data, *args, **kwargs)
+        if attrs is not None:
+            attributes_from_dict(dset, attrs) #quickly set the attributes
+        return dset
+
+    def update_attrs(self, attribute_dict):
+        """Update (create or modify) the attributes of this group."""
+        attributes_from_dict(self, attribute_dict)
 
 class DataFile(Group):
     """Represent an HDF5 file object.  
@@ -97,10 +121,27 @@ _current_datafile = None
 def current(create_if_none=True):
     """Return the current data file, creating one if it does not exist."""
     global _current_datafile
+    if _current_datafile is None and create_if_none:
+        print "No current data file, attempting to create..."
+        try: #we try to pop up a Qt file dialog
+            app = nplab.utils.gui.get_qt_app() #ensure Qt is running
+            fname = qtgui.QFileDialog.getSaveFileName(
+                                caption = "Select Data File",
+                                directory = os.path.join(os.getcwd(),datetime.date.today().strftime("%Y-%m-%d.h5")),
+                                filter = "HDF5 Data (*.h5, *.hdf5)",
+                                options = qtgui.QFileDialog.DontConfirmOverwrite,
+                            )
+            if len(fname) > 0:
+                if not "." in fname:
+                    fname += ".h5"
+                set_current(fname, mode='a') #create the datafile
+            else:
+                print "Cancelled by the user."
+        except:
+            print "File dialog went wrong :("
+    
     if _current_datafile is not None:
-        return _current_datafile
-    elif create_if_none:
-        raise NotImplementedError("File dialog not yet implemented: create a file manually and set it as the current one, with nplab.datafile.set_current(filename).")
+        return _current_datafile #if there is a file (or we created one) return it
     else:
         raise IOError("Sorry, there is no current file to return.")
 
