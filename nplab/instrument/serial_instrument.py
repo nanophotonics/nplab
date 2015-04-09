@@ -16,7 +16,7 @@ from serial import STOPBITS_ONE, STOPBITS_ONE_POINT_FIVE, STOPBITS_TWO
 import io
 import re
 
-class NPSerialInstrument(MessageBusInstrument):
+class SerialInstrument(MessageBusInstrument):
     """
     An instrument primarily using serial communcations
     """

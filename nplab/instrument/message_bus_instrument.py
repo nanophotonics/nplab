@@ -10,8 +10,9 @@ This base class
 #from traits.api import HasTraits, Bool, Int, Str, Button, Array, Enum, List
 #import nplab
 import re
+import nplab.instrument
 
-class MessageBusInstrument(object):
+class MessageBusInstrument(nplab.instrument.Instrument):
     """
     Message Bus Instrument
     ======================

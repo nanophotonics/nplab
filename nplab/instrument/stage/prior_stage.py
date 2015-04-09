@@ -1,29 +1,28 @@
-import serial
-import io
+import nplab.instrument.serial_instrument as serial
 import re
 import numpy as np
 import time
 
-class ProScan(object):
+class ProScan(serial.SerialInstrument):
     """
     This class handles the Prior stage.
     """
-    def __init__(self, port):
-        """
-        Set up the serial port and so on.
-        """
-        self.ser = serial.Serial( 
-                        port=port,
-                        baudrate=9600,
+    port_settings = dict(baudrate=9600,
                         bytesize=serial.EIGHTBITS,
                         parity=serial.PARITY_NONE,
                         stopbits=serial.STOPBITS_ONE,
                         timeout=1, #wait at most one second for a response
                         writeTimeout=1, #similarly, fail if writing takes >1s
-                        xonxoff=False, rtscts=False, dsrdtr=False,)
-        self.ser_io = io.TextIOWrapper(io.BufferedRWPair(self.ser, self.ser, 1),  
-                               newline = '\r',
-                               line_buffering = True)   
+                        xonxoff=False, rtscts=False, dsrdtr=False,
+                    )
+    termination_character = "\r" #: All messages to or from the instrument end with this character.
+    termination_line = "END" #: If multi-line responses are recieved, they must end with this string
+    def __init__(self, port=None):
+        """
+        Set up the serial port and so on.
+        """
+        super(ProScan, self).__init__(port=port) #this opens the port
+        
         self.query("COMP O") #enable full-featured serial interface
         
 #        try: #get the set-up parameters
@@ -44,38 +43,6 @@ class ProScan(object):
         self.query("ENCODER 1") #turn on encoders (if present)
         self.query("SERVO 0") #turn off servocontrol
         self.query("BLSH 0") #turn off backlash control
-    def __del__(self):
-        self.close()
-    def close(self):
-        """Release the serial port"""
-        self.ser.close()
-    def write(self,queryString):
-        """Write a string to the serial port"""
-        self.ser.write(queryString+'\r')
-    def query(self,queryString,multiline=False,termination_line=None):
-        """
-        Write a string to the stage controller and return its response.
-        
-        It should return immediately, because even commands that don't give a
-        response will return '\r'.  The multiline and termination_line commands
-        will keep reading until a termination phrase is reached.
-        """
-        self.write(queryString)
-        
-        if termination_line is not None:
-            multiline = True
-        if multiline:
-            response = ""
-            last_line = "dummy"
-            while termination_line not in last_line \
-                        and len(last_line) > 0:
-                last_line = self.ser_io.readline().replace("\r","\n").strip()
-                response += last_line + "\n"
- #       return self.ser.readline().replace("\r","\n").strip()
-        #TODO: use the one below and make it cope with multilines
-            return response
-        else:
-            return self.ser_io.readline().replace("\r","\n").strip()
     def move_rel(self, dx, block=True):
         """Make a relative move by dx microns (see move)"""
         return self.move(dx, relative=True, block=block)
@@ -99,27 +66,3 @@ class ProScan(object):
     def is_moving(self):
         """return true if the stage is in motion"""
         return self.int_query("$,S")>0
-    def parsed_query(self, queryString, responseString=r"(\d+)", re_flags=0, parseFunction=int, **kwargs):
-        """
-        Perform a query, then parse the result.
-        By default it looks for an integer and returns one, otherwise it will
-        match a custom regex string and return the subexpressions, parsed through
-        parseFunc (which defaults to int()).
-        """
-        reply = self.query(queryString, **kwargs)
-        res = re.search(responseString, reply, flags=re_flags)
-        if res is None:
-            raise ValueError("Stage response to %s ('%s') wasn't matched by /%s/" % (queryString, reply, responseString))
-        try:
-            if len(res.groups()) == 1:
-                return parseFunction(res.groups()[0])
-            else:
-                return map(parseFunction,res.groups())
-        except ValueError:
-            raise ValueError("Stage response to %s ('%s') wasn't matched by /%s/" % (queryString, reply, responseString))
-    def int_query(self, queryString, responseString=r"(\d+)", re_flags=0, **kwargs):
-        """Perform a query and return the result(s) as integer(s) (see parsedQuery)"""
-        return self.parsed_query(queryString, responseString, re_flags, int, **kwargs)
-    def float_query(self, queryString, responseString=r"([.\d]+)", re_flags=0, **kwargs):
-        """Perform a query and return the result(s) as float(s) (see parsedQuery)"""
-        return self.parsed_query(queryString, responseString, re_flags, float, **kwargs)
