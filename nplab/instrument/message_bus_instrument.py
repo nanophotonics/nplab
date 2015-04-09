@@ -7,15 +7,9 @@ This base class
 
 @author: Richard Bowman
 """
-from traits.api import HasTraits, Bool, Int, Str, Button, Array, Enum, List
-import nplab
-import time
-import threading
-import serial
-import serial.tools.list_ports
-import io
+#from traits.api import HasTraits, Bool, Int, Str, Button, Array, Enum, List
+#import nplab
 import re
-import numpy as np
 
 class MessageBusInstrument(object):
     """
@@ -84,7 +78,7 @@ class MessageBusInstrument(object):
             return self.read_multiline(termination_line)
         else:
             return self.readline(timeout).strip() #question: should we strip the final newline?
-    def parsed_query(self, query_string, response_string=r"(\d+)", re_flags=0, parse_function=int, **kwargs):
+    def parsed_query_old(self, query_string, response_string=r"(\d+)", re_flags=0, parse_function=int, **kwargs):
         """
         Perform a query, then parse the result.
         
@@ -105,10 +99,75 @@ class MessageBusInstrument(object):
                 return map(parse_function,res.groups())
         except ValueError:
             raise ValueError("Stage response to %s ('%s') couldn't be parsed by the supplied function" % (query_string, reply))
-    def int_query(self, query_string, response_string=r"(\d+)", re_flags=0, **kwargs):
-        """Perform a query and return the result(s) as integer(s) (see parsedQuery)"""
-        return self.parsed_query(query_string, response_string, re_flags, int, **kwargs)
-    def float_query(self, query_string, response_string=r"([.\d]+)", re_flags=0, **kwargs):
-        """Perform a query and return the result(s) as float(s) (see parsedQuery)"""
-        return self.parsed_query(query_string, response_string, re_flags, float, **kwargs)
+    def parsed_query(self, query_string, response_string=r"%d", re_flags=0, parse_function=None, **kwargs):
+        """
+        Perform a query, returning a parsed form of the response.
+        
+        First query the instrument with the given query string, then compare
+        the response against a template.  The template may contain text and
+        placeholders (e.g. %i and %f for integer and floating point values
+        respectively).  Regular expressions are also allowed - each group is
+        considered as one item to be parsed.  However, currently it's not
+        supported to use both % placeholders and regular expressions at the
+        same time.
+        
+        If placeholders %i, %f, etc. are used, the returned values are  
+        automatically converted to integer or floating point, otherwise you
+        must specify a parsing function (applied to all groups) or a list of 
+        parsing functions (applied to each group in turn).
+        """
+        
+        response_regex = response_string
+        noop = lambda x: x #placeholder null parse function
+        placeholders = [ #tuples of (regex matching placeholder, regex to replace it with, parse function)
+            (r"%c",r".", noop),
+            (r"%(\d+)c",r".{\1}", noop), #TODO support %cn where n is a number of chars
+            (r"%d",r"[-+]?\d+", int),
+            (r"%[eEfg]",r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?", float),
+            (r"%i",r"[-+]?(?:0[xX][\dA-Fa-f]+|0[0-7]*|\d+)", lambda x: int(x, 0)), #0=autodetect base
+            (r"%o",r"[-+]?[0-7]+", lambda x: int(x, 8)), #8 means octal
+            (r"%s",r"\S+",noop),
+            (r"%u",r"\d+",int),
+            (r"%[xX]",r"[-+]?(?:0[xX])?[\dA-Fa-f]+",lambda x: int(x, 16)), #16 forces hexadecimal
+        ]
+        matched_placeholders = []
+        for placeholder, regex, parse_fun in placeholders:
+            response_regex = re.sub(placeholder, '('+regex+')', response_regex) #substitute regex for placeholder
+            matched_placeholders.extend([(parse_fun, m.start()) for m in re.finditer(placeholder, response_string)]) #save the positions of the placeholders
+        if parse_function is None:
+            parse_function = [f for f, s in sorted(matched_placeholders, key=lambda m: m[1])] #order parse functions by their occurrence in the original string
+        if not hasattr(parse_function,'__iter__'):
+            parse_function = [parse_function] #make sure it's a list.
             
+        reply = self.query(query_string, **kwargs) #do the query
+        res = re.search(response_regex, reply, flags=re_flags)
+        if res is None:
+            raise ValueError("Stage response to '%s' ('%s') wasn't matched by /%s/ (generated regex /%s/" % (query_string, reply, response_string, response_regex))
+        try:
+            parsed_result= [f(g) for f, g in zip(parse_function, res.groups())] #try to apply each parse function to its argument
+            if len(parsed_result) == 1:
+                return parsed_result[0]
+            else:
+                return parsed_result
+        except ValueError:
+            print "Parsing Error"
+            print "Matched Groups:", res.groups()
+            print "Parsing Functions:", parse_function
+            raise ValueError("Stage response to %s ('%s') couldn't be parsed by the supplied function" % (query_string, reply))
+    def int_query(self, query_string, **kwargs):
+        """Perform a query and return the result(s) as integer(s) (see parsedQuery)"""
+        return self.parsed_query(query_string, "%d", **kwargs)
+    def float_query(self, query_string, **kwargs):
+        """Perform a query and return the result(s) as float(s) (see parsedQuery)"""
+        return self.parsed_query(query_string, "%f", **kwargs)
+
+class EchoInstrument(MessageBusInstrument):
+    """Trivial test instrument, it simply echoes back what we write."""
+    def __init__(self):
+        super(EchoInstrument, self).__init__()
+        self._last_write = ""
+    def write(self, msg):
+        self._last_write = msg
+    def readline(self, timeout=None):
+        return self._last_write
+    
