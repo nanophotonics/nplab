@@ -137,5 +137,5 @@ class Stage(HasTraits):
         while(self.is_moving(axes=axes)):
             time.sleep(0.1)
         return True
-    def __init__(self):
+#    def __init__(self):
         

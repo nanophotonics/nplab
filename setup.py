@@ -1,6 +1,6 @@
 __author__ = 'alansanders'
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(name='nplab',
       version='1.0',
@@ -9,5 +9,5 @@ setup(name='nplab',
       author='Alan Sanders',
       author_email='as2180@cam.ac.uk',
       license='',
-      packages=['nplab'],
+      packages=find_packages(),
       zip_safe=False)
