@@ -93,4 +93,11 @@ class SerialInstrument(MessageBusInstrument):
     def readline(self, timeout=None):
         """Read one line from the serial port."""
         return self.ser_io.readline().replace(self.termination_character,"\n")
+    def test_communications(self):
+        """Check if the device is available on the current port.  
+        
+        This should be overridden by subclasses.  Assume the port has been
+        successfully opened and the settings are as defined by self.port_settings.
+        Usually this function sends a command and checks for a known reply."""
+        return True
     
