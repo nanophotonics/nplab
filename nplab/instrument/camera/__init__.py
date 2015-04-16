@@ -42,6 +42,8 @@ import numpy as np
 import enable
 import traceback
 
+from nplab.instrument import Instrument
+
 class CameraParameter(HasTraits):
     value = Property(Float(np.NaN))
     name = String()
@@ -77,7 +79,7 @@ class ImageClickTool(enable.api.BaseTool):
             self.plot.y_axis.mapper.map_data(event.y),\
             self.plot.x_axis.mapper.map_data(event.x)
             
-class Camera(HasTraits):
+class Camera(Instrument, HasTraits):
     latest_frame = traits.trait_numeric.Array(dtype=np.uint8,shape=(None, None, 3))
     image_plot = Instance(Plot)
     take_snapshot = Button

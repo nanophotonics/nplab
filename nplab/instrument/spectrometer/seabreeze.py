@@ -42,6 +42,7 @@ from chaco.api import ArrayPlotData, Plot
 from chaco.chaco_plot_editor import ChacoPlotItem
 from enable.component_editor import ComponentEditor
 import threading
+from nplab.instrument import Instrument
 
 
 
@@ -102,7 +103,7 @@ class OceanOpticsError(Exception):
     def __str__(self):
         return "Code %d: %s." % (self.code, error_string(self.code))
 
-class OceanOpticsSpectrometer(HasTraits):
+class OceanOpticsSpectrometer(Instrument, HasTraits):
     """Class representing the Ocean Optics spectrometers, via the SeaBreeze library
     
     The constructor takes a single numeric argument, which is the index of the 
@@ -158,6 +159,7 @@ class OceanOpticsSpectrometer(HasTraits):
         self._isOpen = False
         self._open()
         super(OceanOpticsSpectrometer, self).__init__()
+        HasTraits.__init__(self)
     def __del__(self):
         self.live_view=False
         self._close()
