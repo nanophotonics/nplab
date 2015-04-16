@@ -18,7 +18,7 @@ import re
 
 class SerialInstrument(MessageBusInstrument):
     """
-    An instrument primarily using serial communcations
+    An instrument primarily using serial communications
     """
     port_settings = {}
     """A dictionary of serial port settings.  It is passed as the keyword
@@ -55,7 +55,9 @@ class SerialInstrument(MessageBusInstrument):
         """
         Set up the serial port and so on.
         """
+        super(SerialInstrument, self).__init__()
         self.open(port, False)
+
     def open(self, port=None, quiet=True):
         """Open communications with the serial port.
         
