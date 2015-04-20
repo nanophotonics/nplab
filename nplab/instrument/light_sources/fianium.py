@@ -21,9 +21,6 @@ class Fianium(LightSource, serial.SerialInstrument):
                     )
     termination_character = "\n" #: All messages to or from the instrument end with this character.
 
-    _min_dac = Int(0)
-    _max_dac = Int(2000)
-    dac_range = Range('_min_dac','_max_dac',0,mode='slider',label='DAC')
     set_dac_button = Button('Set DAC')
 
     view = View(
@@ -36,6 +33,8 @@ class Fianium(LightSource, serial.SerialInstrument):
 
     def __init__(self, port=None):
         super(LightSource, self).__init__(port=port)
+        self._min_power = 0
+        self._max_power = 2000
 
     def get_dac(self):
         return self.float_query('Q?')
