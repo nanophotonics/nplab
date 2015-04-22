@@ -14,8 +14,7 @@ import h5py
 import os
 import os.path
 import datetime
-from pyface.qt import QtCore as qt
-from pyface.qt import QtGui as qtgui
+from nplab.utils.gui import qt, qtgui
 
 import nplab.utils.gui
 
@@ -129,22 +128,25 @@ def current(create_if_none=True):
         print "No current data file, attempting to create..."
         try: #we try to pop up a Qt file dialog
             app = nplab.utils.gui.get_qt_app() #ensure Qt is running
-            fname, ftype = qtgui.QFileDialog.getSaveFileName(
+            fname = qtgui.QFileDialog.getSaveFileName(
                                 caption = "Select Data File",
                                 directory = os.path.join(os.getcwd(),datetime.date.today().strftime("%Y-%m-%d.h5")),
-                                filter = "HDF5 Data (*.h5, *.hdf5)",
+                                filter = "HDF5 Data (*.h5 *.hdf5)",
                                 options = qtgui.QFileDialog.DontConfirmOverwrite,
                             )
+            if not isinstance(fname, basestring):
+                fname = fname[0] #work around version-dependent Qt behaviour :(
             if len(fname) > 0:
                 if not "." in fname:
                     fname += ".h5"
-                if os.path.isfile(fname): #FIXME: dirty hack to work around mode=a not working
-                    set_current(fname,mode='r+')
-                else:
-                    set_current(fname,mode='w-') #create the datafile
+                set_current(fname, mode='a')
+#                if os.path.isfile(fname): #FIXME: dirty hack to work around mode=a not working
+#                    set_current(fname,mode='r+')
+#                else:
+#                    set_current(fname,mode='w-') #create the datafile
             else:
                 print "Cancelled by the user."
-        finally:
+        except:
             print "File dialog went wrong :("
     
     if _current_datafile is not None:
