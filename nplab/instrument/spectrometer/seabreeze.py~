@@ -383,5 +383,3 @@ if __name__ == "__main__":
         except:       #of course, if there's no spectrometer this will fail, hence the error handling
             shutdown_seabreeze() #reset things if we've had errors
             print "The spectrometer did not close cleanly. SeaBreeze has been reset."
-#to alter max/min: s.spectrum_plot.value_mapper.range.high=0.01
-
