@@ -138,7 +138,7 @@ class GridScanner(HasTraits):
         self._init_grid(self.size, self.step, self.init)
 
     def move(self, ax, position):
-        self.scanner.move(position, axis=ax)
+        self.scanner.move_axis(position, axis=ax)
 
     def get_position(self, ax):
         return self.scanner.get_position(axis=ax)
@@ -224,9 +224,9 @@ class AcquisitionThread(Thread):
         self.step_times = np.zeros(20)
         self.step_times[:] = np.nan
         self.total_points = reduce(operator.mul, self.grid_scanner.grid_shape, 1)  # could use lambda x,y: x*y for func
-        self.f = h5py.File(os.path.join(os.path.expanduser('~'), 'Desktop', 'timing.hdf5'), 'w')
-        self.s = self.f.create_dataset('timing', shape=self.grid_scanner.grid_shape + (2,), dtype=np.float64,
-                                       compression="gzip")
+#        self.f = h5py.File(os.path.join(os.path.expanduser('~'), 'Desktop', 'timing.hdf5'), 'w')
+#        self.s = self.f.create_dataset('timing', shape=self.grid_scanner.grid_shape + (2,), dtype=np.float64,
+#                                       compression="gzip")
         self.current_step = 1
 
     def run(self):
@@ -279,15 +279,15 @@ class AcquisitionThread(Thread):
             self.grid_scanner.move(selected_axes[i], self.grid_scanner.init[i])
         self.grid_scanner.analyse_scan()
         self.grid_scanner.close_scan()
-        self.f.close()
+#        self.f.close()
 
     def update_time(self, *times):
         indices = self.grid_scanner.indices
         t0, t1, t2 = times
         dt1 = t1 - t0
         dt2 = t2 - t1
-        self.s[indices + (0,)] = 1e3 * dt1
-        self.s[indices + (1,)] = 1e3 * dt2
+#        self.s[indices + (0,)] = 1e3 * dt1
+#        self.s[indices + (1,)] = 1e3 * dt2
         self.step_times[:-1] = self.step_times[1:]
         self.step_times[-1] = t2 - t0
 
