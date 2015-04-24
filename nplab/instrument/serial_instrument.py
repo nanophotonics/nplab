@@ -114,7 +114,10 @@ class SerialInstrument(MessageBusInstrument):
             except:
                 pass
             finally:
-                self.close()
+                try:
+                    self.close()
+                except:
+                    pass #we don't care if there's an error closing the port...
             if success:
                 break #again, make sure this happens *after* closing the port
         if success:
