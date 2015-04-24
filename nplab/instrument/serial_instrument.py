@@ -102,4 +102,23 @@ class SerialInstrument(MessageBusInstrument):
         successfully opened and the settings are as defined by self.port_settings.
         Usually this function sends a command and checks for a known reply."""
         return True
+    def find_port(self):
+        """Iterate through the available serial ports and query them to see
+        if our instrument is there."""
+        success = False
+        for port_name, _, _ in serial.tools.list_ports.comports(): #loop through serial ports, apparently 256 is the limit?!
+            try:
+                print "Trying port",port_name
+                self.open(port_name)
+                success = True
+            except:
+                pass
+            finally:
+                self.close()
+            if success:
+                break #again, make sure this happens *after* closing the port
+        if success:
+            return port_name
+        else:
+            return None
     
