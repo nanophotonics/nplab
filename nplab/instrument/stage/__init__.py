@@ -138,4 +138,19 @@ class Stage(HasTraits):
             time.sleep(0.1)
         return True
 #    def __init__(self):
-        
+       
+
+class DummyStage(Instrument):
+    """A stub stage for testing purposes, prints moves to the console."""
+    def __init__(self):
+	super(DummyStage, self).__init__()
+	self.position = np.array([0,0,0])
+    def move(self, position, relative=False):
+	    if relative:
+		    self.position = position
+	    else:
+		    self.position += position
+	    print "stage now at", self.position
+    def move_rel(self, position):
+	    self.move(position, relative=True)
+
