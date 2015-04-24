@@ -27,7 +27,7 @@ class ProScan(serial.SerialInstrument, stage.Stage):
         self.query("COMP O") #enable full-featured serial interface
         
 #        try: #get the set-up parameters
-        self.microstepsPerMicron = self.int_query("STAGE",r"MICROSTEPS/MICRON = (\d+)",termination_line="END")
+        self.microstepsPerMicron = self.parsed_query("STAGE",r"MICROSTEPS/MICRON = %d",termination_line="END")
         self.query("RES s %f" % (1/self.microstepsPerMicron)) #set the resolution to 1 microstep
         self.resolution = self.float_query("RES s")
 #        except:
@@ -68,9 +68,9 @@ class ProScan(serial.SerialInstrument, stage.Stage):
         """return true if the stage is in motion"""
         return self.int_query("$,S")>0
     def test_communications(self):
+        """Check there is a prior stage at the other end of the COM port."""
         response = self.query("?",multiline=True)
         if response.startswith("PROSCAN"):
             return True
         else:
-            print "response:", response
             return False

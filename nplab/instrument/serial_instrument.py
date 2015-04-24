@@ -111,6 +111,7 @@ class SerialInstrument(MessageBusInstrument):
                 print "Trying port",port_name
                 self.open(port_name)
                 success = True
+                print "Success!"
             except:
                 pass
             finally:
