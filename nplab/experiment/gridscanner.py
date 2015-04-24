@@ -56,7 +56,7 @@ class GridScanner(HasTraits):
     grid_scanner objects comprise of a scanning stage and a scan function.
     The movement function should be supplied with the required axes and a
     move command. The scan function can be anything but must have the grid
-    indicies as its arguments.
+    indices as its arguments.
     It is recommended to use the init_scan, open_scan, close_scan and
     cleanup methods. Open_scan is called first and it typically used to
     open communications to equipment. Init_scan is called after and is
