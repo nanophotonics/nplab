@@ -19,10 +19,11 @@ def attributes_from_dict(group_or_dataset, dict_of_attributes):
     """Update the metadata of an HDF5 object with a dictionary."""
     attrs = group_or_dataset.attrs
     for key, value in dict_of_attributes.iteritems():
-        if key in attrs.keys():
-            attrs.modify(key, value)
-        else:
-            attrs.create(key, value)
+	if value is not None:
+	   if key in attrs.keys():
+               attrs.modify(key, value)
+     	   else:
+               attrs.create(key, value)
 
 class Group(h5py.Group):
     """HDF5 Group, a collection of datasets and subgroups.
@@ -136,6 +137,7 @@ def current(create_if_none=True):
             if not isinstance(fname, basestring):
                 fname = fname[0] #work around version-dependent Qt behaviour :(
             if len(fname) > 0:
+                print fname
                 if not "." in fname:
                     fname += ".h5"
                 set_current(fname, mode='a')
@@ -160,5 +162,12 @@ def set_current(datafile, **kwargs):
         _current_datafile = datafile
     else:
         print "opening file: ", datafile
-        _current_datafile = DataFile(datafile, **kwargs) #open a new datafile
+        try:
+            _current_datafile = DataFile(datafile, **kwargs) #open a new datafile
+        except Exception as e:
+            print "problem opening file:"
+            print e
+            print "trying with mode=r+"
+            kwargs['mode'] = 'r+' #dirty hack to work around mode=a not working
+            _current_datafile = DataFile(datafile, **kwargs)
 
