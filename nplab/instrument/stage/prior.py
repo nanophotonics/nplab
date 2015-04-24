@@ -1,9 +1,10 @@
 import nplab.instrument.serial_instrument as serial
+import nplab.instrument.stage as stage
 import re
 import numpy as np
 import time
 
-class ProScan(serial.SerialInstrument):
+class ProScan(serial.SerialInstrument, stage.Stage):
     """
     This class handles the Prior stage.
     """
@@ -21,7 +22,7 @@ class ProScan(serial.SerialInstrument):
         """
         Set up the serial port and so on.
         """
-        super(ProScan, self).__init__(port=port) #this opens the port
+        serial.SerialInstrument.__init__(port=port) #this opens the port
         
         self.query("COMP O") #enable full-featured serial interface
         
@@ -59,10 +60,17 @@ class ProScan(serial.SerialInstrument):
         self.query(querystring)
         if(block):
             while(self.is_moving()): time.sleep(0.02)
-    def position(self):
+    def get_position(self):
         """return the current position in microns"""
-        pos = self.parsed_query('P',r"([.\d-]+),([.\d-]+),([.\d-]+)")
+        pos = self.parsed_query('P',r"%f,%f,%f")
         return np.array(pos) * self.resolution
     def is_moving(self):
         """return true if the stage is in motion"""
         return self.int_query("$,S")>0
+    def test_communications(self):
+        response = self.query("?",multiline=True)
+        if response.startswith("PROSCAN"):
+            return True
+        else:
+            print "response:", response
+            return False
