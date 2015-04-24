@@ -18,7 +18,7 @@ class ProScan(serial.SerialInstrument, stage.Stage):
                     )
     termination_character = "\r" #: All messages to or from the instrument end with this character.
     termination_line = "END" #: If multi-line responses are recieved, they must end with this string
-    def __init__(self, port=None):
+    def __init__(self, port=None, use_si_units = False):
         """
         Set up the serial port and so on.
         """
@@ -44,26 +44,33 @@ class ProScan(serial.SerialInstrument, stage.Stage):
         self.query("ENCODER 1") #turn on encoders (if present)
         self.query("SERVO 0") #turn off servocontrol
         self.query("BLSH 0") #turn off backlash control
+        
+        self.use_si_units = use_si_units
     def move_rel(self, dx, block=True):
-        """Make a relative move by dx microns (see move)"""
+        """Make a relative move by dx microns/metres (see move)"""
         return self.move(dx, relative=True, block=block)
     def move(self, x, relative=False, block=True):
         """
-        Move to coordinate x (a np.array of coordinates) in microns
+        Move to coordinate x (a np.array of coordinates) in microns, or metres if use_si_units is true
         
         By default we block until the move is over (if possible), if wait==False
         we return immediately.  relative=True does relative motion, otherwise
         motion is absolute.
         """
         querystring = "GR" if relative else "G" #allow for absolute or relative moves
+        if self.use_si_units: x = np.array(x) * 1e6
         for i in range(len(x)): querystring += " %d" % int(x[i]/self.resolution)
         self.query(querystring)
         if(block):
             while(self.is_moving()): time.sleep(0.02)
-    def get_position(self):
+    def get_position(self, axis=None):
         """return the current position in microns"""
-        pos = self.parsed_query('P',r"%f,%f,%f")
-        return np.array(pos) * self.resolution
+        if axis is not None:
+            return self.select_axis(self.get_position(), axis)
+        else:
+            pos = self.parsed_query('P',r"%f,%f,%f")
+            if self.use_si_units: pos = np.array(pos)/1e6
+            return np.array(pos) * self.resolution
     def is_moving(self):
         """return true if the stage is in motion"""
         return self.int_query("$,S")>0
