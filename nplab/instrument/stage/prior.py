@@ -22,7 +22,7 @@ class ProScan(serial.SerialInstrument, stage.Stage):
         """
         Set up the serial port and so on.
         """
-        serial.SerialInstrument.__init__(port=port) #this opens the port
+        serial.SerialInstrument.__init__(self, port=port) #this opens the port
         
         self.query("COMP O") #enable full-featured serial interface
         
