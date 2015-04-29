@@ -14,9 +14,6 @@ import h5py
 import os
 import os.path
 import datetime
-from nplab.utils.gui import qt, qtgui
-
-import nplab.utils.gui
 
 def attributes_from_dict(group_or_dataset, dict_of_attributes):
     """Update the metadata of an HDF5 object with a dictionary."""
@@ -127,6 +124,8 @@ def current(create_if_none=True):
     if _current_datafile is None and create_if_none:
         print "No current data file, attempting to create..."
         try: #we try to pop up a Qt file dialog
+            import nplab.utils.gui
+            from nplab.utils.gui import qtgui
             app = nplab.utils.gui.get_qt_app() #ensure Qt is running
             fname = qtgui.QFileDialog.getSaveFileName(
                                 caption = "Select Data File",
