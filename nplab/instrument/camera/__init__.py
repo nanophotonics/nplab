@@ -98,8 +98,8 @@ class Camera(Instrument, HasTraits):
                              editor=traitsui.api.TableEditor(columns=
                                  [ObjectColumn(name="name", editable=False),
                                   ObjectColumn(name="value")])),
-                    springy=False),
-                ), kind="live",resizable=True,width=500,height=600,title="OpenCV Camera")
+                    springy=True),
+                layout="split"), kind="live",resizable=True,width=500,height=600,title="OpenCV Camera")
     
     def __init__(self,capturedevice=0):
         super(Camera,self).__init__()
