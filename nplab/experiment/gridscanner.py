@@ -162,6 +162,14 @@ class GridScanner(HasTraits):
         #raise NotImplementedError("You must subclass cleanup to implement it for your own experiment")
         pass
     
+    def update_drift_compensation(self):
+        """Update the current drift compensation.
+        
+        If you have a nice way of compensating for drift, you should use this 
+        function to do it - it's called each time the outermost scan axis 
+        updates."""
+        pass
+    
     # Traits methods
 
     def _update_grid_button_fired(self):
@@ -244,6 +252,7 @@ class AcquisitionThread(Thread):
         for k in pnts[-1]:  # outer most axis
             if self.abort_requested:
                 break
+            self.grid_scanner.update_drift_compensation()
             self.grid_scanner._status = 'Scanning layer {0:d}/{1:d}'.format(k + 1, len(pnts[-1]))
             self.grid_scanner.move(selected_axes[-1], scan_axes[-1][k])
             pnts[-2] = pnts[-2][::-1]  # reverse which way is iterated over each time
