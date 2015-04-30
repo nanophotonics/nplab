@@ -2,27 +2,27 @@
 """
 Auto-aligning spectrometer: centres in on a nanoparticle after a short scan
 """
-import traits
+#import traits
 from traits.api import HasTraits, Property, Instance, Float, Range, Array, Int, String, Button, Bool, on_trait_change
-import traitsui
+#import traitsui
 from traitsui.api import View, Item, HGroup, VGroup, Tabbed
 from traitsui.table_column import ObjectColumn
-import chaco
-from chaco.api import ArrayPlotData, Plot
-from enable.component_editor import ComponentEditor
+#import chaco
+#from chaco.api import ArrayPlotData, Plot
+#from enable.component_editor import ComponentEditor
 import threading
 import numpy as np
-import seabreeze
-import prior_stage
+import nplab.instrument.spectrometer
+import nplab.instrument.stage
+from nplab.instrument import Instrument
 import time
-from traitsui_mpl_qt import MPLFigureEditor
+from nplab.utils.traitsui_mpl_qt import MPLFigureEditor
 import matplotlib.pyplot as plt
-from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import scipy.optimize
-from scipy.odr import odrpack as odr
+#from scipy.odr import odrpack as odr
 
-class SpectrometerAligner(HasTraits):
+class SpectrometerAligner(HasTraits, Instrument):
     spectrum_mask=None #a mask to set which pixels to align to
     align_to_raw_spectra=False
     spectrometer=None
@@ -289,7 +289,9 @@ def plot_alignment(positions, powers, mean_position):
     plt.show(block=False)
     
 if __name__ == "__main__":
+    import nplab.instrument.spectrometer.seabreeze as seabreeze
     seabreeze.shutdown_seabreeze() #just in case...
+    import nplab.instrument.stage.prior as prior_stage
     stage = prior_stage.ProScan("COM3")
     spectrometer = seabreeze.OceanOpticsSpectrometer(0)
     aligner = SpectrometerAligner(spectrometer,stage)
