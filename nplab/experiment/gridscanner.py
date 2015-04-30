@@ -100,6 +100,8 @@ class GridScanner(HasTraits):
     step_time = Float()
     scan_length_estimate = Property(depends_on=['grid_shape', 'step_time'])
 
+    stage_units = Float(1)
+
     traits_view = View(grid_scanner_group())
 
     def __init__(self):
@@ -138,10 +140,10 @@ class GridScanner(HasTraits):
         self._init_grid(self.size, self.step, self.init)
 
     def move(self, ax, position):
-        self.scanner.move_axis(position, axis=ax)
+        self.scanner.move_axis(position/self.stage_units, axis=ax)
 
     def get_position(self, ax):
-        return self.scanner.get_position(axis=ax)
+        return self.scanner.get_position(axis=ax)*self.stage_units
 
     def scan_function(self, *indices):
         raise NotImplementedError("You must subclass scan_function to implement it for your own experiment")
@@ -193,7 +195,7 @@ class GridScanner(HasTraits):
 
     def set_init_to_current_position(self):
         for i, ax in enumerate(self.axes):
-            self.init[i] = self.scanner.get_position(ax)
+            self.init[i] = self.scanner.get_position(ax)*self.stage_units
         self.init = self.init
 
     def _get_scan_length_estimate(self):
