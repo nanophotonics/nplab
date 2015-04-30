@@ -90,7 +90,7 @@ class CameraStageMapper(HasTraits):
         self.stage.move(-p)
     def camera_centre_position(self):
         """return the position of the centre of the camera view, on the sample"""
-        return -self.stage.position()
+        return -self.stage.position
     def centre_on_feature(self, feature_image, search_size=(50,50), tolerance=0.3, max_iterations=10):
         """Adjust the stage slightly to centre on the given feature.
         
@@ -209,7 +209,7 @@ class CameraStageMapper(HasTraits):
     def autofocus_iterate(self, dz, method="centre_of_mass", noise_floor=0.3):
         self._action_lock.acquire()
         """Move in z and take images.  Move to the sharpest position."""
-        here = self.stage.position()
+        here = self.stage.position
         positions = [here]                              #positions keeps track of where we sample
         powers = [self.autofocus_merit_function()]      #powers holds the value of the merit fn at each point
         camera_live_view = self.camera.live_view
@@ -217,7 +217,7 @@ class CameraStageMapper(HasTraits):
         for z in dz:
             self.stage.move(np.array([0,0,z])+here)     #visit each point and evaluate merit function
  #           time.sleep(0.5)
-            positions.append(self.stage.position())
+            positions.append(self.stage.position)
             powers.append(self.autofocus_merit_function())
         powers = np.array(powers)
         positions = np.array(positions)
