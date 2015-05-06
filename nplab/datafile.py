@@ -52,7 +52,7 @@ class Group(h5py.Group):
                 n += 1 #increase the number until the name's unique
             return (name % n)
 
-    def create_group(self, name, attrs=None, auto_increment=True):
+    def create_group(self, name, attrs=None, auto_increment=True, timestamp=True):
         """Create a new group, ensuring we don't overwrite old ones.
 
         A new group is created within this group, with the specified name.
@@ -68,6 +68,8 @@ class Group(h5py.Group):
         if auto_increment:
             name = self.find_unique_name(name)
         g = super(Group, self).create_group(name)
+	if timestamp:
+	    g.attrs.create('creation_timestamp',datetime.datetime.now().isoformat())
         if attrs is not None:
             attributes_from_dict(g, attrs)
         return Group(g.id) #make sure it's wrapped!
@@ -75,11 +77,13 @@ class Group(h5py.Group):
         """Return a subgroup, creating it if it does not exist."""
         return Group(super(Group, self).require_group(name).id) #wrap the returned group
 
-    def create_dataset(self, name, auto_increment=True, shape=None,dtype=None,data=None,attrs=None,*args,**kwargs):
+    def create_dataset(self, name, auto_increment=True, shape=None,dtype=None,data=None,attrs=None,timestamp=True,*args,**kwargs):
         """Create a new dataset, optionally with an auto-incrementing name."""
         if auto_increment:
             name = self.find_unique_name(name)
         dset = super(Group, self).create_dataset(name, shape, dtype, data, *args, **kwargs)
+	if timestamp:
+	    dset.attrs.create('creation_timestamp',datetime.datetime.now().isoformat())
         if attrs is not None:
             attributes_from_dict(dset, attrs) #quickly set the attributes
         return dset
@@ -112,6 +116,10 @@ class DataFile(Group):
         """
         f = h5py.File(name, mode, *args, **kwargs) #open the file
         super(DataFile, self).__init__(f.id) #this is actually just an h5py group object!
+    def flush(self):
+	self.file.flush()
+    def close(self):
+	self.file.close()
     def make_current(self):
         """Set this as the default location for all new data."""
         global _current_datafile
