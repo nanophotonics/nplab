@@ -151,9 +151,9 @@ class Camera(Instrument, HasTraits):
                     assert ret, "Failed to capture a frame"
                     return ret, frame
                 except:
-                    print "Attempt number %d failed to capture a frame from the camera!"
+                    print "Attempt number {0} failed to capture a frame from the camera!".format(i)
         print "Camera.raw_snapshot() has failed to capture a frame."
-        return false, None
+        return False, None
     def color_image(self):
         """Get a colour image (bypass filtering, etc.)"""
         ret, frame = self.raw_snapshot()
