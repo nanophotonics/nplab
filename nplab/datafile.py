@@ -14,6 +14,7 @@ import h5py
 import os
 import os.path
 import datetime
+import re
 
 def attributes_from_dict(group_or_dataset, dict_of_attributes):
     """Update the metadata of an HDF5 object with a dictionary."""
@@ -24,6 +25,11 @@ def attributes_from_dict(group_or_dataset, dict_of_attributes):
                attrs.modify(key, value)
      	   else:
                attrs.create(key, value)
+
+def h5_item_number(group_or_dataset):
+    """Returns the number at the end of a group/dataset name, or None."""
+    m = re.search(r"(\d)+$", group_or_dataset.name) #match numbers at the end of the name
+    return int(m.groups()[0]) if m else None
 
 class Group(h5py.Group):
     """HDF5 Group, a collection of datasets and subgroups.
@@ -51,6 +57,19 @@ class Group(h5py.Group):
             while (name % n) in self:
                 n += 1 #increase the number until the name's unique
             return (name % n)
+    def numbered_items(self,name):
+        """Get a list of datasets/groups that have a given name + number, 
+        sorted by the number appended to the end.
+        
+        This function is intended to return items saved with 
+        auto_increment=True, in the order they were added (by default they
+        come in alphabetical order, so 10 comes before 2).  `name` is the 
+        name passed in without the _0 suffix.
+        """
+        items = [v for k, v in self.iteritems() 
+                        if k.startswith(name)   #only items that start with `name`
+                        and re.match(r"_*(\d+)$",k[len(name):])] #and end with numbers
+        return sorted(items, key=h5_item_number)
 
     def create_group(self, name, attrs=None, auto_increment=True, timestamp=True):
         """Create a new group, ensuring we don't overwrite old ones.
