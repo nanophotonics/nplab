@@ -248,6 +248,7 @@ class AcquisitionThread(Thread):
         for i in range(len(scan_axes)):
             pnts.append(range(scan_axes[i].size))
 
+        self.grid_scanner.indices = (-1,) * len(selected_axes)
         st0 = time()
         for k in pnts[-1]:  # outer most axis
             if self.abort_requested:
