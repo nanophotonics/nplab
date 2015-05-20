@@ -61,8 +61,12 @@ class ProScan(serial.SerialInstrument, stage.Stage):
         if self.use_si_units: x = np.array(x) * 1e6
         for i in range(len(x)): querystring += " %d" % int(x[i]/self.resolution)
         self.query(querystring)
-        if(block):
-            while(self.is_moving()): time.sleep(0.02)
+        try:
+            if(block):
+                while(self.is_moving()):
+                    time.sleep(0.02)
+        except KeyboardInterrupt:
+            self.emergency_stop()
     def get_position(self, axis=None):
         """return the current position in microns"""
         if axis is not None:
@@ -74,6 +78,8 @@ class ProScan(serial.SerialInstrument, stage.Stage):
     def is_moving(self):
         """return true if the stage is in motion"""
         return self.int_query("$,S")>0
+    def emergency_stop(self):
+        return self.query("K")
     def test_communications(self):
         """Check there is a prior stage at the other end of the COM port."""
         response = self.query("?",multiline=True)
