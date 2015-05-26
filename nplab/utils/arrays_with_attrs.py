@@ -1,0 +1,56 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Tue May 26 08:08:14 2015
+
+@author: rwb27
+"""
+
+import numpy as np
+
+class AttributeDict(dict):
+    """This class extends a dictionary to have a "create" method for
+    compatibility with h5py attrs objects."""
+    
+    def create(self, name, data):
+        self[name] = data
+        
+    def modify(self, name, data):
+        self[name] = data
+        
+        
+def ensure_attribute_dict(obj):
+    """Given a mapping that may or not be an AttributeDict, return an
+    AttributeDict object that either is, or copies the data of, the input."""
+    if isinstance(obj, AttributeDict):
+        return obj
+    else:
+        return AttributeDict(obj)
+        
+class ArrayWithAttrs(np.ndarray):
+    """A numpy ndarray, with an AttributeDict accessible as array.attrs.
+    
+    This class is intended as a temporary version of an h5py dataset to allow
+    the easy passing of metadata/attributes around nplab functions."""
+    
+    def __new__(cls, input_array, attrs={}):
+        """Make a new ndarray, based on an existing one, with an attrs dict.
+        
+        This function adds an attributes dictionary to a numpy array, to make
+        it work like an h5py dataset.  It doesn't copy data if it can be 
+        avoided."""
+        # the input array should be a numpy array, then we cast it to this type
+        obj = np.asarray(input_array).view(cls)
+        # next, add the dict
+        # ensure_attribute_dict always returns an AttributeDict
+        obj.attrs = ensure_attribute_dict(attrs)
+        # return the new object
+        return obj
+        
+    def __array_finalize__(self, obj):
+        # this is called by numpy when the object is created (__new__ may or
+        # may not get called)
+        if obj is None: return # if obj is None, __new__ was called - do nothing
+        # if we didn't create the object with __new__,  we must add the attrs
+        # dictionary.  We copy this from the source object if possible (while
+        # ensuring it's the right type) or create a new, empty one if not.
+        self.attrs = ensure_attribute_dict(getattr(obj, 'attrs', {}))
