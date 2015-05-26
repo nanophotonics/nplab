@@ -24,7 +24,6 @@ class Instrument(HasTraits):
         super(Instrument, self).__init__()
         Instrument.instances_set().add(self) #keep track of instances (should this be in __new__?)
 
-
     @classmethod
     def instances_set(cls):
         if Instrument.__instances is None:
@@ -81,4 +80,19 @@ class Instrument(HasTraits):
         """
         df = cls.get_root_data_folder()
         return df.create_dataset(name+'_%d', *args, **kwargs)
-
+        
+    def show_gui(self, blocking=False):
+        """Display a GUI window for the item of equipment.
+        
+        You should override this method to display a window to control the
+        instrument.  If edit_traits/configure_traits methods exist, we'll fall
+        back to those as a default.
+        """
+        try:
+            if blocking:
+                self.configure_traits()
+            else:
+                self.edit_traits()
+        except AttributeError:
+            raise NotImplementedError("It looks like the show_gui method hasn't been subclassed, and the instrument is not using traitsui.")
+            
