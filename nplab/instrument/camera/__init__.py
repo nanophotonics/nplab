@@ -2,33 +2,10 @@
 """
 Created on Wed Jun 11 12:28:18 2014
 
-@author: Richard
+@author: Richard Bowman
 """
 
-import sys
-try:
-    import cv2
-except ImportError:
-    explanation="""
-WARNING: could not import the Open CV library.
-    
-Make sure you have installed OpenCV, and that its version matches your Python 
-architecture (64 or 32 bit).  You can download a simple installer from:
-http://www.lfd.uci.edu/~gohlke/pythonlibs/#opencv
-We are using Python %d.%d, so get the corresponding package.
-""" % (sys.version_info.major, sys.version_info.minor)
-    try:
-        import traitsui
-        import traitsui.message
-        traitsui.message.error(explanation,"OpenCV Missing", buttons=["OK"])
-    except Exception as e:
-        print "uh oh, problem with the message..."
-        print e
-        pass
-    finally:
-        raise ImportError(explanation) 
-    
-import cv2.cv
+
 import traits
 from traits.api import HasTraits, Property, Instance, Float, String, Button, Bool, on_trait_change
 import traitsui
@@ -47,30 +24,35 @@ from nplab.instrument import Instrument
 class CameraParameter(HasTraits):
     value = Property(Float(np.NaN))
     name = String()
-    def __init__(self,videoCapture,parameter_name):
-        self._cap = videoCapture
-        self.name = parameter_name.title().replace('_',' ')
-        try:
-            self._parameter_ID = getattr(cv2.cv,'CV_CAP_PROP_'+parameter_name.upper().replace(' ','_'))
-        except AttributeError:
-            raise AttributeError("%s is not a valid capture property, try CameraParameter.list_names()")
+
+    def __init__(self,parent,name):
+        self.parent = parent
+        self.name=name
+
     def _get_value(self):
-        return self._cap.get(self._parameter_ID)
+        """get the value of this parameter"""
+        pass
+    
     def _set_value(self, value):
-        return self._cap.set(self._parameter_ID, value)
+        """get the value of this parameter"""
+        pass
+    
     def default_traits_view(self):
         return View(Item(name="value", label=self.name),kind="live")
-        
-    @classmethod
-    def list_names(cls):
-        return [name.replace("CV_CAP_PROP_","") for name in dir(cv2.cv) if "CV_CAP_PROP_" in name ]
+
 
 class ImageClickTool(enable.api.BaseTool):
     """This handles clicks on the image and relays them to a callback function"""
     def __init__(self,plot):
         super(ImageClickTool, self).__init__()
         self.plot = plot
+        
     def normal_left_up(self, event):
+        """Handle a regular click on the image.
+        
+        This calls the callback function with two numbers between 0 and 1,
+        corresponding to X and Y on the image.  Multiply by image size to get
+        pixel coordinates."""
         if hasattr(self, "callback"):
             self.callback(1.-self.plot.y_axis.mapper.map_data(event.y),
                           self.plot.x_axis.mapper.map_data(event.x),)
@@ -78,7 +60,8 @@ class ImageClickTool(enable.api.BaseTool):
             print "Clicked on image:", \
             self.plot.y_axis.mapper.map_data(event.y),\
             self.plot.x_axis.mapper.map_data(event.x)
-            
+          
+          
 class Camera(Instrument, HasTraits):
     latest_frame = traits.trait_numeric.Array(dtype=np.uint8,shape=(None, None, 3))
     image_plot = Instance(Plot)
@@ -99,70 +82,72 @@ class Camera(Instrument, HasTraits):
                                  [ObjectColumn(name="name", editable=False),
                                   ObjectColumn(name="value")])),
                     springy=True),
-                layout="split"), kind="live",resizable=True,width=500,height=600,title="OpenCV Camera")
+                layout="split"), kind="live",resizable=True,width=500,height=600,title="Camera")
     
-    def __init__(self,capturedevice=0):
+    def __init__(self):
         super(Camera,self).__init__()
-        
-        self.cap=cv2.VideoCapture(capturedevice)
-        self._image_plot_data = ArrayPlotData(latest_frame=self.latest_frame,
-                                              across=[0,1],middle=[0.5,0.5])
-        self.image_plot = Plot(self._image_plot_data)
-        self.image_plot.img_plot("latest_frame",origin="top left")
-        self.image_plot.plot(("across","middle"),color="yellow")
-        self.image_plot.plot(("middle","across"),color="yellow")
-        #remove the axes... there ought to be a neater way to do this!
-        self.image_plot.underlays = [u for u in self.image_plot.underlays \
-                                    if not isinstance(u, chaco.axis.PlotAxis)]
-        self.image_plot.padding = 0
-        self.image_plot_tool = ImageClickTool(self.image_plot)
-        self.image_plot.tools.append(self.image_plot_tool)
-
-        self.parameters = [CameraParameter(self.cap, n) for n in CameraParameter.list_names()]        
+        self._setup_plot()
+        self.initialise_parameters()
         self.acquisition_lock = threading.Lock()        
         
     def __del__(self):
         self.close()
 #        super(Camera,self).__del__() #apparently not...?
     def close(self):
-        """Stop communication with the camera and allow it to be re-used."""
+        """Stop communication with the camera and allow it to be re-used.
+        
+        override in subclass if you want to shut down hardware."""
         self.live_view = False
-        self.cap.release()
+        
     def _take_snapshot_fired(self): self.update_latest_frame()
     def update_latest_frame(self, frame=None):
-        """Take a new frame and store it as the "latest frame".  Return the image as displayed, including filters, etc."""
+        """Take a new frame and store it as the "latest frame".
+        
+        Returns the image as displayed, including filters, etc."""
         if frame is None: 
-            ret, frame = self.raw_snapshot()
+            frame = self.color_image()
         if frame is not None:
-            rgbframe=cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
             if self.filter_function is not None:
-                self.latest_frame=self.filter_function(rgbframe)
+                self.latest_frame=self.filter_function(frame)
             else:
-                self.latest_frame=rgbframe
+                self.latest_frame=frame
             return self.latest_frame
         else:
-            print "Dropped a frame! cv2 return value:", ret
+            print "Failed to get an image from the camera"
     def raw_snapshot(self):
-        """Take a snapshot and return it.  Bypass filters etc."""
-        with self.acquisition_lock:
-            for i in range(10):
-                try:
-                    ret, frame = self.cap.read()
-                    assert ret, "Failed to capture a frame"
-                    return ret, frame
-                except:
-                    print "Attempt number {0} failed to capture a frame from the camera!".format(i)
-        print "Camera.raw_snapshot() has failed to capture a frame."
-        return False, None
+        """Take a snapshot and return it.  No filtering or conversion."""
+        return True, np.zeros((640,480,3),dtype=np.uint8)
     def color_image(self):
         """Get a colour image (bypass filtering, etc.)"""
         ret, frame = self.raw_snapshot()
-        return cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
+        try:
+            assert frame.shape[2]==3
+            return frame
+        except:
+            try:
+                assert len(frame.shape)==2
+                return np.vstack((frame,)*3) #turn gray into color by duplicating!
+            except:
+                return None
     def gray_image(self):
         """Get a colour image (bypass filtering, etc.)"""
         ret, frame = self.raw_snapshot()
-        return cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
+        try:
+            assert len(frame.shape)==2
+            return frame
+        except:
+            try:
+                assert frame.shape[2]==3
+                return np.mean(frame,axis=2)
+            except:
+                return None
+                
+    def parameter_names(self):
+        """Return a list of names of parameters that may be set."""
+        return ['exposure','gain']
+    
     def _latest_frame_changed(self):
+        """Update the Chaco plot with the latest image."""
         try:
             self._image_plot_data.set_data("latest_frame",self.latest_frame)
             self.image_plot.aspect_ratio = float(self.latest_frame.shape[1])/float(self.latest_frame.shape[0])
@@ -171,7 +156,29 @@ class Camera(Instrument, HasTraits):
             print "=========== Traceback ============"
             traceback.print_exc()
             print "============== End ==============="
+    
+    def initialise_parameters(self):
+        """populate the list of camera settings that can be adjusted."""
+        self.parameters = [CameraParameter(self, n) for n in self.parameter_names()]
+        
+    def _setup_plot(self):
+        """Construct the Chaco plot used for displaying the image"""
+        self._image_plot_data = ArrayPlotData(latest_frame=self.latest_frame,
+                                              across=[0,1],middle=[0.5,0.5])
+        self.image_plot = Plot(self._image_plot_data)
+        self.image_plot.img_plot("latest_frame",origin="top left")
+        self.image_plot.plot(("across","middle"),color="yellow") #crosshair
+        self.image_plot.plot(("middle","across"),color="yellow")
+        
+        #remove the axes... there ought to be a neater way to do this!
+        self.image_plot.underlays = [u for u in self.image_plot.underlays \
+                                    if not isinstance(u, chaco.axis.PlotAxis)]
+        self.image_plot.padding = 0 #fill the plot region with the image
+        self.image_plot_tool = ImageClickTool(self.image_plot)
+        self.image_plot.tools.append(self.image_plot_tool)
+
     def _live_view_changed(self):
+        """Turn live view on and off"""
         if self.live_view==True:
             print "starting live view thread"
             try:
@@ -193,9 +200,3 @@ class Camera(Instrument, HasTraits):
         while not self._live_view_stop_event.wait(timeout=0.1):
             self.update_latest_frame()
         
-#example code:
-if __name__ == "__main__":
-    c = Camera(0)
-    c.configure_traits()
-    c.close()
-    del c
