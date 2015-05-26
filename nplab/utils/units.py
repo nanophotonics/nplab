@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue May 26 08:45:40 2015
+Unit support for nplab
+======================
+
+Sometimes it's really useful to check the units on data, for example when using
+translation stages (which can be very sensitive to being told to move 1000nm if
+you only wanted to move 1um...)
 
 @author: rwb27
 """
@@ -9,7 +14,7 @@ from nplab import ArrayWithAttrs
 from nplab.utils.array_with_attrs import ensure_attrs
 import pint
 
-ureg = pint.UnitRegistry()
+ureg = pint.UnitRegistry() #this should always be where the unit registry comes from
 
 def get_unit_string(obj, default=None, warn=False, fail=False):
     """Return a string representation of an object's units.
@@ -28,6 +33,7 @@ def get_unit_string(obj, default=None, warn=False, fail=False):
             if fail:
                 raise ValueError("No unit information was found on " + str(obj))
             return default
+
     
 def get_units(obj, default=None, warn=False):
     """Return the units from an object as a pint Quantity.
@@ -50,68 +56,41 @@ def get_units(obj, default=None, warn=False):
         if warn:
             print "Warning: no units found on " + str(obj)
         if default is not None:
-            return default
+            return ensure_unit(default)
         else:
             raise e
+        
         
 def array_with_units(obj, units):
     """Bundle an object as an ArrayWithAttrs having a "units" attribute."""
     ret = ensure_attrs(obj)
-    ret.attrs.create('units', units)
+    ret.attrs.create('units', str(units))
     return ret
-    
-def extract_units(obj, default=None, warn=False):
-    """Return the unparsed units string from an object"""
-    try:
-        return obj.attrs.get('units')
-    except AttributeError as e:
-        if warn:
-            print "Warning: no units found on " + str(obj)
-        if default is not None:
-            return default
-        else:
-            raise e
-            
-def parse_units(unit_string):
-    """Take a unit string and return a (prefix,unit) tuple."""
-    prefix, unit = None, None
-    for k, v in units.iteritems():
-        if unit_string == k:
-            unit = k
-            unit_string = ''
-            break
-    for k, v in prefixes.iteritems():
-        if unit_string.startswith(k):
-            prefix = k
-            unit_string = unit_string[len(prefix):] #remove prefix once parsed
-            break
-    for k, v in units.iteritems():
-        if unit_string.endswith(k):
-            unit = k
-            unit_string = unit_string[:-len(unit)]
-            break
-    if prefix is None:
-        for k, v in prefixes.iteritems():
-            if unit_string.startswith(v[1]):
-                prefix = k
-                unit_string = unit_string[len(v[1]):] #remove prefix once parsed
-                break
-    if unit is None:
-        for k, v in units.iteritems():
-            if unit_string.endswith(v[1]):
-                unit = k
-                unit_string = unit_string[:-len(v[1])]
-                break
-    return prefix, unit
 
-def to_base_units(unit_string):
-    """Given a unit, convert it to standard form (e.g. angstroms/microns become metre-derivatives)"""
-    prefix, unit = parse_units(unit_string)
-    raise NotImplementedError("TODO: implement this")
+
+def ensure_unit(obj):
+    """Ensure an object is a unit (i.e. a pint quantity).
     
-    
-def convert_units(obj, dest_units):
+    Strings will be converted to units if possible, and UnitsContainers will be
+    turned back into Quantities."""
+    if isinstance(obj, ureg.Quantity):
+        return obj #if it's a quantity, we're good.
+    else:
+        return ureg(str(obj)) #otherwise, convert to string and parse
+
+def convert_quantity(obj, dest_units, default=None, warn=True, return_quantity=False):
     """Return a copy of obj in the required units."""
-    from_units = parse_units(extract_units(obj))
-    to_units = parse_units(dest_units)
+    if ensure_unit(dest_units)==get_units(obj):
+        return obj #make sure objects are returned unchanged if units match
+    if isinstance(obj, ureg.Quantity):
+        q = obj
+    else:
+        #convert the object to a Quantity
+        q = obj * get_units(obj, default=default, warn=warn)
+    du = ensure_unit(dest_units)
+    rq = q.to(du.units) / du.magnitude
+    if return_quantity:
+        return rq
+    else:
+        return rq.magnitude #this should return an array/whatever
     
