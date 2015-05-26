@@ -10,23 +10,31 @@ from nplab.utils.thread_utils import locked_action_decorator, background_action_
 import nplab
 from traits.api import HasTraits
 
+from weakref import WeakSet
 
 class Instrument(HasTraits):
     """Base class for all instrument-control classes.
 
     This class takes care of management of instruments, saving data, etc.
     """
-    __instances = []
+    __instances = None
 
     def __init__(self):
         """Create an instrument object."""
         super(Instrument, self).__init__()
-        Instrument.__instances.append(self)
+        Instrument.instances_set().add(self) #keep track of instances (should this be in __new__?)
+
+
+    @classmethod
+    def instances_set(cls):
+        if Instrument.__instances is None:
+            Instrument.__instances = WeakSet()
+        return Instrument.__instances
 
     @classmethod
     def get_instances(cls):
         """Return a list of all available instances of this class."""
-        return [i for i in Instrument.__instances if isinstance(i, cls)]
+        return [i for i in Instrument.instances_set() if isinstance(i, cls)]
 
     @classmethod
     def get_instance(cls, create=True, exceptions=True):

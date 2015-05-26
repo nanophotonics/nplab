@@ -52,6 +52,26 @@ def test_get_instances():
     assert len(instruments) == 3, "Wrong number of instruments present!"
 
     assert InstrumentB.get_instance() == b, "Second class didn't return the right instance."
+    
+def test_instance_deletion():
+    class InstrumentC(Instrument):
+        def __del__(self):
+            print "deleted"
+    assert len(InstrumentC.get_instances()) == 0, "An instance of a not-yet-created instrument existed"
+    c = InstrumentC()
+    assert len(InstrumentC.get_instances()) == 1, "The created instrument wasn't in the list"
+    del c
+    assert len(InstrumentC.get_instances()) == 0, "The instrument wasn't properly removed on deletion"
+        
+def test_instance_deletion_2():
+    class InstrumentC(Instrument):
+        pass
+    assert len(InstrumentC.get_instances()) == 0, "An instance of a not-yet-created instrument existed"
+    c = InstrumentC()
+    assert len(InstrumentC.get_instances()) == 1, "The created instrument wasn't in the list"
+    del c
+    assert len(InstrumentC.get_instances()) == 0, "The instrument wasn't properly removed on deletion"
+    
 
 def test_saving():
     #test the auto-saving capabilities
