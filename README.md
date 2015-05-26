@@ -1,6 +1,6 @@
 nplab
 =====
-Core functions and instrument scripts for the Nanophotonics lab experimental scripts.  This is designed to be one Python module, which provides both the various support functions (saving to file, running experiments in a thread, etc.) and the core instrument scripts in nplab.instruments.*.
+Core functions and instrument scripts for the Nanophotonics lab experimental scripts.  This is designed to be one Python module, which provides both the various support functions (saving to file, running experiments in a thread, etc.) and the core instrument scripts in `nplab.instruments.*`.
 
 Experimental data is managed by the class `DataFile`, a wrapper for h5py that manages HDF5 files with auto-incrementing names and a graphical browser, which also maintains a "current" data file to which data should be saved, accessible as `nplab.datafile.current()`.  For convenience, there is a function `nplab.current_datafile()` that returns the same object.
 
