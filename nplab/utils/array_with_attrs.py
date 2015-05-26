@@ -26,6 +26,14 @@ def ensure_attribute_dict(obj):
     else:
         return AttributeDict(obj)
         
+def ensure_attrs(obj):
+    """Return an ArrayWithAttrs version of an array-like object, may be the
+    original object if it already has attrs."""
+    if hasattr(obj, 'attrs'):
+        return obj #if it has attrs, do nothing
+    else:
+        return ArrayWithAttrs(obj) #otherwise, wrap it
+        
 class ArrayWithAttrs(np.ndarray):
     """A numpy ndarray, with an AttributeDict accessible as array.attrs.
     

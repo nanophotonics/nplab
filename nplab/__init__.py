@@ -9,4 +9,4 @@ __author__ = 'alansanders,rwb27'
 __all__ = []
 
 from datafile import current as current_datafile
-from utils.arrays_with_attrs import ArrayWithAttrs
+from utils.array_with_attrs import ArrayWithAttrs
