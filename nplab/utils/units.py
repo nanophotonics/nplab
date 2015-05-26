@@ -7,37 +7,52 @@ Created on Tue May 26 08:45:40 2015
 
 from nplab import ArrayWithAttrs
 from nplab.utils.array_with_attrs import ensure_attrs
+import pint
 
-#define the prefixes here, with tuples containing 3 elements:
-#exponent, abbreviation (text), symbol (for graphs, etc. in laTeX/MathJax)
-prefixes = {
-                'peta': (15, 'P', 'P'),
-                'tera': (12, 'T', 'T'),
-                'giga': (9, 'G', 'G'),
-                'mega': (6, 'M', 'M'),
-                'kilo': (3, 'k', 'k'),
-#                '': (0, '', ''),
-                'deci': (-1, 'd', 'd'),
-                'centi': (-2, 'c', 'c'),
-                'milli': (-3, 'm', 'm'),
-                'micro': (-6, 'u', '\mu'),
-                'nano': (-9, 'n', 'n'),
-                'pico': (-12, 'p', 'p'),
-                'femto': (-15, 'f', 'f'),
-                'atto': (-18, 'a', 'a'),
-                }
-                
-# units are defined by abbreviation (text), symbol (for graphs etc.) and
-# optionally a base unit tuple of (coefficient, unit_string).
-units = {
-                'metre': ('m', 'm', None),
-                'gram': ('g', 'g', None),
-                'second': ('s', 's', None),
-                'Angstrom': ('A', 'A', (0.1, 'nanometre')),
-                'micron': ('um', '\mu m', (1, 'micrometre')),
-                'Ohm': ('Ohm', '\omega', None),
- #               '': ('', '', None),
-        }
+ureg = pint.UnitRegistry()
+
+def get_unit_string(obj, default=None, warn=False, fail=False):
+    """Return a string representation of an object's units.
+    
+    This function returns obj.attrs.get('units') with no processing, or it
+    converts the units of a Quantity object to a string and returns that.  The
+    output is suitable for saving to an HDF5 file."""
+    try:
+        return obj.attrs.get('units') #this works for things with attrs
+    except AttributeError:
+        try:
+            return str(obj.units) #this works for Quantities
+        except:
+            if warn:
+                print "Warning: no unit string found on " + str(obj)
+            if fail:
+                raise ValueError("No unit information was found on " + str(obj))
+            return default
+    
+def get_units(obj, default=None, warn=False):
+    """Return the units from an object as a pint Quantity.
+    
+    The object can be either an ArrayWithAttrs (i.e. obj.attrs.get('units') is
+    a string with the units) or a pint Quantity object.  In both cases, we
+    return a pint Quantity object.  If the input was a Quantity, the object
+    will have a magnitude of one, while if the input is an array it's possible
+    for the magnitude not to be one (this allows arrays to be saved in odd
+    units, like "100 nm" which can be useful if it's in camera pixels, for
+    example."""
+
+    try:
+        if isinstance(obj, ureg.Quantity):
+            return ureg.Quantity(1, obj.units) #if we have a Quantity, return its units
+        else:
+            unit_string = get_unit_string(obj) #look for a units attribute
+            return ureg(unit_string) #convert to a pint unit
+    except AttributeError as e:
+        if warn:
+            print "Warning: no units found on " + str(obj)
+        if default is not None:
+            return default
+        else:
+            raise e
         
 def array_with_units(obj, units):
     """Bundle an object as an ArrayWithAttrs having a "units" attribute."""
