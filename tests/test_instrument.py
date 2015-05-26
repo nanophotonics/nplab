@@ -5,14 +5,13 @@ Instrument Tests
 This uses some trivial dummy classes to test the auto-finding features of
 the instrument class.
 """
-import sys
-sys.path.append("../")
-sys.path.append("./")
+import pytest
 import os
 
 import nplab
 import nplab.datafile
 import nplab.instrument
+
 from nplab.instrument import Instrument
 
 class InstrumentA(Instrument):
@@ -27,20 +26,16 @@ class InstrumentB(Instrument):
         print "An instance of instrument B is being created"
         super(InstrumentB, self).__init__()
 
-if __name__ == '__main__':
-    test_ok = True
-
+def test_get_instances_empty():
     instruments = InstrumentA.get_instances()
     assert len(instruments)==0, "Spurious instrument returned"
 
-    try:
-        a = InstrumentA.get_instance(create=False)
-        test_ok = False
-    except:
-        print "There are still no As, as expected"
-    assert test_ok, "Got or created an A when we shouldn't have"
+def test_get_instance_empty():
+    with pytest.raises(IndexError):
+        a = InstrumentA.get_instance(create=False) #should fail
 
-
+def test_get_instances():
+    # create some instances and check we can retrieve them correctly
     a = InstrumentA.get_instance() #should create a valid instance
     a2 = InstrumentA.get_instance() #should return the same instance
 
@@ -58,12 +53,14 @@ if __name__ == '__main__':
 
     assert InstrumentB.get_instance() == b, "Second class didn't return the right instance."
 
-    print "Checking save functionality"
-    nplab.datafile.set_current("temp.h5",mode='w')
+def test_saving():
+    #test the auto-saving capabilities
+    a = InstrumentA.get_instance() #should create/get a valid instance
+    nplab.datafile.set_current("temp.h5",mode='w') #use a temporary h5py file
     for i in range(10):
         a.create_data_group('test',attrs={'creator':'instrumentA','serial':i})
     assert nplab.current_datafile()['InstrumentA/test_9'].attrs.get('serial')==9, "data saving didn't work as expected"
     f = nplab.current_datafile()
-    f.file.close()
+    f.close()
     os.remove('temp.h5')
 

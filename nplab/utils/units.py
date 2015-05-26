@@ -21,7 +21,7 @@ def get_unit_string(obj, default=None, warn=False, fail=False):
     
     This function returns obj.attrs.get('units') with no processing, or it
     converts the units of a Quantity object to a string and returns that.  The
-    output is suitable for saving to an HDF5 file."""
+    output should be suitable for saving to an HDF5 file."""
     try:
         return obj.attrs.get('units') #this works for things with attrs
     except AttributeError:
@@ -34,6 +34,16 @@ def get_unit_string(obj, default=None, warn=False, fail=False):
                 raise ValueError("No unit information was found on " + str(obj))
             return default
 
+def unit_to_string(quantity):
+    """Converts a quantity (used for units) to a string for saving or display.
+    
+    The only thing this does over and above str(quantity) is stripping the
+    initial "1 " where the magnitude is unity.
+    """
+    if quantity.magnitude == 1:
+        return str(quantity.units)
+    else:
+        return str(quantity)
     
 def get_units(obj, default=None, warn=False):
     """Return the units from an object as a pint Quantity.
@@ -50,15 +60,15 @@ def get_units(obj, default=None, warn=False):
         if isinstance(obj, ureg.Quantity):
             return ureg.Quantity(1, obj.units) #if we have a Quantity, return its units
         else:
-            unit_string = get_unit_string(obj) #look for a units attribute
+            unit_string = get_unit_string(obj, fail=True) #look for a units attribute
             return ureg(unit_string) #convert to a pint unit
-    except AttributeError as e:
+    except:
         if warn:
             print "Warning: no units found on " + str(obj)
         if default is not None:
             return ensure_unit(default)
         else:
-            raise e
+            raise ValueError("No unit information could be found on " + str(obj) + " (it should either have an attrs dict with a 'units' attribute, or be a Quantity).")
         
         
 def array_with_units(obj, units):
@@ -80,13 +90,14 @@ def ensure_unit(obj):
 
 def convert_quantity(obj, dest_units, default=None, warn=True, return_quantity=False):
     """Return a copy of obj in the required units."""
-    if ensure_unit(dest_units)==get_units(obj):
+    if ensure_unit(dest_units)==get_units(obj, default=default, warn=False):
         return obj #make sure objects are returned unchanged if units match
     if isinstance(obj, ureg.Quantity):
         q = obj
     else:
         #convert the object to a Quantity
-        q = obj * get_units(obj, default=default, warn=warn)
+        fu = get_units(obj, default=default, warn=warn)
+        q = ureg.Quantity(obj, fu.units)/fu.magnitude
     du = ensure_unit(dest_units)
     rq = q.to(du.units) / du.magnitude
     if return_quantity:
