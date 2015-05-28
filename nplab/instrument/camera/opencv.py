@@ -43,6 +43,8 @@ import numpy as np
 from nplab.instrument.camera import Camera, CameraParameter, ImageClickTool
 
 class OpenCVCameraParameter(CameraParameter):
+    value = Property(Float(np.NaN))
+    name = String()
     def __init__(self, parent, parameter_name):
         self._cap = parent.cap
         self.name = parameter_name.title().replace('_',' ')
