@@ -9,4 +9,3 @@ if __name__ == '__main__':
     cam.live_view = False
     cam.cap.release()
 
-1
