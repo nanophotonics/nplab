@@ -66,7 +66,7 @@ class Instrument(HasTraits):
         return df.create_group(name, auto_increment=True, *args, **kwargs)
 
     @classmethod
-    def create_dataset(cls, name, *args, **kwargs):
+    def create_dataset(cls, name, flush=True, *args, **kwargs):
         """Store a reading in a dataset (or make a new dataset to fill later).
 
         :param name: should be a noun describing what the reading is (image,
@@ -77,5 +77,7 @@ class Instrument(HasTraits):
         if "%d" not in name:
             name = name + '_%d'
         df = cls.get_root_data_folder()
-        return df.create_dataset(name, *args, **kwargs)
-
+        dset = df.create_dataset(name, *args, **kwargs)
+        if 'data' in kwargs and flush:
+            dset.file.flush() #make sure it's in the file if we wrote data
+        return dset
