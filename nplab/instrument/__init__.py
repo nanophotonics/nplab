@@ -60,7 +60,7 @@ class Instrument(HasTraits):
         :param name: should be a noun describing what the reading is (image,
         spectrum, etc.)
         """
-        if %d not in name:
+        if "%d" not in name:
             name = name + '_%d'
         df = cls.get_root_data_folder()
         return df.create_group(name, auto_increment=True, *args, **kwargs)
