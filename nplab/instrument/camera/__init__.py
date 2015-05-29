@@ -182,7 +182,7 @@ class Camera(Instrument, HasTraits):
         except:
             try:
                 assert frame.shape[2]==3
-                return np.mean(frame,axis=2)
+                return np.mean(frame, axis=2, dtype=frame.dtype)
             except:
                 return None
                 
