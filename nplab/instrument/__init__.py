@@ -74,7 +74,7 @@ class Instrument(HasTraits):
 
         Other arguments are passed to `create_dataset`.
         """
-        if %d not in name:
+        if "%d" not in name:
             name = name + '_%d'
         df = cls.get_root_data_folder()
         return df.create_dataset(name, *args, **kwargs)
