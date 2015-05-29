@@ -8,7 +8,7 @@ classes.
 
 from nplab.utils.thread_utils import locked_action_decorator, background_action_decorator
 import nplab
-from traits.api import HasTraits
+from traits.api import HasTraits, String
 
 
 class Instrument(HasTraits):
@@ -17,6 +17,7 @@ class Instrument(HasTraits):
     This class takes care of management of instruments, saving data, etc.
     """
     __instances = []
+    description = String #description of a dataset
 
     def __init__(self):
         """Create an instrument object."""
@@ -59,8 +60,10 @@ class Instrument(HasTraits):
         :param name: should be a noun describing what the reading is (image,
         spectrum, etc.)
         """
+        if %d not in name:
+            name = name + '_%d'
         df = cls.get_root_data_folder()
-        return df.create_group(name+'_%d', auto_increment=True, *args, **kwargs)
+        return df.create_group(name, auto_increment=True, *args, **kwargs)
 
     @classmethod
     def create_dataset(cls, name, *args, **kwargs):
@@ -71,6 +74,8 @@ class Instrument(HasTraits):
 
         Other arguments are passed to `create_dataset`.
         """
+        if %d not in name:
+            name = name + '_%d'
         df = cls.get_root_data_folder()
-        return df.create_dataset(name+'_%d', *args, **kwargs)
+        return df.create_dataset(name, *args, **kwargs)
 
