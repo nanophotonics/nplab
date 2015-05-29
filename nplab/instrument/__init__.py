@@ -18,6 +18,7 @@ class Instrument(HasTraits):
     This class takes care of management of instruments, saving data, etc.
     """
     __instances = None
+    description = String
 
     def __init__(self):
         """Create an instrument object."""
