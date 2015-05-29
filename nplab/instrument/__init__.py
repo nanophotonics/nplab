@@ -8,7 +8,7 @@ classes.
 
 from nplab.utils.thread_utils import locked_action_decorator, background_action_decorator
 import nplab
-from traits.api import HasTraits
+from traits.api import HasTraits, String
 
 from weakref import WeakSet
 
@@ -66,11 +66,13 @@ class Instrument(HasTraits):
         :param name: should be a noun describing what the reading is (image,
         spectrum, etc.)
         """
+        if "%d" not in name:
+            name = name + '_%d'
         df = cls.get_root_data_folder()
-        return df.create_group(name+'_%d', auto_increment=True, *args, **kwargs)
+        return df.create_group(name, auto_increment=True, *args, **kwargs)
 
     @classmethod
-    def create_dataset(cls, name, *args, **kwargs):
+    def create_dataset(cls, name, flush=True, *args, **kwargs):
         """Store a reading in a dataset (or make a new dataset to fill later).
 
         :param name: should be a noun describing what the reading is (image,
@@ -78,9 +80,14 @@ class Instrument(HasTraits):
 
         Other arguments are passed to `create_dataset`.
         """
+        if "%d" not in name:
+            name = name + '_%d'
         df = cls.get_root_data_folder()
-        return df.create_dataset(name+'_%d', *args, **kwargs)
-        
+        dset = df.create_dataset(name, *args, **kwargs)
+        if 'data' in kwargs and flush:
+            dset.file.flush() #make sure it's in the file if we wrote data
+        return dset
+
     def show_gui(self, blocking=False):
         """Display a GUI window for the item of equipment.
         
@@ -95,4 +102,3 @@ class Instrument(HasTraits):
                 self.edit_traits()
         except AttributeError:
             raise NotImplementedError("It looks like the show_gui method hasn't been subclassed, and the instrument is not using traitsui.")
-            

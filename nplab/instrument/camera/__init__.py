@@ -66,15 +66,18 @@ class Camera(Instrument, HasTraits):
     latest_frame = traits.trait_numeric.Array(dtype=np.uint8,shape=(None, None, 3))
     image_plot = Instance(Plot)
     take_snapshot = Button
+    save_snapshot = Button
+    edit_camera_properties = Button
     live_view = Bool
     parameters = traits.trait_types.List(trait=Instance(CameraParameter))
     filter_function = None
     
-    traits_view = View(VGroup(
+    old_traits_view = View(VGroup(
                     Item(name="image_plot",editor=ComponentEditor(),show_label=False,springy=True),
                     HGroup(
                         VGroup(
                             Item(name="take_snapshot",show_label=False),
+                            Item(name="save_snapshot",show_label=False),
                             HGroup(Item(name="live_view")), #the hgroup is a trick to make the column narrower
                         springy=False),
                         Item(name="parameters",show_label=False,springy=True,
@@ -83,7 +86,32 @@ class Camera(Instrument, HasTraits):
                                   ObjectColumn(name="value")])),
                     springy=True),
                 layout="split"), kind="live",resizable=True,width=500,height=600,title="Camera")
-    
+                
+    traits_view = View(VGroup(
+                    Item(name="image_plot",editor=ComponentEditor(),show_label=False,springy=True),
+                    VGroup(
+                        HGroup(
+                            Item(name="live_view"),
+                            Item(name="take_snapshot",show_label=False),
+                            Item(name="edit_camera_properties",show_label=False),
+                        ),
+                        HGroup(
+                            Item(name="description"),
+                            Item(name="save_snapshot",show_label=False),
+                        ), 
+                        springy=False,
+                    ),
+                    layout="split"), kind="live",resizable=True,width=500,height=600,title="Camera")
+                
+    properties_view = View(VGroup( #used to edit camera properties
+                        Item(name="parameters",show_label=False,springy=True,
+                         editor=traitsui.api.TableEditor(columns=
+                             [ObjectColumn(name="name", editable=False),
+                              ObjectColumn(name="value")])),
+                        ),
+                        kind="live",resizable=True,width=500,height=600,title="Camera Properties"
+                    )
+                    
     def __init__(self):
         super(Camera,self).__init__()
         self._setup_plot()
@@ -114,6 +142,22 @@ class Camera(Instrument, HasTraits):
             return self.latest_frame
         else:
             print "Failed to get an image from the camera"
+    def _save_snapshot_fired(self):
+        d=self.create_dataset('snapshot', data=self.update_latest_frame(), attrs=self.get_metadata())
+        d.attrs.create('description',self.description)
+    def get_metadata(self):
+        """Return a dictionary of camera settings."""
+        ret = dict()
+        for p in self.parameters:
+            try:
+                ret[p.name]=p.value
+            except:
+                pass #if there was a problem getting metadata, ignore it.
+        return ret
+    
+    def _edit_camera_properties_fired(self):
+        self.edit_traits(view="properties_view")
+        
     def raw_snapshot(self):
         """Take a snapshot and return it.  No filtering or conversion."""
         return True, np.zeros((640,480,3),dtype=np.uint8)

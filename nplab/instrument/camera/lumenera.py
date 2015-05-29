@@ -66,33 +66,44 @@ class LumeneraCameraParameter(CameraParameter):
             raise AttributeError("%s is not a valid capture property, try CameraParameter.list_names()")
             
     def _get_value(self):
-        return self.parent.cam.GetProperty(self._parameter_name)
+        return self.parent.cam.GetProperty(self._parameter_name)[0]
         
     def _set_value(self, value):
         return self.parent.cam.SetProperty(self._parameter_name, value)
         
-           
 class LumeneraCamera(Camera):
     last_frame_time = -1
     fps = -1
     latest_frame = traits.trait_numeric.Array(dtype=np.uint8,shape=(None, None, 3))
 
     edit_properties = Button
-    edit_video_properties = Button    
+    edit_video_properties = Button
+    edit_camera_properties = Button
+    video_priority = Bool(True)
+    exposure = Property(Float)
+    gain = Property(Float)
     
     traits_view = View(VGroup(
                 Item(name="image_plot",editor=ComponentEditor(),show_label=False,springy=True),
                 HGroup(
                     VGroup(
-                        Item(name="take_snapshot",show_label=False),
-                        Item(name="edit_properties",show_label=False),
-                        Item(name="edit_video_properties",show_label=False),
-                        HGroup(Item(name="live_view")), #the hgroup is a trick to make the column narrower
+                        VGroup(
+                            Item(name="exposure"),
+                            Item(name="gain"),
+                            Item(name="live_view")
+                            ), #the vgroup is a trick to make the column narrower
+                        HGroup(
+                            Item(name="edit_properties",show_label=False),
+                            Item(name="edit_video_properties",show_label=False),
+                            Item(name="edit_camera_properties",show_label=False),
+                        ),
                     springy=False),
-                    Item(name="parameters",show_label=False,springy=True,
-                         editor=traitsui.api.TableEditor(columns=
-                             [ObjectColumn(name="name", editable=False),
-                              ObjectColumn(name="value")])),
+                    VGroup(
+                        Item(name="take_snapshot",show_label=False),
+                        HGroup(Item(name="description")),
+                        Item(name="save_snapshot",show_label=False),
+                        HGroup(Item(name="video_priority")),
+                    springy=False),
                 springy=True),
             layout="split"), kind="live",resizable=True,width=500,height=600,title="Camera")
     def __init__(self,camera_number=1):
@@ -101,19 +112,19 @@ class LumeneraCamera(Camera):
         
         super(LumeneraCamera,self).__init__() #NB this comes after setting up the hardware
      
-        
     def close(self):
         """Stop communication with the camera and allow it to be re-used."""
         super(LumeneraCamera, self).close()
         self.cam.CameraClose()
         
-    def raw_snapshot(self, suppress_errors = False, video_priority = True):
+    def raw_snapshot(self, suppress_errors = False, video_priority = None):
         """Take a snapshot and return it.  Bypass filters etc.
         
         If video_priority is specified, don't interrupt video streaming and
         just return the latest frame.  If it's set to false, stop the video
         stream, take a snapshot, and re-start the video stream."""
-        
+        if video_priority is None:
+            video_priority = self.video_priority
         if self._cameraIsStreaming and video_priority:
             #TODO add logic that waits for the next frame
             return True, self.latest_frame #if we're streaming video, just use the latest frame
@@ -165,11 +176,51 @@ class LumeneraCamera(Camera):
     
     def initialise_parameters(self):
         self.parameters = [LumeneraCameraParameter(self,n) for n in self.parameter_names()]
+        
+    def get_metadata(self):
+        """Return a dictionary of camera settings and parameters."""
+        ret = super(LumeneraCamera, self).get_metadata()
+        
+        camid=self.cam.GetCameraId()
+        version = self.cam.QueryVersion()
+        interface = self.cam.QueryExternInterface()
+        frame, fps = self.cam.GetFormat()
+        depth = self.cam.GetTruePixelDepth()
+        
+        pixformat = 'raw8 raw16 RGB24 YUV422 Count Filter RGBA32 RGB48'.split()
+        ret['camera_id'] = camid
+        ret['camera_model'] = lucam.CAMERA_MODEL.get(camid, "Unknown")
+        ret['serial_number'] = version.serialnumber
+        ret['firmware_version'] = lucam.print_version(version.firmware)
+        ret['FPGA_version'] = lucam.print_version(version.fpga)
+        ret['API_version'] = lucam.print_version(version.api)
+        ret['driver_version'] = lucam.print_version(version.driver)
+        ret['Interface'] = lucam.Lucam.EXTERN_INTERFACE[interface]
+        ret['image_offset'] = (frame.xOffset, frame.yOffset)
+        ret['image_size'] = (frame.width // frame.binningX,
+                                     frame.height // frame.binningY)
+        if frame.flagsX:
+            ret['binning'] = (frame.binningX, frame.binningY)
+        else:
+            ret['subsampling'] = (frame.subSampleX, frame.subSampleY)
+        ret['pixel_format'] = pixformat[frame.pixelFormat]
+        ret['bit_depth'] = (depth if frame.pixelFormat else 8)
+        ret['frame_rate'] = fps
+        return ret
     
     def _edit_properties_fired(self):
         self.cam.DisplayPropertyPage(None)
     def _edit_video_properties_fired(self):
         self.cam.DisplayVideoFormatPage(None)
+        
+    def _get_exposure(self):
+        return self.cam.GetProperty('exposure')[0]
+    def _set_exposure(self, exp):
+        self.cam.SetProperty('exposure', exp)
+    def _get_gain(self):
+        return self.cam.GetProperty('gain')[0]
+    def _set_gain(self, exp):
+        self.cam.SetProperty('gain', exp)
     
     def _live_view_changed(self):
         """Turn live view on and off"""

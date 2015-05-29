@@ -146,9 +146,15 @@ class DataFile(Group):
 
 _current_datafile = None
 
-def current(create_if_none=True):
+def current(create_if_none=True, create_if_closed=True):
     """Return the current data file, creating one if it does not exist."""
     global _current_datafile
+    if create_if_closed: #try to access the file - if it's closed, it will fail
+        try:
+            _current_datafile.keys()
+        except: #if the file is closed, set it to none so we make a new one.
+            _current_datafile = None
+            
     if _current_datafile is None and create_if_none:
         print "No current data file, attempting to create..."
         try: #we try to pop up a Qt file dialog

@@ -8,5 +8,3 @@ if __name__ == '__main__':
     cam.configure_traits()
     cam.live_view = False
     cam.close()
-
-1
