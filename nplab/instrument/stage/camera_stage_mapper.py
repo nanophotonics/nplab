@@ -32,6 +32,7 @@ class CameraStageMapper(HasTraits):
     autofocus_step = Range(0., 10., 0.5)
     frames_to_discard = Int(1)
     settling_time = Float(0.2)
+    disable_live_view = True
     traits_view = View(
                     VGroup(
                         Item(name="calibration_distance"),
@@ -164,7 +165,8 @@ class CameraStageMapper(HasTraits):
 #        self.calibration_template = template
 #        self.calibration_images = []
         camera_live_view = self.camera.live_view
-        self.camera.live_view = False
+        if self.disable_live_view:
+            self.camera.live_view = False
         for p in pos:
             self.move_to_sample_position(here + p)
             self.flush_camera_and_wait()
