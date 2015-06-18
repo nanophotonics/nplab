@@ -1,12 +1,10 @@
 """
 Test for the experiment module
 ==============================
-"""
 
-import sys
-sys.path.append("../")
-sys.path.append("./")
-import os
+unfortunately, this needs a GUI to test it - so it's not compatible with
+automated unit testing (yet...)
+"""
 
 import nplab
 import nplab.experiment, nplab.instrument

@@ -14,18 +14,22 @@ import h5py
 import os
 import os.path
 import datetime
-from nplab.utils.gui import qt, qtgui
-
-import nplab.utils.gui
+import re
 
 def attributes_from_dict(group_or_dataset, dict_of_attributes):
     """Update the metadata of an HDF5 object with a dictionary."""
     attrs = group_or_dataset.attrs
     for key, value in dict_of_attributes.iteritems():
-        if key in attrs.keys():
-            attrs.modify(key, value)
-        else:
-            attrs.create(key, value)
+	if value is not None:
+	   if key in attrs.keys():
+               attrs.modify(key, value)
+     	   else:
+               attrs.create(key, value)
+
+def h5_item_number(group_or_dataset):
+    """Returns the number at the end of a group/dataset name, or None."""
+    m = re.search(r"(\d)+$", group_or_dataset.name) #match numbers at the end of the name
+    return int(m.groups()[0]) if m else None
 
 class Group(h5py.Group):
     """HDF5 Group, a collection of datasets and subgroups.
@@ -53,8 +57,21 @@ class Group(h5py.Group):
             while (name % n) in self:
                 n += 1 #increase the number until the name's unique
             return (name % n)
+    def numbered_items(self,name):
+        """Get a list of datasets/groups that have a given name + number, 
+        sorted by the number appended to the end.
+        
+        This function is intended to return items saved with 
+        auto_increment=True, in the order they were added (by default they
+        come in alphabetical order, so 10 comes before 2).  `name` is the 
+        name passed in without the _0 suffix.
+        """
+        items = [v for k, v in self.iteritems() 
+                        if k.startswith(name)   #only items that start with `name`
+                        and re.match(r"_*(\d+)$",k[len(name):])] #and end with numbers
+        return sorted(items, key=h5_item_number)
 
-    def create_group(self, name, attrs=None, auto_increment=True):
+    def create_group(self, name, attrs=None, auto_increment=True, timestamp=True):
         """Create a new group, ensuring we don't overwrite old ones.
 
         A new group is created within this group, with the specified name.
@@ -70,6 +87,8 @@ class Group(h5py.Group):
         if auto_increment:
             name = self.find_unique_name(name)
         g = super(Group, self).create_group(name)
+	if timestamp:
+	    g.attrs.create('creation_timestamp',datetime.datetime.now().isoformat())
         if attrs is not None:
             attributes_from_dict(g, attrs)
         return Group(g.id) #make sure it's wrapped!
@@ -77,11 +96,13 @@ class Group(h5py.Group):
         """Return a subgroup, creating it if it does not exist."""
         return Group(super(Group, self).require_group(name).id) #wrap the returned group
 
-    def create_dataset(self, name, auto_increment=True, shape=None,dtype=None,data=None,attrs=None,*args,**kwargs):
+    def create_dataset(self, name, auto_increment=True, shape=None,dtype=None,data=None,attrs=None,timestamp=True,*args,**kwargs):
         """Create a new dataset, optionally with an auto-incrementing name."""
         if auto_increment:
             name = self.find_unique_name(name)
         dset = super(Group, self).create_dataset(name, shape, dtype, data, *args, **kwargs)
+	if timestamp:
+	    dset.attrs.create('creation_timestamp',datetime.datetime.now().isoformat())
         if attrs is not None:
             attributes_from_dict(dset, attrs) #quickly set the attributes
         return dset
@@ -114,6 +135,10 @@ class DataFile(Group):
         """
         f = h5py.File(name, mode, *args, **kwargs) #open the file
         super(DataFile, self).__init__(f.id) #this is actually just an h5py group object!
+    def flush(self):
+	self.file.flush()
+    def close(self):
+	self.file.close()
     def make_current(self):
         """Set this as the default location for all new data."""
         global _current_datafile
@@ -121,12 +146,20 @@ class DataFile(Group):
 
 _current_datafile = None
 
-def current(create_if_none=True):
+def current(create_if_none=True, create_if_closed=True):
     """Return the current data file, creating one if it does not exist."""
     global _current_datafile
+    if create_if_closed: #try to access the file - if it's closed, it will fail
+        try:
+            _current_datafile.keys()
+        except: #if the file is closed, set it to none so we make a new one.
+            _current_datafile = None
+            
     if _current_datafile is None and create_if_none:
         print "No current data file, attempting to create..."
         try: #we try to pop up a Qt file dialog
+            import nplab.utils.gui
+            from nplab.utils.gui import qtgui
             app = nplab.utils.gui.get_qt_app() #ensure Qt is running
             fname = qtgui.QFileDialog.getSaveFileName(
                                 caption = "Select Data File",
@@ -137,6 +170,7 @@ def current(create_if_none=True):
             if not isinstance(fname, basestring):
                 fname = fname[0] #work around version-dependent Qt behaviour :(
             if len(fname) > 0:
+                print fname
                 if not "." in fname:
                     fname += ".h5"
                 set_current(fname, mode='a')
@@ -161,5 +195,12 @@ def set_current(datafile, **kwargs):
         _current_datafile = datafile
     else:
         print "opening file: ", datafile
-        _current_datafile = DataFile(datafile, **kwargs) #open a new datafile
+        try:
+            _current_datafile = DataFile(datafile, **kwargs) #open a new datafile
+        except Exception as e:
+            print "problem opening file:"
+            print e
+            print "trying with mode=r+"
+            kwargs['mode'] = 'r+' #dirty hack to work around mode=a not working
+            _current_datafile = DataFile(datafile, **kwargs)
 

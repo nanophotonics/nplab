@@ -56,7 +56,7 @@ class GridScanner(HasTraits):
     grid_scanner objects comprise of a scanning stage and a scan function.
     The movement function should be supplied with the required axes and a
     move command. The scan function can be anything but must have the grid
-    indicies as its arguments.
+    indices as its arguments.
     It is recommended to use the init_scan, open_scan, close_scan and
     cleanup methods. Open_scan is called first and it typically used to
     open communications to equipment. Init_scan is called after and is
@@ -100,6 +100,8 @@ class GridScanner(HasTraits):
     step_time = Float()
     scan_length_estimate = Property(depends_on=['grid_shape', 'step_time'])
 
+    stage_units = Float(1)
+
     traits_view = View(grid_scanner_group())
 
     def __init__(self):
@@ -138,10 +140,10 @@ class GridScanner(HasTraits):
         self._init_grid(self.size, self.step, self.init)
 
     def move(self, ax, position):
-        self.scanner.move(position, axis=ax)
+        self.scanner.move_axis(position/self.stage_units, axis=ax)
 
     def get_position(self, ax):
-        return self.scanner.get_position(axis=ax)
+        return self.scanner.get_position(axis=ax)*self.stage_units
 
     def scan_function(self, *indices):
         raise NotImplementedError("You must subclass scan_function to implement it for your own experiment")
@@ -158,6 +160,14 @@ class GridScanner(HasTraits):
 
     def cleanup(self):
         #raise NotImplementedError("You must subclass cleanup to implement it for your own experiment")
+        pass
+    
+    def update_drift_compensation(self):
+        """Update the current drift compensation.
+        
+        If you have a nice way of compensating for drift, you should use this 
+        function to do it - it's called each time the outermost scan axis 
+        updates."""
         pass
     
     # Traits methods
@@ -193,7 +203,7 @@ class GridScanner(HasTraits):
 
     def set_init_to_current_position(self):
         for i, ax in enumerate(self.axes):
-            self.init[i] = self.scanner.get_position(ax)
+            self.init[i] = self.scanner.get_position(ax)*self.stage_units
         self.init = self.init
 
     def _get_scan_length_estimate(self):
@@ -224,9 +234,9 @@ class AcquisitionThread(Thread):
         self.step_times = np.zeros(20)
         self.step_times[:] = np.nan
         self.total_points = reduce(operator.mul, self.grid_scanner.grid_shape, 1)  # could use lambda x,y: x*y for func
-        self.f = h5py.File(os.path.join(os.path.expanduser('~'), 'Desktop', 'timing.hdf5'), 'w')
-        self.s = self.f.create_dataset('timing', shape=self.grid_scanner.grid_shape + (2,), dtype=np.float64,
-                                       compression="gzip")
+#        self.f = h5py.File(os.path.join(os.path.expanduser('~'), 'Desktop', 'timing.hdf5'), 'w')
+#        self.s = self.f.create_dataset('timing', shape=self.grid_scanner.grid_shape + (2,), dtype=np.float64,
+#                                       compression="gzip")
         self.current_step = 1
 
     def run(self):
@@ -238,10 +248,12 @@ class AcquisitionThread(Thread):
         for i in range(len(scan_axes)):
             pnts.append(range(scan_axes[i].size))
 
+        self.grid_scanner.indices = (-1,) * len(selected_axes)
         st0 = time()
         for k in pnts[-1]:  # outer most axis
             if self.abort_requested:
                 break
+            self.grid_scanner.update_drift_compensation()
             self.grid_scanner._status = 'Scanning layer {0:d}/{1:d}'.format(k + 1, len(pnts[-1]))
             self.grid_scanner.move(selected_axes[-1], scan_axes[-1][k])
             pnts[-2] = pnts[-2][::-1]  # reverse which way is iterated over each time
@@ -279,15 +291,15 @@ class AcquisitionThread(Thread):
             self.grid_scanner.move(selected_axes[i], self.grid_scanner.init[i])
         self.grid_scanner.analyse_scan()
         self.grid_scanner.close_scan()
-        self.f.close()
+#        self.f.close()
 
     def update_time(self, *times):
         indices = self.grid_scanner.indices
         t0, t1, t2 = times
         dt1 = t1 - t0
         dt2 = t2 - t1
-        self.s[indices + (0,)] = 1e3 * dt1
-        self.s[indices + (1,)] = 1e3 * dt2
+#        self.s[indices + (0,)] = 1e3 * dt1
+#        self.s[indices + (1,)] = 1e3 * dt2
         self.step_times[:-1] = self.step_times[1:]
         self.step_times[-1] = t2 - t0
 

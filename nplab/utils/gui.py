@@ -6,11 +6,14 @@ Various utility functions for GUI-related stuff.
 """
 
 import sip
-API_NAMES = ["QDate", "QDateTime", "QString", "QTextStream", "QTime", "QUrl", "QVariant"]
-API_VERSION = 2
-for name in API_NAMES:
-    sip.setapi(name, API_VERSION)
-
+try:
+    API_NAMES = ["QDate", "QDateTime", "QString", "QTextStream", "QTime", "QUrl", "QVariant"]
+    API_VERSION = 2
+    for name in API_NAMES:
+        sip.setapi(name, API_VERSION)
+except ValueError:
+    print "Problem setting Qt API"
+    
 from pyface.qt import QtCore as qt
 from pyface.qt import QtGui as qtgui
 from pyface.qt import QtCore, QtGui
