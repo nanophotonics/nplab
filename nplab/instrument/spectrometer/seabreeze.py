@@ -366,8 +366,8 @@ if __name__ == "__main__":
             s = OceanOpticsSpectrometer(0)
             print "spectrometer %s is a %s" % (s.serial_number, s.model_name)
             if s.model_name=="QE65000":
-                s.set_tec_temperature(-20)
-                print "temperature: %f C" % s.read_tec_temperature()
+                s.tec_temperature = -20
+                print "temperature: %f C" % s.tec_temperature
             s.integration_time=1e2
             s.read()
             s.configure_traits(**kwargs)
