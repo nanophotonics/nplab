@@ -12,6 +12,7 @@ from matplotlib.figure import Figure
 from nplab.ui.ui_tools import UiTools
 import h5py
 from multiprocessing.pool import ThreadPool
+from threading import Thread
 
 
 class Spectrometer(Instrument):
@@ -248,31 +249,30 @@ class SpectrometerDisplayUI(UiTools, display_base, display_widget):
                                                  self.figure_widget, FigureCanvas(self.fig))
 
         self.take_spectrum_button.clicked.connect(self.button_pressed)
-        self.live_button.clicked.connect(self.check_updating)
-
+        self.live_button.clicked.connect(self.start_live_feed)
         self.threshold.setValidator(QtGui.QDoubleValidator())
         self.threshold.textChanged.connect(self.check_state)
+        self._display_thread = Thread(target=self.update_display)
 
     def button_pressed(self, *args, **kwargs):
         sender = self.sender()
         if sender is self.take_spectrum_button:
-            read_processed_spectrum = self.spectrometer.read_processed_spectra \
-                if isinstance(self.spectrometer, Spectrometers) \
-                else self.spectrometer.read_processed_spectrum
-            spectrum = read_processed_spectrum()
-            self.update_display(spectrum)
+            if self._display_thread.is_alive():
+                print 'already acquiring'
+                return
+            self._display_thread = Thread(target=self.update_display)
+            self._display_thread.start()
         elif sender is self.save_button:
             save_spectrum = self.spectrometer.save_spectra \
                 if isinstance(self.spectrometer, Spectrometers) \
                 else self.spectrometer.save_spectrum
             save_spectrum()
 
-    def update_display(self, spectrum=None):
-        if spectrum is None:
-            read_processed_spectrum = self.spectrometer.read_processed_spectra \
-                if isinstance(self.spectrometer, Spectrometers) \
-                else self.spectrometer.read_processed_spectrum
-            spectrum = read_processed_spectrum()
+    def update_display(self):
+        read_processed_spectrum = self.spectrometer.read_processed_spectra \
+            if isinstance(self.spectrometer, Spectrometers) \
+            else self.spectrometer.read_processed_spectrum
+        spectrum = read_processed_spectrum()
         if self.enable_threshold.checkState() == QtCore.Qt.Checked:
             threshold = float(self.threshold.text())
             if isinstance(self.spectrometer, Spectrometers):
@@ -304,11 +304,23 @@ class SpectrometerDisplayUI(UiTools, display_base, display_widget):
                 ax.autoscale_view()
         self.fig.canvas.draw()
 
+    def continuously_update_display(self):
+        while self.live_button.isChecked():
+            self.update_display()
+
+    def start_live_feed(self):
+        if self.live_button.isChecked():
+            if self._display_thread.is_alive():
+                print 'already acquiring'
+                return
+            self._display_thread = Thread(target=self.continuously_update_display)
+            self._display_thread.start()
+
     def check_updating(self, period=0.2):
         if self.live_button.isChecked():
             print 'updating'
             self._timer = QtCore.QTimer()
-            self._timer.timeout.connect(self.update_display)
+            self._timer.timeout.connect(self.update_spectrum)
             self._timer.start(period)
         else:
             print 'stopped updating'
@@ -372,8 +384,19 @@ class SpectrometersUI(QtGui.QWidget):
 class DummySpectrometer(Spectrometer):
     def __init__(self):
         super(DummySpectrometer, self).__init__()
+        self._integration_time = 0
+
+    def get_integration_time(self):
+        return self._integration_time
+
+    def set_integration_time(self, value):
+        self._integration_time = value
+
+    integration_time = property(get_integration_time, set_integration_time)
 
     def read_spectrum(self):
+        from time import sleep
+        sleep(self.integration_time/1000.)
         return np.array([np.random.random() for wl in self.wavelengths])
 
 
@@ -383,6 +406,10 @@ if __name__ == '__main__':
     s1 = DummySpectrometer()
     s2 = DummySpectrometer()
     spectrometers = Spectrometers([s1, s2])
+    for spectrometer in spectrometers.spectrometers:
+        spectrometer.integration_time = 100
+    import timeit
+    print '{0:.2f} ms'.format(1000*timeit.Timer(spectrometers.read_spectra).timeit(number=10)/10)
     app = get_qt_app()
     ui = SpectrometersUI(spectrometers)
     ui.show()
