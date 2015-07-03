@@ -31,9 +31,7 @@ class HDF5Browser(base, widget):
         self.treeWidget.customContextMenuRequested.connect(self.context_menu)
         self.refreshButton.clicked.connect(self.refresh)
 
-        self.figureWidget = FigureCanvas(self.fig)
-        self.figureWidget.setParent(self)
-        self.horizontalLayout.addWidget(self.figureWidget)
+        self.figureWidget = self.renew_widget(self.figureWidget, FigureCanvas(self.fig))
 
     def __del__(self):
         pass#self.f.close()
