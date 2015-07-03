@@ -38,6 +38,8 @@ from nplab.instrument import Instrument
 from nplab.utils.gui import QtCore, QtGui
 from nplab.instrument.spectrometer import Spectrometer, SpectrometerControlUI, SpectrometerDisplayUI, SpectrometerUI
 import traitsui
+import os
+from PyQt4 import uic
 
 try:
     seabreeze = ctypes.cdll.seabreeze
@@ -119,6 +121,8 @@ class OceanOpticsSpectrometer(Spectrometer):
         super(OceanOpticsSpectrometer, self).__init__()
         self._minimum_integration_time = None
         self.integration_time = self.minimum_integration_time
+        self._tec_enabled = True
+        self.enable_tec = True
 
     def __del__(self):
         self._close()
@@ -215,10 +219,7 @@ class OceanOpticsSpectrometer(Spectrometer):
         return self._minimum_integration_time
 
     def get_tec_enable(self):
-        e = ctypes.c_int()
-        tec = seabreeze.seabreeze_get_tec_enable(self.index, byref(e))
-        check_error(e)
-        return bool(tec)
+        return self._tec_enabled
 
     def set_tec_enable(self, state=True):
         """
@@ -227,6 +228,7 @@ class OceanOpticsSpectrometer(Spectrometer):
         e = ctypes.c_int()
         seabreeze.seabreeze_set_tec_enable(self.index, byref(e), c_int(state))
         check_error(e)
+        self._tec_enabled = state
 
     enable_tec = property(get_tec_enable, set_tec_enable)
 
@@ -290,18 +292,22 @@ class OceanOpticsSpectrometer(Spectrometer):
             return SpectrometerUI(self)
 
 
-class OceanOpticsControlUI(SpectrometerControlUI):
+oo_base, oo_widget = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'ocean_optics_controls.ui'))
+
+#class OceanOpticsControlUI(SpectrometerControlUI, oo_base, oo_widget):
+class OceanOpticsControlUI(oo_base, SpectrometerControlUI, oo_widget):
     def __init__(self, spectrometer):
         assert isinstance(spectrometer, OceanOpticsSpectrometer), 'spectrometer must be an OceanOpticsSpectrometer'
         super(OceanOpticsControlUI, self).__init__(spectrometer)
+        #self.setupUi(self)
 
-        self.tec_temperature = QtGui.QLineEdit(self)
         self.tec_temperature.setValidator(QtGui.QDoubleValidator())
         self.tec_temperature.textChanged.connect(self.check_state)
         self.tec_temperature.textChanged.connect(self.update_param)
-        self.parameters_layout.addRow('TEC Temperature', self.tec_temperature)
-
         self.tec_temperature.setText(str(spectrometer.tec_temperature))
+
+        self.enable_tec.stateChanged.connect(self.update_tec)
+        self.enable_tec.setChecked(self.spectrometer.enable_tec)
 
     def update_param(self, *args, **kwargs):
         sender = self.sender()
@@ -315,6 +321,12 @@ class OceanOpticsControlUI(SpectrometerControlUI):
                 self.spectrometer.tec_temperature = float(args[0])
             except ValueError:
                 pass
+
+    def update_tec(self, state):
+        if state == QtCore.Qt.Checked:
+            self.spectrometer.enable_tec = True
+        elif state == QtCore.Qt.Unchecked:
+            self.spectrometer.enable_tec = False
 
 
 # example code:
