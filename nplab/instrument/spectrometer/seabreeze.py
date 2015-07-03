@@ -214,6 +214,22 @@ class OceanOpticsSpectrometer(Spectrometer):
             self._minimum_integration_time = min_time / 1000.
         return self._minimum_integration_time
 
+    def get_tec_enable(self):
+        e = ctypes.c_int()
+        tec = seabreeze.seabreeze_get_tec_enable(self.index, byref(e))
+        check_error(e)
+        return bool(tec)
+
+    def set_tec_enable(self, state=True):
+        """
+        Turn the cooling system on or off.
+        """
+        e = ctypes.c_int()
+        seabreeze.seabreeze_set_tec_enable(self.index, byref(e), c_int(state))
+        check_error(e)
+
+    enable_tec = property(get_tec_enable, set_tec_enable)
+
     def get_tec_temperature(self):
         """get current temperature"""
         e = ctypes.c_int()
@@ -225,25 +241,14 @@ class OceanOpticsSpectrometer(Spectrometer):
 
     def set_tec_temperature(self, temperature):
         """enable the cooling system and set the temperature"""
+        if not self.enable_tec:
+            self.enable_tec = True
         e = ctypes.c_int()
         seabreeze.seabreeze_set_tec_temperature(self.index, byref(e), c_double(temperature))
         seabreeze.seabreeze_set_tec_enable(self.index, byref(e), 1)
         check_error(e)
 
     tec_temperature = property(get_tec_temperature, set_tec_temperature)
-
-    def get_tec(self):
-        return 0
-
-    def set_tec(self, state=True):
-        """
-        Turn the cooling system on or off.
-        """
-        e = ctypes.c_int()
-        seabreeze.seabreeze_set_tec_enable(self.index, byref(e), int(state))
-        check_error(e)
-
-    tec = property(get_tec, set_tec)
 
     def read_wavelengths(self):
         """get an array of the wavelengths"""
