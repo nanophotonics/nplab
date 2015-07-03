@@ -148,6 +148,9 @@ class Spectrometers(Instrument):
     def read_processed_spectra(self):
         return self._pool.map(lambda s: s.read_processed_spectrum(), self.spectrometers)
 
+    def get_qt_ui(self):
+        return SpectrometersUI(self)
+
     def save_spectra(self, name, spectra=None, h5group=None, with_attrs={'background', 'reference', 'wavelengths'}):
         spectra = self.read_processed_spectra() if spectra is None else spectra
         for i,spectrum in enumerate(spectra):
