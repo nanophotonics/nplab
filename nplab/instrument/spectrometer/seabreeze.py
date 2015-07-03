@@ -10,7 +10,7 @@ I've not tested it with USB2000, though I believe it should work.
 IMPORTANT NOTE ON DRIVERS:
 Spectrometers will only show up in this module if they are associated with the
 SeaBreeze driver.  This must be done manually if you have previously used the
-OmniDriver package (this is what Igor uses with our XOP).  You can do this 
+OmniDriver package (this is what Igor uses with our XOP).  You can do this
 through Device Manager: find the spectrometer, right click and select "Update
 Driver...".  Select "search for a driver in a particular location" and then
 choose C:\Program Files\Ocean Optics\SeaBreeze\Drivers.  Once it installs, you
@@ -44,10 +44,10 @@ try:
 except WindowsError as e:  # if the DLL is missing, warn, either graphically or with an exception.
     explanation = """
 WARNING: could not link to the SeaBreeze DLL.
-    
-Make sure you have installed the SeaBreeze driver from the Ocean Optics 
-website (http://downloads.oceanoptics.com/OEM/), and that its version matches 
-your Python architecture (64 or 32 bit).  See the module help for more 
+
+Make sure you have installed the SeaBreeze driver from the Ocean Optics
+website (http://downloads.oceanoptics.com/OEM/), and that its version matches
+your Python architecture (64 or 32 bit).  See the module help for more
 information"""
     try:
         traitsui.message.error(explanation, "SeaBreeze Driver Missing", buttons=["OK"])
@@ -103,10 +103,10 @@ class OceanOpticsError(Exception):
         return "Code %d: %s." % (self.code, error_string(self.code))
 
 
-class OceanOpticsSpectrometer(Instrument, Spectrometer):
+class OceanOpticsSpectrometer(Spectrometer):
     """Class representing the Ocean Optics spectrometers, via the SeaBreeze library
-    
-    The constructor takes a single numeric argument, which is the index of the 
+
+    The constructor takes a single numeric argument, which is the index of the
     spectrometer you want, starting at 0.  It has traits, so you can call up a
     GUI to control the spectrometer with s.configure_traits."""
 
@@ -117,6 +117,8 @@ class OceanOpticsSpectrometer(Instrument, Spectrometer):
         self._isOpen = False
         self._open()
         super(OceanOpticsSpectrometer, self).__init__()
+        self._minimum_integration_time = None
+        self.integration_time = self.minimum_integration_time
 
     def __del__(self):
         self._close()
@@ -164,14 +166,6 @@ class OceanOpticsSpectrometer(Instrument, Spectrometer):
             self._serial_number = s.value
         return self._serial_number
 
-    def get_integration_time(self):
-        return 0
-
-    def set_integration_time(self, value):
-        print 'setting 0'
-
-    integration_time = property(get_integration_time, set_integration_time)
-
     @property
     def wavelengths(self):
         if self._wavelengths is None:
@@ -202,18 +196,23 @@ class OceanOpticsSpectrometer(Instrument, Spectrometer):
     def set_integration_time(self, milliseconds):
         """set the integration time"""
         e = ctypes.c_int()
-        if milliseconds * 1000 < self.minimum_integration_time():
-            raise ValueError("Cannot set integration time below %d microseconds" % self.minimum_integration_time())
+        if milliseconds < self.minimum_integration_time:
+            raise ValueError("Cannot set integration time below %d microseconds" % self.minimum_integration_time)
         seabreeze.seabreeze_set_integration_time(self.index, byref(e), c_ulong(int(milliseconds * 1000)))
         check_error(e)
         self._latest_integration_time = milliseconds
 
-    def get_minimum_integration_time(self):
+    integration_time = property(get_integration_time, set_integration_time)
+
+    @property
+    def minimum_integration_time(self):
         """minimum allowable value for integration time"""
-        e = ctypes.c_int()
-        mintime = seabreeze.seabreeze_get_minimum_integration_time_micros(self.index, byref(e))
-        check_error(e)
-        return mintime
+        if self._minimum_integration_time is None:
+            e = ctypes.c_int()
+            min_time = seabreeze.seabreeze_get_minimum_integration_time_micros(self.index, byref(e))
+            check_error(e)
+            self._minimum_integration_time = min_time / 1000.
+        return self._minimum_integration_time
 
     def get_tec_temperature(self):
         """get current temperature"""
@@ -279,6 +278,12 @@ class OceanOpticsSpectrometer(Instrument, Spectrometer):
             ['model_name', 'serial_number', 'integration_time', 'tec_temperature', 'reference', 'background',
              'wavelengths'])
 
+    def get_qt_ui(self, control_only=False):
+        if control_only:
+            return OceanOpticsControlUI(self)
+        else:
+            return SpectrometerUI(self)
+
 
 class OceanOpticsControlUI(SpectrometerControlUI):
     def __init__(self, spectrometer):
@@ -289,7 +294,9 @@ class OceanOpticsControlUI(SpectrometerControlUI):
         self.tec_temperature.setValidator(QtGui.QDoubleValidator())
         self.tec_temperature.textChanged.connect(self.check_state)
         self.tec_temperature.textChanged.connect(self.update_param)
-        self.parameters_layout.addWidget('TEC Temperature', self.tec_temperature)
+        self.parameters_layout.addRow('TEC Temperature', self.tec_temperature)
+
+        self.tec_temperature.setText(str(spectrometer.tec_temperature))
 
     def update_param(self, *args, **kwargs):
         sender = self.sender()
@@ -316,14 +323,13 @@ if __name__ == "__main__":
         print "Spectrometers connected:", list_spectrometers()
         print "%d spectrometers found" % N
 
-        spectrometers = [OceanOpticsSpectrometer(i) for i in N]
+        spectrometers = [OceanOpticsSpectrometer(i) for i in range(N)]
         spectrometers = Spectrometers(spectrometers)
-        for s in spectrometers:
+        for s in spectrometers.spectrometers:
             print "spectrometer %s is a %s" % (s.serial_number, s.model_name)
-            if s.model_name in ["QE65000", "QEPRO"]:
+            if s.model_name in ["QE65000", "QE-PRO"]:
                 s.set_tec_temperature = -20
-                print "temperature: %f C" % s.tec_temperature
-            s.integration_time = 1e2
+            #s.integration_time = 1e2
             s.read()
         app = get_qt_app()
         ui = spectrometers.get_qt_ui()

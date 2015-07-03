@@ -43,6 +43,7 @@ class Spectrometer(Instrument):
 
     def set_integration_time(self, value):
         print 'setting 0'
+
     integration_time = property(get_integration_time, set_integration_time)
 
     @property
@@ -97,6 +98,14 @@ class Spectrometer(Instrument):
     def read(self):
         return self.wavelengths, self.read_processed_spectrum()
 
+    def mask_spectrum(self, spectrum, threshold):
+        if self.reference is not None and self.background is not None:
+            reference = self.reference - self.background
+            mask = reference < reference.max() * threshold
+            return ma.array(spectrum, mask=mask)
+        else:
+            return spectrum
+
     def get_qt_ui(self, control_only=False):
         if control_only:
             return SpectrometerControlUI(self)
@@ -148,6 +157,9 @@ class Spectrometers(Instrument):
     def read_processed_spectra(self):
         return self._pool.map(lambda s: s.read_processed_spectrum(), self.spectrometers)
 
+    def mask_spectra(self, spectra, threshold):
+        return [spectrometer.mask_spectrum(spectrum, threshold) for (spectrometer, spectrum) in zip(self.spectrometers, spectra)]
+
     def get_qt_ui(self):
         return SpectrometersUI(self)
 
@@ -186,6 +198,8 @@ class SpectrometerControlUI(UiTools, controls_base, controls_widget):
 
         self.id_string.setText('{0} {1}'.format(self.spectrometer.model_name, self.spectrometer.serial_number))
         self.id_string.resize(self.id_string.sizeHint())
+
+        self.integration_time.setText(str(spectrometer.integration_time))
 
     def update_param(self, *args, **kwargs):
         sender = self.sender()
@@ -236,6 +250,9 @@ class SpectrometerDisplayUI(UiTools, display_base, display_widget):
         self.take_spectrum_button.clicked.connect(self.button_pressed)
         self.live_button.clicked.connect(self.check_updating)
 
+        self.threshold.setValidator(QtGui.QDoubleValidator())
+        self.threshold.textChanged.connect(self.check_state)
+
     def button_pressed(self, *args, **kwargs):
         sender = self.sender()
         if sender is self.take_spectrum_button:
@@ -256,6 +273,12 @@ class SpectrometerDisplayUI(UiTools, display_base, display_widget):
                 if isinstance(self.spectrometer, Spectrometers) \
                 else self.spectrometer.read_processed_spectrum
             spectrum = read_processed_spectrum()
+        if self.enable_threshold.checkState() == QtCore.Qt.Checked:
+            threshold = float(self.threshold.text())
+            if isinstance(self.spectrometer, Spectrometers):
+                spectrum = [spectrometer.mask_spectrum(s, threshold) for (spectrometer, s) in zip(self.spectrometer.spectrometers, spectrum)]
+            else:
+                spectrum = self.spectrometer.mask_spectrum(spectrum, threshold)
         if not self.fig.axes:
             if hasattr(spectrum, '__len__'):
                 ax = self.fig.add_subplot(111)
@@ -291,12 +314,6 @@ class SpectrometerDisplayUI(UiTools, display_base, display_widget):
             print 'stopped updating'
             self._timer.stop()
 
-    def get_masked_spectrum(self):
-        if len(self.reference) == len(self.wavelengths) and len(self.background) == len(self.wavelengths):
-            return ma.array(self.latest_spectrum, mask=(self.reference-self.background) < (self.reference-self.background).max()*self.reference_threshold)
-        else:
-            return self.latest_spectrum
-
 
 class SpectrometerUI(QtGui.QWidget):
     """
@@ -311,7 +328,7 @@ class SpectrometerUI(QtGui.QWidget):
 
     def _init_ui(self):
         self.setWindowTitle(self.spectrometer.__class__.__name__)
-        self.controls = SpectrometerControlUI(self.spectrometer)
+        self.controls = self.spectrometer.get_qt_ui(control_only=True)
         self.display = SpectrometerDisplayUI(self.spectrometer)
         layout = QtGui.QVBoxLayout()
         controls_layout = QtGui.QVBoxLayout()
@@ -342,7 +359,7 @@ class SpectrometersUI(QtGui.QWidget):
         controls_group.setLayout(self.controls_layout)
         self.controls = []
         for spectrometer in self.spectrometers.spectrometers:
-            control = SpectrometerControlUI(spectrometer)
+            control = spectrometer.get_qt_ui(control_only=True)
             self.controls_layout.addWidget(control)
             self.controls.append(control)
         self.display = SpectrometerDisplayUI(self.spectrometers)
