@@ -105,7 +105,7 @@ class OceanOpticsError(Exception):
         return "Code %d: %s." % (self.code, error_string(self.code))
 
 
-class OceanOpticsSpectrometer(Spectrometer):
+class OceanOpticsSpectrometer(Spectrometer, Instrument):
     """Class representing the Ocean Optics spectrometers, via the SeaBreeze library
 
     The constructor takes a single numeric argument, which is the index of the
@@ -148,8 +148,7 @@ class OceanOpticsSpectrometer(Spectrometer):
             check_error(e)
             self._isOpen = False
 
-    @property
-    def model_name(self):
+    def get_model_name(self):
         if self._model_name is None:
             N = 32  # make a buffer for the DLL to return a string into
             s = ctypes.create_string_buffer(N)
@@ -159,8 +158,9 @@ class OceanOpticsSpectrometer(Spectrometer):
             self._model_name = s.value
         return self._model_name
 
-    @property
-    def serial_number(self):
+    model_name = property(get_model_name)
+
+    def get_serial_number(self):
         if self._serial_number is None:
             N = 32  # make a buffer for the DLL to return a string into
             s = ctypes.create_string_buffer(N)
@@ -170,15 +170,7 @@ class OceanOpticsSpectrometer(Spectrometer):
             self._serial_number = s.value
         return self._serial_number
 
-    @property
-    def wavelengths(self):
-        if self._wavelengths is None:
-            self._wavelengths = np.arange(400, 1200, 1)
-        return self._wavelengths
-
-    def read_spectrum(self):
-        self.latest_raw_spectrum = np.zeros(0)
-        return self.latest_raw_spectrum
+    serial_number = property(get_serial_number)
 
     def get_usb_descriptor(self, id):
         """get the spectrometer's USB descriptor"""
@@ -208,8 +200,7 @@ class OceanOpticsSpectrometer(Spectrometer):
 
     integration_time = property(get_integration_time, set_integration_time)
 
-    @property
-    def minimum_integration_time(self):
+    def get_minimum_integration_time(self):
         """minimum allowable value for integration time"""
         if self._minimum_integration_time is None:
             e = ctypes.c_int()
@@ -217,6 +208,8 @@ class OceanOpticsSpectrometer(Spectrometer):
             check_error(e)
             self._minimum_integration_time = min_time / 1000.
         return self._minimum_integration_time
+
+    minimum_integration_time = property(get_minimum_integration_time)
 
     def get_tec_enable(self):
         return self._tec_enabled
@@ -263,11 +256,12 @@ class OceanOpticsSpectrometer(Spectrometer):
         check_error(e)
         return np.array(list(wavelengths_carray))
 
-    @property
-    def wavelengths(self):  # this function should only be called once, thanks to the @cached_property decorator
+    def get_wavelengths(self):  # this function should only be called once, thanks to the @cached_property decorator
         if self._wavelengths is None:
             self._wavelengths = self.read_wavelengths()
         return self._wavelengths
+
+    wavelengths = property(get_wavelengths)
 
     def read_spectrum(self):
         """get the current reading from the spectrometer's sensor"""
@@ -339,6 +333,7 @@ if __name__ == "__main__":
         N = len(list_spectrometers())
         print "Spectrometers connected:", list_spectrometers()
         print "%d spectrometers found" % N
+        assert N != 0, 'There are no Ocean Optics spectrometers attached (are you using the seabreeze drivers?)'
 
         spectrometers = [OceanOpticsSpectrometer(i) for i in range(N)]
         spectrometers = Spectrometers(spectrometers)
@@ -346,7 +341,6 @@ if __name__ == "__main__":
             print "spectrometer %s is a %s" % (s.serial_number, s.model_name)
             if s.model_name in ["QE65000", "QE-PRO"]:
                 s.set_tec_temperature = -20
-            #s.integration_time = 1e2
             s.read()
         app = get_qt_app()
         ui = spectrometers.get_qt_ui()
