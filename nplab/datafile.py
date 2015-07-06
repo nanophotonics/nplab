@@ -28,7 +28,7 @@ def attributes_from_dict(group_or_dataset, dict_of_attributes):
 
 def h5_item_number(group_or_dataset):
     """Returns the number at the end of a group/dataset name, or None."""
-    m = re.search(r"(\d)+$", group_or_dataset.name) #match numbers at the end of the name
+    m = re.search(r"(\d+)$", group_or_dataset.name) #match numbers at the end of the name
     return int(m.groups()[0]) if m else None
 
 class Group(h5py.Group):
