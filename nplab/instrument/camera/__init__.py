@@ -18,6 +18,9 @@ import threading
 import numpy as np
 import enable
 import traceback
+import tkinter as tk
+from tkinter import filedialog
+from PIL import Image
 
 from nplab.instrument import Instrument
 
@@ -67,6 +70,7 @@ class Camera(Instrument, HasTraits):
     image_plot = Instance(Plot)
     take_snapshot = Button
     save_snapshot = Button
+    save_jpg = Button
     edit_camera_properties = Button
     live_view = Bool
     parameters = traits.trait_types.List(trait=Instance(CameraParameter))
@@ -98,6 +102,7 @@ class Camera(Instrument, HasTraits):
                         HGroup(
                             Item(name="description"),
                             Item(name="save_snapshot",show_label=False),
+                            Item(name="save_jpg",show_label=False),
                         ), 
                         springy=False,
                     ),
@@ -145,6 +150,15 @@ class Camera(Instrument, HasTraits):
     def _save_snapshot_fired(self):
         d=self.create_dataset('snapshot', data=self.update_latest_frame(), attrs=self.get_metadata())
         d.attrs.create('description',self.description)
+        
+    def _save_jpg_fired(self):
+        cur_img = self.update_latest_frame()
+        root = tk.Tk()
+        root.withdraw()
+        file_path = filedialog.askopenfilename()
+        j = Image.fromarray(cur_img)
+        j.save(file_path)
+        
     def get_metadata(self):
         """Return a dictionary of camera settings."""
         ret = dict()
