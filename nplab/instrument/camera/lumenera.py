@@ -102,6 +102,7 @@ class LumeneraCamera(Camera):
                         Item(name="take_snapshot",show_label=False),
                         HGroup(Item(name="description")),
                         Item(name="save_snapshot",show_label=False),
+                        Item(name="save_jpg_snapshot",show_label=False),
                         HGroup(Item(name="video_priority")),
                     springy=False),
                 springy=True),

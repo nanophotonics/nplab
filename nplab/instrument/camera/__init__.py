@@ -18,6 +18,10 @@ import threading
 import numpy as np
 import enable
 import traceback
+import os
+import datetime
+from PyQt4 import QtGui
+from PIL import Image
 
 from nplab.instrument import Instrument
 
@@ -66,6 +70,7 @@ class Camera(Instrument, HasTraits):
     latest_frame = traits.trait_numeric.Array(dtype=np.uint8,shape=(None, None, 3))
     image_plot = Instance(Plot)
     take_snapshot = Button
+    save_jpg_snapshot = Button
     save_snapshot = Button
     edit_camera_properties = Button
     live_view = Bool
@@ -98,6 +103,7 @@ class Camera(Instrument, HasTraits):
                         HGroup(
                             Item(name="description"),
                             Item(name="save_snapshot",show_label=False),
+                            Item(name="save_jpg_snapshot",show_label=False),
                         ), 
                         springy=False,
                     ),
@@ -145,6 +151,17 @@ class Camera(Instrument, HasTraits):
     def _save_snapshot_fired(self):
         d=self.create_dataset('snapshot', data=self.update_latest_frame(), attrs=self.get_metadata())
         d.attrs.create('description',self.description)
+        
+    def _save_jpg_snapshot_fired(self):
+        cur_img = self.update_latest_frame()
+        fname = QtGui.QFileDialog.getSaveFileName(
+                                caption = "Select Data File",
+                                directory = os.path.join(os.getcwd(),datetime.date.today().strftime("%Y-%m-%d.jpg")),
+                                filter = "Images (*.jpg *.jpeg)",
+                            )
+        j = Image.fromarray(cur_img)
+        j.save(fname)
+        
     def get_metadata(self):
         """Return a dictionary of camera settings."""
         ret = dict()
