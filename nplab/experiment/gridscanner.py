@@ -118,7 +118,8 @@ class GridScanner(object):
 
     def start(self, rate=0.2):
         """Starts grid scanner data acquisition."""
-        if hasattr(self, 'acquisition_thread') and self.acquisition_thread.is_alive():
+        if (hasattr(self, 'acquisition_thread') and self.acquisition_thread.is_alive()) or\
+                (hasattr(self, 'display_thread') and self.display_thread.is_alive()):
             print 'scan already running'
             return
         self.acquisition_thread = threading.Thread(target=self.scan_grid,
@@ -155,7 +156,7 @@ class GridScanner(object):
         """Convenience method that initialises a grid based on current parameters."""
         self.init_grid(self.axes, self.size, self.step, self.init)
 
-    def move(self, axis, position):
+    def move(self, position, axis):
         """Move to a position along a given axis."""
         self.scanner.move_axis(position/self.stage_units, axis=axis)
 
@@ -248,18 +249,18 @@ class GridScanner(object):
                 break
             #self.grid_scanner.update_drift_compensation()
             self.status = 'Scanning layer {0:d}/{1:d}'.format(k + 1, len(pnts[-1]))
-            self.move(axes[-1], scan_axes[-1][k])
+            self.move(scan_axes[-1][k], axes[-1])
             pnts[-2] = pnts[-2][::-1]  # reverse which way is iterated over each time
             for j in pnts[-2]:
                 if self.abort_requested:
                     break
-                self.move(axes[-2], scan_axes[-2][j])
+                self.move(scan_axes[-2][j], axes[-2])
                 if len(axes) == 3:  # for 3d grid (volume) scans
                     pnts[-3] = pnts[-3][::-1]  # reverse which way is iterated over each time
                     for i in pnts[-3]:
                         if self.abort_requested:
                             break
-                        self.move(axes[-3], scan_axes[-3][i])
+                        self.move(scan_axes[-3][i], axes[-3])
                         self.indices = (i, j, k)
                         self._timed_scan_function(i, j, k)
                         self._index += 1
@@ -271,7 +272,7 @@ class GridScanner(object):
         self.print_scan_time(time() - scan_start_time)
         # move back to initial positions
         for i in range(len(axes)):
-            self.move(axes[i], init[i])
+            self.move(init[i], axes[i])
         # finish the scan
         self.analyse_scan()
         self.close_scan()
@@ -443,6 +444,10 @@ class GridScannerQT(GridScanner, QtCore.QObject):
         super(GridScannerQT, self).__init__()
 
     def _update_axes(self):
+        """
+        This is called to emit a signal when the axes list is changed and update all dependencies.
+        :return:
+        """
         super(GridScannerQT, self)._update_axes()
         self.axes_updated.emit(self.axes)
 
@@ -468,10 +473,25 @@ class GridScannerQT(GridScanner, QtCore.QObject):
         print 'gui update stopped'
 
     def rescale_parameter(self, param, value):
+        """
+        Rescales the list or array-type axes grid parameters and emits the new values
+        to update the variables in the grid scanner.
+        """
         super(GridScannerQT, self).rescale_parameter(param, value)
         a = getattr(self, param)
         updater = getattr(self, '%s_updated' % param)
         updater.emit(a)
+
+    def vary_axes(self, name, multiplier=2.):
+        """
+
+        :param name:
+        :param multiplier:
+        :return:
+        """
+        param = name.split('_',1)[1]
+        super(GridScannerQT, self).vary_axes(name, multiplier=2.)
+        getattr(self, '%s_updated' % param).emit(getattr(self, param))
 
 
 class GridScannerUI(QtGui.QWidget):
@@ -505,14 +525,14 @@ class GridScannerUI(QtGui.QWidget):
         ## Axes List ##
         col2 = QtGui.QHBoxLayout()
         # the axes
-        self.axes = QtGui.QListView(self)
-        self.axes.setModel(QtGui.QStringListModel(self.grid_scanner.axes))
-        self.size, self.step, self.init = (QtGui.QListView(self), QtGui.QListView(self), QtGui.QListView(self))
-        for widget, list, param in zip([self.size, self.step, self.init],
-                                       [self.grid_scanner.size, self.grid_scanner.step, self.grid_scanner.init],
-                                       ['size', 'step', 'init']):
+        self.axes, self.size, self.step, self.init = (QtGui.QListView(self), QtGui.QListView(self), QtGui.QListView(self), QtGui.QListView(self))
+        for widget, list, param in zip([self.axes, self.size, self.step, self.init],
+                                       [self.grid_scanner.axes, self.grid_scanner.size, self.grid_scanner.step, self.grid_scanner.init],
+                                       ['axes', 'size', 'step', 'init']):
             model = QtGui.QStringListModel([str(x) for x in list])
-            model.dataChanged.connect(partial(self.set_param, param))
+            dtype = str if param == 'axes' else float
+            convert = False if param == 'axes' else True
+            model.dataChanged.connect(partial(self.set_param, param, dtype=dtype, convert=convert))
             widget.setModel(model)
         self.grid_scanner.axes_updated.connect(partial(self.update_param, 'axes'))
         self.grid_scanner.size_updated.connect(partial(self.update_param, 'size'))
@@ -622,6 +642,7 @@ class GridScannerUI(QtGui.QWidget):
             button.setToolTip(tool_tip)
             button_layout.addWidget(button)
         button_layout.addStretch()
+        button_layout.setSizeConstraint(QtGui.QLayout.SetMinimumSize)
 
         # status and estimated times
         status_layout = QtGui.QHBoxLayout()
@@ -641,6 +662,7 @@ class GridScannerUI(QtGui.QWidget):
         axes_layout.addLayout(col1)
         axes_layout.addLayout(col2)
         axes_layout.addStretch()
+        axes_layout.setSizeConstraint(QtGui.QLayout.SetMinimumSize)
 
         control_group = QtGui.QGroupBox()
         control_group.setTitle('Grid Scanner Controls')
@@ -658,6 +680,7 @@ class GridScannerUI(QtGui.QWidget):
         self.layout.addLayout(status_layout)
         self.layout.setSpacing(5)
         self.layout.setContentsMargins(5,5,5,5)
+        self.layout.setSizeConstraint(QtGui.QLayout.SetMinimumSize)
         self.setLayout(self.layout)
 
     def update_axes(self):
@@ -678,10 +701,15 @@ class GridScannerUI(QtGui.QWidget):
     def update_timing(self, time):
         self.timing.setText(time)
 
-    def set_param(self, param):
-        """Apply changes made in the UI lists to the underlying GridScanner."""
+    def set_param(self, param, dtype=float, convert=True):
+        """
+        Apply changes made in the UI lists to the underlying GridScanner.
+        """
         uia = getattr(self, param)
-        setattr(self.grid_scanner, param, np.array([float(x) for x in uia.model().stringList()]))
+        a = [dtype(x) for x in uia.model().stringList()]
+        if convert:
+            a = np.array(a)
+        setattr(self.grid_scanner, param, a)
 
     def update_param(self, param):
         """Update the UI list with changes from the underlying GridScanner."""
