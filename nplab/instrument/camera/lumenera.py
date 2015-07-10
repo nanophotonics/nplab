@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Lumenera camera wrapper for NPLab
 =================================

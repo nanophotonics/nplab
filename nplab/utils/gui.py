@@ -11,7 +11,7 @@ if os.environ.get('QT_API') is None:
     os.environ['QT_API'] = 'pyqt'  # by default use pyqt4
 qt_api = os.environ.get('QT_API')
 
-print "api environment variable is (gui): "+os.environ['QT_API']
+#print "api environment variable is (gui): "+os.environ['QT_API']
 
 import sip
 API_NAMES = ["QDate", "QDateTime", "QString", "QTextStream", "QTime", "QUrl", "QVariant"]
@@ -42,7 +42,7 @@ elif ui_toolkit == 'native' and os.environ['QT_API'] == 'pyqt':
     from PyQt4 import QtGui as qtgui
 else:
     raise ImportError("Invalid ui_toolkit or QT_API")
-print QtCore, QtGui
+#print QtCore, QtGui
 
 # this is to rectify differences between pyside and pyqt4
 try:
