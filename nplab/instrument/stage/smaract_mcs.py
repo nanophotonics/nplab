@@ -3,8 +3,12 @@ __author__ = 'alansanders'
 import ctypes
 from ctypes import byref, c_int
 from nplab.instrument import Instrument
-from nplab.instrument.stage import Stage
+from nplab.instrument.stage import Stage, StageUI
 import os
+from nplab.utils.gui import *
+from PyQt4 import uic
+from nplab.ui.ui_tools import UiTools
+
 
 try:
     mcsc = ctypes.cdll.MCSControl
@@ -483,9 +487,39 @@ class SmaractMCS(Stage, Instrument):
         levels = [self.position_to_level(1e9*p) for p in positions]
         self.multi_scan_move(levels, axes, speeds, relative)
 
+    def get_qt_ui(self):
+        return SmaractMCSUI(self)
+
     ### Useful Properties ###
     num_ch = property(get_num_channels)
     position = property(get_position)
+
+
+class ScanStageUI(StageUI):
+    def __init__(self, stage):
+        super(ScanStageUI, self).__init__(stage)
+
+    def move_axis_relative(self, index, axis, dir=1):
+        self.stage.scan_move_to_position(dir*self.step_size[index], axis=axis, speed=4095, relative=True)
+
+
+controls_base, controls_widget = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'smaract_mcs.ui'))
+
+class SmaractMCSUI(UiTools, controls_base, controls_widget):
+    def __init__(self, mcs, parent=None):
+        assert isinstance(mcs, SmaractMCS), "system must be a Smaract MCS"
+        super(SmaractMCSUI, self).__init__()
+        self.mcs = mcs
+        self.setupUi(self)
+        self.mcs_id.setText(str(mcs.mcs_id))
+        self.num_ch.setText(str(mcs.num_ch))
+        self.reference_button.clicked.connect(self.mcs.find_references)
+        self.calibrate_button.clicked.connect(self.mcs.calibrate_system)
+        self.create_stage_interfaces()
+
+    def create_stage_interfaces(self):
+        self.replace_widget(self.step_stage_layout, self.step_stage_widget, StageUI(self.mcs))
+        self.replace_widget(self.scan_stage_layout, self.scan_stage_widget, ScanStageUI(self.mcs))
 
 
 if __name__ == '__main__':

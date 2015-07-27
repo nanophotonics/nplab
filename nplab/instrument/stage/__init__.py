@@ -64,7 +64,7 @@ controls_base, controls_widget = uic.loadUiType(os.path.join(os.path.dirname(__f
 
 class StageUI(UiTools, controls_base, controls_widget):
     def __init__(self, stage, parent=None):
-        assert isinstance(stage, Stage), "instrument must be a Spectrometer"
+        assert isinstance(stage, Stage), "instrument must be a Stage"
         super(StageUI, self).__init__()
         self.stage = stage
         self.setupUi(self)
@@ -74,14 +74,14 @@ class StageUI(UiTools, controls_base, controls_widget):
         self.create_axes_layout()
 
     def move_axis_relative(self, index, axis, dir=1):
-        self.stage.move_axis(dir*self.step_size[index], axis=axis, relative=True)
+        self.stage.move(dir*self.step_size[index], axis=axis, relative=True)
 
     def create_axes_layout(self, stack_multiple_stages='horizontal'):
         path = os.path.dirname(os.path.realpath(nplab.ui.__file__))
         for i, ax in enumerate(self.stage.axis_names):
             step_size_select = QtGui.QComboBox(self)
             step_size_select.addItems(self.step_size_values.keys())
-            step_size_select.activated[str].connect(partial(self.onActivated, i))
+            step_size_select.activated[str].connect(partial(self.on_activated, i))
             self.info_layout.addWidget(QtGui.QLabel(ax, self))
             self.info_layout.addWidget(step_size_select)
 
@@ -127,7 +127,7 @@ class StageUI(UiTools, controls_base, controls_widget):
         updater = getattr(self, '%s_updated' % param)
         updater.emit(a)
 
-    def onActivated(self, index, value):
+    def on_activated(self, index, value):
         print self.sender(), index, value
         self.step_size[index] = self.step_size_values[value]
 
