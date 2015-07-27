@@ -63,6 +63,8 @@ controls_base, controls_widget = uic.loadUiType(os.path.join(os.path.dirname(__f
 
 
 class StageUI(UiTools, controls_base, controls_widget):
+    update_ui = QtCore.pyqtSignal(str)
+
     def __init__(self, stage, parent=None):
         assert isinstance(stage, Stage), "instrument must be a Stage"
         super(StageUI, self).__init__()
@@ -71,19 +73,38 @@ class StageUI(UiTools, controls_base, controls_widget):
         self.step_size_values = step_size_dict(1e-9, 1e-3)
         self.step_size = [self.step_size_values[self.step_size_values.keys()[0]] for axis in stage.axis_names]
         self.create_axes_layout()
+        self.update_ui.connect(self.update_positions)
 
     def move_axis_relative(self, index, axis, dir=1):
         self.stage.move(dir*self.step_size[index], axis=axis, relative=True)
+        self.update_ui.emit(axis)
 
     def create_axes_layout(self, stack_multiple_stages='horizontal'):
         path = os.path.dirname(os.path.realpath(nplab.ui.__file__))
         icon_size = QtCore.QSize(12,12)
+        self.positions = []
         for i, ax in enumerate(self.stage.axis_names):
+            col = 2*(i/3)
+            position = QtGui.QLineEdit('', self)
+            position.setReadOnly(True)
+            self.positions.append(position)
+            self.info_layout.addWidget(QtGui.QLabel(str(ax), self), i%3, col)
+            self.info_layout.addWidget(position, i%3, col+1)
+
+            if i%3==0:
+                group = QtGui.QGroupBox('axes {0}'.format(1+(i/3)), self)
+                layout = QtGui.QGridLayout()
+                layout.setSpacing(6)
+                group.setLayout(layout)
+                self.axes_layout.addWidget(group, 0, i/3)
+
             step_size_select = QtGui.QComboBox(self)
             step_size_select.addItems(self.step_size_values.keys())
             step_size_select.activated[str].connect(partial(self.on_activated, i))
-            self.info_layout.addWidget(QtGui.QLabel(str(ax), self))
-            self.info_layout.addWidget(step_size_select)
+            layout.addWidget(QtGui.QLabel(str(ax), self), i%3, 5)
+            layout.addWidget(step_size_select, i%3, 6)
+            if i%3==0:
+                layout.addItem(QtGui.QSpacerItem(12, 0), 0, 4)
 
             plus_button = QtGui.QPushButton('', self)
             plus_button.clicked.connect(partial(self.move_axis_relative, i, ax, 1))
@@ -91,47 +112,38 @@ class StageUI(UiTools, controls_base, controls_widget):
             minus_button.clicked.connect(partial(self.move_axis_relative, i, ax, -1))
             if i%3==0:
                 plus_button.setIcon(QtGui.QIcon(os.path.join(path, 'right.png')))
-                plus_button.setIconSize(icon_size)
-                plus_button.resize(icon_size)
                 minus_button.setIcon(QtGui.QIcon(os.path.join(path, 'left.png')))
-                minus_button.setIconSize(icon_size)
-                if i != 0:
-                    self.axes_layout.addItem(QtGui.QSpacerItem(24,0), 1, 4*(i/3))
-                self.axes_layout.addWidget(minus_button, 1, 0+5*(i/3))
-                self.axes_layout.addWidget(plus_button, 1, 2+5*(i/3))
+                layout.addWidget(minus_button, 1, 0)
+                layout.addWidget(plus_button, 1, 2)
             elif i%3==1:
                 plus_button.setIcon(QtGui.QIcon(os.path.join(path, 'up.png')))
-                plus_button.setIconSize(icon_size)
                 minus_button.setIcon(QtGui.QIcon(os.path.join(path, 'down.png')))
-                minus_button.setIconSize(icon_size)
-                self.axes_layout.addWidget(plus_button, 0, 1+5*(i/3))
-                self.axes_layout.addWidget(minus_button, 2, 1+5*(i/3))
+                layout.addWidget(plus_button, 0, 1)
+                layout.addWidget(minus_button, 2, 1)
             elif i%3==2:
                 plus_button.setIcon(QtGui.QIcon(os.path.join(path, 'up.png')))
-                plus_button.setIconSize(icon_size)
                 minus_button.setIcon(QtGui.QIcon(os.path.join(path, 'down.png')))
-                minus_button.setIconSize(icon_size)
-                self.axes_layout.addWidget(plus_button, 0, 3+5*(i/3))
-                self.axes_layout.addWidget(minus_button, 2, 3+5*(i/3))
-        axes_label = QtGui.QLabel('axis 1', self)
-        self.axes_layout.addWidget(axes_label, 0,0)
-        self.axes_layout.setSpacing(0)
-
-    def rescale_parameter(self, param, value):
-        assert value in self._unit_conversion.keys(), 'a valid unit must be supplied'
-        unit_param = '_%s_unit' % param
-        old_value = getattr(self, unit_param) if hasattr(self, unit_param) else value
-        setattr(self, unit_param, value)
-        a = getattr(self, param)
-        a *= self._unit_conversion[old_value] / self._unit_conversion[value]
-        a = getattr(self, param)
-        updater = getattr(self, '%s_updated' % param)
-        updater.emit(a)
+                layout.addWidget(plus_button, 0, 3)
+                layout.addWidget(minus_button, 2, 3)
+            plus_button.setIconSize(icon_size)
+            plus_button.resize(icon_size)
+            minus_button.setIconSize(icon_size)
+            minus_button.resize(icon_size)
 
     def on_activated(self, index, value):
         #print self.sender(), index, value
         self.step_size[index] = self.step_size_values[value]
 
+    def update_positions(self, axis=None):
+        if axis is None:
+            current_position = self.stage.position
+            for i in range(len(self.positions)):
+                p = engineering_format(current_position[i], base_unit='m', digits_of_precision=3)
+                self.positions[i].setText(p)
+        else:
+            i = self.stage.axis_names.index(axis)
+            p = engineering_format(self.stage.position[i], base_unit='m', digits_of_precision=3)
+            self.positions[i].setText(p)
 
 def step_size_dict(smallest, largest, mantissas=[1,2,5]):
     """Return a dictionary with nicely-formatted distances as keys and metres as values."""
@@ -246,14 +258,14 @@ class DummyStage(Stage):
         self.axis_names = ('x1', 'y1', 'z1', 'x2', 'y2', 'z2')
         self._position = np.zeros((len(self.axis_names)), dtype=np.float64)
 
-    def move(self, position, relative=False):
+    def move(self, position, axis=None, relative=False):
         if relative:
             self._position += position
         else:
             self._position = position
-        print "stage now at", self._position
+        #print "stage now at", self._position
 
-    def move_rel(self, position):
+    def move_rel(self, position, axis=None):
         self.move(position, relative=True)
 
     def get_position(self, axis=None):
@@ -261,6 +273,8 @@ class DummyStage(Stage):
             return self.select_axis(self.get_position(), axis)
         else:
             return self._position
+
+    position = property(get_position)
 
 
 if __name__ == '__main__':
