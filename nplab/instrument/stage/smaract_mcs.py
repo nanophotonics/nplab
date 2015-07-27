@@ -96,16 +96,16 @@ class SmaractMCS(Stage, Instrument):
 
     def __init__(self):
         super(SmaractMCS, self).__init__()
-        # self.mcsID = mcs_id
+        self.mcsID = 'usb:id:1842634745'
         self.handle = c_int(0)
         # self.setup()
         self.is_open = False
         self._num_ch = None
         self.axis_names = [i for i in range(self.num_ch)]
-        self.positions = [0 for ch in self.num_ch]
-        self.levels = [0 for ch in self.num_ch]
-        self.voltages = [0 for ch in self.num_ch]
-        self.scan_positions = [0 for ch in self.num_ch]
+        self.positions = [0 for ch in range(self.num_ch)]
+        self.levels = [0 for ch in range(self.num_ch)]
+        self.voltages = [0 for ch in range(self.num_ch)]
+        self.scan_positions = [0 for ch in range(self.num_ch)]
 
     ### Main Methods ###
 
@@ -525,3 +525,6 @@ class SmaractMCSUI(UiTools, controls_base, controls_widget):
 if __name__ == '__main__':
     # print SA_OK
     stage = SmaractMCS()
+    print stage.position
+    print stage.get_position()
+    print stage.get_position(0)
