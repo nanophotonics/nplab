@@ -3,6 +3,9 @@ Formatting Utilities
 ====================
 """
 
+import numpy as np
+
+
 def engineering_format(number, base_unit='', significant_figures=None, digits_of_precision=None):
     """Format a number into a string using SI prefixes."""
     assert not (significant_figures is not None and digits_of_precision is not None), "You may not specify both the number of digits of precision and the number of significant digits."
