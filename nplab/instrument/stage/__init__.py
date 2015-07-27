@@ -3,7 +3,7 @@
 NP Lab Stage Module
 ===================
 
-This module contains various things to simplify the use of stages in Python.  
+This module contains various things to simplify the use of stages in Python.
 
 @author: Richard Bowman, Alan Sanders
 """
@@ -40,7 +40,7 @@ class Stage(Instrument):
     def move_axis(self, pos, axis=None, relative=False):
         """Move along one axis."""
         if axis not in self.axis_names: raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
-        
+
         full_position = np.zeros((len(self.axis_names))) if relative else self.position
         full_position[self.axis_names.index(axis)] = pos
         self.move(full_position, relative=relative)
@@ -52,7 +52,7 @@ class Stage(Instrument):
         """Pick an element from a tuple, indexed by axis name."""
         assert axis in self.axis_names, ValueError("{0} is not a valid axis name.".format(axis))
         return iterable[self.axis_names.index(axis)]
-        
+
     position = property(fget=get_position, doc="Current position of the stage")
 
     def get_qt_ui(self):
@@ -70,7 +70,6 @@ class StageUI(UiTools, controls_base, controls_widget):
         self.setupUi(self)
         self.step_size_values = step_size_dict(1e-9, 1e-3)
         self.step_size = [self.step_size_values[self.step_size_values.keys()[0]] for axis in stage.axis_names]
-        print self.step_size_values
         self.create_axes_layout()
 
     def move_axis_relative(self, index, axis, dir=1):
@@ -78,11 +77,12 @@ class StageUI(UiTools, controls_base, controls_widget):
 
     def create_axes_layout(self, stack_multiple_stages='horizontal'):
         path = os.path.dirname(os.path.realpath(nplab.ui.__file__))
+        icon_size = QtCore.QSize(12,12)
         for i, ax in enumerate(self.stage.axis_names):
             step_size_select = QtGui.QComboBox(self)
             step_size_select.addItems(self.step_size_values.keys())
             step_size_select.activated[str].connect(partial(self.on_activated, i))
-            self.info_layout.addWidget(QtGui.QLabel(ax, self))
+            self.info_layout.addWidget(QtGui.QLabel(str(ax), self))
             self.info_layout.addWidget(step_size_select)
 
             plus_button = QtGui.QPushButton('', self)
@@ -91,25 +91,26 @@ class StageUI(UiTools, controls_base, controls_widget):
             minus_button.clicked.connect(partial(self.move_axis_relative, i, ax, -1))
             if i%3==0:
                 plus_button.setIcon(QtGui.QIcon(os.path.join(path, 'right.png')))
-                plus_button.setIconSize(QtCore.QSize(16,16))
+                plus_button.setIconSize(icon_size)
+                plus_button.resize(icon_size)
                 minus_button.setIcon(QtGui.QIcon(os.path.join(path, 'left.png')))
-                minus_button.setIconSize(QtCore.QSize(16,16))
+                minus_button.setIconSize(icon_size)
                 if i != 0:
                     self.axes_layout.addItem(QtGui.QSpacerItem(24,0), 1, 4*(i/3))
                 self.axes_layout.addWidget(minus_button, 1, 0+5*(i/3))
                 self.axes_layout.addWidget(plus_button, 1, 2+5*(i/3))
             elif i%3==1:
                 plus_button.setIcon(QtGui.QIcon(os.path.join(path, 'up.png')))
-                plus_button.setIconSize(QtCore.QSize(16,16))
+                plus_button.setIconSize(icon_size)
                 minus_button.setIcon(QtGui.QIcon(os.path.join(path, 'down.png')))
-                minus_button.setIconSize(QtCore.QSize(16,16))
+                minus_button.setIconSize(icon_size)
                 self.axes_layout.addWidget(plus_button, 0, 1+5*(i/3))
                 self.axes_layout.addWidget(minus_button, 2, 1+5*(i/3))
             elif i%3==2:
                 plus_button.setIcon(QtGui.QIcon(os.path.join(path, 'up.png')))
-                plus_button.setIconSize(QtCore.QSize(16,16))
+                plus_button.setIconSize(icon_size)
                 minus_button.setIcon(QtGui.QIcon(os.path.join(path, 'down.png')))
-                minus_button.setIconSize(QtCore.QSize(16,16))
+                minus_button.setIconSize(icon_size)
                 self.axes_layout.addWidget(plus_button, 0, 3+5*(i/3))
                 self.axes_layout.addWidget(minus_button, 2, 3+5*(i/3))
         axes_label = QtGui.QLabel('axis 1', self)
@@ -128,7 +129,7 @@ class StageUI(UiTools, controls_base, controls_widget):
         updater.emit(a)
 
     def on_activated(self, index, value):
-        print self.sender(), index, value
+        #print self.sender(), index, value
         self.step_size[index] = self.step_size_values[value]
 
 
@@ -138,10 +139,10 @@ def step_size_dict(smallest, largest, mantissas=[1,2,5]):
     steps = [m*10**e for e in log_range for m in mantissas if smallest <= m*10**e <= largest]
     return OrderedDict((engineering_format(s, 'm'), s) for s in steps)
 
-    
+
 #class Stage(HasTraits):
 #    """Base class for controlling translation stages.
-#    
+#
 #    This class defines an interface for translation stages, it is designed to
 #    be subclassed when a new stage is added.  The basic interface is very
 #    simple: the property "position" encapsulates most of a stage's
@@ -149,8 +150,8 @@ def step_size_dict(smallest, largest, mantissas=[1,2,5]):
 #    current position: in both cases its value should be convertable to a numpy
 #    array (i.e. a list or tuple of numbers is OK, or just a single number if
 #    appropriate).
-#    
-#    More detailed control (for example non-blocking motion) can be achieved 
+#
+#    More detailed control (for example non-blocking motion) can be achieved
 #    with the functions:
 #    * get_position(): return the current position (as a np.array)
 #    * move(pos, relative=False, blocking=True): move the stage
@@ -158,16 +159,16 @@ def step_size_dict(smallest, largest, mantissas=[1,2,5]):
 #    * is_moving: whether the stage is moving (property)
 #    * wait_until_stopped(): block until the stage stops moving
 #    * stop(): stop the current motion (may be unsupported)
-#    
+#
 #    Subclassing nplab.stage.Stage
 #    -----------------------------
 #    The only essential commands to subclass are get_position() and _move(). The
 #    rest will be supplied by the parent class, to give the functionality above.
 #    _move() has the same signature as move, and is called internally by move().
 #    This allows the stage class to emulate blocking/non-blocking moves.
-#    
-#    NB if a non-blocking move is requested of a stage that doesn't support it, 
-#    a blocking move can be done in a background thread and is_moving should 
+#
+#    NB if a non-blocking move is requested of a stage that doesn't support it,
+#    a blocking move can be done in a background thread and is_moving should
 #    return whether that thread is alive, wait_until_stopped() is a join().
 #    """
 #    axis_names = ["X","Y","Z"]
@@ -188,7 +189,7 @@ def step_size_dict(smallest, largest, mantissas=[1,2,5]):
 #        self.move(pos, relative=True, **kwargs)
 #    def move(self, pos, axis=None, relative=False, blocking=True, axes=None, **kwargs):
 #        """Move the stage to the specified position.
-#        
+#
 #        Arguments:
 #        * pos: the position to move to, or the displacement to move by
 #        * relative: whether pos is an absolute or relative move
@@ -210,7 +211,7 @@ def step_size_dict(smallest, largest, mantissas=[1,2,5]):
 #        else:
 #            if axis is None:
 #                axis=self.default_axes_for_move[0] #default to moving the first axis
-#                
+#
 #        if blocking and self.emulate_blocking_moves:
 #            self._move(pos, relative=relative, blocking=False, axes=axes, **kwargs)
 #            try:
@@ -223,7 +224,7 @@ def step_size_dict(smallest, largest, mantissas=[1,2,5]):
 #    def _move(self, position=None, relative=False, blocking=True, *args, **kwargs):
 #        """This should be overridden to have the same method signature as move.
 #        If some features are not supported (e.g. blocking) then it should be OK
-#        to raise NotImplementedError.  If you ask for it with the emulate_* 
+#        to raise NotImplementedError.  If you ask for it with the emulate_*
 #        attributes, many missing features can be emulated.
 #        """
 #        raise NotImplementedError("You must subclass _move to implement it for your own stage")
@@ -236,7 +237,7 @@ def step_size_dict(smallest, largest, mantissas=[1,2,5]):
 #            time.sleep(0.1)
 #        return True
 ##    def __init__(self):
-       
+
 
 class DummyStage(Stage):
     """A stub stage for testing purposes, prints moves to the console."""

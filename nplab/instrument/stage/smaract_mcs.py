@@ -96,7 +96,7 @@ class SmaractMCS(Stage, Instrument):
 
     def __init__(self):
         super(SmaractMCS, self).__init__()
-        self.mcsID = 'usb:id:1842634745'
+        self.mcs_id = 'usb:id:1842634745'
         self.handle = c_int(0)
         # self.setup()
         self.is_open = False
@@ -161,7 +161,7 @@ class SmaractMCS(Stage, Instrument):
     def open_mcs(self):
         if not self.is_open:
             mode = ctypes.c_char_p('sync')
-            if self.check_status(mcsc.SA_OpenSystem(byref(self.handle), self.mcsID, mode)):
+            if self.check_status(mcsc.SA_OpenSystem(byref(self.handle), self.mcs_id, mode)):
                 self.is_open = True
                 return True
             else:
@@ -495,11 +495,22 @@ class SmaractMCS(Stage, Instrument):
     position = property(get_position)
 
 
-class ScanStageUI(StageUI):
+class SmaractStageUI(StageUI):
     def __init__(self, stage):
-        super(ScanStageUI, self).__init__(stage)
+        super(SmaractStageUI, self).__init__(stage)
 
     def move_axis_relative(self, index, axis, dir=1):
+        if axis in [1,2,4,5]:
+            dir *= -1
+        self.stage.move(dir*self.step_size[index], axis=axis, relative=True)
+
+class SmaractScanStageUI(StageUI):
+    def __init__(self, stage):
+        super(SmaractScanStageUI, self).__init__(stage)
+
+    def move_axis_relative(self, index, axis, dir=1):
+        if axis in [1,2,4,5]:
+            dir *= -1
         self.stage.scan_move_to_position(dir*self.step_size[index], axis=axis, speed=4095, relative=True)
 
 
@@ -518,8 +529,8 @@ class SmaractMCSUI(UiTools, controls_base, controls_widget):
         self.create_stage_interfaces()
 
     def create_stage_interfaces(self):
-        self.replace_widget(self.step_stage_layout, self.step_stage_widget, StageUI(self.mcs))
-        self.replace_widget(self.scan_stage_layout, self.scan_stage_widget, ScanStageUI(self.mcs))
+        self.step_stage_widget = self.replace_widget(self.step_stage_layout, self.step_stage_widget, SmaractStageUI(self.mcs))
+        self.scan_stage_widget = self.replace_widget(self.scan_stage_layout, self.scan_stage_widget, SmaractScanStageUI(self.mcs))
 
 
 if __name__ == '__main__':
@@ -528,3 +539,10 @@ if __name__ == '__main__':
     print stage.position
     print stage.get_position()
     print stage.get_position(0)
+
+    import sys
+    from nplab.utils.gui import get_qt_app
+    app = get_qt_app()
+    ui = stage.get_qt_ui()
+    ui.show()
+    sys.exit(app.exec_())
