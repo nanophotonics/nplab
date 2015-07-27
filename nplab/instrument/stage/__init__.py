@@ -14,18 +14,29 @@ from pyface.api import ImageResource
 import numpy as np
 from collections import OrderedDict
 import itertools
-import nplab
-import nplab.instrument
+from nplab.instrument import Instrument
 import time
 import threading
+from nplab.utils.gui import *
+from PyQt4 import uic
+from nplab.ui.ui_tools import UiTools
+import nplab.ui
+import inspect
+from functools import partial
+from nplab.utils.formatting import engineering_format
 
-class Stage(nplab.instrument.Instrument):
-    axis_names = ('x', 'y', 'z')
-    def move(self, pos, relative=False):
+
+class Stage(Instrument):
+    def __init__(self):
+        self.axis_names = ('x', 'y', 'z')
+
+    def move(self, pos, axis=None, relative=False):
         raise NotImplementedError("You must override move() in a Stage subclass")
-    def move_rel(self, position):
+
+    def move_rel(self, position, axis=None):
         """Make a relative move, see move() with relative=True."""
-        self.move(position, relative=True)
+        self.move(position, axis=None, relative=True)
+
     def move_axis(self, pos, axis=None, relative=False):
         """Move along one axis."""
         if axis not in self.axis_names: raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
@@ -33,39 +44,100 @@ class Stage(nplab.instrument.Instrument):
         full_position = np.zeros((len(self.axis_names))) if relative else self.position
         full_position[self.axis_names.index(axis)] = pos
         self.move(full_position, relative=relative)
-    def _get_position(self, axis=None):
-        return self.get_position(axis=axis)
+
     def get_position(self, axis=None):
         raise NotImplementedError("You must override get_position in a Stage subclass.")
+
     def select_axis(self, iterable, axis=None):
         """Pick an element from a tuple, indexed by axis name."""
         assert axis in self.axis_names, ValueError("{0} is not a valid axis name.".format(axis))
         return iterable[self.axis_names.index(axis)]
         
-    position = property(fget=_get_position, doc="Current position of the stage")
+    position = property(fget=get_position, doc="Current position of the stage")
+
+    def get_qt_ui(self):
+        return StageUI(self)
 
 
-#def step_size_dict(smallest, largest, mantissas=[1,2,5]):
-#    """Return a dictionary with nicely-formatted distances as keys and metres as values."""
-#    steps = [m * 10**e 
-#                for e in np.arange(np.floor(np.log10(smallest)), np.floor(np.log10(largest))+1) 
-#                for m in mantissas 
-#                if smallest <= m * 10**e
-#                if m * 10**e <= largest]
-#    return OrderedDict((nplab.engineering_format(s, 'm'), s) for s in steps)
-#class Axis(HasTraits):
-#    """Lightweight wrapper class that controls one axis of a stage."""
-#    step_up = Button()
-#    step_down = Button()
-#    stage = Instance()
-#    axis_name = Str()
-#    traits_view = VGroup(
-#            Item()
-#        )
-#    def __init__(self, stage, axis_name):
-#        super(Axis, self).__init__()
-#        self.stage = stage
-#        self.axis_name = axis_name
+controls_base, controls_widget = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'stage.ui'))
+
+
+class StageUI(UiTools, controls_base, controls_widget):
+    def __init__(self, stage, parent=None):
+        assert isinstance(stage, Stage), "instrument must be a Spectrometer"
+        super(StageUI, self).__init__()
+        self.stage = stage
+        self.setupUi(self)
+        self.step_size_values = step_size_dict(1e-9, 1e-3)
+        self.step_size = [self.step_size_values[self.step_size_values.keys()[0]] for axis in stage.axis_names]
+        print self.step_size_values
+        self.create_axes_layout()
+
+    def move_axis_relative(self, index, axis, dir=1):
+        self.stage.move_axis(dir*self.step_size[index], axis=axis, relative=True)
+
+    def create_axes_layout(self, stack_multiple_stages='horizontal'):
+        path = os.path.dirname(os.path.realpath(nplab.ui.__file__))
+        for i, ax in enumerate(self.stage.axis_names):
+            step_size_select = QtGui.QComboBox(self)
+            step_size_select.addItems(self.step_size_values.keys())
+            step_size_select.activated[str].connect(partial(self.onActivated, i))
+            self.info_layout.addWidget(QtGui.QLabel(ax, self))
+            self.info_layout.addWidget(step_size_select)
+
+            plus_button = QtGui.QPushButton('', self)
+            plus_button.clicked.connect(partial(self.move_axis_relative, i, ax, 1))
+            minus_button = QtGui.QPushButton('', self)
+            minus_button.clicked.connect(partial(self.move_axis_relative, i, ax, -1))
+            if i%3==0:
+                plus_button.setIcon(QtGui.QIcon(os.path.join(path, 'right.png')))
+                plus_button.setIconSize(QtCore.QSize(16,16))
+                minus_button.setIcon(QtGui.QIcon(os.path.join(path, 'left.png')))
+                minus_button.setIconSize(QtCore.QSize(16,16))
+                if i != 0:
+                    self.axes_layout.addItem(QtGui.QSpacerItem(24,0), 1, 4*(i/3))
+                self.axes_layout.addWidget(minus_button, 1, 0+5*(i/3))
+                self.axes_layout.addWidget(plus_button, 1, 2+5*(i/3))
+            elif i%3==1:
+                plus_button.setIcon(QtGui.QIcon(os.path.join(path, 'up.png')))
+                plus_button.setIconSize(QtCore.QSize(16,16))
+                minus_button.setIcon(QtGui.QIcon(os.path.join(path, 'down.png')))
+                minus_button.setIconSize(QtCore.QSize(16,16))
+                self.axes_layout.addWidget(plus_button, 0, 1+5*(i/3))
+                self.axes_layout.addWidget(minus_button, 2, 1+5*(i/3))
+            elif i%3==2:
+                plus_button.setIcon(QtGui.QIcon(os.path.join(path, 'up.png')))
+                plus_button.setIconSize(QtCore.QSize(16,16))
+                minus_button.setIcon(QtGui.QIcon(os.path.join(path, 'down.png')))
+                minus_button.setIconSize(QtCore.QSize(16,16))
+                self.axes_layout.addWidget(plus_button, 0, 3+5*(i/3))
+                self.axes_layout.addWidget(minus_button, 2, 3+5*(i/3))
+        axes_label = QtGui.QLabel('axis 1', self)
+        self.axes_layout.addWidget(axes_label, 0,0)
+        self.axes_layout.setSpacing(0)
+
+    def rescale_parameter(self, param, value):
+        assert value in self._unit_conversion.keys(), 'a valid unit must be supplied'
+        unit_param = '_%s_unit' % param
+        old_value = getattr(self, unit_param) if hasattr(self, unit_param) else value
+        setattr(self, unit_param, value)
+        a = getattr(self, param)
+        a *= self._unit_conversion[old_value] / self._unit_conversion[value]
+        a = getattr(self, param)
+        updater = getattr(self, '%s_updated' % param)
+        updater.emit(a)
+
+    def onActivated(self, index, value):
+        print self.sender(), index, value
+        self.step_size[index] = self.step_size_values[value]
+
+
+def step_size_dict(smallest, largest, mantissas=[1,2,5]):
+    """Return a dictionary with nicely-formatted distances as keys and metres as values."""
+    log_range = np.arange(np.floor(np.log10(smallest)), np.floor(np.log10(largest))+1)
+    steps = [m*10**e for e in log_range for m in mantissas if smallest <= m*10**e <= largest]
+    return OrderedDict((engineering_format(s, 'm'), s) for s in steps)
+
     
 #class Stage(HasTraits):
 #    """Base class for controlling translation stages.
@@ -169,18 +241,31 @@ class Stage(nplab.instrument.Instrument):
 class DummyStage(Stage):
     """A stub stage for testing purposes, prints moves to the console."""
     def __init__(self):
-	super(DummyStage, self).__init__()
-	self._position = np.array([0,0,0])
+        super(DummyStage, self).__init__()
+        self.axis_names = ('x1', 'y1', 'z1', 'x2', 'y2', 'z2')
+        self._position = np.zeros((len(self.axis_names)), dtype=np.float64)
+
     def move(self, position, relative=False):
-	    if relative:
-		    self._position = position
-	    else:
-		    self._position += position
-	    print "stage now at", self._position
+        if relative:
+            self._position += position
+        else:
+            self._position = position
+        print "stage now at", self._position
+
     def move_rel(self, position):
-	    self.move(position, relative=True)
+        self.move(position, relative=True)
+
     def get_position(self, axis=None):
         if axis is not None:
             return self.select_axis(self.get_position(), axis)
         else:
             return self._position
+
+
+if __name__ == '__main__':
+    import sys
+    from nplab.utils.gui import get_qt_app
+    app = get_qt_app()
+    ui = DummyStage().get_qt_ui()
+    ui.show()
+    sys.exit(app.exec_())

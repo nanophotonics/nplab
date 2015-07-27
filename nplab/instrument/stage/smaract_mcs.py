@@ -1,0 +1,493 @@
+__author__ = 'alansanders'
+
+import ctypes
+from ctypes import byref, c_int
+from nplab.instrument import Instrument
+from nplab.instrument.stage import Stage
+import os
+
+try:
+    mcsc = ctypes.cdll.MCSControl
+except:
+    raise Warning("MCSControl dll not found")
+
+file_dir = os.path.dirname(os.path.realpath(__file__))
+
+
+def get_enums():
+    with open(os.path.join(file_dir, 'MCSControl.h'), 'r') as f:
+        lines = [line.strip().split(' ') for line in f.readlines() if line.startswith('#define')]
+        enums = {}
+        for line in lines:
+            while '' in line: line.remove('')
+            if len(line) == 3:
+                try:
+                    enums[line[1]] = int(line[2])
+                except ValueError:
+                    pass
+    return enums
+
+
+def set_enums():
+    enums = get_enums()
+    for k, v in zip(enums.keys(), enums.values()):
+        # print k+' = '+str(v)
+        cmd = k + ' = c_int(' + str(v) + ')'
+        exec cmd in globals()
+
+
+set_enums()
+max_acc = 1e7
+max_speed = 1e8
+
+
+class MCSError(Exception):
+    def __init__(self, value):
+        try:
+            self.value = value
+            error_text = ctypes.c_char_p()
+            mcsc.SA_GetStatusInfo(value, byref(error_text))
+            print "MCS error {:d}".format(value)
+            print ctypes.string_at(error_text)
+        except:
+            print "MCS error {:d}".format(value)
+
+
+class SmaractError(Exception):
+    def __init__(self, msg):
+        print "MCS error: %s" % msg
+
+
+class SmaractMCS(Stage, Instrument):
+    """
+    Smaract MCS controller interface for Smaract stages.
+    """
+
+    @staticmethod
+    def check_status(status):
+        """
+        Checks whether a MCS dll function was a success and if not returns the error.
+        :param status: c_int status code returned from an MCS function
+        :return:
+        """
+        if (status != SA_OK.value):
+            raise MCSError(status)
+        else:
+            return True
+
+    @classmethod
+    def find_mcs_systems(cls):
+        """
+        Get a list of all MCS devices available on this computer. The list
+        contains MCS IDs which are unique numbers to identify a MCS.
+        """
+        outBuffer = ctypes.create_string_buffer(4096)
+        bufferSize = c_int(4096)  # ctypes.sizeof(outBuffer)
+        # outBuffer holds the locator strings, separated by '\n'
+        # bufferSize holds the number of bytes written to outBuffer
+        if cls.check_status(mcsc.SA_FindSystems("", outBuffer, byref(bufferSize))):
+            print 'buffer size:', bufferSize
+            print 'buffer:', ctypes.string_at(outBuffer)
+        return ctypes.string_at(outBuffer)
+
+    def __init__(self):
+        super(SmaractMCS, self).__init__()
+        # self.mcsID = mcs_id
+        self.handle = c_int(0)
+        # self.setup()
+        self.is_open = False
+        self._num_ch = None
+        self.axis_names = [i for i in range(self.num_ch)]
+        self.positions = [0 for ch in self.num_ch]
+        self.levels = [0 for ch in self.num_ch]
+        self.voltages = [0 for ch in self.num_ch]
+        self.scan_positions = [0 for ch in self.num_ch]
+
+    ### Main Methods ###
+
+    def get_position(self, axis=None):
+        """
+        Get the position of the stage or of a specified axis.
+        :param axis:
+        :return:
+        """
+        if axis is None:
+            positions = []
+            for axis in self.axis_names:
+                positions.append(self.get_position(axis))
+            return positions
+        else:
+            if axis not in self.axis_names:
+                raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
+            ch = c_int(int(axis))
+            position = c_int()
+            self.check_open_status()
+            mcsc.SA_GetPosition_S(self.handle, ch, byref(position))
+            return 1e-9 * position.value
+
+    def move(self, position, axis, relative=False):
+        """
+        Move the stage to the requested position. The function should block all further
+        actions until the stage has finished moving.
+        :param position: units of m (SI units, converted to nm in the method)
+        :param axis: integer channel index
+        :param relative:
+        :return:
+        """
+        if axis not in self.axis_names:
+            raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
+        position *= 1e9
+        ch = c_int(int(axis))
+        position = c_int(int(position))
+        self.check_open_status()
+        if relative:
+            self.check_status(mcsc.SA_GotoPositionRelative_S(self.handle, ch, position, c_int(0)))
+        else:
+            self.check_status(mcsc.SA_GotoPositionAbsolute_S(self.handle, ch, position, c_int(0)))
+        self.wait_until_done(ch)
+
+    ### Setup Methods ###
+
+    def check_open_status(self):
+        if self.open_mcs():
+            return
+        else:
+            raise SmaractError('Error opening')
+
+    def open_mcs(self):
+        if not self.is_open:
+            mode = ctypes.c_char_p('sync')
+            if self.check_status(mcsc.SA_OpenSystem(byref(self.handle), self.mcsID, mode)):
+                self.is_open = True
+                return True
+            else:
+                return False
+        else:
+            return True
+
+    def close_mcs(self):
+        if self.is_open:
+            if self.check_status(mcsc.SA_CloseSystem(self.handle)):
+                self.is_open = False
+                return True
+            else:
+                return False
+        else:
+            return True
+
+    def get_num_channels(self):
+        if self._num_ch is not None:
+            return self._num_ch
+        num_ch = c_int()
+        self.check_open_status()
+        if self.check_status(mcsc.SA_GetNumberOfChannels(self.handle, byref(num_ch))):
+            self._num_ch = num_ch.value
+            return num_ch.value
+        else:
+            return False
+
+    def setup(self):
+        self.check_open_status()
+        self.set_sensor_power_mode(2)
+        for i in range(self.num_ch):
+            self.set_speed(ch, 0)
+            self.set_acceleration(ch, 0)
+            self.set_low_vibration_mode(ch, 1)
+            ch = c_int(i)
+            self.check_status(mcsc.SA_SetStepWhileScan_S(self.handle, ch, SA_NO_STEP_WHILE_SCAN))
+
+    def set_sensor_power_mode(self, mode):
+        modes = {0: SA_SENSOR_DISABLED, 1: SA_SENSOR_ENABLED, 2: SA_SENSOR_POWERSAVE}
+        self.check_open_status()
+        self.check_status(mcsc.SA_SetSensorEnabled_S(self.handle, modes[mode]))
+
+    def set_low_vibration_mode(self, ch, enable):
+        ch = c_int(int(ch))
+        values = {0: SA_DISABLED, 1: SA_ENABLED}
+        self.check_open_status()
+        self.check_status(mcsc.SA_SetChannelProperty_S(self.handle, ch,
+                                                       mcsc.SA_EPK(SA_GENERAL, SA_LOW_VIBRATION, SA_OPERATION_MODE),
+                                                       values[enable]))
+
+    ### Calibration Methods ###
+
+    def wait_until_done(self, ch):
+        status = c_int(4)
+        if type(ch) is not c_int:
+            ch = c_int(ch)
+        while status.value != SA_STOPPED_STATUS.value:
+            self.check_status(mcsc.SA_GetStatus_S(self.handle, ch, byref(status)))
+        return
+
+    def get_channel_status(self, ch):
+        ch = c_int(ch)
+        status = c_int(4)
+        self.check_status(mcsc.SA_GetStatus_S(self.handle, ch, byref(status)))
+        return status.value
+
+    def calibrate_system(self):
+        print 'calibrating system'
+        self.check_open_status()
+        self.set_sensor_power_mode(1)
+        num_ch = self.get_num_channels()
+        for ch in range(num_ch):
+            self.check_status(mcsc.SA_CalibrateSensor_S(self.handle, ch))
+            self.wait_until_done(ch)
+
+    def set_safe_directions(self):
+        """
+        Sets the safe directions for all channels to move when referencing.
+        Vertical channels should all move upwards (i.e. SA_FORWARD_DIRECTION).
+        The left channel should move left (SA_BACKWARD_DIRECTION) while the
+        right channel should move right (SA_FORWARD_DIRECTION). The remaining
+        two forward channels should move backwards away from the objective
+        (SA_BACKWARD_DIRECTION).
+
+        Note that this function is currently based on the tip experiment arrangement.
+        """
+        self.check_open_status()
+        # self.set_sensor_power_mode(1)
+        num_ch = self.get_num_channels()
+        forward_channels = [3]  # was [0,1,2,5]
+        for i in range(num_ch):
+            value = SA_FORWARD_DIRECTION if (i in forward_channels) \
+                else SA_BACKWARD_DIRECTION
+            ch = c_int(int(i))
+            self.check_status(mcsc.SA_SetSafeDirection_S(self.handle,
+                                                         ch, value))
+        return forward_channels
+
+    def find_references_ch(self, ch):
+        print 'finding reference for ch', ch
+        ch = c_int(int(ch))
+        self.check_open_status()
+        self.set_sensor_power_mode(1)
+        forward_channels = self.set_safe_directions()
+        value = SA_FORWARD_DIRECTION if (ch.value in forward_channels) else SA_BACKWARD_DIRECTION
+        self.check_status(mcsc.SA_FindReferenceMark_S(self.handle, ch, value, 0, SA_AUTO_ZERO))
+        self.wait_until_done(ch)
+
+    def find_references(self):
+        self.check_open_status()
+        num_ch = self.get_num_channels()
+        for i in range(num_ch):
+            self.find_references_ch(i)
+
+    ### Movement Methods ###
+
+    def set_initial_position(self, ch, position):
+        ch = c_int(int(ch))
+        position = c_int(position)
+        self.check_open_status()
+        mcsc.SA_SetPosition_S(self.handle, ch, position)
+
+    def physical_position_known(self, ch):
+        ch = c_int(int(ch))
+        known = c_int()
+        self.check_open_status()
+        mcsc.SA_GetPhysicalPositionKnown_S(self.handle, ch, byref(known))
+        if known == SA_PHYSICAL_POSITION_KNOWN:
+            return True
+        elif known == SA_PHYSICAL_POSITION_UNKNOWN:
+            return False
+        else:
+            raise SmaractError('Unknown return value')
+
+    def multi_move(self, positions, axes, relative=False):
+        self.check_open_status()
+
+        positions = [c_int(1e9 * p) for p in positions]
+        channels = [c_int(int(axis)) for axis in axes]
+
+        for i in range(len(axes)):
+            if relative:
+                self.check_status(mcsc.SA_GotoPositionRelative_S(self.handle, channels[i], positions[i], c_int(0)))
+            else:
+                self.check_status(mcsc.SA_GotoPositionAbsolute_S(self.handle, channels[i], positions[i], c_int(0)))
+        for axis in axes:
+            self.wait_until_done(axis)
+
+    def multi_move_rel(self, step, axes):
+        steps = [1e9 * step for axis in axes]
+        self.multi_move(steps, axes, relative=True)
+
+    def set_position(self, ch, position):
+        '''
+        units are nm
+        '''
+        position *= 1e9
+        ch = c_int(int(ch))
+        position = c_int(int(position))
+        self.check_open_status()
+        mcsc.SA_SetPosition_S(self.handle, ch, position)
+
+    def get_acceleration(self, ch):
+        ch = c_int(int(ch))
+        acceleration = c_int()
+        self.check_open_status()
+        mcsc.SA_GetClosedLoopMoveAcceleration_S(self.handle, ch, byref(acceleration))
+        return acceleration.value
+
+    def set_acceleration(self, ch, acceleration):
+        '''
+        units are um/s/s.
+        '''
+        ch = c_int(int(ch))
+        acceleration = c_int(int(acceleration))
+        self.check_open_status()
+        mcsc.SA_SetClosedLoopMoveAcceleration_S(self.handle, ch, acceleration)
+
+    def get_speed(self, ch):
+        ch = c_int(int(ch))
+        speed = c_int()
+        self.check_open_status()
+        self.check_status(mcsc.SA_GetClosedLoopMoveSpeed_S(self.handle, ch,
+                                                           byref(speed)))
+        return speed.value
+
+    def set_speed(self, ch, speed):
+        '''
+        units are nm/s, max is 1e8. A value of 0 deactivates speed control
+        (defaults to max.).
+        '''
+        ch = c_int(int(ch))
+        speed = c_int(int(speed))
+        self.check_open_status()
+        self.check_status(mcsc.SA_SetClosedLoopMoveSpeed_S(self.handle, ch,
+                                                           speed))
+
+    def get_frequency(self, ch):
+        ch = c_int(int(ch))
+        frequency = c_int()
+        self.check_open_status()
+        self.check_status(mcsc.SA_GetClosedLoopMaxFrequency_S(self.handle, ch,
+                                                              byref(frequency)))
+        return frequency.value
+
+    def set_frequency(self, ch, frequency):
+        '''
+        units are nm/s, min is 50, max is 18,500. A value of 0 deactivates speed control
+        (defaults to max.).
+        '''
+        ch = c_int(int(ch))
+        frequency = c_int(int(frequency))
+        self.check_open_status()
+        self.check_status(mcsc.SA_SetClosedLoopMaxFrequency_S(self.handle, ch,
+                                                              frequency))
+
+    ### Scanning Methods ###
+
+    def position_to_level(self, position):
+        # 1 um per 100 V, position can be 0, 1000 nm
+        voltage = position / 10.
+        level = self.voltage_to_level(voltage)
+        return level
+
+    def voltage_to_level(self, voltage):
+        level = voltage * 4095. / 100.
+        level = round(level)
+        return level
+
+    def level_to_voltage(self, level):
+        voltage = 100. * level / 4095.
+        return voltage
+
+    def level_to_position(self, level):
+        voltage = self.level_to_voltage(level)
+        position = voltage * 10.
+        return position
+
+    def get_voltage(self, ch):
+        ch = c_int(int(ch))
+        level = c_int()
+        self.check_open_status()
+        mcsc.SA_GetVoltageLevel_S(self.handle, ch, byref(level))
+        voltage = self.level_to_voltage(level.value)
+        return voltage
+
+    def get_scan_position(self, ch):
+        voltage = self.get_voltage(ch)
+        position = voltage * 10.
+        return position * 1e-9
+
+    def scan_move(self, level, axis, speed=4095, relative=False):
+        """
+        Scan up to 100V
+        level: 0 - 100 V, 0 - 4095
+        speed: 4095 s - 1 us for full 4095 voltage range, 1 - 4,095,000,000
+        """
+        if axis not in self.axis_names:
+            raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
+        ch = c_int(int(axis))
+        level = c_int(int(level))
+        speed = c_int(int(speed))
+        self.check_open_status()
+        if relative:
+            self.check_status(mcsc.SA_ScanMoveRelative_S(self.handle, ch, level, speed))
+        else:
+            self.check_status(mcsc.SA_ScanMoveAbsolute_S(self.handle, ch, level, speed))
+        self.wait_until_done(ch)
+
+    def scan_move_rel(self, diff, axis, speed=4095):
+        """
+        Scan up to 50V
+        diff: -100 - 100 V, -4095 - 4095
+        speed: 4095 s - 1 us for full 4095 voltage range, 1 - 4,095,000,000
+        """
+        self.scan_move(diff, axis, speed, relative=True)
+
+    def scan_move_to_voltage(self, axis, voltage, speed, relative=False):
+        """
+        Scan to 50V
+        level: 0 - 100 V, 0 - 4095
+        speed: 4095 s - 1 us for full 4095 voltage range, 1 - 4,095,000,000
+        """
+        level = self.voltage_to_level(voltage)
+        self.scan_move(level, axis, speed, relative)
+
+    def scan_move_rel_to_voltage(self, axis, voltage_diff, speed):
+        """
+        Scan to 50V
+        level: 0 - 100 V, 0 - 4095
+        speed: 4095 s - 1 us for full 4095 voltage range, 1 - 4,095,000,000
+        """
+        diff = self.voltage_to_level(voltage_diff)
+        self.scan_move(diff, axis, speed, relative=True)
+
+    def scan_move_to_position(self, position, axis, speed, relative=False):
+        level = self.position_to_level(1e9*position)
+        self.scan_move(level, axis, speed, relative)
+
+    def scan_move_rel_to_position(self, axis, step, speed):
+        diff = self.position_to_level(1e9*step)
+        self.scan_move(diff, axis, speed, relative=True)
+
+    def multi_scan_move(self, levels, axes, speeds, relative=False):
+        self.check_open_status()
+        levels = [c_int(int(level)) for level in levels]
+        axes = [c_int(int(axis)) for axis in axes]
+        speeds = [c_int(int(speed)) for speed in speeds]
+        for i in range(len(axes)):
+            if relative:
+                pass
+            else:
+                self.check_status(mcsc.SA_ScanMoveAbsolute_S(self.handle, axes[i], levels[i], speeds[i]))
+        for axis in axes:
+            self.wait_until_done(axis)
+
+    def multi_scan_move_to_voltage(self, voltages, axes, speeds, relative=False):
+        levels = [self.voltage_to_level(v) for v in voltages]
+        self.multi_scan_move(levels, axes, speeds, relative)
+
+    def multi_scan_move_to_position(self, positions, axes, speeds, relative=False):
+        levels = [self.position_to_level(1e9*p) for p in positions]
+        self.multi_scan_move(levels, axes, speeds, relative)
+
+    ### Useful Properties ###
+    num_ch = property(get_num_channels)
+    position = property(get_position)
+
+
+if __name__ == '__main__':
+    # print SA_OK
+    stage = SmaractMCS()
