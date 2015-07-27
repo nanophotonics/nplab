@@ -181,26 +181,6 @@ class HyperspectralImage(object):
         self._dx1, self._dy1 = self._get_offset(self.wavelength, polarisation=1)
         self._dx2, self._dy2 = self._get_offset(self.wavelength, polarisation=2)
 
-    def set_roi(self, dataset):
-        name = dataset.name.rsplit('/', 1)[1]
-        ndims = len(dataset.shape)-1
-        # if the step axis is the one being returned then simply set its roi
-        # the other fundamental axis is the wavelength
-        if name in ['x','y','z'] or 'wavelength' in name:
-            roi = getattr(self, '_{0}_roi'.format(name))
-        elif 'spectra' in name:
-            i = name.rsplit('spectra', 1)[1]
-            wl_roi = getattr(self, '_wavelength{0}_roi'.format(i))
-            if ndims == 2:
-                roi = np.s_[self._x_roi, self._y_roi, wl_roi]
-            elif ndims == 3:
-                roi = np.s_[self._x_roi, self._y_roi, self._z_roi, wl_roi]
-        # if any other array is being returned then process accordingly
-        else:
-            print 'have not taken into account', name
-        a = dataset[roi]
-        return a
-
     def apply_corrections(self, a, dataset):
         name = dataset.name.rsplit('/', 1)[1]
         if name in ['x', 'y', 'z']:
