@@ -149,7 +149,7 @@ class SmaractMCS(Stage, Instrument):
             self.check_status(mcsc.SA_GotoPositionRelative_S(self.handle, ch, position, c_int(0)))
         else:
             self.check_status(mcsc.SA_GotoPositionAbsolute_S(self.handle, ch, position, c_int(0)))
-        self.wait_until_done(ch)
+        self.wait_until_stopped(ch)
 
     ### Setup Methods ###
 
@@ -216,7 +216,7 @@ class SmaractMCS(Stage, Instrument):
 
     ### Calibration Methods ###
 
-    def wait_until_done(self, ch):
+    def wait_until_stopped(self, ch):
         status = c_int(4)
         if type(ch) is not c_int:
             ch = c_int(ch)
@@ -237,7 +237,7 @@ class SmaractMCS(Stage, Instrument):
         num_ch = self.get_num_channels()
         for ch in range(num_ch):
             self.check_status(mcsc.SA_CalibrateSensor_S(self.handle, ch))
-            self.wait_until_done(ch)
+            self.wait_until_stopped(ch)
 
     def set_safe_directions(self):
         """
@@ -270,7 +270,7 @@ class SmaractMCS(Stage, Instrument):
         forward_channels = self.set_safe_directions()
         value = SA_FORWARD_DIRECTION if (ch.value in forward_channels) else SA_BACKWARD_DIRECTION
         self.check_status(mcsc.SA_FindReferenceMark_S(self.handle, ch, value, 0, SA_AUTO_ZERO))
-        self.wait_until_done(ch)
+        self.wait_until_stopped(ch)
 
     def find_references(self):
         self.check_open_status()
@@ -310,7 +310,7 @@ class SmaractMCS(Stage, Instrument):
             else:
                 self.check_status(mcsc.SA_GotoPositionAbsolute_S(self.handle, channels[i], positions[i], c_int(0)))
         for axis in axes:
-            self.wait_until_done(axis)
+            self.wait_until_stopped(axis)
 
     def multi_move_rel(self, step, axes):
         steps = [1e9 * step for axis in axes]
@@ -449,7 +449,7 @@ class SmaractMCS(Stage, Instrument):
             self.check_status(mcsc.SA_ScanMoveRelative_S(self.handle, ch, level, speed))
         else:
             self.check_status(mcsc.SA_ScanMoveAbsolute_S(self.handle, ch, level, speed))
-        self.wait_until_done(ch)
+        self.wait_until_stopped(ch)
 
     def scan_move_rel(self, diff, axis, speed=4095):
         """
@@ -496,7 +496,7 @@ class SmaractMCS(Stage, Instrument):
             else:
                 self.check_status(mcsc.SA_ScanMoveAbsolute_S(self.handle, axes[i], levels[i], speeds[i]))
         for axis in axes:
-            self.wait_until_done(axis)
+            self.wait_until_stopped(axis)
 
     def multi_scan_move_to_voltage(self, voltages, axes, speeds, relative=False):
         levels = [self.voltage_to_level(v) for v in voltages]
