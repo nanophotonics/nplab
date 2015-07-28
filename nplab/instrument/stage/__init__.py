@@ -63,7 +63,7 @@ controls_base, controls_widget = uic.loadUiType(os.path.join(os.path.dirname(__f
 
 
 class StageUI(UiTools, controls_base, controls_widget):
-    update_ui = QtCore.pyqtSignal(str)
+    update_ui = QtCore.pyqtSignal([int], [str])
 
     def __init__(self, stage, parent=None):
         assert isinstance(stage, Stage), "instrument must be a Stage"
@@ -73,11 +73,16 @@ class StageUI(UiTools, controls_base, controls_widget):
         self.step_size_values = step_size_dict(1e-9, 1e-3)
         self.step_size = [self.step_size_values[self.step_size_values.keys()[0]] for axis in stage.axis_names]
         self.create_axes_layout()
-        self.update_ui.connect(self.update_positions)
+        self.update_ui[str].connect(self.update_positions)
+        self.update_pos_button.clicked.connect(partial(self.update_positions, None))
 
     def move_axis_relative(self, index, axis, dir=1):
         self.stage.move(dir*self.step_size[index], axis=axis, relative=True)
-        self.update_ui.emit(axis)
+        if type(axis) == str:
+        #    axis = QtCore.QString(axis)
+            self.update_ui[str].emit(axis)
+        elif type(axis) == int:
+            self.update_ui[int].emit(axis)
 
     def create_axes_layout(self, stack_multiple_stages='horizontal'):
         path = os.path.dirname(os.path.realpath(nplab.ui.__file__))
@@ -134,6 +139,9 @@ class StageUI(UiTools, controls_base, controls_widget):
         #print self.sender(), index, value
         self.step_size[index] = self.step_size_values[value]
 
+    @QtCore.pyqtSlot(int)
+    #@QtCore.pyqtSlot('QString')
+    @QtCore.pyqtSlot(str)
     def update_positions(self, axis=None):
         if axis is None:
             current_position = self.stage.position
