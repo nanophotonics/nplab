@@ -8,6 +8,7 @@ import os
 from nplab.utils.gui import *
 from PyQt4 import uic
 from nplab.ui.ui_tools import UiTools
+from nplab.utils.formatting import engineering_format
 
 
 try:
@@ -94,9 +95,9 @@ class SmaractMCS(Stage, Instrument):
             print 'buffer:', ctypes.string_at(outBuffer)
         return ctypes.string_at(outBuffer)
 
-    def __init__(self):
+    def __init__(self, system_id):
         super(SmaractMCS, self).__init__()
-        self.mcs_id = 'usb:id:1842634745'
+        self.mcs_id = system_id
         self.handle = c_int(0)
         # self.setup()
         self.is_open = False
@@ -401,18 +402,36 @@ class SmaractMCS(Stage, Instrument):
         position = voltage * 10.
         return position
 
-    def get_voltage(self, ch):
-        ch = c_int(int(ch))
+    def get_scan_level(self, axis):
+        ch = c_int(int(axis))
         level = c_int()
         self.check_open_status()
         mcsc.SA_GetVoltageLevel_S(self.handle, ch, byref(level))
-        voltage = self.level_to_voltage(level.value)
+        return level.value
+
+
+    def get_voltage(self, ch):
+        level = self.get_scan_level(ch)
+        voltage = self.level_to_voltage(level)
         return voltage
 
-    def get_scan_position(self, ch):
-        voltage = self.get_voltage(ch)
-        position = voltage * 10.
-        return position * 1e-9
+    def get_scan_position(self, axis=None):
+        """
+        Get the scanning position of the stage or of a specified axis.
+        :param axis:
+        :return:
+        """
+        if axis is None:
+            positions = []
+            for axis in self.axis_names:
+                positions.append(1e-9*10.*self.get_voltage(axis))
+            return positions
+        else:
+            if axis not in self.axis_names:
+                raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
+            voltage = self.get_voltage(axis)
+            position = 1e-9*10.*voltage
+            return position
 
     def scan_move(self, level, axis, speed=4095, relative=False):
         """
@@ -493,6 +512,7 @@ class SmaractMCS(Stage, Instrument):
     ### Useful Properties ###
     num_ch = property(get_num_channels)
     position = property(get_position)
+    scan_position = property(get_scan_position)
 
 
 class SmaractStageUI(StageUI):
@@ -503,6 +523,7 @@ class SmaractStageUI(StageUI):
         if axis in [1,2,4,5]:
             dir *= -1
         self.stage.move(dir*self.step_size[index], axis=axis, relative=True)
+        self.update_ui[int].emit(axis)
 
 class SmaractScanStageUI(StageUI):
     def __init__(self, stage):
@@ -512,7 +533,20 @@ class SmaractScanStageUI(StageUI):
         if axis in [1,2,4,5]:
             dir *= -1
         self.stage.scan_move_to_position(dir*self.step_size[index], axis=axis, speed=4095, relative=True)
+        self.update_ui[int].emit(axis)
 
+    @QtCore.pyqtSlot(int)
+    @QtCore.pyqtSlot(str)
+    def update_positions(self, axis=None):
+        if axis is None:
+            current_position = self.stage.scan_position
+            for i in range(len(self.positions)):
+                p = engineering_format(current_position[i], base_unit='m', digits_of_precision=3)
+                self.positions[i].setText(p)
+        else:
+            i = self.stage.axis_names.index(axis)
+            p = engineering_format(self.stage.scan_position[i], base_unit='m', digits_of_precision=3)
+            self.positions[i].setText(p)
 
 controls_base, controls_widget = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'smaract_mcs.ui'))
 
@@ -535,10 +569,11 @@ class SmaractMCSUI(UiTools, controls_base, controls_widget):
 
 if __name__ == '__main__':
     # print SA_OK
-    stage = SmaractMCS()
-    print stage.position
-    print stage.get_position()
-    print stage.get_position(0)
+    system_id = SmaractMCS.find_mcs_systems()
+    stage = SmaractMCS(system_id)
+    #print stage.position
+    #print stage.get_position()
+    #print stage.get_position(0)
 
     import sys
     from nplab.utils.gui import get_qt_app

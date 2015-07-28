@@ -73,6 +73,7 @@ class StageUI(UiTools, controls_base, controls_widget):
         self.step_size_values = step_size_dict(1e-9, 1e-3)
         self.step_size = [self.step_size_values[self.step_size_values.keys()[0]] for axis in stage.axis_names]
         self.create_axes_layout()
+        self.update_ui[int].connect(self.update_positions)
         self.update_ui[str].connect(self.update_positions)
         self.update_pos_button.clicked.connect(partial(self.update_positions, None))
 
