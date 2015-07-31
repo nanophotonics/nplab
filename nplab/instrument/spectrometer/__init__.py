@@ -13,7 +13,10 @@ import h5py
 from multiprocessing.pool import ThreadPool
 from threading import Thread
 import time
-
+import h5py
+import os
+import inspect
+import datetime
 
 class Spectrometer(object):
 
@@ -26,6 +29,21 @@ class Spectrometer(object):
         self.background = None
         self.latest_raw_spectrum = None
         self.latest_spectrum = None
+        self._config_file = None
+
+    def __del__(self):
+        if self._config_file is not None:
+            self._config_file.close()
+
+    def open_config_file(self):
+        if self._config_file is None:
+            f = inspect.getfile(self.__class__)
+            d = os.path.dirname(f)
+            self._config_file = h5py.File(os.path.join(d, 'config.h5'))
+            self._config_file.attrs['date'] = datetime.datetime.now().strftime("%H:%M %d/%m/%y")
+        return self._config_file
+
+    config_file = property(open_config_file)
 
     def get_model_name(self):
         if self._model_name is None:
@@ -60,14 +78,25 @@ class Spectrometer(object):
         self.latest_raw_spectrum = np.zeros(0)
         return self.latest_raw_spectrum
 
+    def update_config(self, name, data):
+        f = self.config_file
+        if name not in f:
+            f.create_dataset(name, data=data)
+        else:
+            dset = f[name]
+            dset[:] = data
+            f.flush()
+
     def read_background(self):
         self.background = self.read_spectrum()
+        self.update_config('background', self.background)
 
     def clear_background(self):
         self.background = None
 
     def read_reference(self):
         self.reference = self.read_spectrum()
+        self.update_config('reference', self.reference)
 
     def clear_reference(self):
         self.reference = None
@@ -197,6 +226,7 @@ class SpectrometerControlUI(UiTools, controls_base, controls_widget):
         self.read_reference_button.clicked.connect(self.button_pressed)
         self.clear_background_button.clicked.connect(self.button_pressed)
         self.clear_reference_button.clicked.connect(self.button_pressed)
+        self.load_state_button.clicked.connect(self.button_pressed)
 
         self.background_subtracted.stateChanged.connect(self.state_changed)
         self.referenced.stateChanged.connect(self.state_changed)
@@ -218,16 +248,42 @@ class SpectrometerControlUI(UiTools, controls_base, controls_widget):
         sender = self.sender()
         if sender is self.read_background_button:
             self.spectrometer.read_background()
-            self.background_subtracted.setChecked(True)
+            self.background_subtracted.blockSignals(True)
+            self.background_subtracted.setCheckState(QtCore.Qt.Checked)
+            self.background_subtracted.blockSignals(False)
         elif sender is self.clear_background_button:
             self.spectrometer.clear_background()
-            self.background_subtracted.setChecked(False)
+            self.background_subtracted.blockSignals(True)
+            self.background_subtracted.setCheckState(QtCore.Qt.Unchecked)
+            self.background_subtracted.blockSignals(False)
         elif sender is self.read_reference_button:
             self.spectrometer.read_reference()
-            self.referenced.setChecked(True)
+            self.referenced.blockSignals(True)
+            self.referenced.setCheckState(QtCore.Qt.Checked)
+            self.referenced.blockSignals(False)
         elif sender is self.clear_reference_button:
             self.spectrometer.clear_reference()
-            self.referenced.setChecked(False)
+            self.referenced.blockSignals(True)
+            self.referenced.setCheckState(QtCore.Qt.Unchecked)
+            self.referenced.blockSignals(False)
+        elif sender is self.load_state_button:
+            if self.spectrometer._config_file is None:
+                print 'No config file present'
+                return
+            if 'background' in self.spectrometer.config_file:
+                self.spectrometer.background = self.spectrometer.config_file['background'][:]
+                self.background_subtracted.blockSignals(True)
+                self.background_subtracted.setCheckState(QtCore.Qt.Checked)
+                self.background_subtracted.blockSignals(False)
+            else:
+                print 'background not found in config file'
+            if 'reference' in self.spectrometer.config_file:
+                self.spectrometer.reference = self.spectrometer.config_file['reference'][:]
+                self.referenced.blockSignals(True)
+                self.referenced.setCheckState(QtCore.Qt.Checked)
+                self.referenced.blockSignals(False)
+            else:
+                print 'reference not found in config file'
 
     def state_changed(self, state):
         sender = self.sender()

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>282</width>
-    <height>186</height>
+    <width>334</width>
+    <height>231</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -20,9 +20,6 @@
    <string>Form</string>
   </property>
   <layout class="QVBoxLayout" name="layout">
-   <property name="spacing">
-    <number>6</number>
-   </property>
    <property name="margin">
     <number>5</number>
    </property>
@@ -247,6 +244,13 @@
           </property>
           <property name="text">
            <string>Referenced</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="0">
+         <widget class="QPushButton" name="load_state_button">
+          <property name="text">
+           <string>Load State</string>
           </property>
          </widget>
         </item>

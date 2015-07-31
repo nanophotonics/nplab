@@ -40,6 +40,9 @@ from nplab.instrument.spectrometer import Spectrometer, SpectrometerControlUI, S
 import traitsui
 import os
 from PyQt4 import uic
+import h5py
+import inspect
+import datetime
 
 try:
     seabreeze = ctypes.cdll.seabreeze
@@ -125,6 +128,7 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
         self.enable_tec = True
 
     def __del__(self):
+        super(OceanOpticsSpectrometer, self).__del__()
         self._close()
         return self
 
@@ -147,6 +151,14 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
             seabreeze.seabreeze_close_spectrometer(self.index, byref(e))
             check_error(e)
             self._isOpen = False
+
+    def open_config_file(self):
+        if self._config_file is None:
+            f = inspect.getfile(self.__class__)
+            d = os.path.dirname(f)
+            self._config_file = h5py.File(os.path.join(d, self.model_name+'_'+self.serial_number+'_config.h5'))
+            self._config_file.attrs['date'] = datetime.datetime.now().strftime("%H:%M %d/%m/%y")
+        return self._config_file
 
     def get_model_name(self):
         if self._model_name is None:
