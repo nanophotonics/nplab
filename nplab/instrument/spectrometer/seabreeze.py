@@ -160,6 +160,8 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
             self._config_file.attrs['date'] = datetime.datetime.now().strftime("%H:%M %d/%m/%y")
         return self._config_file
 
+    config_file = property(open_config_file)
+
     def get_model_name(self):
         if self._model_name is None:
             N = 32  # make a buffer for the DLL to return a string into

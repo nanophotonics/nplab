@@ -267,9 +267,6 @@ class SpectrometerControlUI(UiTools, controls_base, controls_widget):
             self.referenced.setCheckState(QtCore.Qt.Unchecked)
             self.referenced.blockSignals(False)
         elif sender is self.load_state_button:
-            if self.spectrometer._config_file is None:
-                print 'No config file present'
-                return
             if 'background' in self.spectrometer.config_file:
                 self.spectrometer.background = self.spectrometer.config_file['background'][:]
                 self.background_subtracted.blockSignals(True)

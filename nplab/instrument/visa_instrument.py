@@ -29,13 +29,13 @@ class VisaInstrument(Instrument):
         try:
             self.instr.close()
         except Exception as e:
-            print "The serial port didn't close cleanly:", e            print "The serial port didn't close cleanly:", e
-            
+            print "The serial port didn't close cleanly:", e
+
     def write(self, *args, **kwargs):
         return self.instr.write(*args, **kwargs)
-        
+
     def read(self, *args, **kwargs):
         return self.instr.read(*args, **kwargs)
-        
+
     def query(self, *args, **kwargs):
         return self.instr.query(*args, **kwargs)
