@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>SMU</class>
+ <widget class="QWidget" name="SMU">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>428</width>
+    <height>253</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <property name="margin">
+    <number>5</number>
+   </property>
+   <item>
+    <widget class="QGroupBox" name="smu_group">
+     <property name="title">
+      <string>SMU</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_2">
+      <property name="margin">
+       <number>5</number>
+      </property>
+      <item>
+       <layout class="QHBoxLayout" name="source_select_layout">
+        <property name="sizeConstraint">
+         <enum>QLayout::SetDefaultConstraint</enum>
+        </property>
+        <item>
+         <widget class="QLabel" name="source_label">
+          <property name="text">
+           <string>Source:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="voltage_button">
+          <property name="text">
+           <string>Voltage</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="current_button">
+          <property name="text">
+           <string>Current</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="output">
+          <property name="text">
+           <string>Output</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="display_layout">
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <item>
+         <widget class="QLabel" name="display_label">
+          <property name="text">
+           <string>Display:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="display_select">
+          <item>
+           <property name="text">
+            <string>voltage</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>current</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>resistance</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>power</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item>
+         <spacer name="horizontalSpacer_2">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="controls_layout">
+        <item>
+         <widget class="QGroupBox" name="source_controls">
+          <property name="title">
+           <string>Source Controls</string>
+          </property>
+          <layout class="QFormLayout" name="source_layout">
+           <property name="margin">
+            <number>5</number>
+           </property>
+           <item row="1" column="0">
+            <widget class="QLabel" name="source_range_label">
+             <property name="text">
+              <string>Range</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QLineEdit" name="source_range"/>
+           </item>
+           <item row="3" column="0">
+            <widget class="QLabel" name="source_limit_label">
+             <property name="text">
+              <string>Limit</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="1">
+            <widget class="QLineEdit" name="source_limit"/>
+           </item>
+           <item row="2" column="1">
+            <widget class="QCheckBox" name="source_autorange">
+             <property name="text">
+              <string>Auto</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QLineEdit" name="source_value"/>
+           </item>
+           <item row="0" column="0">
+            <widget class="QLabel" name="value_label">
+             <property name="text">
+              <string>Value</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QGroupBox" name="measurement_controls">
+          <property name="title">
+           <string>Measurement Controls</string>
+          </property>
+          <layout class="QFormLayout" name="measurement_layout">
+           <property name="margin">
+            <number>5</number>
+           </property>
+           <item row="3" column="0">
+            <widget class="QLabel" name="measurement_limit_label">
+             <property name="text">
+              <string>Limit</string>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="1">
+            <widget class="QLineEdit" name="measurement_limit"/>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="measurement_range_label">
+             <property name="text">
+              <string>Range</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QLineEdit" name="measurement_range"/>
+           </item>
+           <item row="2" column="1">
+            <widget class="QCheckBox" name="measurement_autorange">
+             <property name="text">
+              <string>Auto</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="measure_layout">
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <item>
+         <widget class="QPushButton" name="measure_button">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>Measure</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="measurements">
+          <property name="readOnly">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

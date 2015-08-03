@@ -2,6 +2,8 @@ __author__ = 'alansanders'
 
 from nplab.instrument.visa_instrument import VisaInstrument
 import numpy as np
+from nplab.utils.gui import *
+from PyQt4 import uic
 
 
 class Keithley2635A(VisaInstrument):
@@ -91,21 +93,22 @@ class Keithley2635A(VisaInstrument):
     def get_display(self):
         return self.instr.query('print(display.smua.measure.func)')
     def set_display(self, display):
+        assert display in ['display.MEASURE_DCAMPS', 'display.MEASURE_DCVOLTS', 'display.MEASURE_OHMS', 'display.MEASURE_WATTS', 0,1,2,3], 'Invalid display given'
         self.instr.write('display.smua.measure.func=%s' % display)
     display = property(get_display, set_display)
 
     def get_src_voltage_autorange(self):
         return self.instr.query('print(smua.source.autorangev)')
     def set_src_voltage_autorange(self, autorange):
-        assert autorange in [0,1], "Autorange must either be 0 (off) or 1 (on)"
-        self.instr.write('smua.source.autorangev=%s' % autorange)
+        assert autorange in [0,1, False, True], "Autorange must either be 0 (off) or 1 (on)"
+        self.instr.write('smua.source.autorangev=%s' % int(autorange))
     src_voltage_autorange = property(get_src_voltage_autorange, set_src_voltage_autorange)
 
     def get_src_current_autorange(self):
         return self.instr.query('print(smua.source.autorangei)')
     def set_src_current_autorange(self, autorange):
-        assert autorange in [0,1], "Autorange must either be 0 (off) or 1 (on)"
-        self.instr.write('smua.source.autorangei=%s' % autorange)
+        assert autorange in [0,1, False, True], "Autorange must either be 0 (off) or 1 (on)"
+        self.instr.write('smua.source.autorangei=%s' % int(autorange))
     src_current_autorange = property(get_src_current_autorange, set_src_current_autorange)
 
     def get_src_voltage_lowrange(self):
@@ -123,15 +126,15 @@ class Keithley2635A(VisaInstrument):
     def get_meas_voltage_autorange(self):
         return self.instr.query('print(smua.measure.autorangev)')
     def set_meas_voltage_autorange(self, autorange):
-        assert autorange in [0,1], "Autorange must either be 0 (off) or 1 (on)"
-        self.instr.write('smua.measure.autorangev=%s' % autorange)
+        assert autorange in [0,1, False, True], "Autorange must either be 0 (off) or 1 (on)"
+        self.instr.write('smua.measure.autorangev=%s' % int(autorange))
     meas_voltage_autorange = property(get_meas_voltage_autorange, set_meas_voltage_autorange)
 
     def get_meas_current_autorange(self):
         return self.instr.query('print(smua.measure.autorangei)')
     def set_meas_current_autorange(self, autorange):
-        assert autorange in [0,1], "Autorange must either be 0 (off) or 1 (on)"
-        self.instr.write('smua.measure.autorangei=%s' % autorange)
+        assert autorange in [0,1, False, True], "Autorange must either be 0 (off) or 1 (on)"
+        self.instr.write('smua.measure.autorangei=%s' % int(autorange))
     meas_current_autorange = property(get_meas_current_autorange, set_meas_current_autorange)
 
     def get_meas_voltage_lowrange(self):
@@ -213,9 +216,138 @@ class Keithley2635A(VisaInstrument):
                 # print 'v down', v, v_range
         return v
 
+    def get_qt_ui(self):
+        return SmuUI(self)
+
+
+smu_base, smu_widget = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'smu.ui'))
+
+
+class SmuUI(smu_base, smu_widget):
+    def __init__(self, smu, parent=None):
+        super(SmuUI, self).__init__()
+        self.smu = smu
+        self.parent = parent
+        self.setupUi(self)
+
+        self.current_button.clicked.connect(self.state_changed)
+        self.voltage_button.clicked.connect(self.state_changed)
+        self.source_value.returnPressed.connect(self.set_parameter)
+        self.source_range.returnPressed.connect(self.set_parameter)
+        self.source_autorange.stateChanged.connect(self.state_changed)
+        self.source_limit.returnPressed.connect(self.set_parameter)
+        self.measurement_range.returnPressed.connect(self.set_parameter)
+        self.measurement_autorange.stateChanged.connect(self.state_changed)
+        self.measurement_limit.returnPressed.connect(self.set_parameter)
+        self.measure_button.clicked.connect(self.measure_button_clicked)
+        self.display_select.activated[str].connect(self.on_activated)
+        self.output.stateChanged.connect(self.state_changed)
+
+        self.voltage_button.setChecked(True)
+        self.source_value.setText(str(self.smu.src_voltage))
+        self.source_range.setText(str(self.smu.src_voltage_range))
+        self.source_autorange.setChecked(bool(self.smu.src_voltage_autorange))
+        self.source_limit.setText(str(self.smu.src_voltage_limit))
+        self.measurement_range.setText(str(self.smu.meas_current_range))
+        self.measurement_autorange.setChecked(bool(self.smu.meas_current_autorange))
+        self.measurement_limit.setText(str(self.smu.src_current_limit))
+        self.output.setChecked(False)
+
+
+    def set_parameter(self):
+        sender = self.sender()
+        value = sender.text()
+        if sender.validator() is not None:
+            state = sender.validator().validate(value, 0)[0]
+            if state != QtGui.QValidator.Acceptable:
+                return
+        if self.voltage_button.isChecked():
+            if sender == self.source_value:
+                self.smu.src_voltage = float(value)
+            elif sender == self.source_range:
+                self.source_autorange.setChecked(False)
+                self.smu.src_voltage_range = float(value)
+            elif sender == self.source_limit:
+                self.smu.src_voltage_limit = float(value)
+            elif sender == self.measurement_range:
+                self.measurement_autorange.setChecked(False)
+                self.smu.meas_current_range = float(value)
+            elif sender == self.measurement_limit:
+                self.smu.src_current_limit = float(value)
+        elif self.current_button.isChecked():
+            if sender == self.source_value:
+                self.smu.src_current = float(value)
+            elif sender == self.source_range:
+                self.source_autorange.setChecked(False)
+                self.smu.src_current_range = float(value)
+            elif sender == self.source_limit:
+                self.smu.src_current_limit = float(value)
+            elif sender == self.measurement_range:
+                self.maesurement_autorange.setChecked(False)
+                self.smu.meas_voltage_range = float(value)
+            elif sender == self.measurement_limit:
+                self.smu.meas_voltage_limit = float(value)
+
+    def state_changed(self, state):
+        sender = self.sender()
+        value = True if state == QtCore.Qt.Checked else False
+        if sender == self.voltage_button:
+            if value:
+                self.current_button.blockSignals(True)
+                self.current_button.setChecked(False)
+                self.current_button.blockSignals(False)
+                self.smu.source = 0
+        elif sender == self.current_button:
+            if value:
+                self.voltage_button.blockSignals(True)
+                self.voltage_button.setChecked(False)
+                self.voltage_button.blockSignals(False)
+                self.smu.source = 1
+        elif sender == self.source_autorange:
+            if self.voltage_button.isChecked():
+                self.smu.src_voltage_autorange = value
+            elif self.current_button.isChecked():
+                self.smu.src_current_autorange = value
+        elif sender == self.measurement_autorange:
+            if self.voltage_button.isChecked():
+                self.smu.meas_current_autorange = value
+            elif self.current_button.isChecked():
+                self.smu.meas_voltage_autorange = value
+        elif sender == self.output:
+            if value:
+                self.smu.output = 1
+            else:
+                self.smu.output = 0
+
+    def measure_button_clicked(self):
+        voltage = self.smu.read_voltage()
+        current = self.smu.read_current()
+        resistance = self.smu.read_resistance()
+        power = self.smu.read_power()
+        self.measurements.setText('{0:.2e} V, {1:.2e} A, {2:.2e} Ohms, {3:.2e} W'.format(voltage, current, resistance, power))
+
+    def on_activated(self, value):
+        # print self.sender(), index, value
+        if value == 'voltage':
+            self.smu.display = 1
+        elif value == 'current':
+            self.smu.display = 0
+        elif value == 'resistance':
+            self.smu.display = 2
+        elif value == 'power':
+            self.smu.display = 3
+
+
 if __name__ == '__main__':
     smu = Keithley2635A()
     smu.output = 1
     smu.src_voltage = 10e-3
     print smu.read_iv()
     print smu.read_resistance()
+    smu.output = 0
+
+    import sys
+    app = get_qt_app()
+    ui = smu.get_qt_ui()
+    ui.show()
+    sys.exit(app.exec_())
