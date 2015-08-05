@@ -3,6 +3,19 @@
 Created on Thu Jul 10 17:06:28 2014
 
 @author: Richard
+
+Function decorators to help writing multi-threaded code:
+    
+@locked_action
+@locked_action_decorator(wait_for_lock=True)
+
+Decorating a function with the @locked_action decorator means that only one such function can be called simultaneously on a given object - it's intended to protect i/o operations and make the object thread safe.  By default, functions block until the lock is available, but the long form of the decorator allows this to be changed, so the function returns immediately if the object is locked.
+
+@background_action
+
+Decorating a function with @background_action means that it will happen in a thread.  Often you should lock the action to stop multiple threads conflicting.  NB that you should put the @background_action decorator *before* the @locked_action decorator, otherwise the lock won't work.  
+
+A function running in the background returns a thread object; to find the return value, you can call t.join_and_return_result() (you may want to check if the thread has finished first with t.is_alive()).
 """
 
 import time
@@ -24,7 +37,14 @@ def locked_action_decorator(wait_for_lock=True):
     default) or to the function when called (which overrides it).
     """
     def decorator(function):
+        #the decorator is meant to be called as @locked_action_decorator()
+        #so we need to return a function, which is what actually gets used
+        #to modify the function we're decorating.
         def locked_action(self, wait_for_lock=wait_for_lock, *args, **kwargs):
+            """Perform an action, but use a lock so only one locked action can
+            happen at any time"""
+            #TODO: make sure this doesn't mess up docstrings
+            #First: make sure the lock object exists
             if not hasattr(self, "_nplab_action_lock"):
                 self._nplab_action_lock = threading.RLock()
             try:
@@ -41,6 +61,7 @@ def locked_action_decorator(wait_for_lock=True):
                 self._nplab_action_lock.release() #don't leave the thing locked
         return locked_action
     return decorator
+#you can also use @locked_action as a decorator, which uses default args.
 locked_action = locked_action_decorator()
 
 def background_action_decorator(background_by_default=True, ):
