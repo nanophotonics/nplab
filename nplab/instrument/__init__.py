@@ -37,7 +37,7 @@ class Instrument(HasTraits):
         return [i for i in Instrument.instances_set() if isinstance(i, cls)]
 
     @classmethod
-    def get_instance(cls, create=True, exceptions=True):
+    def get_instance(cls, create=True, exceptions=True, *args, **kwargs):
         """Return an instance of this class, if one exists.  
         
         Usually returns the first available instance.
@@ -47,7 +47,7 @@ class Instrument(HasTraits):
             return instances[0]
         else:
             if create:
-                return cls()
+                return cls(*args, **kwargs)
             else:
                 if exceptions:
                     raise IndexError("There is no available instance!")
