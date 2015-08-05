@@ -5,11 +5,19 @@ from nplab.utils.gui import *
 
 class UiTools(object):
 
-    def replace_widget(self, layout, old_widget, new_widget):
-        layout.addWidget(new_widget)
-        #new_widget.setParent(self)
-        layout.removeWidget(old_widget)
-        old_widget.setParent(None)
+    def replace_widget(self, layout, old_widget, new_widget, **kwargs):
+        if isinstance(layout, QtGui.QGridLayout):
+            index = layout.indexOf(old_widget)
+            position = layout.getItemPosition(index)
+            layout.removeWidget(old_widget)
+            old_widget.setParent(None)
+            layout.addWidget(new_widget, *position, **kwargs)
+            #new_widget.setParent(self)
+        else:
+            index = layout.indexOf(old_widget)
+            layout.removeWidget(old_widget)
+            old_widget.setParent(None)
+            layout.insertWidget(index, new_widget, **kwargs)
         return new_widget
 
     def check_state(self, *args, **kwargs):
