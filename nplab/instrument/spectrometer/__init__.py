@@ -45,6 +45,15 @@ class Spectrometer(object):
 
     config_file = property(open_config_file)
 
+    def update_config(self, name, data):
+        f = self.config_file
+        if name not in f:
+            f.create_dataset(name, data=data)
+        else:
+            dset = f[name]
+            dset[:] = data
+            f.flush()
+
     def get_model_name(self):
         if self._model_name is None:
             self._model_name = 'model_name'
@@ -77,15 +86,6 @@ class Spectrometer(object):
     def read_spectrum(self):
         self.latest_raw_spectrum = np.zeros(0)
         return self.latest_raw_spectrum
-
-    def update_config(self, name, data):
-        f = self.config_file
-        if name not in f:
-            f.create_dataset(name, data=data)
-        else:
-            dset = f[name]
-            dset[:] = data
-            f.flush()
 
     def read_background(self):
         self.background = self.read_spectrum()
@@ -135,6 +135,8 @@ class Spectrometer(object):
         if self.reference is not None and self.background is not None:
             reference = self.reference - self.background
             mask = reference < reference.max() * threshold
+            if len(spectrum.shape)>1:
+                mask = np.tile(mask, spectrum.shape[:-1]+(1,))
             return ma.array(spectrum, mask=mask)
         else:
             return spectrum
@@ -490,6 +492,11 @@ class DummySpectrometer(Spectrometer):
         self._integration_time = value
 
     integration_time = property(get_integration_time, set_integration_time)
+
+    def get_wavelengths(self):
+        return np.arange(400,1200,1)
+
+    wavelengths = property(get_wavelengths)
 
     def read_spectrum(self):
         from time import sleep
