@@ -7,14 +7,17 @@ __author__ = 'alansanders'
 from nplab.utils.gui import *
 from PyQt4 import uic
 import matplotlib
+
 matplotlib.use('Qt4Agg')
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from data_renderers import *
+from nplab.ui.ui_tools import UiTools
 
-base, widget = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'hdf5_browser.ui'))
 
-class HDF5Browser(base, widget):
+# base, widget = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'hdf5_browser.ui'))
+
+class HDF5Browser(QtGui.QWidget, UiTools):
     """
     Describe the class
     """
@@ -23,22 +26,26 @@ class HDF5Browser(base, widget):
         super(HDF5Browser, self).__init__(parent)
         self.f = f
         self.fig = Figure()
-        self.setupUi(self)
+        # self.setupUi(self)
+        uic.loadUi(os.path.join(os.path.dirname(__file__), 'hdf5_browser.ui'), self)
 
-        self.setWindowTitle(self.f.filename)
+        try:
+            self.root_name = self.f.filename
+        except AttributeError:
+            self.root_name = self.f.file.filename
+        self.setWindowTitle(self.root_name)
         self.addItems(self.treeWidget.invisibleRootItem())
         self.treeWidget.itemClicked.connect(self.on_click)
         self.treeWidget.customContextMenuRequested.connect(self.context_menu)
         self.refreshButton.clicked.connect(self.refresh)
-
-        self.figureWidget = self.renew_widget(self.figureWidget, FigureCanvas(self.fig))
+        self.figureWidget = self.replace_widget(self.horizontalLayout, self.figureWidget, FigureCanvas(self.fig))
 
     def __del__(self):
-        pass#self.f.close()
+        pass  # self.f.close()
 
     def addItems(self, parent):
-        root = self.addParent(parent, 0, self.f.filename, self.f)
-        self.parents = {self.f.name:root}
+        root = self.addParent(parent, 0, self.root_name, self.f)
+        self.parents = {self.f.name: root}
         self.f.visit(self.addChild)
 
     def addParent(self, parent, column, title, data):
@@ -57,7 +64,7 @@ class HDF5Browser(base, widget):
             parent = self.parents['/']
         item = QtGui.QTreeWidgetItem(parent, [name.rsplit('/', 1)[-1]])
         item.setData(0, QtCore.Qt.UserRole, self.f[name])
-        self.parents['/'+name] = item
+        self.parents['/' + name] = item
 
     def refresh(self):
         self.treeWidget.clear()
@@ -84,27 +91,20 @@ class HDF5Browser(base, widget):
         renderer_suitabilities = [d.is_suitable(h5object) for d in renderers]
         max_renderer = max(renderer_suitabilities)
         best_renderer = renderers[renderer_suitabilities.index(max_renderer)]
-        self.figureWidget = self.renew_widget(self.figureWidget, best_renderer(h5object, self))
-
-    def renew_widget(self, old_widget, new_widget):
-        layout = self.horizontalLayout
-        layout.removeWidget(old_widget)
-        old_widget.setParent(None)
-        layout.addWidget(new_widget)
-        new_widget.setParent(self)
-        return new_widget
+        self.figureWidget = self.replace_widget(self.horizontalLayout, self.figureWidget, best_renderer(h5object, self))
 
 
 if __name__ == '__main__':
     import sys, h5py, os, numpy as np
+
     print os.getcwd()
     app = get_qt_app()
     f = h5py.File('test.h5', 'w')
-    f.create_dataset('dset1', data=np.linspace(-1,1,100))
+    f.create_dataset('dset1', data=np.linspace(-1, 1, 100))
     g = f.create_group('group1')
-    g.create_dataset('dset2', data=np.linspace(-1,1,100)**2)
+    g.create_dataset('dset2', data=np.linspace(-1, 1, 100) ** 2)
     g = g.create_group('group2')
-    g.create_dataset('dset3', data=np.linspace(-1,1,100).reshape(10,10))
+    g.create_dataset('dset3', data=np.linspace(-1, 1, 100).reshape(10, 10))
     ui = HDF5Browser(f)
     ui.show()
     sys.exit(app.exec_())
