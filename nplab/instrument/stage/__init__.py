@@ -4,9 +4,6 @@ Base class and interface for Stages.
 
 __author__ = 'alansanders, richardbowman'
 
-from traits.api import HasTraits, Tuple, Button, Enum, Any, List, Str, Instance, Float, Dict, Array
-from traitsui.api import View, Item, ButtonEditor, HGroup, VGroup, Spring, Group, VGrid
-from pyface.api import ImageResource
 import numpy as np
 from collections import OrderedDict
 import itertools
@@ -20,6 +17,7 @@ import nplab.ui
 import inspect
 from functools import partial
 from nplab.utils.formatting import engineering_format
+import collections
 
 
 class Stage(Instrument):
@@ -31,12 +29,12 @@ class Stage(Instrument):
 
     def move_rel(self, position, axis=None):
         """Make a relative move, see move() with relative=True."""
-        self.move(position, axis=None, relative=True)
+        self.move(position, axis, relative=True)
 
-    def move_axis(self, pos, axis=None, relative=False):
+    def move_axis(self, pos, axis, relative=False):
         """Move along one axis."""
-        if axis not in self.axis_names: raise ValueError(
-            "{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
+        if axis not in self.axis_names:
+            raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
 
         full_position = np.zeros((len(self.axis_names))) if relative else self.position
         full_position[self.axis_names.index(axis)] = pos
@@ -45,7 +43,7 @@ class Stage(Instrument):
     def get_position(self, axis=None):
         raise NotImplementedError("You must override get_position in a Stage subclass.")
 
-    def select_axis(self, iterable, axis=None):
+    def select_axis(self, iterable, axis):
         """Pick an element from a tuple, indexed by axis name."""
         assert axis in self.axis_names, ValueError("{0} is not a valid axis name.".format(axis))
         return iterable[self.axis_names.index(axis)]
@@ -64,26 +62,41 @@ class Stage(Instrument):
     def get_qt_ui(self):
         return StageUI(self)
 
+    def get_axis_param(self, get_func, axis=None):
+        if axis is None:
+            return tuple(get_func(axis) for axis in self.axis_names)
+        elif isinstance(axis, collections.Sequence) and not isinstance(axis, str):
+            return tuple(get_func(ax) for ax in axis)
+        else:
+            return get_func(axis)
+
+    def set_axis_param(self, set_func, value, axis=None):
+        if axis is None:
+            tuple(set_func(value, axis) for axis in self.axis_names)
+        elif isinstance(axis, collections.Sequence) and not isinstance(axis, str):
+            tuple(set_func(value, ax) for ax in axis)
+        else:
+            set_func(value, axis)
+
     # TODO: stored dictionary of 'bookmarked' locations for fast travel
 
 
-controls_base, controls_widget = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'stage.ui'))
-
-
-class StageUI(UiTools, controls_base, controls_widget):
+class StageUI(QtGui.QWidget, UiTools):
     update_ui = QtCore.pyqtSignal([int], [str])
 
     def __init__(self, stage, parent=None):
         assert isinstance(stage, Stage), "instrument must be a Stage"
         super(StageUI, self).__init__()
         self.stage = stage
-        self.setupUi(self)
+        #self.setupUi(self)
+        uic.loadUi(os.path.join(os.path.dirname(__file__), 'stage.ui'), self)
         self.step_size_values = step_size_dict(1e-9, 1e-3)
         self.step_size = [self.step_size_values[self.step_size_values.keys()[0]] for axis in stage.axis_names]
         self.create_axes_layout()
         self.update_ui[int].connect(self.update_positions)
         self.update_ui[str].connect(self.update_positions)
         self.update_pos_button.clicked.connect(partial(self.update_positions, None))
+        self.update_positions()
 
     def move_axis_absolute(self, position, axis):
         self.stage.move(position, axis=axis, relative=False)
@@ -196,7 +209,10 @@ class StageUI(UiTools, controls_base, controls_widget):
                 self.update_positions(axis=axis)
         else:
             i = self.stage.axis_names.index(axis)
-            p = engineering_format(self.stage.position[i], base_unit='m', digits_of_precision=3)
+            try:
+                p = engineering_format(self.stage.position[i], base_unit='m', digits_of_precision=4)
+            except ValueError:
+                p = '0 m'
             self.positions[i].setText(p)
 
 
@@ -315,21 +331,24 @@ class DummyStage(Stage):
         self._position = np.zeros((len(self.axis_names)), dtype=np.float64)
 
     def move(self, position, axis=None, relative=False):
-        i = self.axis_names.index(axis)
-        if relative:
-            self._position[i] += position
-        else:
-            self._position[i] = position
+        def move_axis(position, axis):
+            if relative:
+                self._position[self.axis_names.index(axis)] += position
+            else:
+                self._position[self.axis_names.index(axis)] = position
+        self.set_axis_param(move_axis, position, axis)
+        #i = self.axis_names.index(axis)
+        #if relative:
+        #    self._position[i] += position
+        #else:
+        #    self._position[i] = position
             # print "stage now at", self._position
 
-    def move_rel(self, position, axis=None):
-        self.move(position, relative=True)
+    #def move_rel(self, position, axis=None):
+    #    self.move(position, relative=True)
 
     def get_position(self, axis=None):
-        if axis is not None:
-            return self.select_axis(self.get_position(), axis)
-        else:
-            return self._position
+        return self.get_axis_param(lambda axis: self._position[self.axis_names.index(axis)], axis)
 
     position = property(get_position)
 
@@ -338,7 +357,13 @@ if __name__ == '__main__':
     import sys
     from nplab.utils.gui import get_qt_app
 
+    stage = DummyStage()
+    print stage.move(2e-6, axis=('x1', 'x2'))
+    print stage.get_position()
+    print stage.get_position('x1')
+    print stage.get_position(['x1', 'y1'])
+
     app = get_qt_app()
-    ui = DummyStage().get_qt_ui()
+    ui = stage.get_qt_ui()
     ui.show()
     sys.exit(app.exec_())

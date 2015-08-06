@@ -102,7 +102,7 @@ class SmaractMCS(Stage, Instrument):
         # self.setup()
         self.is_open = False
         self._num_ch = None
-        self.axis_names = [i for i in range(self.num_ch)]
+        self.axis_names = (i for i in range(self.num_ch))
         self.positions = [0 for ch in range(self.num_ch)]
         self.levels = [0 for ch in range(self.num_ch)]
         self.voltages = [0 for ch in range(self.num_ch)]
@@ -117,10 +117,7 @@ class SmaractMCS(Stage, Instrument):
         :return:
         """
         if axis is None:
-            positions = []
-            for axis in self.axis_names:
-                positions.append(self.get_position(axis))
-            return positions
+            return [self.get_position(axis) for axis in self.axis_names]
         else:
             if axis not in self.axis_names:
                 raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
@@ -422,10 +419,7 @@ class SmaractMCS(Stage, Instrument):
         :return:
         """
         if axis is None:
-            positions = []
-            for axis in self.axis_names:
-                positions.append(1e-9*10.*self.get_voltage(axis))
-            return positions
+            return [1e-9*10.*self.get_voltage(axis) for axis in self.axis_names]
         else:
             if axis not in self.axis_names:
                 raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
