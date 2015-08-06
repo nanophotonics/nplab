@@ -1,29 +1,74 @@
 __author__ = 'alansanders'
 
-from traits.api import HasTraits, Int, Range, Button
-from traitsui.api import View, Item, HGroup, Spring
+from nplab.instrument import Instrument
+from nplab.utils.gui import *
+from PyQt4 import uic
+from nplab.ui.ui_tools import UiTools
 
 
-class LightSource(HasTraits):
+class LightSource(Instrument):
 
-    _min_power = Int(0)
-    _max_power = Int(2000)
-    power = Range('_min_power', '_max_power', 0, mode='slider', label='Power')
-    set_power_button = Button('Set Power')
+    def __init__(self, shutter=None):
+        super(LightSource, self).__init__()
+        self.min_power = 0
+        self.max_power = 1
+        self.shutter = shutter
 
-    view = View(
-                HGroup(Item('power'),
-                      Item('set_power_button', show_label=False), Spring(),
-                      label='Light Source Controls', show_border=True
-                      ),
-                resizable=True, title="Light Source"
-               )
-
-    def __init__(self):
+    def get_power(self):
         pass
 
-    def _power_changed(self, value):
-        pass
+    def set_power(self, value):
+        print value
 
-    def _set_power_button_fired(self):
-        pass
+    power = property(get_power, set_power)
+
+    def get_qt_ui(self):
+        return LightSourceUI(self)
+
+
+class LightSourceUI(QtGui.QWidget, UiTools):
+    def __init__(self, light_source, parent=None):
+        assert isinstance(light_source, LightSource), 'instrument must be a LightSource'
+        self.light_source = light_source
+        super(LightSourceUI, self).__init__(parent)
+        uic.loadUi(os.path.join(os.path.dirname(__file__), 'light_source.ui'), self)
+        self.control_group.setTitle(self.light_source.__class__.__name__)
+        self.power.setValidator(QtGui.QDoubleValidator())
+        self.power.textChanged.connect(self.check_state)
+        self.power.returnPressed.connect(self.update_param)
+        self.power_slider.valueChanged[int].connect(self.update_param)
+        self.power_slider.sliderReleased.connect(self.update_param)
+        self.set_power_button.clicked.connect(self.on_click)
+
+    def on_click(self):
+        sender = self.sender()
+        if sender == self.set_power_button:
+            self.power_slider.blockSignals(True)
+            self.power_slider.setValue(float(self.power.text()))
+            self.power_slider.blockSignals(False)
+            self.light_source.power = float(self.power.text())
+
+    def update_param(self, *args, **kwargs):
+        sender = self.sender()
+        index = self.senderSignalIndex()
+        if sender == self.power:
+            self.power_slider.blockSignals(True)
+            self.power_slider.setValue(float(self.power.text()))
+            self.power_slider.blockSignals(False)
+            self.light_source.power = float(self.power.text())
+        if sender == self.power_slider:
+            if len(args) != 0:  # slider is moving and the value is changing
+                value, = args
+                self.power.setText(str(value))
+            else:  # slider is released and signal has no arguments
+                value = sender.value()
+                self.light_source.power = float(self.power.text())
+
+
+if __name__ == '__main__':
+    import sys
+    app = get_qt_app()
+    ls = LightSource()
+    ui = ls.get_qt_ui()
+    ui.show()
+    sys.exit(app.exec_())
