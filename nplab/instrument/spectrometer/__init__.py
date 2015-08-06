@@ -160,6 +160,17 @@ class Spectrometer(object):
     def load_reference_from_file(self):
         pass
 
+    def get_metadata(self):
+        """Returns the relevant spectrometer properties as a dictionary."""
+        return dict(model_name=self.model_name,
+                    serial_number=self.serial_number,
+                    integration_time=self.integration_time,
+                    reference=self.reference,
+                    background=self.background,
+                    wavelengths=self.wavelengths)
+
+    metadata = property(get_metadata)
+
 
 class Spectrometers(object):
     def __init__(self, spectrometer_list):
@@ -207,6 +218,15 @@ class Spectrometers(object):
             if with_attrs is not {}:
                 for attr in with_attrs:
                     dset.attrs[attr] = getattr(self.spectrometers[i], attr)
+
+    def get_metadata(self):
+        """
+        Returns a list of dictionaries containing relevant spectrometer properties
+        for each spectrometer.
+        """
+        return [spectrometer.metadata for spectrometer in self.spectrometers]
+
+    metadata = property(get_metadata)
 
 
 controls_base, controls_widget = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'spectrometer_controls.ui'))
@@ -483,7 +503,7 @@ class SpectrometersUI(QtGui.QWidget):
 class DummySpectrometer(Spectrometer):
     def __init__(self):
         super(DummySpectrometer, self).__init__()
-        self._integration_time = 0
+        self._integration_time = 10
 
     def get_integration_time(self):
         return self._integration_time

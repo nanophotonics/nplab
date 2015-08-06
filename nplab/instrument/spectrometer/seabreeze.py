@@ -260,7 +260,7 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
     tec_temperature = property(get_tec_temperature, set_tec_temperature)
 
     def read_wavelengths(self):
-        """get an array of the wavelengths"""
+        """get an array of the wavelengths in nm"""
         self._comms_lock.acquire()
         e = ctypes.c_int()
         N = seabreeze.seabreeze_get_formatted_spectrum_length(self.index, byref(e))
@@ -270,7 +270,8 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
         check_error(e)
         return np.array(list(wavelengths_carray))
 
-    def get_wavelengths(self):  # this function should only be called once, thanks to the @cached_property decorator
+    def get_wavelengths(self):
+        """Return the cached wavelengths property"""
         if self._wavelengths is None:
             self._wavelengths = self.read_wavelengths()
         return self._wavelengths
@@ -289,9 +290,16 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
         return np.array(list(spectrum_carray))
 
     def get_metadata(self):
-        return self.get(
-            ['model_name', 'serial_number', 'integration_time', 'tec_temperature', 'reference', 'background',
-             'wavelengths'])
+        """Returns the relevant spectrometer properties as a dictionary."""
+        return dict(model_name=self.model_name,
+                    serial_number=self.serial_number,
+                    integration_time=self.integration_time,
+                    tec_temperature=self.tec_temperature,
+                    reference=self.reference,
+                    background=self.background,
+                    wavelengths=self.wavelengths)
+
+    metadata = property(get_metadata)
 
     def get_qt_ui(self, control_only=False):
         if control_only:
