@@ -36,7 +36,7 @@ import numpy as np
 import threading
 from nplab.instrument import Instrument
 from nplab.utils.gui import QtCore, QtGui
-from nplab.instrument.spectrometer import Spectrometer, SpectrometerControlUI, SpectrometerDisplayUI, SpectrometerUI
+from nplab.instrument.spectrometer import Spectrometer, Spectrometers, SpectrometerControlUI, SpectrometerDisplayUI, SpectrometerUI
 import traitsui
 import os
 from PyQt4 import uic
@@ -114,6 +114,46 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
     The constructor takes a single numeric argument, which is the index of the
     spectrometer you want, starting at 0.  It has traits, so you can call up a
     GUI to control the spectrometer with s.configure_traits."""
+
+    @staticmethod
+    def shutdown_seabreeze():
+        """shut down seabreeze, useful if anything has gone wrong"""
+        seabreeze.seabreeze_shutdown()
+
+    @classmethod
+    def list_spectrometers(cls):
+        """list all spectrometers available"""
+        spectrometers = []
+        n = 0
+        try:
+            while True:  # we stop when we run out of spectrometers, signified by an exception
+                # the line below creates a spectrometer, initialises, gets the serial number, and closes again
+                spectrometers.append(cls(n).serial_number)
+                # if the spectrometer does not exist, it raises an exception.
+                n += 1
+        except OceanOpticsError:
+            pass
+        finally:
+            return spectrometers
+
+    @classmethod
+    def get_spectrometer_instances(cls):
+        """return a list of spectrometer instances for all available spectrometers"""
+        spectrometers = []
+        try:
+            n = 0
+            while True:
+                spectrometers.append(cls(n))
+                n += 1
+        except OceanOpticsError:
+            pass
+        finally:
+            return spectrometers
+
+    @classmethod
+    def get_spectrometers(cls):
+        """get a Spectrometers instance containing all available spectrometers"""
+        return Spectrometers(cls.get_spectrometer_instances())
 
     def __init__(self, index):
         """initialise the spectrometer"""
@@ -357,8 +397,7 @@ if __name__ == "__main__":
         print "%d spectrometers found" % N
         assert N != 0, 'There are no Ocean Optics spectrometers attached (are you using the seabreeze drivers?)'
 
-        spectrometers = [OceanOpticsSpectrometer(i) for i in range(N)]
-        spectrometers = Spectrometers(spectrometers)
+        spectrometers = OceanOpticsSpectrometer.get_spectrometers()
         for s in spectrometers.spectrometers:
             print "spectrometer %s is a %s" % (s.serial_number, s.model_name)
             if s.model_name in ["QE65000", "QE-PRO"]:
