@@ -15,6 +15,7 @@ import os
 import os.path
 import datetime
 import re
+import sys
 
 
 def attributes_from_dict(group_or_dataset, dict_of_attributes):
@@ -32,6 +33,48 @@ def h5_item_number(group_or_dataset):
     """Returns the number at the end of a group/dataset name, or None."""
     m = re.search(r"(\d+)$", group_or_dataset.name)  # match numbers at the end of the name
     return int(m.groups()[0]) if m else None
+
+
+def get_data_dir(destination='local', rel_path='Desktop/Data'):
+    """Creates a path to a specified data storage location."""
+    if destination == 'local':
+        home_dir = os.path.expanduser('~')
+        path = os.path.join(home_dir, rel_path)
+    elif destination == 'server':
+        if sys.platform == 'windows':
+            network_dir = 'R:'
+        elif sys.platform == 'darwin':
+            network_dir = '/Volumes/NPHome'
+        path = os.path.join(network_dir, rel_path)
+    if not os.path.exists(path):
+        os.makedirs(path)
+    return path
+
+
+def get_filename(data_dir, basename='data', fformat='.h5'):
+    """Creates a dated directory path and returns a file name to open a file there."""
+    date = datetime.datetime.now()
+    output_dir = os.path.join(data_dir, str(date.year),
+                              '{:02d}'.format(date.month)+'. '+date.strftime('%b'),
+                              '{:02d}'.format(date.day))
+    if not os.path.exists(output_dir): os.makedirs(output_dir)
+    file_path = os.path.join(output_dir,basename+fformat)
+    return file_path
+
+
+def get_unique_filename(data_dir, basename='data', fformat='.h5'):
+    """Creates a dated directory path and returns a unique file name to open a file there."""
+    date = datetime.datetime.now()
+    output_dir = os.path.join(data_dir, str(date.year),
+                              '{:02d}'.format(date.month)+'. '+date.strftime('%b'),
+                              '{:02d}'.format(date.day), basename+'s')
+    if not os.path.exists(output_dir): os.makedirs(output_dir)
+    unique_id = 1
+    file_path = os.path.join(output_dir,basename+'_'+str(unique_id)+fformat)
+    while os.path.exists(file_path):
+        unique_id += 1
+        file_path = os.path.join(output_dir,basename+'_'+str(unique_id)+fformat)
+    return file_path
 
 
 class Group(h5py.Group):
