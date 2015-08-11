@@ -25,7 +25,10 @@ class Experiment(object):
         super(Experiment, self).__init__()
         #self.queue = Queue()
         self.latest_data = deque([], maxlen=1)
-        #self.notifier = threading.Event()
+        self.lock = threading.Lock()  # useful in threaded experiments
+        self.acquiring = threading.Event()
+        self.data_requested = False
+        self.request_complete = False
 
     def run(self, *args, **kwargs):
         raise NotImplementedError()
@@ -33,7 +36,7 @@ class Experiment(object):
     @background_action
     @locked_action
     def run_in_background(self, *args, **kwargs):
-        raise NotImplementedError()
+        self.run(*args, **kwargs)
 
     def set_latest_data(self, *data):
         self.latest_data.append(data)
@@ -44,6 +47,26 @@ class Experiment(object):
             return self.latest_data.pop()
         else:
             return False
+
+    def request_data(self):
+        if not self.request_complete:
+            self.data_requested = True
+            return False
+        self.request_complete = False
+        data = self.check_for_data()
+        return data
+
+    def check_for_data_request(self, *data):
+        """
+        Be careful when giving sequences/iterables e.g. lists, arrays as these are passed
+        by reference and can cause threading issues. Be sure to send a copy.
+        :param data:
+        :return:
+        """
+        if self.data_requested:
+            self.set_latest_data(*data)
+            self.data_requested = False
+            self.request_complete = True
 
     @staticmethod
     def queue_data(queue, *data):
