@@ -162,12 +162,11 @@ class Group(h5py.Group):
         """Update (create or modify) the attributes of this group."""
         attributes_from_dict(self, attribute_dict)
 
-    @staticmethod
-    def append_dataset(h5object, name, value, shape=(0,), dtype='f8'):
-        if name not in h5object:
-            dset = h5object.require_dataset(name, shape, dtype, maxshape=(None,), chunks=True)
+    def append_dataset(self, name, value, shape=(0,), dtype='f8'):
+        if name not in self:
+            dset = self.require_dataset(name, shape, dtype, maxshape=(None,), chunks=True)
         else:
-            dset = h5object[name]
+            dset = self[name]
         index = dset.shape[0]
         dset.resize(index+1,0)
         dset[index,...] = value
@@ -216,6 +215,7 @@ _current_datafile = None
 
 def current(create_if_none=True, create_if_closed=True):
     """Return the current data file, creating one if it does not exist."""
+    # TODO: if file previously used but closed don't ask to recreate but use config to open
     global _current_datafile
     if create_if_closed:  # try to access the file - if it's closed, it will fail
         try:
