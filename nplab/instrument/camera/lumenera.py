@@ -135,11 +135,8 @@ class LumeneraCamera(Camera):
                 try:
                     frame = self.cam.TakeSnapshot()
                     assert frame is not None, "Failed to capture a frame"
-                    f = self.cam.GetFormat()[0]
-                    w, h = f.width // (f.binningX * f.subSampleX), f.height // (f.binningY * f.subSampleY)
-                    assert np.product(frame.shape) == w*h, "Frame was the wrong size"
                     frame_pointer = frame.ctypes.data_as(ctypes.POINTER(ctypes.c_byte))
-                    return True, self.cam.ConvertFrameToRgb24(f, frame_pointer)
+                    return True, self.convert_frame(frame_pointer, np.product(frame.shape))
                 except Exception as e:
                     print "Attempt number {0} failed to capture a frame from the camera: {1}".format(i,e)
         print "Camera.raw_snapshot() has failed to capture a frame."
@@ -149,16 +146,26 @@ class LumeneraCamera(Camera):
             return False, None
         
     def _streamingCallback(self, context, frame_pointer, frame_size):
+        """This function is called on each frame that comes back from the camera when it's streaming.
+        
+        We keep track of the frame rate, and convert each frame to RGB so we 
+        can store it in latest_image and thus update the GUI.
+        """
         now = time.clock()
         self.fps = 1/(now - self.last_frame_time)
         self.last_frame_time = now
+        try:
+            #last_frame = np.ctypeslib.as_array(frame_pointer, shape=(h, w)).astype(np.ubyte, copy=True)
+            self.latest_frame = self.convert_frame(frame_pointer, frame_size)
+        except:
+            print "invalid frame size"        
+    def convert_frame(self, frame_pointer, frame_size):
+        """Convert a frame from the camera to an RGB numpy array."""
         f = self.cam.GetFormat()[0]
         w, h = f.width // (f.binningX * f.subSampleX), f.height // (f.binningY * f.subSampleY)
-        if frame_size == w*h:
-            #last_frame = np.ctypeslib.as_array(frame_pointer, shape=(h, w)).astype(np.ubyte, copy=True)
-            self.latest_frame = self.cam.ConvertFrameToRgb24(f, frame_pointer)
-        else:
-            print "invalid frame size"        
+        assert frame_size == w*h, "The frame size did not match the image format!"
+        converted_frame = self.cam.ConvertFrameToRgb24(f, frame_pointer) #actually convert the frame
+        return converted_frame[:,:,::-1] #for some reason frames come back BGR - flip them to RGB
     def start_streaming(self):
         """Start streaming video from the camera as a preview."""
         self.cam.StreamVideoControl('start_streaming')

@@ -67,8 +67,11 @@ class ImageClickTool(enable.api.BaseTool):
           
           
 class Camera(Instrument, HasTraits):
-    latest_frame = traits.trait_numeric.Array(dtype=np.uint8,shape=(None, None, 3))
-    image_plot = Instance(Plot)
+    """Generic class for representing cameras.
+    
+    This should always be subclassed in order to make a useful instrument."""
+    latest_frame = traits.trait_numeric.Array(dtype=np.uint8,shape=(None, None, 3)) #the last frame acquired by the camera
+    image_plot = Instance(Plot) #chaco plot used to display the latest frame
     take_snapshot = Button
     save_jpg_snapshot = Button
     save_snapshot = Button
