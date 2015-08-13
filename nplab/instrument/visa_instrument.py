@@ -2,6 +2,7 @@ __author__ = 'alansanders'
 
 from nplab.instrument import Instrument
 import visa
+from functools import partial
 
 
 class VisaInstrument(Instrument):
@@ -38,4 +39,13 @@ class VisaInstrument(Instrument):
         return self.instr.read(*args, **kwargs)
 
     def query(self, *args, **kwargs):
+        print args, kwargs
         return self.instr.query(*args, **kwargs)
+
+    idn = property(fget=partial(query, message='*idn?'))
+
+
+if __name__ == '__main__':
+    instrument = VisaInstrument(address='GPIB0::3::INSTR')
+    print instrument.query('*idn?')
+    print instrument.idn
