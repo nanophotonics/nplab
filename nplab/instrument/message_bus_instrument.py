@@ -193,6 +193,7 @@ class queried_property(object):
         return getter(self.get_cmd)
 
     def __set__(self, obj, value):
+        print 'set', obj, value
         if self.set_cmd is None:
             raise AttributeError("can't set attribute")
         if self.fvalidate is not None:
@@ -202,12 +203,52 @@ class queried_property(object):
             message = message.format(value)
         elif '%' in message:
             message = message % value
+        print message
         obj.write(message)
 
     def __delete__(self, obj):
         if self.fdel is None:
             raise AttributeError("can't delete attribute")
         self.fdel(obj)
+
+
+class queried_channel_property(queried_property):
+    def __init__(self, get_cmd=None, set_cmd=None, fvalidate=None, fdel=None, doc=None, dtype='float'):
+        super(queried_channel_property, self).__init__(get_cmd, set_cmd, fvalidate, fdel, doc, dtype)
+
+    def __get__(self, obj, objtype=None):
+        assert hasattr(obj, 'ch') and hasattr(obj, 'parent'),\
+        'object must have a ch attribute and a parent attribute'
+        if obj is None:
+            return self
+        if self.get_cmd is None:
+            raise AttributeError("unreadable attribute")
+        if self.dtype == 'float':
+            getter = obj.parent.float_query
+        elif self.dtype == 'int':
+            getter = obj.parent.int_query
+        else:
+            getter = obj.parent.query
+        message = self.get_cmd
+        if '{0' in message:
+            message = message.format(obj.ch)
+        elif '%' in message:
+            message = message % obj.ch
+        return getter(message)
+
+    def __set__(self, obj, value):
+        assert hasattr(obj, 'ch') and hasattr(obj, 'parent'),\
+        'object must have a ch attribute and a parent attribute'
+        if self.set_cmd is None:
+            raise AttributeError("can't set attribute")
+        if self.fvalidate is not None:
+            self.fvalidate(obj, value)
+        message = self.set_cmd
+        if '{0' in message:
+            message = message.format(obj.ch, value)
+        elif '%' in message:
+            message = message % (obj.ch, value)
+        obj.parent.write(message)
 
 
 class EchoInstrument(MessageBusInstrument):

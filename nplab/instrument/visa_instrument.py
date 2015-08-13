@@ -1,6 +1,6 @@
 __author__ = 'alansanders'
 
-from nplab.instrument.message_bus_instrument import MessageBusInstrument, queried_property
+from nplab.instrument.message_bus_instrument import MessageBusInstrument, queried_property, queried_channel_property
 import visa
 from functools import partial
 
@@ -21,7 +21,10 @@ class VisaInstrument(MessageBusInstrument):
         """
         super(VisaInstrument, self).__init__()
         rm = visa.ResourceManager()
-        assert address in rm.list_resources(), "The instrument was not found"
+        try:
+            assert address in rm.list_resources(), "The instrument was not found"
+        except AssertionError:
+            print 'Available equipment:', rm.list_resources()
         self.instr = rm.open_resource(address, **settings)
         self._address = address
         self._settings = settings
