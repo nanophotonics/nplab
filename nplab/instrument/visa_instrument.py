@@ -1,11 +1,11 @@
 __author__ = 'alansanders'
 
-from nplab.instrument import Instrument
+from nplab.instrument.message_bus_instrument import MessageBusInstrument, queried_property
 import visa
 from functools import partial
 
 
-class VisaInstrument(Instrument):
+class VisaInstrument(MessageBusInstrument):
     """
     An instrument primarily using VISA communications
     """
@@ -39,13 +39,13 @@ class VisaInstrument(Instrument):
         return self.instr.read(*args, **kwargs)
 
     def query(self, *args, **kwargs):
-        print args, kwargs
         return self.instr.query(*args, **kwargs)
 
-    idn = property(fget=partial(query, message='*idn?'))
-
+    #idn = property(fget=partial(query, message='*idn?'))
+    idn = queried_property('*idn?', dtype='str')
 
 if __name__ == '__main__':
     instrument = VisaInstrument(address='GPIB0::3::INSTR')
     print instrument.query('*idn?')
     print instrument.idn
+    print instrument.float_query
