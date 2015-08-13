@@ -11,24 +11,22 @@ import numpy as np
 import threading
 import time
 import operator
-from nplab.experiment import Experiment
+from nplab.experiment import Experiment, TimedScan
 from nplab.instrument.stage import Stage
 from functools import partial
 from nplab.utils.gui import *
 from nplab.ui.ui_tools import UiTools
 import cProfile, pstats
 
-group_params = {'show_border': True, 'springy': False}
-button_params = dict(show_label=False)
 
-
-class GridScanner(Experiment):
+class GridScanner(Experiment, TimedScan):
     """
 
     """
 
     def __init__(self):
-        super(GridScanner, self).__init__()
+        Experiment.__init__(self)
+        TimedScan.__init__(self)
         self.scanner = Stage()
         self.stage_units = 1
         self.axes = list(self.scanner.axis_names)
@@ -41,15 +39,17 @@ class GridScanner(Experiment):
         self._num_axes = len(self.axes)
         self._unit_conversion = {'nm': 1e-9, 'um': 1e-6, 'mm': 1e-3}
         self._size_unit, self._step_unit, self._init_unit = ('um', 'um', 'um')
-        self.init_grid(self.axes, self.size, self.step, self.init)
+        self.grid_shape = (0,0)
         self.status = 'inactive'
         self.abort_requested = False
         self.estimated_step_time = 0.001
         self.acquisition_thread = None
+        #self.init_grid(self.axes, self.size, self.step, self.init)
 
     def _update_axes(self, num_axes):
         """
         Updates all axes related objects (and sequence lengths) when the number of axes is changed.
+
         :param num_axes: the new number of axes to scan
         :return:
         """
@@ -78,6 +78,7 @@ class GridScanner(Experiment):
     def rescale_parameter(self, param, value):
         """
         Rescales the parameter (size, step or init) if its units are changed.
+
         :param param:
         :param value:
         :return:
@@ -98,6 +99,7 @@ class GridScanner(Experiment):
         """
         Starts the grid scan in its own thread and runs the update function at the specified
         rate whilst acquiring the data.
+
         :param rate: the update period in seconds
         :return:
         """
@@ -147,6 +149,7 @@ class GridScanner(Experiment):
         """
         This is called before the experiment enters its own thread. Methods that should be
         executed in the main thread should be called here (e.g. graphing).
+
         :return:
         """
         pass
@@ -156,6 +159,7 @@ class GridScanner(Experiment):
         This is called after the experiment enters its own thread to setup the scan. Methods
         that should be executed in line with the experiment should be called here (e.g. data
         storage).
+
         :return:
         """
         pass
@@ -167,6 +171,7 @@ class GridScanner(Experiment):
     def _timed_scan_function(self, *indices):
         """
         Supplementary function that can be used
+
         :param indices:
         :return:
         """
@@ -185,6 +190,7 @@ class GridScanner(Experiment):
     def close_scan(self):
         """
         Closes the scan whilst still in the experiment thread.
+
         :return:
         """
         self.update(force=True)
@@ -196,45 +202,6 @@ class GridScanner(Experiment):
         function to do it - it's called each time the outermost scan axis
         updates."""
         pass
-
-    def estimate_scan_duration(self):
-        """Estimate the duration of a grid scan."""
-        estimated_time = self.total_points * self.estimated_step_time
-        return self.format_time(estimated_time)
-
-    def get_estimated_time_remaining(self):
-        """Estimate the time remaining of the current scan."""
-        if not hasattr(self, '_step_times'):
-            return np.inf
-        mask = np.isfinite(self._step_times)
-        if not np.any(mask):
-            return 0
-        average_step_time = np.mean(self._step_times[mask])
-        etr = (self.total_points - self._index) * average_step_time  # remaining steps = self.total_points - index
-        return etr
-
-    def format_time(self, t):
-        """Formats the time in seconds into a string with convenient units."""
-        if t < 120:
-            return '{0:.1f} s'.format(t)
-        elif (t >= 120) and (t < 3600):
-            return '{0:.1f} mins'.format(t / 60.)
-        elif t >= 3600:
-            return '{0:.1f} hours'.format(t / 3600.)
-        else:
-            return 'You should probably not be running this scan!'
-
-    def get_formatted_estimated_time_remaining(self):
-        """Returns a string of convenient units for the estimated time remaining."""
-        if self.acquisition_thread.is_alive():
-            etr = self.get_estimated_time_remaining()
-            return self.format_time(etr)
-        else:
-            return 'inactive'
-
-    def print_scan_time(self, t):
-        """Prints the duration of the scan."""
-        print 'Scan took', self.format_time(t)
 
     def scan_grid(self, axes, size, step, init):
         """Scans a grid, applying a function at each position."""
@@ -269,11 +236,11 @@ class GridScanner(Experiment):
                             break
                         self.move(scan_axes[-3][i], axes[-3])
                         self.indices = (i, j, k)
-                        self._timed_scan_function(i, j, k)
+                        self.scan_function(i, j, k)
                         self._index += 1
                 elif len(axes) == 2:  # for regular 2d grid scans ignore third axis i
                     self.indices = (j, k)
-                    self._timed_scan_function(j, k)
+                    self.scan_function(j, k)
                     self._index += 1
 
         self.print_scan_time(time.time() - scan_start_time)
@@ -325,7 +292,8 @@ class GridScannerQT(GridScanner, QtCore.QObject):
     timing_updated = QtCore.pyqtSignal(str)
 
     def __init__(self):
-        super(GridScannerQT, self).__init__()
+        GridScanner.__init__(self)
+        QtCore.QObject.__init__(self)
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.update)
 
@@ -340,6 +308,7 @@ class GridScannerQT(GridScanner, QtCore.QObject):
     def _update_axes(self, num_axes):
         """
         This is called to emit a signal when the axes list is changed and update all dependencies.
+
         :return:
         """
         super(GridScannerQT, self)._update_axes(num_axes)
@@ -525,7 +494,7 @@ if __name__ == '__main__':
             time.sleep(0.0005)
             x,y = (self.scan_axes[0][indices[0]], self.scan_axes[1][indices[1]])
             self.data[indices] = np.sin(2*np.pi*2e6*x) * np.cos(2*np.pi*2e6*y)
-            self.check_for_data_request(self.data.copy())
+            self.check_for_data_request(self.data)
         #@profile
         #def start(self, rate=0.1):
         #    super(DummyGridScanner, self).start(0.1)
