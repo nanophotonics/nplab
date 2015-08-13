@@ -104,4 +104,8 @@ class OpenCVCamera(Camera):
         """Get a colour image (bypass filtering, etc.)"""
         ret, frame = self.raw_snapshot()
         return cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
-        
+
+
+if __name__ == '__main__':
+    cam = OpenCVCamera()
+    cam.configure_traits()
