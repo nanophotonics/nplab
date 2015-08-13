@@ -6,6 +6,7 @@ Various utility functions for GUI-related stuff.
 """
 
 import os
+import sys
 ui_toolkit = 'native'  # by default use pyqt4
 if os.environ.get('QT_API') is None:
     os.environ['QT_API'] = 'pyqt'  # by default use pyqt4
@@ -30,6 +31,7 @@ if ui_toolkit == 'native' and os.environ['QT_API'] == 'pyside':
         from PyQt4 import QtCore, QtGui
         from PyQt4 import QtCore as qt
         from PyQt4 import QtGui as qtgui
+        from PyQt4 import uic
 elif ui_toolkit == 'pyface':
     from traits.etsconfig.api import ETSConfig
     ETSConfig.toolkit = 'qt4'
@@ -40,6 +42,7 @@ elif ui_toolkit == 'native' and os.environ['QT_API'] == 'pyqt':
     from PyQt4 import QtCore, QtGui
     from PyQt4 import QtCore as qt
     from PyQt4 import QtGui as qtgui
+    from PyQt4 import uic
 else:
     raise ImportError("Invalid ui_toolkit or QT_API")
 #print QtCore, QtGui
@@ -68,6 +71,22 @@ def get_qt_app():
         app = qtgui.QApplication([])
     assert app is not None, "Problem creating the QApplication."
     return app
+
+
+def popup_widget(widget):
+    if widget.isVisible():  # doesn't need to be created and shown just brought to the front
+        pass
+    else:
+        ui = widget()
+        ui.show()
+
+
+def show_widget(Widget, *args, **kwargs):
+    """Show the specified widget GUI in a QT application."""
+    app = get_qt_app()
+    ui = Widget(*args, **kwargs)
+    ui.show()
+    sys.exit(app.exec_())
 
 
 if __name__ == '__main__':
@@ -116,9 +135,4 @@ if __name__ == '__main__':
             # refresh canvas
             self.canvas.draw()
 
-
-    import sys
-    app = get_qt_app()
-    ui = Widget()
-    ui.show()
-    sys.exit(app.exec_())
+    show_widget(Widget())
