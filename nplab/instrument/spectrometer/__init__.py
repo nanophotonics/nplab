@@ -241,9 +241,9 @@ class Spectrometers(Instrument):
         """
         spectra = self.read_processed_spectra() if spectra is None else spectra
         metadata_list = self.get_metadata_list()
-        g = self.create_group('spectra',attrs=attrs) # create a uniquely numbered group in the default place
+        g = self.create_data_group('spectra',attrs=attrs) # create a uniquely numbered group in the default place
         for spectrum,metadata in zip(spectra,metadata_list):
-            g.create_dataset('spectrum_%d',attrs=metadata)
+            g.create_dataset('spectrum_%d',data=spectrum,attrs=metadata)
             
     def get_metadata(self):
         """
