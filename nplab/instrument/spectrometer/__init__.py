@@ -147,6 +147,8 @@ class Spectrometer(object):
         else:
             return SpectrometerUI(self)
 
+    #TODO: the function below should save *raw* spectra, and should use get_metadata to get the attrs.
+    #it should also use self.get_datagroup()
     def save_spectrum(self, name, spectrum=None, h5group=None, with_attrs={'background', 'reference', 'wavelengths'}):
         spectrum = self.read_processed_spectrum() if spectrum is None else spectrum
         dset = h5group.create_dataset(name, data=spectrum)
