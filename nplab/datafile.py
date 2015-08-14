@@ -35,6 +35,7 @@ def h5_item_number(group_or_dataset):
     return int(m.groups()[0]) if m else None
 
 
+#TODO: merge with the current_datafile system
 def get_data_dir(destination='local', rel_path='Desktop/Data'):
     """Creates a path to a specified data storage location."""
     if destination == 'local':
@@ -182,7 +183,7 @@ class DataFile(Group):
     def __init__(self, name, mode=None, *args, **kwargs):
         """Open or create an HDF5 file.
 
-        :param name: The filename/path of the HDF5 file to open or create.
+        :param name: The filename/path of the HDF5 file to open or create, or an h5py File object
         :param mode: Mode to open the file in, one of:
             r
                 Read-only, file must exist
@@ -195,8 +196,11 @@ class DataFile(Group):
             a
                 Open read/write if the file exists, otherwise create it.
         """
-        f = h5py.File(name, mode, *args, **kwargs)  # open the file
-        super(DataFile, self).__init__(f.id)  # this is actually just an h5py group object!
+        if isinstance(name, h5py.File):
+            f=name #if it's already an open file, just use it
+        else:
+            f = h5py.File(name, mode, *args, **kwargs)  # open the file
+        super(DataFile, self).__init__(f.id)  # initialise a Group object with the root group of the file (saves re-wrapping all the functions for File)
 
     def flush(self):
         self.file.flush()
