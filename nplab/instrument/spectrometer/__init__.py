@@ -32,10 +32,13 @@ class Spectrometer(object):
         self._config_file = None
 
     def __del__(self):
-        if self._config_file is not None:
+        try:
             self._config_file.close()
+        except AttributeError:
+            pass #if it's not present, we get an exception - which doesn't matter.
 
     def open_config_file(self):
+        """Open the config file for the current spectrometer and return it, creating if it's not there"""
         if self._config_file is None:
             f = inspect.getfile(self.__class__)
             d = os.path.dirname(f)
@@ -88,29 +91,36 @@ class Spectrometer(object):
         return self.latest_raw_spectrum
 
     def read_background(self):
+        """Acquire a new spectrum and use it as a background measurement."""
         self.background = self.read_spectrum()
         self.update_config('background', self.background)
 
     def clear_background(self):
+        """Clear the current background reading."""
         self.background = None
 
     def read_reference(self):
+        """Acquire a new spectrum and use it as a reference."""
         self.reference = self.read_spectrum()
         self.update_config('reference', self.reference)
 
     def clear_reference(self):
+        """Clear the current reference spectrum"""
         self.reference = None
 
     def is_background_compensated(self):
+        """Return whether there's currently a valid background spectrum"""
         return len(self.background)==len(self.latest_raw_spectrum) and \
             sum(self.background)>0
 
     def is_referenced(self):
+        """Check whether there's currently a valid background and reference spectrum"""
         return self.is_background_compensated and \
             len(self.reference)==len(self.latest_raw_spectrum) and \
             sum(self.reference)>0
 
     def process_spectrum(self, spectrum):
+        """Subtract the background and divide by the reference, if possible"""
         if self.background is not None:
             if self.reference is not None:
                 old_error_settings = np.seterr(all='ignore')
@@ -124,14 +134,21 @@ class Spectrometer(object):
         return new_spectrum
 
     def read_processed_spectrum(self):
+        """Acquire a new spectrum and return a processed (referenced/background-subtracted) spectrum.
+        
+        NB if saving data to file, it's best to save raw spectra along with metadata - this is a
+        convenience method for display purposes."""
         spectrum = self.read_spectrum()
         self.latest_spectrum = self.process_spectrum(spectrum)
         return self.latest_spectrum
 
     def read(self):
+        """Acquire a new spectrum and return a tuple of wavelengths, spectrum"""
         return self.wavelengths, self.read_processed_spectrum()
 
     def mask_spectrum(self, spectrum, threshold):
+        """Return a masked array of the spectrum, showing only points where the reference
+        is bright enough to be useful."""
         if self.reference is not None and self.background is not None:
             reference = self.reference - self.background
             mask = reference < reference.max() * threshold
@@ -142,14 +159,14 @@ class Spectrometer(object):
             return spectrum
 
     def get_qt_ui(self, control_only=False):
+        """Create a Qt interface for the spectrometer"""
         if control_only:
             return SpectrometerControlUI(self)
         else:
             return SpectrometerUI(self)
 
-    #TODO: the function below should save *raw* spectra, and should use get_metadata to get the attrs.
-    #it should also use self.get_datagroup()
     def save_spectrum(self, spectrum=None):
+        """Save a spectrum to the current datafile, creating if necessary."""
         spectrum = self.read_spectrum() if spectrum is None else spectrum
         self.create_dataset("spectrum", data=spectrum, attrs=self.metadata)
 
