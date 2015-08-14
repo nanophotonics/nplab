@@ -97,9 +97,24 @@ class Instrument(HasTraits):
         back to those as a default.
         """
         try:
-            if blocking:
+            if self.hasattr('get_qt_ui'):
+                print "Using Qt Interface..."
+                from nplab.utils.gui import get_qt_app, qt
+                app = get_qt_app()
+                ui = self.get_qt_ui()
+                if blocking:
+                    ui.windowModality = qt.ApplicationModal
+                ui.show()
+                if blocking:
+                    try:
+                        return app.exec_()
+                    except:
+                        return ui
+                else:
+                    return ui
+            elif blocking:
                 self.configure_traits()
             else:
                 self.edit_traits()
         except AttributeError:
-            raise NotImplementedError("It looks like the show_gui method hasn't been subclassed, and the instrument is not using traitsui.")
+            raise NotImplementedError("It looks like the show_gui method hasn't been subclassed, there isn't a get_qt_ui() method, and the instrument is not using traitsui.")

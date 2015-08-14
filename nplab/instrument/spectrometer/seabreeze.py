@@ -403,10 +403,11 @@ if __name__ == "__main__":
             if s.model_name in ["QE65000", "QE-PRO"]:
                 s.set_tec_temperature = -20
             s.read()
-        app = get_qt_app()
-        ui = spectrometers.get_qt_ui()
-        ui.show()
-        sys.exit(app.exec_())
+ #       app = get_qt_app()
+ #       ui = spectrometers.get_qt_ui()
+ #       ui.show()
+ #       sys.exit(app.exec_())
+        sys.exit(spectrometers.show_gui(blocking=True))
     except OceanOpticsError as error:
         print "An error occurred with the spectrometer: %s" % error
     finally:

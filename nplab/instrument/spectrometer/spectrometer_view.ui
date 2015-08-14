@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>379</width>
-    <height>312</height>
+    <width>640</width>
+    <height>253</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -232,17 +232,10 @@
            <string>Continuously read spectra and update the graph</string>
           </property>
           <property name="text">
-           <string>Live Spectra</string>
+           <string>Live View</string>
           </property>
           <property name="checkable">
            <bool>true</bool>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="save_button">
-          <property name="text">
-           <string>Save Spectra</string>
           </property>
          </widget>
         </item>
@@ -258,6 +251,20 @@
            </size>
           </property>
          </spacer>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="description">
+          <property name="text">
+           <string>Description...</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="save_button">
+          <property name="text">
+           <string>Save</string>
+          </property>
+         </widget>
         </item>
        </layout>
       </item>
