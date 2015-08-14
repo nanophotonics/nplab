@@ -67,6 +67,7 @@ class Instrument(HasTraits):
 
         :param name: should be a noun describing what the reading is (image,
         spectrum, etc.)
+        :param attrs: may be a dictionary, saved as HDF5 metadata
         """
         if "%d" not in name:
             name = name + '_%d'
