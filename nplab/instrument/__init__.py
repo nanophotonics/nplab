@@ -19,6 +19,7 @@ class Instrument(HasTraits):
     """
     __instances = None
     description = String
+    metadata_property_names = () #"Tuple of names of properties that should be automatically saved as HDF5 metadata
 
     def __init__(self):
         """Create an instrument object."""
@@ -89,27 +90,39 @@ class Instrument(HasTraits):
             dset.file.flush() #make sure it's in the file if we wrote data
         return dset
 
-    def show_gui(self, blocking=False):
+    def get_metadata(self):
+        """A dictionary of settings, properties, etc. to save along with data.
+        
+        This returns the value of each property in self.metadata_property_names."""
+        return {name: getattr(self,name) for name in self.metadata_property_names}
+
+    metadata = property(get_metadata)
+
+
+    def show_gui(self, blocking=True):
         """Display a GUI window for the item of equipment.
         
         You should override this method to display a window to control the
         instrument.  If edit_traits/configure_traits methods exist, we'll fall
         back to those as a default.
+
+        If you use blocking=False, it will return immediately - this may cause
+        issues with the Qt/Traits event loop.
         """
         try:
-            if self.hasattr('get_qt_ui'):
-                print "Using Qt Interface..."
+            if hasattr(self,'get_qt_ui'):
                 from nplab.utils.gui import get_qt_app, qt
                 app = get_qt_app()
                 ui = self.get_qt_ui()
-                if blocking:
-                    ui.windowModality = qt.ApplicationModal
                 ui.show()
                 if blocking:
+                    print "Running GUI, this will block the command line until the window is closed."
+                    ui.windowModality = qt.Qt.ApplicationModal
                     try:
                         return app.exec_()
                     except:
-                        return ui
+                        print "Could not run the Qt application: perhaps it is already running?"
+                        return
                 else:
                     return ui
             elif blocking:

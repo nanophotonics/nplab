@@ -17,9 +17,10 @@ import h5py
 import os
 import inspect
 import datetime
+from nplab.instrument import Instrument
 
-class Spectrometer(object):
-
+class Spectrometer(Instrument):
+    metadata_property_names = ('model_name','serial_number','integration_time','reference','background','wavelengths')
     def __init__(self):
         super(Spectrometer, self).__init__()
         self._model_name = None
@@ -165,10 +166,18 @@ class Spectrometer(object):
         else:
             return SpectrometerUI(self)
 
-    def save_spectrum(self, spectrum=None):
-        """Save a spectrum to the current datafile, creating if necessary."""
+    def save_spectrum(self, spectrum=None, attrs={}):
+        """Save a spectrum to the current datafile, creating if necessary.
+        
+        If no spectrum is passed in, a new spectrum is taken.  The convention
+        is to save raw spectra only, along with reference/background to allow
+        later processing.
+        
+        The attrs dictionary allows extra metadata to be saved in the HDF5 file."""
         spectrum = self.read_spectrum() if spectrum is None else spectrum
-        self.create_dataset("spectrum", data=spectrum, attrs=self.metadata)
+        metadata = self.metadata
+        metadata.update(attrs) #allow extra metadata to be passed in
+        self.create_dataset("spectrum", data=spectrum, attrs=metadata)
 
     def save_reference_to_file(self):
         pass
@@ -176,19 +185,9 @@ class Spectrometer(object):
     def load_reference_from_file(self):
         pass
 
-    def get_metadata(self):
-        """Returns the relevant spectrometer properties as a dictionary."""
-        return dict(model_name=self.model_name,
-                    serial_number=self.serial_number,
-                    integration_time=self.integration_time,
-                    reference=self.reference,
-                    background=self.background,
-                    wavelengths=self.wavelengths)
-
-    metadata = property(get_metadata)
 
 
-class Spectrometers(object):
+class Spectrometers(Instrument):
     def __init__(self, spectrometer_list):
         assert False not in [isinstance(s, Spectrometer) for s in spectrometer_list],\
             'an invalid spectrometer was supplied'

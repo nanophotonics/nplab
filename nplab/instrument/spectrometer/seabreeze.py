@@ -115,6 +115,8 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
     spectrometer you want, starting at 0.  It has traits, so you can call up a
     GUI to control the spectrometer with s.configure_traits."""
 
+    metadata_property_names = Spectrometer.metadata_property_names + ("tec_temperature",)
+
     @staticmethod
     def shutdown_seabreeze():
         """shut down seabreeze, useful if anything has gone wrong"""
@@ -329,19 +331,11 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
         check_error(e)  # throw an exception if something went wrong
         return np.array(list(spectrum_carray))
 
-    def get_metadata(self):
-        """Returns the relevant spectrometer properties as a dictionary."""
-        return dict(model_name=self.model_name,
-                    serial_number=self.serial_number,
-                    integration_time=self.integration_time,
-                    tec_temperature=self.tec_temperature,
-                    reference=self.reference,
-                    background=self.background,
-                    wavelengths=self.wavelengths)
-
-    metadata = property(get_metadata)
-
     def get_qt_ui(self, control_only=False):
+        """Return a Qt Widget for controlling the spectrometer.
+
+        If control_only is true, this will not contain a graph of the spectrum.
+        """
         if control_only:
             return OceanOpticsControlUI(self)
         else:
@@ -406,8 +400,8 @@ if __name__ == "__main__":
  #       app = get_qt_app()
  #       ui = spectrometers.get_qt_ui()
  #       ui.show()
- #       sys.exit(app.exec_())
-        sys.exit(spectrometers.show_gui(blocking=True))
+ #       sys.exit(app.exec_()) #this is the "long way" of running a GUI
+        spectrometers.show_gui() #the "short way" of running a GUI
     except OceanOpticsError as error:
         print "An error occurred with the spectrometer: %s" % error
     finally:
