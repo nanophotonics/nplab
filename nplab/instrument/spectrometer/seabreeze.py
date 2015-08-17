@@ -157,6 +157,11 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
         """get a Spectrometers instance containing all available spectrometers"""
         return Spectrometers(cls.get_spectrometer_instances())
 
+    @classmethod
+    def get_current_spectrometers(cls):
+        """get a Spectrometers instance containing all previously instanced spectrometers"""
+        return Spectrometers(cls.get_instances())
+
     def __init__(self, index):
         """initialise the spectrometer"""
         self.index = index  # the spectrometer's ID, used by all seabreeze functions
