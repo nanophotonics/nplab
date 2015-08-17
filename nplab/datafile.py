@@ -77,6 +77,16 @@ def get_unique_filename(data_dir, basename='data', fformat='.h5'):
     return file_path
 
 
+def get_file(set_current=True):
+    """Convenience function to quickly get a current DataFile object."""
+    data_dir = get_data_dir()
+    fname = get_filename(data_dir)
+    f = DataFile(fname, 'w')
+    if set_current:
+        f.make_current()
+    return f
+
+
 class Group(h5py.Group):
     """HDF5 Group, a collection of datasets and subgroups.
 
