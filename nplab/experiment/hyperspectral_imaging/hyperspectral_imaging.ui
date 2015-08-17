@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>678</width>
-    <height>360</height>
+    <width>504</width>
+    <height>326</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -106,24 +106,13 @@ Browser</string>
       </property>
       <item>
        <widget class="QLabel" name="scan_description_label">
-        <property name="font">
-         <font>
-          <pointsize>11</pointsize>
-         </font>
-        </property>
         <property name="text">
          <string>Scan Description:</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QTextEdit" name="scan_description">
-        <property name="font">
-         <font>
-          <pointsize>11</pointsize>
-         </font>
-        </property>
-       </widget>
+       <widget class="QTextEdit" name="scan_description"/>
       </item>
       <item>
        <layout class="QHBoxLayout" name="stage_select_layout">
@@ -135,24 +124,13 @@ Browser</string>
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
-          <property name="font">
-           <font>
-            <pointsize>11</pointsize>
-           </font>
-          </property>
           <property name="text">
            <string>Stage Select:</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QComboBox" name="stage_select">
-          <property name="font">
-           <font>
-            <pointsize>11</pointsize>
-           </font>
-          </property>
-         </widget>
+         <widget class="QComboBox" name="stage_select"/>
         </item>
        </layout>
       </item>
@@ -163,11 +141,6 @@ Browser</string>
         </property>
         <item>
          <widget class="QLabel" name="wavelength_label">
-          <property name="font">
-           <font>
-            <pointsize>11</pointsize>
-           </font>
-          </property>
           <property name="text">
            <string>Wavelength:</string>
           </property>
@@ -200,11 +173,6 @@ Browser</string>
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
-          <property name="font">
-           <font>
-            <pointsize>11</pointsize>
-           </font>
-          </property>
          </widget>
         </item>
        </layout>
@@ -216,24 +184,13 @@ Browser</string>
         </property>
         <item>
          <widget class="QLabel" name="layer_label">
-          <property name="font">
-           <font>
-            <pointsize>11</pointsize>
-           </font>
-          </property>
           <property name="text">
            <string>Layer:</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QLineEdit" name="view_layer">
-          <property name="font">
-           <font>
-            <pointsize>11</pointsize>
-           </font>
-          </property>
-         </widget>
+         <widget class="QLineEdit" name="view_layer"/>
         </item>
         <item>
          <widget class="QCheckBox" name="override_view_layer">
@@ -243,6 +200,13 @@ Browser</string>
          </widget>
         </item>
        </layout>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="safe_exit">
+        <property name="text">
+         <string>Safe Exit</string>
+        </property>
+       </widget>
       </item>
      </layout>
     </widget>

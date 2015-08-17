@@ -68,6 +68,7 @@ class HyperspectralScan(GridScanQT, ScanningExperimentHDF5):
         # position_method = get_position_method(self, self.stage, self.stage_select)
         # setattr(self, position_method.__name__, MethodType(position_method, self))
         # # possibly requires third argument of self.__class__ or HyperspectralAcquisition
+        self.axes = list(self.stage.axis_names[:self.num_axes])
         self.set_init_to_current_position()
 
     def set_spectrometers(self, spectrometers):
@@ -329,6 +330,7 @@ class HyperspectralScanUI(QtGui.QWidget, UiTools):
         self.init_view_select()
 
         self.scan_description.textChanged.connect(self.update_param)
+        self.safe_exit.stateChanged.connect(self.on_state_change)
 
         self.config_stage.clicked.connect(self.on_click)
         self.config_spectrometers.clicked.connect(self.on_click)
@@ -386,6 +388,14 @@ class HyperspectralScanUI(QtGui.QWidget, UiTools):
                 print self.grid_scanner.f
                 self.browser = HDF5Browser(self.grid_scanner.f)
                 self.browser.show()
+
+    def on_state_change(self, state):
+        sender = self.sender()
+        if sender is self.safe_exit:
+            if state == QtCore.Qt.Checked:
+                self.grid_scanner.safe_exit = True
+            elif state == QtCore.Qt.Unchecked:
+                self.grid_scanner.safe_exit = False
 
     def on_view_wavelength_change(self, *args, **kwargs):
         """

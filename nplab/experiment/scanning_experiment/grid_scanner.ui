@@ -7,8 +7,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>551</width>
-    <height>250</height>
+    <width>521</width>
+    <height>224</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -49,11 +49,6 @@
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
-          <property name="font">
-           <font>
-            <pointsize>11</pointsize>
-           </font>
-          </property>
           <property name="text">
            <string>Num. Axes:</string>
           </property>
@@ -72,11 +67,6 @@
             <width>30</width>
             <height>16777215</height>
            </size>
-          </property>
-          <property name="font">
-           <font>
-            <pointsize>11</pointsize>
-           </font>
           </property>
           <property name="text">
            <string>2</string>
@@ -119,11 +109,6 @@
           </property>
           <item>
            <widget class="QLabel" name="axes_label">
-            <property name="font">
-             <font>
-              <pointsize>11</pointsize>
-             </font>
-            </property>
             <property name="text">
              <string>Axes:</string>
             </property>
@@ -143,11 +128,6 @@
               <height>16777215</height>
              </size>
             </property>
-            <property name="font">
-             <font>
-              <pointsize>11</pointsize>
-             </font>
-            </property>
            </widget>
           </item>
          </layout>
@@ -156,11 +136,6 @@
          <layout class="QVBoxLayout" name="names_layout">
           <item>
            <widget class="QLabel" name="axes_names_label">
-            <property name="font">
-             <font>
-              <pointsize>11</pointsize>
-             </font>
-            </property>
             <property name="text">
              <string>Names:</string>
             </property>
@@ -173,11 +148,6 @@
               <width>40</width>
               <height>16777215</height>
              </size>
-            </property>
-            <property name="font">
-             <font>
-              <pointsize>11</pointsize>
-             </font>
             </property>
            </widget>
           </item>
@@ -193,11 +163,6 @@
           </property>
           <item>
            <widget class="QLabel" name="size_label">
-            <property name="font">
-             <font>
-              <pointsize>11</pointsize>
-             </font>
-            </property>
             <property name="text">
              <string>Size:</string>
             </property>
@@ -210,11 +175,6 @@
               <width>70</width>
               <height>16777215</height>
              </size>
-            </property>
-            <property name="font">
-             <font>
-              <pointsize>11</pointsize>
-             </font>
             </property>
            </widget>
           </item>
@@ -235,11 +195,6 @@
               <width>50</width>
               <height>16777215</height>
              </size>
-            </property>
-            <property name="font">
-             <font>
-              <pointsize>11</pointsize>
-             </font>
             </property>
             <item>
              <property name="text">
@@ -264,7 +219,7 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../ui/resources.qrc">
+             <iconset resource="../../ui/resources.qrc">
               <normaloff>:/icons/up.png</normaloff>:/icons/up.png</iconset>
             </property>
             <property name="iconSize">
@@ -281,7 +236,7 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../ui/resources.qrc">
+             <iconset resource="../../ui/resources.qrc">
               <normaloff>:/icons/down.png</normaloff>:/icons/down.png</iconset>
             </property>
             <property name="iconSize">
@@ -317,11 +272,6 @@
           </property>
           <item>
            <widget class="QLabel" name="step_label">
-            <property name="font">
-             <font>
-              <pointsize>11</pointsize>
-             </font>
-            </property>
             <property name="text">
              <string>Step:</string>
             </property>
@@ -334,11 +284,6 @@
               <width>70</width>
               <height>16777215</height>
              </size>
-            </property>
-            <property name="font">
-             <font>
-              <pointsize>11</pointsize>
-             </font>
             </property>
            </widget>
           </item>
@@ -366,11 +311,6 @@
               <height>16777215</height>
              </size>
             </property>
-            <property name="font">
-             <font>
-              <pointsize>11</pointsize>
-             </font>
-            </property>
             <item>
              <property name="text">
               <string>nm</string>
@@ -394,7 +334,7 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../ui/resources.qrc">
+             <iconset resource="../../ui/resources.qrc">
               <normaloff>:/icons/up.png</normaloff>:/icons/up.png</iconset>
             </property>
             <property name="iconSize">
@@ -411,7 +351,7 @@
              <string/>
             </property>
             <property name="icon">
-             <iconset resource="../ui/resources.qrc">
+             <iconset resource="../../ui/resources.qrc">
               <normaloff>:/icons/down.png</normaloff>:/icons/down.png</iconset>
             </property>
             <property name="iconSize">
@@ -450,11 +390,6 @@
           </property>
           <item>
            <widget class="QLabel" name="init_label">
-            <property name="font">
-             <font>
-              <pointsize>11</pointsize>
-             </font>
-            </property>
             <property name="text">
              <string>Init:</string>
             </property>
@@ -467,11 +402,6 @@
               <width>70</width>
               <height>16777215</height>
              </size>
-            </property>
-            <property name="font">
-             <font>
-              <pointsize>11</pointsize>
-             </font>
             </property>
            </widget>
           </item>
@@ -492,11 +422,6 @@
               <width>50</width>
               <height>16777215</height>
              </size>
-            </property>
-            <property name="font">
-             <font>
-              <pointsize>11</pointsize>
-             </font>
             </property>
             <item>
              <property name="text">
@@ -522,11 +447,6 @@
               <horstretch>0</horstretch>
               <verstretch>0</verstretch>
              </sizepolicy>
-            </property>
-            <property name="font">
-             <font>
-              <pointsize>11</pointsize>
-             </font>
             </property>
             <property name="text">
              <string>Set Init
@@ -588,11 +508,6 @@ to Current</string>
           </property>
           <item>
            <widget class="QLabel" name="gridshape_label">
-            <property name="font">
-             <font>
-              <pointsize>11</pointsize>
-             </font>
-            </property>
             <property name="text">
              <string>Grid Shape:</string>
             </property>
@@ -600,11 +515,6 @@ to Current</string>
           </item>
           <item>
            <widget class="QLineEdit" name="gridshape">
-            <property name="font">
-             <font>
-              <pointsize>11</pointsize>
-             </font>
-            </property>
             <property name="readOnly">
              <bool>true</bool>
             </property>
@@ -622,11 +532,6 @@ to Current</string>
           </property>
           <item>
            <widget class="QLabel" name="total_points_label">
-            <property name="font">
-             <font>
-              <pointsize>11</pointsize>
-             </font>
-            </property>
             <property name="text">
              <string>Total Points:</string>
             </property>
@@ -634,11 +539,6 @@ to Current</string>
           </item>
           <item>
            <widget class="QLineEdit" name="total_points">
-            <property name="font">
-             <font>
-              <pointsize>11</pointsize>
-             </font>
-            </property>
             <property name="readOnly">
              <bool>true</bool>
             </property>
@@ -656,11 +556,6 @@ to Current</string>
           </property>
           <item>
            <widget class="QLabel" name="est_scan_time_label">
-            <property name="font">
-             <font>
-              <pointsize>11</pointsize>
-             </font>
-            </property>
             <property name="text">
              <string>Estimated Scan Time:</string>
             </property>
@@ -668,11 +563,6 @@ to Current</string>
           </item>
           <item>
            <widget class="QLineEdit" name="est_scan_time">
-            <property name="font">
-             <font>
-              <pointsize>11</pointsize>
-             </font>
-            </property>
             <property name="readOnly">
              <bool>true</bool>
             </property>
@@ -682,11 +572,6 @@ to Current</string>
         </item>
         <item>
          <widget class="QPushButton" name="update_button">
-          <property name="font">
-           <font>
-            <pointsize>11</pointsize>
-           </font>
-          </property>
           <property name="text">
            <string>Update</string>
           </property>
@@ -694,11 +579,6 @@ to Current</string>
         </item>
         <item>
          <widget class="QPushButton" name="start_button">
-          <property name="font">
-           <font>
-            <pointsize>11</pointsize>
-           </font>
-          </property>
           <property name="text">
            <string>Start</string>
           </property>
@@ -706,11 +586,6 @@ to Current</string>
         </item>
         <item>
          <widget class="QPushButton" name="abort_button">
-          <property name="font">
-           <font>
-            <pointsize>11</pointsize>
-           </font>
-          </property>
           <property name="text">
            <string>Abort</string>
           </property>
@@ -744,11 +619,6 @@ to Current</string>
      </property>
      <item>
       <widget class="QLabel" name="status_label">
-       <property name="font">
-        <font>
-         <pointsize>11</pointsize>
-        </font>
-       </property>
        <property name="text">
         <string>Status:</string>
        </property>
@@ -756,11 +626,6 @@ to Current</string>
      </item>
      <item>
       <widget class="QLineEdit" name="status">
-       <property name="font">
-        <font>
-         <pointsize>11</pointsize>
-        </font>
-       </property>
        <property name="readOnly">
         <bool>true</bool>
        </property>
@@ -768,11 +633,6 @@ to Current</string>
      </item>
      <item>
       <widget class="QLabel" name="est_time_remain_label">
-       <property name="font">
-        <font>
-         <pointsize>11</pointsize>
-        </font>
-       </property>
        <property name="text">
         <string>Estimated Time Remaining:</string>
        </property>
@@ -780,11 +640,6 @@ to Current</string>
      </item>
      <item>
       <widget class="QLineEdit" name="est_time_remain">
-       <property name="font">
-        <font>
-         <pointsize>11</pointsize>
-        </font>
-       </property>
        <property name="text">
         <string/>
        </property>
@@ -812,7 +667,7 @@ to Current</string>
  </widget>
  <layoutdefault spacing="0" margin="5"/>
  <resources>
-  <include location="../ui/resources.qrc"/>
+  <include location="../../ui/resources.qrc"/>
  </resources>
  <connections/>
 </ui>
