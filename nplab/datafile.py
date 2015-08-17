@@ -168,6 +168,8 @@ class Group(h5py.Group):
             attributes_from_dict(dset, attrs)  # quickly set the attributes
         return dset
 
+    create_dataset.__doc__ += '\n\n'+h5py.Group.create_dataset.__doc__
+
     def require_dataset(self, name, auto_increment=True, shape=None, dtype=None, data=None, attrs=None, timestamp=True,
                         *args, **kwargs):
         """Require a new dataset, optionally with an auto-incrementing name."""
@@ -178,12 +180,12 @@ class Group(h5py.Group):
             dset = self[name]
         return dset
 
-    def create_resizable_dataset(self, name, shape=(0,), maxshape=(None,), auto_increment=True, dtype='f8', attrs=None, timestamp=True,
+    def create_resizable_dataset(self, name, shape=(0,), maxshape=(None,), auto_increment=True, dtype=None, attrs=None, timestamp=True,
                                  *args, **kwargs):
         return self.create_dataset(name, auto_increment, shape, dtype, attrs, timestamp,
                                    maxshape=maxshape, chunks=True, *args, **kwargs)
 
-    def require_resizable_dataset(self, name, shape=(0,), maxshape=(None,), auto_increment=True, dtype='f8', attrs=None, timestamp=True,
+    def require_resizable_dataset(self, name, shape=(0,), maxshape=(None,), auto_increment=True, dtype=None, attrs=None, timestamp=True,
                                   *args, **kwargs):
         if name not in self:
             dset = self.create_resizable_dataset(name, shape, maxshape, auto_increment, dtype, attrs, timestamp,
@@ -196,7 +198,7 @@ class Group(h5py.Group):
         """Update (create or modify) the attributes of this group."""
         attributes_from_dict(self, attribute_dict)
 
-    def append_dataset(self, name, value, dtype='f8'):
+    def append_dataset(self, name, value, dtype=None):
         if name not in self:
             if hasattr(value, 'shape'):
                 shape = (0,)+value.shape
@@ -315,3 +317,7 @@ def set_current(datafile, **kwargs):
             print "trying with mode=r+"
             kwargs['mode'] = 'r+'  # dirty hack to work around mode=a not working
             _current_datafile = DataFile(datafile, **kwargs)
+
+
+if __name__ == '__main__':
+    help(Group.create_dataset)
