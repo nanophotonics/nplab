@@ -178,7 +178,7 @@ class Spectrometer(Instrument):
         later processing.
         
         The attrs dictionary allows extra metadata to be saved in the HDF5 file."""
-        spectrum = self.read_processed_spectrum() if spectrum is None else spectrum
+        spectrum = self.read_spectrum() if spectrum is None else spectrum
         metadata = self.metadata
         metadata.update(attrs) #allow extra metadata to be passed in
         self.create_dataset("spectrum", data=spectrum, attrs=metadata) 
@@ -246,7 +246,7 @@ class Spectrometers(Instrument):
         If no spectra are given, new ones are acquired - NB you should pass
         raw spectra in - metadata will be saved along with the spectra.
         """
-        spectra = self.read_processed_spectra() if spectra is None else spectra
+        spectra = self.read_spectra() if spectra is None else spectra
         metadata_list = self.get_metadata_list()
         g = self.create_data_group('spectra',attrs=attrs) # create a uniquely numbered group in the default place
         for spectrum,metadata in zip(spectra,metadata_list):
