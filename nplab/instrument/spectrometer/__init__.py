@@ -17,8 +17,13 @@ import h5py
 import os
 import inspect
 import datetime
+from nplab.instrument import Instrument
 
-class Spectrometer(object):
+
+class Spectrometer(Instrument):
+
+    metadata_property_names = ('model_name', 'serial_number', 'integration_time',
+                               'reference', 'background', 'wavelengths')
 
     def __init__(self):
         super(Spectrometer, self).__init__()
@@ -32,10 +37,13 @@ class Spectrometer(object):
         self._config_file = None
 
     def __del__(self):
-        if self._config_file is not None:
+        try:
             self._config_file.close()
+        except AttributeError:
+            pass #if it's not present, we get an exception - which doesn't matter.
 
     def open_config_file(self):
+        """Open the config file for the current spectrometer and return it, creating if it's not there"""
         if self._config_file is None:
             f = inspect.getfile(self.__class__)
             d = os.path.dirname(f)
@@ -88,29 +96,36 @@ class Spectrometer(object):
         return self.latest_raw_spectrum
 
     def read_background(self):
+        """Acquire a new spectrum and use it as a background measurement."""
         self.background = self.read_spectrum()
         self.update_config('background', self.background)
 
     def clear_background(self):
+        """Clear the current background reading."""
         self.background = None
 
     def read_reference(self):
+        """Acquire a new spectrum and use it as a reference."""
         self.reference = self.read_spectrum()
         self.update_config('reference', self.reference)
 
     def clear_reference(self):
+        """Clear the current reference spectrum"""
         self.reference = None
 
     def is_background_compensated(self):
+        """Return whether there's currently a valid background spectrum"""
         return len(self.background)==len(self.latest_raw_spectrum) and \
             sum(self.background)>0
 
     def is_referenced(self):
+        """Check whether there's currently a valid background and reference spectrum"""
         return self.is_background_compensated and \
             len(self.reference)==len(self.latest_raw_spectrum) and \
             sum(self.reference)>0
 
     def process_spectrum(self, spectrum):
+        """Subtract the background and divide by the reference, if possible"""
         if self.background is not None:
             if self.reference is not None:
                 old_error_settings = np.seterr(all='ignore')
@@ -124,14 +139,21 @@ class Spectrometer(object):
         return new_spectrum
 
     def read_processed_spectrum(self):
+        """Acquire a new spectrum and return a processed (referenced/background-subtracted) spectrum.
+        
+        NB if saving data to file, it's best to save raw spectra along with metadata - this is a
+        convenience method for display purposes."""
         spectrum = self.read_spectrum()
         self.latest_spectrum = self.process_spectrum(spectrum)
         return self.latest_spectrum
 
     def read(self):
+        """Acquire a new spectrum and return a tuple of wavelengths, spectrum"""
         return self.wavelengths, self.read_processed_spectrum()
 
     def mask_spectrum(self, spectrum, threshold):
+        """Return a masked array of the spectrum, showing only points where the reference
+        is bright enough to be useful."""
         if self.reference is not None and self.background is not None:
             reference = self.reference - self.background
             mask = reference < reference.max() * threshold
@@ -142,19 +164,25 @@ class Spectrometer(object):
             return spectrum
 
     def get_qt_ui(self, control_only=False):
+        """Create a Qt interface for the spectrometer"""
         if control_only:
             return SpectrometerControlUI(self)
         else:
             return SpectrometerUI(self)
 
-    #TODO: the function below should save *raw* spectra, and should use get_metadata to get the attrs.
-    #it should also use self.get_datagroup()
-    def save_spectrum(self, name, spectrum=None, h5group=None, with_attrs={'background', 'reference', 'wavelengths'}):
+    def save_spectrum(self, spectrum=None, attrs={}):
+        """Save a spectrum to the current datafile, creating if necessary.
+        
+        If no spectrum is passed in, a new spectrum is taken.  The convention
+        is to save raw spectra only, along with reference/background to allow
+        later processing.
+        
+        The attrs dictionary allows extra metadata to be saved in the HDF5 file."""
         spectrum = self.read_processed_spectrum() if spectrum is None else spectrum
-        dset = h5group.create_dataset(name, data=spectrum)
-        if with_attrs is not {}:
-            for attr in with_attrs:
-                dset.attrs[attr] = getattr(self, attr)
+        metadata = self.metadata
+        metadata.update(attrs) #allow extra metadata to be passed in
+        self.create_dataset("spectrum", data=spectrum, attrs=metadata) 
+        #save data in the default place (see nplab.instrument.Instrument)
 
     def save_reference_to_file(self):
         pass
@@ -162,19 +190,8 @@ class Spectrometer(object):
     def load_reference_from_file(self):
         pass
 
-    def get_metadata(self):
-        """Returns the relevant spectrometer properties as a dictionary."""
-        return dict(model_name=self.model_name,
-                    serial_number=self.serial_number,
-                    integration_time=self.integration_time,
-                    reference=self.reference,
-                    background=self.background,
-                    wavelengths=self.wavelengths)
 
-    metadata = property(get_metadata)
-
-
-class Spectrometers(object):
+class Spectrometers(Instrument):
     def __init__(self, spectrometer_list):
         assert False not in [isinstance(s, Spectrometer) for s in spectrometer_list],\
             'an invalid spectrometer was supplied'
@@ -201,14 +218,20 @@ class Spectrometers(object):
     wavelengths = property(get_wavelengths)
 
     def read_spectra(self):
+        """Acquire spectra from all spectrometers and return as a list."""
         return self._pool.map(lambda s: s.read_spectrum(), self.spectrometers)
 
     def read_processed_spectra(self):
+        """Acquire a list of processed (referenced, background subtracted) spectra."""
         return self._pool.map(lambda s: s.read_processed_spectrum(), self.spectrometers)
 
     def process_spectra(self, spectra):
         pairs = zip(self.spectrometers, spectra)
         return self._pool.map(lambda (s, spectrum): s.process_spectrum(spectrum), pairs)
+
+    def get_metadata_list(self):
+        """Return a list of metadata for each spectrometer."""
+        return self._pool.map(lambda s: s.get_metadata(), self.spectrometers)
 
     def mask_spectra(self, spectra, threshold):
         return [spectrometer.mask_spectrum(spectrum, threshold) for (spectrometer, spectrum) in zip(self.spectrometers, spectra)]
@@ -216,15 +239,19 @@ class Spectrometers(object):
     def get_qt_ui(self):
         return SpectrometersUI(self)
 
-    def save_spectra(self, name, spectra=None, h5group=None, with_attrs={'background', 'reference', 'wavelengths'}):
-        spectra = self.read_processed_spectra() if spectra is None else spectra
-        for i,spectrum in enumerate(spectra):
-            suffix = str(i) if i>0 else ''
-            dset = h5group.create_dataset(name+suffix, data=spectra[i])
-            if with_attrs is not {}:
-                for attr in with_attrs:
-                    dset.attrs[attr] = getattr(self.spectrometers[i], attr)
+    def save_spectra(self, spectra=None, attrs={}):
+        """Save spectra from all the spectrometers, in a folder in the current
+        datafile, creating the file if needed.
 
+        If no spectra are given, new ones are acquired - NB you should pass
+        raw spectra in - metadata will be saved along with the spectra.
+        """
+        spectra = self.read_processed_spectra() if spectra is None else spectra
+        metadata_list = self.get_metadata_list()
+        g = self.create_data_group('spectra',attrs=attrs) # create a uniquely numbered group in the default place
+        for spectrum,metadata in zip(spectra,metadata_list):
+            g.create_dataset('spectrum_%d',data=spectrum,attrs=metadata)
+            
     def get_metadata(self):
         """
         Returns a list of dictionaries containing relevant spectrometer properties
@@ -368,6 +395,7 @@ class SpectrometerDisplayUI(UiTools, display_base, display_widget):
 
         self.take_spectrum_button.clicked.connect(self.button_pressed)
         self.live_button.clicked.connect(self.button_pressed)
+        self.save_button.clicked.connect(self.button_pressed)
         self.threshold.setValidator(QtGui.QDoubleValidator())
         self.threshold.textChanged.connect(self.check_state)
 
@@ -393,7 +421,7 @@ class SpectrometerDisplayUI(UiTools, display_base, display_widget):
             save_spectrum = self.spectrometer.save_spectra \
                 if isinstance(self.spectrometer, Spectrometers) \
                 else self.spectrometer.save_spectrum
-            save_spectrum()
+            save_spectrum(attrs={'description':str(self.description.text())})
         elif sender is self.live_button:
             if self.live_button.isChecked():
                 #if self._display_thread.is_alive():

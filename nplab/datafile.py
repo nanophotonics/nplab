@@ -35,6 +35,7 @@ def h5_item_number(group_or_dataset):
     return int(m.groups()[0]) if m else None
 
 
+#TODO: merge with the current_datafile system
 def get_data_dir(destination='local', rel_path='Desktop/Data'):
     """Creates a path to a specified data storage location."""
     if destination == 'local':
@@ -104,7 +105,7 @@ class Group(h5py.Group):
     def find_unique_name(self, name):
         """Find a unique name for a subgroup or dataset in this group.
         
-        :param name: If this contains a %d placeholder and auto_increment is True, it will be replaced with the lowest integer such that the new name is unique.  If no %d is included, _%d will be appended to the name if the name already exists in this group.
+        :param name: If this contains a %d placeholder, it will be replaced with the lowest integer such that the new name is unique.  If no %d is included, _%d will be appended to the name if the name already exists in this group.
         """
         if "%d" not in name and name not in self:
             return name  # simplest case: it's a unique name
@@ -158,7 +159,19 @@ class Group(h5py.Group):
 
     def create_dataset(self, name, auto_increment=True, shape=None, dtype=None, data=None, attrs=None, timestamp=True,
                        *args, **kwargs):
-        """Create a new dataset, optionally with an auto-incrementing name."""
+        """Create a new dataset, optionally with an auto-incrementing name.
+
+        :param name: the name of the new dataset
+        :param auto_increment: if True (default), add a number to the dataset name to 
+            ensure it's unique.  To force the addition of a number, append %d to the dataset name.
+        :param shape: a tuple describing the dimensions of the data (only needed if data is not specified)
+        :param dtype: data type to be saved (if not specifying data)
+        :param data: a numpy array or equivalent, to be saved - this specifies dtype and shape.
+        :param attrs: a dictionary of metadata to be saved with the data
+        :param timestamp: if True (default), we save a "creation_timestamp" attribute with the current time.
+
+        Further arguments are passed to h5py.Group.create_dataset.
+        """
         if auto_increment:
             name = self.find_unique_name(name)
         dset = super(Group, self).create_dataset(name, shape, dtype, data, *args, **kwargs)
@@ -227,7 +240,7 @@ class DataFile(Group):
     def __init__(self, name, mode=None, *args, **kwargs):
         """Open or create an HDF5 file.
 
-        :param name: The filename/path of the HDF5 file to open or create.
+        :param name: The filename/path of the HDF5 file to open or create, or an h5py File object
         :param mode: Mode to open the file in, one of:
             r
                 Read-only, file must exist
@@ -240,8 +253,11 @@ class DataFile(Group):
             a
                 Open read/write if the file exists, otherwise create it.
         """
-        f = h5py.File(name, mode, *args, **kwargs)  # open the file
-        super(DataFile, self).__init__(f.id)  # this is actually just an h5py group object!
+        if isinstance(name, h5py.File):
+            f=name #if it's already an open file, just use it
+        else:
+            f = h5py.File(name, mode, *args, **kwargs)  # open the file
+        super(DataFile, self).__init__(f.id)  # initialise a Group object with the root group of the file (saves re-wrapping all the functions for File)
 
     def flush(self):
         self.file.flush()
