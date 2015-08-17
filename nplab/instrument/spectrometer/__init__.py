@@ -399,6 +399,12 @@ class SpectrometerDisplayUI(UiTools, display_base, display_widget):
         self.threshold.setValidator(QtGui.QDoubleValidator())
         self.threshold.textChanged.connect(self.check_state)
 
+        for text_field in [self.x_max, self.x_min, self.y_max, self.y_min]:
+            text_field.setValidator(QtGui.QDoubleValidator())
+            text_field.textChanged.connect(self.update_limits)
+        for checkbox in [self.autoscale_x, self.autoscale_y]:
+            checkbox.stateChanged.connect(self.update_limits)
+
         #self._display_thread = Thread(target=self.update_spectrum)
         self._display_thread = DisplayThread(self)
         self._display_thread.spectrum_ready.connect(self.update_display)
@@ -438,6 +444,22 @@ class SpectrometerDisplayUI(UiTools, display_base, display_widget):
             else self.spectrometer.read_processed_spectrum
         spectrum = read_processed_spectrum()
         self.update_display(spectrum)
+
+    def update_limits():
+        """Handle autoscaling/limit related parameter changes"""
+        try:
+            for ax in self.fig.axes:
+                if self.autoscale_x.checkState():
+                    ax.set_xlim(auto=True)
+                else:
+                    ax.set_xlim(float(self.x_min.text()),float(self.x_min.text()))
+                if self.autoscale_y.checkState():
+                    ax.set_ylim(auto=True)
+                else:
+                    ax.set_ylim(float(self.y_min.text()),float(self.y_min.text()))
+        except:
+            print "Uh oh, something went wrong setting the graph limits."
+
 
     def continuously_update_spectrum(self):
         t0 = time.time()
