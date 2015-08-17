@@ -3,10 +3,9 @@ __author__ = 'alansanders'
 from nplab.instrument.visa_instrument import VisaInstrument, queried_property, queried_channel_property
 from functools import partial
 import numpy as np
-from struct import unpack
 
 
-class DSOChannel(object):
+class AgilentDSOChannel(object):
     def __init__(self, dso, channel):
         self.parent = dso
         self.ch = channel
@@ -35,17 +34,17 @@ class DSOChannel(object):
     probe = queried_channel_property(':channel{0}:probe?', ':channel{0}:probe {1}')
 
 
-class DSO(VisaInstrument):
+class AgilentDSO(VisaInstrument):
     """
     Interface to the Agilent digital storage oscilloscopes.
     """
     def __init__(self, address='USB0::0x0957::0x1799::MY51330673::INSTR'):
-        super(DSO, self).__init__(address=address)
+        super(AgilentDSO, self).__init__(address=address)
         self.instr.read_termination = '\n'
         self.instr.write_termination = '\n'
         self.channel_names = (1, 2)
         for ch in self.channel_names:
-            setattr(self, 'channel{0}'.format(ch), DSOChannel(self, ch))
+            setattr(self, 'channel{0}'.format(ch), AgilentDSOChannel(self, ch))
         self.channels = tuple(getattr(self, 'channel{0}'.format(ch)) for ch in self.channel_names)
         # set byte transmission
         self.waveform_format = 'byte'
@@ -189,7 +188,7 @@ class DSO(VisaInstrument):
 
 
 if __name__ == '__main__':
-    dso = DSO()
+    dso = AgilentDSO()
     print dso.time_range
     print dso.channel1.range
     dso.capture()
