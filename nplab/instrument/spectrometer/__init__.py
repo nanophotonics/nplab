@@ -445,18 +445,18 @@ class SpectrometerDisplayUI(UiTools, display_base, display_widget):
         spectrum = read_processed_spectrum()
         self.update_display(spectrum)
 
-    def update_limits():
+    def update_limits(self, *args, **kwargs):
         """Handle autoscaling/limit related parameter changes"""
         try:
             for ax in self.fig.axes:
                 if self.autoscale_x.checkState():
                     ax.set_xlim(auto=True)
                 else:
-                    ax.set_xlim(float(self.x_min.text()),float(self.x_min.text()))
+                    ax.set_xlim(float(self.x_min.text()),float(self.x_max.text()))
                 if self.autoscale_y.checkState():
                     ax.set_ylim(auto=True)
                 else:
-                    ax.set_ylim(float(self.y_min.text()),float(self.y_min.text()))
+                    ax.set_ylim(float(self.y_min.text()),float(self.y_max.text()))
         except:
             print "Uh oh, something went wrong setting the graph limits."
 
@@ -486,6 +486,7 @@ class SpectrometerDisplayUI(UiTools, display_base, display_widget):
             else:
                 ax = self.fig.add_subplot(111)
                 ax.plot(self.spectrometer.wavelengths, spectrum, 'r-')
+            self.update_limits()
         else:
             if isinstance(self.spectrometer, Spectrometers):
                 for i, axis in enumerate(self.fig.axes):
