@@ -11,26 +11,25 @@ import numpy as np
 import threading
 import time
 import operator
-from nplab.experiment import Experiment, TimedScan
+from nplab.experiment.scanning_experiment import ScanningExperiment, TimedScan
 from nplab.instrument.stage import Stage
 from functools import partial
 from nplab.utils.gui import *
 from nplab.ui.ui_tools import UiTools
-import cProfile, pstats
 
 
-class GridScanner(Experiment, TimedScan):
+class GridScan(ScanningExperiment, TimedScan):
     """
 
     """
 
     def __init__(self):
-        Experiment.__init__(self)
+        ScanningExperiment.__init__(self)
         TimedScan.__init__(self)
-        self.scanner = Stage()
+        self.stage = Stage()
         self.stage_units = 1
-        self.axes = list(self.scanner.axis_names)
-        self.axes_names = list(str(ax) for ax in self.scanner.axis_names)
+        self.axes = list(self.stage.axis_names)
+        self.axes_names = list(str(ax) for ax in self.stage.axis_names)
         self.size = 1. * np.ones(len(self.axes), dtype=np.float64)
         self.step = 0.05 * np.ones(len(self.axes), dtype=np.float64)
         self.init = np.zeros(len(self.axes), dtype=np.float64)
@@ -40,10 +39,6 @@ class GridScanner(Experiment, TimedScan):
         self._unit_conversion = {'nm': 1e-9, 'um': 1e-6, 'mm': 1e-3}
         self._size_unit, self._step_unit, self._init_unit = ('um', 'um', 'um')
         self.grid_shape = (0,0)
-        self.status = 'inactive'
-        self.abort_requested = False
-        self.estimated_step_time = 0.001
-        self.acquisition_thread = None
         #self.init_grid(self.axes, self.size, self.step, self.init)
 
     def _update_axes(self, num_axes):
@@ -95,7 +90,7 @@ class GridScanner(Experiment, TimedScan):
     step_unit = property(fget=lambda self: getattr(self, '_step_unit'), fset=partial(rescale_parameter, param='step'))
     init_unit = property(fget=lambda self: getattr(self, '_init_unit'), fset=partial(rescale_parameter, param='init'))
 
-    def start(self):
+    def run(self):
         """
         Starts the grid scan in its own thread and runs the update function at the specified
         rate whilst acquiring the data.
@@ -107,18 +102,9 @@ class GridScanner(Experiment, TimedScan):
             print 'scan already running'
             return
         self.init_scan()
-        self.acquisition_thread = threading.Thread(target=self.scan_grid,
+        self.acquisition_thread = threading.Thread(target=self.scan,
                                                    args=(self.axes, self.size, self.step, self.init))
         self.acquisition_thread.start()
-
-    def abort(self):
-        """Requests an abort of the currently running grid scan."""
-        if not hasattr(self, 'acquisition_thread'):
-            return
-        if self.acquisition_thread.is_alive():
-            print 'aborting'
-            self.abort_requested = True
-            self.acquisition_thread.join()
 
     def init_grid(self, axes, size, step, init):
         """Create a grid on which to scan."""
@@ -129,6 +115,7 @@ class GridScanner(Experiment, TimedScan):
             s0 = init[i] * self._unit_conversion[self.init_unit]
             ax = np.arange(0, s+st/2., st) - s/2. + s0
             scan_axes.append(ax)
+        scan_axes = scan_axes[::-1]
         self.grid_shape = tuple(ax.size for ax in scan_axes)
         self.total_points = reduce(operator.mul, self.grid_shape, 1)
         self.scan_axes = scan_axes
@@ -140,60 +127,10 @@ class GridScanner(Experiment, TimedScan):
 
     def move(self, position, axis):
         """Move to a position along a given axis."""
-        self.scanner.move(position/self.stage_units, axis=axis)
+        self.stage.move(position/self.stage_units, axis=axis)
 
     def get_position(self, axis):
-        return self.scanner.get_position(axis=axis)*self.stage_units
-
-    def init_scan(self):
-        """
-        This is called before the experiment enters its own thread. Methods that should be
-        executed in the main thread should be called here (e.g. graphing).
-
-        :return:
-        """
-        pass
-
-    def open_scan(self):
-        """
-        This is called after the experiment enters its own thread to setup the scan. Methods
-        that should be executed in line with the experiment should be called here (e.g. data
-        storage).
-
-        :return:
-        """
-        pass
-
-    def scan_function(self, *indices):
-        """Applied at each position in the grid scan."""
-        raise NotImplementedError
-
-    def _timed_scan_function(self, *indices):
-        """
-        Supplementary function that can be used
-
-        :param indices:
-        :return:
-        """
-        t0 = time.time()
-        self.scan_function(*indices)
-        dt = time.time() - t0
-        self._step_times[indices] = dt
-
-    def analyse_scan(self):
-        """
-        This is called before the scan is closed to perform any final calculations.
-        :return:
-        """
-        pass
-
-    def close_scan(self):
-        """
-        Closes the scan whilst still in the experiment thread.
-
-        :return:
-        """
-        self.update(force=True)
+        return self.stage.get_position(axis=axis)*self.stage_units
 
     def update_drift_compensation(self):
         """Update the current drift compensation.
@@ -203,7 +140,7 @@ class GridScanner(Experiment, TimedScan):
         updates."""
         pass
 
-    def scan_grid(self, axes, size, step, init):
+    def scan(self, axes, size, step, init):
         """Scans a grid, applying a function at each position."""
         self.abort_requested = False
         scan_axes = self.init_grid(axes, size, step, init)
@@ -218,29 +155,29 @@ class GridScanner(Experiment, TimedScan):
         self.status = 'acquiring data'
         self.acquiring.set()
         scan_start_time = time.time()
-        for k in pnts[-1]:  # outer most axis
+        for k in pnts[0]:  # outer most axis
             if self.abort_requested:
                 break
             self.update_drift_compensation()
-            self.status = 'Scanning layer {0:d}/{1:d}'.format(k + 1, len(pnts[-1]))
-            self.move(scan_axes[-1][k], axes[-1])
-            pnts[-2] = pnts[-2][::-1]  # reverse which way is iterated over each time
-            for j in pnts[-2]:
+            self.status = 'Scanning layer {0:d}/{1:d}'.format(k + 1, len(pnts[0]))
+            self.move(scan_axes[0][k], axes[0])
+            pnts[1] = pnts[1][::-1]  # reverse which way is iterated over each time
+            for j in pnts[1]:
                 if self.abort_requested:
                     break
-                self.move(scan_axes[-2][j], axes[-2])
+                self.move(scan_axes[1][j], axes[1])
                 if len(axes) == 3:  # for 3d grid (volume) scans
-                    pnts[-3] = pnts[-3][::-1]  # reverse which way is iterated over each time
-                    for i in pnts[-3]:
+                    pnts[2] = pnts[2][::-1]  # reverse which way is iterated over each time
+                    for i in pnts[2]:
                         if self.abort_requested:
                             break
-                        self.move(scan_axes[-3][i], axes[-3])
-                        self.indices = (i, j, k)
-                        self.scan_function(i, j, k)
+                        self.move(scan_axes[2][i], axes[2])
+                        self.indices = (k, j, i)
+                        self.scan_function(k, j, i)
                         self._index += 1
                 elif len(axes) == 2:  # for regular 2d grid scans ignore third axis i
-                    self.indices = (j, k)
-                    self.scan_function(j, k)
+                    self.indices = (k, j)
+                    self.scan_function(k, j)
                     self._index += 1
 
         self.print_scan_time(time.time() - scan_start_time)
@@ -252,13 +189,6 @@ class GridScanner(Experiment, TimedScan):
         self.analyse_scan()
         self.close_scan()
         self.status = 'scan complete'
-
-    def update(self, force=False):
-        """
-        This is the function that is called in the event loop and at the end of the scan
-        and should be reimplemented when subclassing to deal with data updates and GUIs.
-        """
-        pass
 
     def vary_axes(self, name, multiplier=2.):
         if 'increase_size' in name:
@@ -272,11 +202,11 @@ class GridScanner(Experiment, TimedScan):
 
     def set_init_to_current_position(self):
         for i, ax in enumerate(self.axes):
-            self.init[i] = self.scanner.get_position(ax)*self.stage_units / self._unit_conversion[self.init_unit]
+            self.init[i] = self.stage.get_position(ax)*self.stage_units / self._unit_conversion[self.init_unit]
         self.init = self.init
 
 
-class GridScannerQT(GridScanner, QtCore.QObject):
+class GridScanQT(GridScan, QtCore.QObject):
     """
     A GridScanner subclass containing additional or redefined functions related to GUI operation.
     """
@@ -292,18 +222,22 @@ class GridScannerQT(GridScanner, QtCore.QObject):
     timing_updated = QtCore.pyqtSignal(str)
 
     def __init__(self):
-        GridScanner.__init__(self)
+        GridScan.__init__(self)
         QtCore.QObject.__init__(self)
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.update)
 
-    def start(self, rate=0.1):
-        super(GridScannerQT, self).start()
+    def run(self, rate=0.1):
+        super(GridScanQT, self).run()
         self.acquiring.wait()
-        self.timer.start(1000.*rate)
+        self.timer.start(1000*rate)
 
     def get_qt_ui(self):
-        return GridScannerUI(self)
+        return GridScanUI(self)
+
+    @staticmethod
+    def get_qt_ui_cls():
+        return GridScanUI
 
     def _update_axes(self, num_axes):
         """
@@ -311,11 +245,11 @@ class GridScannerQT(GridScanner, QtCore.QObject):
 
         :return:
         """
-        super(GridScannerQT, self)._update_axes(num_axes)
+        super(GridScanQT, self)._update_axes(num_axes)
         self.axes_updated.emit(self.axes)
 
     def init_grid(self, axes, size, step, init):
-        scan_axes = super(GridScannerQT, self).init_grid(axes, size, step, init)
+        scan_axes = super(GridScanQT, self).init_grid(axes, size, step, init)
         self.grid_shape_updated.emit(self.grid_shape)
         self.total_points_updated.emit(self.total_points)
         return scan_axes
@@ -335,7 +269,7 @@ class GridScannerQT(GridScanner, QtCore.QObject):
         Rescales the list or array-type axes grid parameters and emits the new values
         to update the variables in the grid scanner.
         """
-        super(GridScannerQT, self).rescale_parameter(param, value)
+        super(GridScanQT, self).rescale_parameter(param, value)
         a = getattr(self, param)
         updater = getattr(self, '%s_updated' % param)
         updater.emit(a)
@@ -348,7 +282,7 @@ class GridScannerQT(GridScanner, QtCore.QObject):
         :return:
         """
         param = name.split('_',1)[1]
-        super(GridScannerQT, self).vary_axes(name, multiplier=2.)
+        super(GridScanQT, self).vary_axes(name, multiplier=2.)
         getattr(self, '%s_updated' % param).emit(getattr(self, param))
 
     num_axes = property(fget=lambda self: getattr(self, '_num_axes'), fset=_update_axes)
@@ -359,13 +293,13 @@ class GridScannerQT(GridScanner, QtCore.QObject):
 #base, widget = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'gridscanner.ui'), from_imports=False)
 
 #class GridScannerUI(UiTools, base, widget):
-class GridScannerUI(QtGui.QWidget, UiTools):
+class GridScanUI(QtGui.QWidget, UiTools):
     def __init__(self, grid_scanner):
-        assert isinstance(grid_scanner, GridScannerQT), "A valid GridScannerQT subclass must be supplied"
-        super(GridScannerUI, self).__init__()
+        assert isinstance(grid_scanner, GridScanQT), "A valid GridScannerQT subclass must be supplied"
+        super(GridScanUI, self).__init__()
         self.grid_scanner = grid_scanner
         #self.setupUi(self)
-        uic.loadUi(os.path.join(os.path.dirname(__file__), 'gridscanner.ui'), self)
+        uic.loadUi(os.path.join(os.path.dirname(__file__), 'grid_scanner.ui'), self)
 
         self.rate = 0.1
 
@@ -417,7 +351,7 @@ class GridScannerUI(QtGui.QWidget, UiTools):
     def on_click(self):
         sender = self.sender()
         if sender == self.start_button:
-            self.grid_scanner.start(self.rate)
+            self.grid_scanner.run(self.rate)
 
     def update_axes(self):
         print self.axes_view.model().stringList(), self.grid_scanner.axes,\
@@ -467,16 +401,18 @@ if __name__ == '__main__':
     matplotlib.use('Qt4Agg')
     from nplab.ui.mpl_gui import FigureCanvasWithDeferredDraw as FigureCanvas
     from matplotlib.figure import Figure
+    import cProfile
+    import pstats
 
     test = 'qt'
     if test == 'qt':
-        template = GridScannerQT
+        template = GridScanQT
     else:
-        template = GridScanner
+        template = GridScan
 
-    class DummyGridScanner(template):
+    class DummyGridScan(template):
         def __init__(self):
-            super(DummyGridScanner, self).__init__()
+            super(DummyGridScan, self).__init__()
             self.estimated_step_time = 0.0005
             self.fig = Figure()
             self.data = None
@@ -487,26 +423,29 @@ if __name__ == '__main__':
             self.ax = self.fig.add_subplot(111)
             self.ax.set_aspect('equal')
             mult = 1./self._unit_conversion[self.size_unit]
-            x, y = (mult*self.scan_axes[0], mult*self.scan_axes[1])
+            x, y = (mult*self.scan_axes[-1], mult*self.scan_axes[-2])
             self.ax.set_xlim(x.min(), x.max())
             self.ax.set_ylim(y.min(), y.max())
         def scan_function(self, *indices):
             time.sleep(0.0005)
-            x,y = (self.scan_axes[0][indices[0]], self.scan_axes[1][indices[1]])
+            x,y = (self.scan_axes[-1][indices[-1]], self.scan_axes[-2][indices[-2]])
             self.data[indices] = np.sin(2*np.pi*2e6*x) * np.cos(2*np.pi*2e6*y)
-            self.check_for_data_request(self.data)
+            if self.num_axes == 2:
+                self.check_for_data_request(self.data)
+            elif self.num_axes == 3:
+                self.check_for_data_request(self.data[indices[0],:,:])
         #@profile
         #def start(self, rate=0.1):
         #    super(DummyGridScanner, self).start(0.1)
-        def start(self, rate=0.1):
+        def run(self, rate=0.1):
             fname = 'profiling.stats'
-            cProfile.runctx('super(DummyGridScanner, self).start(%.2f)'%rate, globals(), locals(), filename=fname)
+            cProfile.runctx('super(DummyGridScan, self).run(%.2f)'%rate, globals(), locals(), filename=fname)
             stats = pstats.Stats(fname)
             stats.strip_dirs()
             stats.sort_stats('cumulative')
             stats.print_stats()
         def update(self, force=False):
-            super(DummyGridScanner, self).update(force)
+            super(DummyGridScan, self).update(force)
             if self.data is None or self.fig.canvas is None:
                 print 'no canvas or data'
                 return
@@ -520,12 +459,12 @@ if __name__ == '__main__':
                     return
                 if not self.ax.collections:
                     mult = 1./self._unit_conversion[self.size_unit]
-                    self.ax.pcolormesh(mult*self.scan_axes[-2], mult*self.scan_axes[-1], data.transpose())
+                    self.ax.pcolormesh(mult*self.scan_axes[-1], mult*self.scan_axes[-2], data)
                     cid = self.fig.canvas.mpl_connect('button_press_event', self.onclick)
                     cid = self.fig.canvas.mpl_connect('pick_event', self.onpick4)
                 else:
                     img, = self.ax.collections
-                    img.set_array(data.transpose()[:-1,:-1].ravel())
+                    img.set_array(data[:-1,:-1].ravel())
                     try:
                         img_min = data[np.isfinite(data)].min()
                         img_max = data[np.isfinite(data)].max()
@@ -537,7 +476,7 @@ if __name__ == '__main__':
                     self.ax.relim()
                 self.fig.canvas.draw()
         def get_qt_ui(self):
-            return DummyGridScannerUI(self)
+            return DummyGridScanUI(self)
         def onclick(self, event):
             print 'button=%d, x=%d, y=%d, xdata=%f, ydata=%f'%(
             event.button, event.x, event.y, event.xdata, event.ydata)
@@ -551,22 +490,22 @@ if __name__ == '__main__':
                 A = im.get_array()
                 print('onpick4 image', A.shape)
 
-    class DummyGridScannerUI(GridScannerUI):
+    class DummyGridScanUI(GridScanUI):
         def __init__(self, grid_scanner):
-            super(DummyGridScannerUI, self).__init__(grid_scanner)
+            super(DummyGridScanUI, self).__init__(grid_scanner)
             self.canvas = FigureCanvas(self.grid_scanner.fig)
             self.canvas.setMaximumSize(300,300)
             self.layout.addWidget(self.canvas)
             self.resize(self.sizeHint())
 
-    gs = DummyGridScanner()
-    gs.scanner = DummyStage()
-    gs.scanner.axis_names = ('x', 'y', 'z')
+    gs = DummyGridScan()
+    gs.stage = DummyStage()
+    gs.stage.axis_names = ('x', 'y', 'z')
     gs.num_axes = 2
     gs.step /= 2
 
     if test == 'qt':
-        gs.start(0.2)
+        gs.run(0.2)
         app = get_qt_app()
         gui = gs.get_qt_ui()
         gui.rate = 0.2
@@ -577,4 +516,4 @@ if __name__ == '__main__':
         print gs._unit_conversion['um'] / gs._unit_conversion['nm']
         gs.size_unit = 'nm'
         print gs.size_unit, gs.size
-        gs.start()
+        gs.run()

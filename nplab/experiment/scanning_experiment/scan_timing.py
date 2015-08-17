@@ -5,8 +5,16 @@ import numpy as np
 
 class TimedScan(object):
     def __init__(self):
-        self.estimated_step_time = 0
+        self._estimated_step_time = 0
         self.total_points = 0
+
+    @property
+    def estimated_step_time(self):
+        return self._estimated_step_time
+
+    @estimated_step_time.setter
+    def estimated_step_time(self, value):
+        self._estimated_step_time = value
 
     def estimate_scan_duration(self):
         """Estimate the duration of a grid scan."""

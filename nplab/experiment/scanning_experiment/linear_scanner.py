@@ -1,21 +1,20 @@
 __author__ = 'alansanders'
 
-from nplab.experiment import Experiment, TimedScan
+from nplab.experiment.scanning_experiment import ScanningExperiment, TimedScan
 import numpy as np
 import threading
 import time
 from nplab.utils.gui import *
 from nplab.ui.ui_tools import UiTools
-import cProfile, pstats
 
 
-class LinearParameterScanner(Experiment, TimedScan):
+class LinearScan(ScanningExperiment, TimedScan):
     """
 
     """
 
     def __init__(self, start=None, stop=None, step=None):
-        Experiment.__init__(self)
+        ScanningExperiment.__init__(self)
         TimedScan.__init__(self)
         self.scanner = None
         self.start, self.stop, self.step = (start, stop, step)
@@ -38,18 +37,9 @@ class LinearParameterScanner(Experiment, TimedScan):
             print 'scan already running'
             return
         self.init_scan()
-        self.acquisition_thread = threading.Thread(target=self.sweep_parameter,
+        self.acquisition_thread = threading.Thread(target=self.scan,
                                                    args=(self.start, self.stop, self.step))
         self.acquisition_thread.start()
-
-    def abort(self):
-        """Requests an abort of the currently running grid scan."""
-        if not hasattr(self, 'acquisition_thread'):
-            return
-        if self.acquisition_thread.is_alive():
-            print 'aborting'
-            self.abort_requested = True
-            self.acquisition_thread.join()
 
     def init_parameter(self, start, stop, step):
         """Create an parameter array to scan."""
@@ -66,57 +56,7 @@ class LinearParameterScanner(Experiment, TimedScan):
         """Vary the independent parameter."""
         raise NotImplementedError
 
-    def init_scan(self):
-        """
-        This is called before the experiment enters its own thread. Methods that should be
-        executed in the main thread should be called here (e.g. graphing).
-
-        :return:
-        """
-        pass
-
-    def open_scan(self):
-        """
-        This is called after the experiment enters its own thread to setup the scan. Methods
-        that should be executed in line with the experiment should be called here (e.g. data
-        storage).
-
-        :return:
-        """
-        pass
-
-    def scan_function(self, index):
-        """Applied at each position in the grid scan."""
-        raise NotImplementedError
-
-    def _timed_scan_function(self, index):
-        """
-        Supplementary function that can be used
-
-        :param indices:
-        :return:
-        """
-        t0 = time.time()
-        self.scan_function(index)
-        dt = time.time() - t0
-        self._step_times[index] = dt
-
-    def analyse_scan(self):
-        """
-        This is called before the scan is closed to perform any final calculations.
-        :return:
-        """
-        pass
-
-    def close_scan(self):
-        """
-        Closes the scan whilst still in the experiment thread.
-
-        :return:
-        """
-        self.update(force=True)
-
-    def sweep_parameter(self, start, stop, step):
+    def scan(self, start, stop, step):
         """Scans a grid, applying a function at each position."""
         self.abort_requested = False
         p = self.init_parameter(start, stop, step)
@@ -148,15 +88,8 @@ class LinearParameterScanner(Experiment, TimedScan):
         self.close_scan()
         self.status = 'scan complete'
 
-    def update(self, force=False):
-        """
-        This is the function that is called in the event loop and at the end of the scan
-        and should be reimplemented when subclassing to deal with data updates and GUIs.
-        """
-        pass
 
-
-class LinearParameterScannerQT(LinearParameterScanner, QtCore.QObject):
+class LinearScanQT(LinearScan, QtCore.QObject):
     """
     A GridScanner subclass containing additional or redefined functions related to GUI operation.
     """
@@ -166,21 +99,25 @@ class LinearParameterScannerQT(LinearParameterScanner, QtCore.QObject):
     timing_updated = QtCore.pyqtSignal(str)
 
     def __init__(self, start=None, stop=None, step=None):
-        LinearParameterScanner.__init__(self, start, stop, step)
+        LinearScan.__init__(self, start, stop, step)
         QtCore.QObject.__init__(self)
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.update)
 
     def run(self, rate=0.1):
-        super(LinearParameterScannerQT, self).run()
+        super(LinearScanQT, self).run()
         self.acquiring.wait()
         self.timer.start(1000.*rate)
 
     def get_qt_ui(self):
-        return LinearParameterScannerUI(self)
+        return LinearScanUI(self)
+
+    @staticmethod
+    def get_qt_ui_cls():
+        return LinearScanUI
 
     def init_parameter(self, start, stop, step):
-        parameter = super(LinearParameterScannerQT, self).init_parameter(start, stop, step)
+        parameter = super(LinearScanQT, self).init_parameter(start, stop, step)
         self.total_points_updated.emit(self.total_points)
         return parameter
 
@@ -195,10 +132,10 @@ class LinearParameterScannerQT(LinearParameterScanner, QtCore.QObject):
         self.status_updated.emit('')
 
 
-class LinearParameterScannerUI(QtGui.QWidget, UiTools):
+class LinearScanUI(QtGui.QWidget, UiTools):
     def __init__(self, linear_scanner):
-        assert isinstance(linear_scanner, LinearParameterScannerQT), "A valid LinearParameterScannerQT subclass must be supplied"
-        super(LinearParameterScannerUI, self).__init__()
+        assert isinstance(linear_scanner, LinearScanQT), "A valid LinearScanQT subclass must be supplied"
+        super(LinearScanUI, self).__init__()
         self.linear_scanner = linear_scanner
         uic.loadUi(os.path.join(os.path.dirname(__file__), 'linear_scanner.ui'), self)
         self.rate = 1./30.
@@ -259,22 +196,23 @@ class LinearParameterScannerUI(QtGui.QWidget, UiTools):
         self.est_time_remain.setText(time)
 
 
-
 if __name__ == '__main__':
     import matplotlib
     matplotlib.use('Qt4Agg')
     from nplab.ui.mpl_gui import FigureCanvasWithDeferredDraw as FigureCanvas
     from matplotlib.figure import Figure
+    import cProfile
+    import pstats
 
     test = 'qt'
     if test == 'qt':
-        template = LinearParameterScannerQT
+        template = LinearScanQT
     else:
-        template = LinearParameterScanner
+        template = LinearScan
 
-    class DummyLinearParameterScanner(template):
+    class DummyLinearScan(template):
         def __init__(self):
-            super(DummyLinearParameterScanner, self).__init__()
+            super(DummyLinearScan, self).__init__()
             self.start, self.stop, self.step = (0, 1, 0.01)
             self.estimated_step_time = 0.0005
             self.fig = Figure()
@@ -294,13 +232,13 @@ if __name__ == '__main__':
             self.check_for_data_request(self.parameter[:self.index+1], self.data[:self.index+1])
         def run(self, rate=0.1):
             fname = 'profiling.stats'
-            cProfile.runctx('super(DummyLinearParameterScanner, self).run(%.2f)'%rate, globals(), locals(), filename=fname)
+            cProfile.runctx('super(DummyLinearScan, self).run(%.2f)'%rate, globals(), locals(), filename=fname)
             stats = pstats.Stats(fname)
             stats.strip_dirs()
             stats.sort_stats('cumulative')
             stats.print_stats()
         def update(self, force=False):
-            super(DummyLinearParameterScanner, self).update(force)
+            super(DummyLinearScan, self).update(force)
             if self.data is None or self.fig.canvas is None:
                 print 'no canvas or data'
                 return
@@ -321,17 +259,17 @@ if __name__ == '__main__':
                     self.ax.autoscale_view()
                 self.fig.canvas.draw()
         def get_qt_ui(self):
-            return DummyLinearParameterScannerUI(self)
+            return DummyLinearScanUI(self)
 
-    class DummyLinearParameterScannerUI(LinearParameterScannerUI):
+    class DummyLinearScanUI(LinearScanUI):
         def __init__(self, linear_scanner):
-            super(DummyLinearParameterScannerUI, self).__init__(linear_scanner)
+            super(DummyLinearScanUI, self).__init__(linear_scanner)
             self.canvas = FigureCanvas(self.linear_scanner.fig)
             self.canvas.setMaximumSize(300,300)
             self.layout.addWidget(self.canvas)
             self.resize(self.sizeHint())
 
-    ls = DummyLinearParameterScanner()
+    ls = DummyLinearScan()
     if test == 'qt':
         ls.run(1./30.)
         app = get_qt_app()

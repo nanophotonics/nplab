@@ -1,29 +1,25 @@
 __author__ = 'alansanders'
 
-from nplab.experiment import Experiment
-from nplab.experiment.gridscanner import GridScannerQT as GridScanner, GridScannerUI
+from nplab.experiment.scanning_experiment import ScanningExperimentHDF5, GridScanQT
 from nplab.instrument.stage import Stage
 from nplab.instrument.spectrometer import Spectrometer, Spectrometers
 from nplab.instrument.light_sources import LightSource
 from nplab.instrument.shutter import Shutter
-import h5py
-from nplab.datafile import DataFile
 from nplab.utils.gui import *
 from PyQt4 import uic
 from nplab.ui.ui_tools import UiTools
 import numpy as np
 import matplotlib
+import warnings
+import time
 
 matplotlib.use('Qt4Agg')
 # from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from nplab.ui.mpl_gui import FigureCanvasWithDeferredDraw as FigureCanvas
 from matplotlib.figure import Figure
-from time import sleep
 from functools import partial
 from types import MethodType
 import inspect
-import nplab.datafile as datafile
-from threading import RLock
 from nplab.ui.hdf5_browser import HDF5Browser
 
 import pyqtgraph as pg
@@ -33,31 +29,23 @@ pg.setConfigOption('foreground', 'k')
 # TODO: hyperspectral image renderer
 
 
-class HyperspectralScanner(GridScanner):
+class HyperspectralScan(GridScanQT, ScanningExperimentHDF5):
     view_layer_updated = QtCore.pyqtSignal(int)
 
     def __init__(self):
-        super(HyperspectralScanner, self).__init__()
+        GridScanQT.__init__(self)
+        ScanningExperimentHDF5.__init__(self)
         self.spectrometer = None
         self.light_source = None
         self.num_spectrometers = 1
-        self.estimated_step_time = 30e-3
         self.safe_exit = False
         self.delay = 0.
-
-        self.f = datafile.current()
-        self.scan = None
-        self.description = None
 
         self.fig = None#Figure()
         self._created = False
         self.view_wavelength = 600
         self.view_layer = 0
         self.override_view_layer = False  # used to manually show a specific layer instead of current one scanning
-
-    def __del__(self):
-        if self.f is not None:
-            self.f.close()
 
     @property
     def view_layer(self):
@@ -70,14 +58,14 @@ class HyperspectralScanner(GridScanner):
 
     def set_stage(self, stage, move_method=None, pos_method=None):
         assert isinstance(stage, Stage), 'stage must be an instance of Stage'
-        self.scanner = stage
+        self.stage = stage
         # print self.move
-        self.move = self.scanner.move
+        self.move = self.stage.move
         # print self.move
-        # self.scanner.configure()
-        # move_method = get_move_method(self, self.scanner, self.stage_select)
+        # self.stage.configure()
+        # move_method = get_move_method(self, self.stage, self.stage_select)
         # setattr(self, move_method.__name__, MethodType(move_method, self))
-        # position_method = get_position_method(self, self.scanner, self.stage_select)
+        # position_method = get_position_method(self, self.stage, self.stage_select)
         # setattr(self, position_method.__name__, MethodType(position_method, self))
         # # possibly requires third argument of self.__class__ or HyperspectralAcquisition
         self.set_init_to_current_position()
@@ -95,36 +83,48 @@ class HyperspectralScanner(GridScanner):
         assert isinstance(light_source, LightSource), 'light_source must be an instance of LightSource'
         self.light_source = light_source
 
+    @staticmethod
+    def _suffix(i):
+        return '{}'.format(i) if i != 0 else ''
+
     def init_scan(self):
+        assert isinstance(self.stage, Stage), 'stage must be a Stage'
+        assert isinstance(self.spectrometer, Spectrometer) or \
+               isinstance(self.spectrometer, Spectrometers), \
+               'spectrometer must be a Spectrometer or Spectrometers'
         if not self._created:
             self.init_figure()
 
     def open_scan(self):
-        super(HyperspectralScanner, self).open_scan()
-
-        print self.description
+        super(HyperspectralScan, self).open_scan()
         group = self.f.require_group('hyperspectral_images')
-        self.scan = group.create_group('scan_%d', attrs=dict(description=self.description))
-        raw_group = self.scan.create_group('raw_data')
+        self.data = group.create_group('scan_%d', attrs=dict(description=self.description))
+        raw_group = self.data.create_group('raw_data')
         for axis_name, axis_values in zip(self.axes_names, self.scan_axes):
-            self.scan.create_dataset(axis_name, data=axis_values)
+            self.data.create_dataset(axis_name, data=axis_values)
         for i in xrange(self.num_spectrometers):
-            suffix = '_%d'%(i+1) if i!=0 else ''
+            suffix = self._suffix(i)
             spectrometer = self.spectrometer.spectrometers[i]\
                 if isinstance(self.spectrometer, Spectrometers) else self.spectrometer
-            self.scan.create_dataset('wavelength'+suffix, data=spectrometer.wavelengths)
-            self.scan.create_dataset('hs_image'+suffix,
+            self.data.create_dataset('wavelength'+suffix, data=spectrometer.wavelengths)
+            self.data.create_dataset('hs_image'+suffix,
                                      shape=self.grid_shape + (spectrometer.wavelengths.size,),
                                      dtype=np.float64,
                                      attrs={}.update(spectrometer.metadata))
-            self.scan.create_dataset('raw_data/hs_image'+suffix,
+            self.data.create_dataset('raw_data/hs_image'+suffix,
                                      shape=self.grid_shape + (spectrometer.wavelengths.size,),
                                      dtype=np.float64,
                                      attrs={}.update(spectrometer.metadata))
+        if isinstance(self.spectrometer, Spectrometer):
+            self.read_spectra = self.spectrometer.read_spectrum
+            self.process_spectra = self.spectrometer.process_spectrum
+        elif isinstance(self.spectrometer, Spectrometers):
+            self.read_spectra = self.spectrometer.read_spectra
+            self.process_spectra = self.spectrometer.process_spectra
 
     def close_scan(self):
-        super(HyperspectralScanner, self).close_scan()
-        sleep(0.1)
+        super(HyperspectralScan, self).close_scan()
+        time.sleep(0.1)
         if self.safe_exit:
             if isinstance(self.light_source.shutter, Shutter):
                 self.light_source.shutter.toggle()
@@ -132,41 +132,42 @@ class HyperspectralScanner(GridScanner):
                 self.light_source.power = 0
 
     def scan_function(self, *indices):
-        sleep(self.delay)
-        for i in xrange(self.num_spectrometers):
-            suffix = '_%d'%(i+1) if i!=0 else ''
-            spectrometer = self.spectrometer.spectrometers[i]\
-                if isinstance(self.spectrometer, Spectrometers) else self.spectrometer
-            raw_spectrum = spectrometer.read_spectrum()
-            spectrum = spectrometer.process_spectrum(raw_spectrum)
-            self.scan['raw_data/hs_image'+suffix][indices] = raw_spectrum
-            self.scan['hs_image'+suffix][indices] = spectrum
+        time.sleep(self.delay)
+        raw_spectra = self.read_spectra()
+        spectra = self.process_spectra(raw_spectra)
+        for i, (spectrum, raw_spectrum) in enumerate(zip(spectra, raw_spectra)):
+            suffix = self._suffix(i)
+            self.data['raw_data/hs_image'+suffix][indices] = raw_spectrum
+            self.data['hs_image'+suffix][indices] = spectrum
         self.check_for_data_request(*self.set_latest_view(*indices))
 
     def set_latest_view(self, *indices):
         view_data = []
         for i in xrange(self.num_spectrometers):
-            suffix = '_%d'%(i+1) if i!=0 else ''
+            suffix = self._suffix(i)
             spectrometer = self.spectrometer.spectrometers[i]\
                 if isinstance(self.spectrometer, Spectrometers) else self.spectrometer
             w = abs(spectrometer.wavelengths - self.view_wavelength).argmin()
-            data = self.scan['hs_image'+suffix]
+            data = self.data['hs_image'+suffix]
             if self.num_axes == 2:
                 latest_view = data[:, :, w]
+                spectrum = self.data['hs_image'+suffix][indices[-2], indices[-1], :]
             elif self.num_axes == 3:
                 if self.override_view_layer:
                     k = self.view_layer
                 else:
-                    k = self.indices[-1]
+                    k = self.indices[0]
                     if self.view_layer != k:
                         self.view_layer = k
-                latest_view = data[:, :, k, w]
-            spectrum = self.scan['hs_image'+suffix][indices[0],indices[1],:]
+                latest_view = data[k, :, :, w]
+                spectrum = self.data['hs_image'+suffix][k, indices[-2], indices[-1], :]
             spectrum = spectrometer.mask_spectrum(spectrum, 0.05)
             view_data += [latest_view, spectrometer.wavelengths, spectrum]
         return tuple(view_data)
 
     def init_figure(self):
+        if self.fig is None:
+            return
         self.spectrum_plots = [pg.PlotCurveItem() for i in xrange(self.num_spectrometers)]
         self.image_plots = [pg.ImageItem() for i in xrange(self.num_spectrometers)]
         for item in self.image_plots:
@@ -198,7 +199,7 @@ class HyperspectralScanner(GridScanner):
                 return
             if not ax.collections:
                 mult = 1. / self._unit_conversion[self.size_unit]
-                ax.pcolormesh(mult * self.scan_axes[0], mult * self.scan_axes[1], data,
+                ax.pcolormesh(mult * self.scan_axes[-1], mult * self.scan_axes[-2], data,
                               cmap=matplotlib.cm.afmhot)
                 cid = self.fig.canvas.mpl_connect('button_press_event', self.on_mouse_click)
                 cid = self.fig.canvas.mpl_connect('pick_event', self.onpick4)
@@ -216,7 +217,7 @@ class HyperspectralScanner(GridScanner):
             return False
 
     def update(self, force=False):
-        super(HyperspectralScanner, self).update(force)
+        super(HyperspectralScan, self).update(force)
         if not self.fig:
             return
         if force:
@@ -230,7 +231,7 @@ class HyperspectralScanner(GridScanner):
                 img, wavelengths, spectrum = data_group
                 if not np.any(np.isfinite(img)):
                     return
-                self.image_plots[i].setImage(img, xvals=self.scan_axes[0], yvals=self.scan_axes[1])
+                self.image_plots[i].setImage(img, xvals=self.scan_axes[-1], yvals=self.scan_axes[-2])
                 self.spectrum_plots[i].setData(x=wavelengths, y=spectrum, pen=colours[i])
 
     def update2(self):
@@ -268,8 +269,25 @@ class HyperspectralScanner(GridScanner):
             #self.fig.canvas.draw_in_main_loop()
             QtCore.QCoreApplication.processEvents()
 
+    @property
+    def estimated_step_time(self):
+        if isinstance(self.spectrometer, Spectrometer):
+            max_exposure = self.spectrometer.integration_time
+        elif isinstance(self.spectrometer, Spectrometers):
+            max_exposure = 1e-3 * max([s.integration_time for s in self.spectrometer.spectrometers])
+        else:
+            max_exposure = 0
+            warnings.warn('No integration time as spectrometer is not a valid instance of Spectrometer or Spectrometers.')
+        max_travel = 100e-3
+        #self.estimated_step_time = max_exposure + max_travel
+        return max_exposure + max_travel
+
+    @estimated_step_time.setter
+    def estimated_step_time(self, value):
+        print value
+
     def get_qt_ui(self):
-        return HyperspectralScannerUI(self)
+        return HyperspectralScanUI(self)
 
     def on_mouse_click(self, event):
         init_scale = self._unit_conversion[self.size_unit] / self._unit_conversion[self.init_unit]
@@ -287,21 +305,16 @@ class HyperspectralScanner(GridScanner):
         pos = event.scenePos()
         print "Image position:", self.image_plots[0].mapFromScene(pos)
 
-    def update_estimated_step_time(self):
-        max_exposure = 1e-3 * max([s.integration_time for s in self.spectrometers.spectrometers])
-        max_travel = 100e-3
-        self.estimated_step_time = max_exposure + max_travel
 
-
-class HyperspectralScannerUI(QtGui.QWidget, UiTools):
+class HyperspectralScanUI(QtGui.QWidget, UiTools):
     def __init__(self, grid_scanner, parent=None):
-        assert isinstance(grid_scanner, HyperspectralScanner), \
-            'scanner must be an instance of HyperspectralScanner'
-        super(HyperspectralScannerUI, self).__init__()
+        assert isinstance(grid_scanner, HyperspectralScan), \
+            'scanner must be an instance of HyperspectralScan'
+        super(HyperspectralScanUI, self).__init__()
         self.grid_scanner = grid_scanner
         uic.loadUi(os.path.join(os.path.dirname(__file__), 'hyperspectral_imaging.ui'), self)
         self.gridscanner_widget = self.replace_widget(self.main_layout, self.gridscanner_widget,
-                                                      GridScannerUI(self.grid_scanner))
+                                                      GridScanQT.get_qt_ui_cls()(self.grid_scanner))
         self.gridscanner_widget.rate = 0.1
 
         #self.figure_widget = self.replace_widget(self.main_layout, self.figure_widget,
@@ -359,8 +372,8 @@ class HyperspectralScannerUI(QtGui.QWidget, UiTools):
     def on_click(self):
         sender = self.sender()
         if sender == self.config_stage:
-            self.scanner_ui = self.grid_scanner.scanner.get_qt_ui()
-            self.scanner_ui.show()
+            self.stage_ui = self.grid_scanner.stage.get_qt_ui()
+            self.stage_ui.show()
         elif sender == self.config_spectrometers:
             self.spectrometers_ui = self.grid_scanner.spectrometer.get_qt_ui()
             self.spectrometers_ui.show()
@@ -414,17 +427,15 @@ if __name__ == '__main__':
     import sys
     from nplab.instrument.stage import DummyStage
     from nplab.instrument.spectrometer import DummySpectrometer, Spectrometers
+    from nplab import datafile
 
-    data_dir = datafile.get_data_dir()
-    fname = datafile.get_filename(data_dir)
-    f = datafile.DataFile(fname, 'w')
-    f.make_current()
+    f = datafile.get_file()
 
     stage = DummyStage()
     stage.axis_names = ('x', 'y', 'z')
     spectrometers = Spectrometers([DummySpectrometer(), DummySpectrometer()])
 
-    gs = HyperspectralScanner()
+    gs = HyperspectralScan()
     gs.num_axes = 2
     gs.set_stage(stage)
     gs.set_spectrometers(spectrometers)

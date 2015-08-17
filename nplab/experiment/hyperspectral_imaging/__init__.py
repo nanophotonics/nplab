@@ -1,3 +1,3 @@
 __author__ = 'alansanders'
 
-from .hyperspectral_imaging import HyperspectralScanner
+from .hyperspectral_imaging import HyperspectralScan

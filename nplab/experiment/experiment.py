@@ -64,7 +64,7 @@ class Experiment(object):
         :return:
         """
         if self.data_requested:
-            data = tuple(d.copy() if hasattr(d, 'copy') else d for d in data)
+            data = tuple(d.copy() if hasattr(d, 'copy') else np.array(d) for d in data)
             self.set_latest_data(*data)
             self.data_requested = False
             self.request_complete = True
