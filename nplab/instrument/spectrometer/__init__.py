@@ -206,6 +206,10 @@ class Spectrometers(object):
     def read_processed_spectra(self):
         return self._pool.map(lambda s: s.read_processed_spectrum(), self.spectrometers)
 
+    def process_spectra(self, spectra):
+        pairs = zip(self.spectrometers, spectra)
+        return self._pool.map(lambda (s, spectrum): s.process_spectrum(spectrum), pairs)
+
     def mask_spectra(self, spectra, threshold):
         return [spectrometer.mask_spectrum(spectrum, threshold) for (spectrometer, spectrum) in zip(self.spectrometers, spectra)]
 
@@ -531,7 +535,7 @@ if __name__ == '__main__':
     from nplab.utils.gui import get_qt_app
     s1 = DummySpectrometer()
     s2 = DummySpectrometer()
-    spectrometers = Spectrometers([s1])
+    spectrometers = Spectrometers([s1, s2])
     for spectrometer in spectrometers.spectrometers:
         spectrometer.integration_time = 100
     import timeit
