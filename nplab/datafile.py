@@ -168,13 +168,46 @@ class Group(h5py.Group):
             attributes_from_dict(dset, attrs)  # quickly set the attributes
         return dset
 
+    def require_dataset(self, name, auto_increment=True, shape=None, dtype=None, data=None, attrs=None, timestamp=True,
+                        *args, **kwargs):
+        """Require a new dataset, optionally with an auto-incrementing name."""
+        if name not in self:
+            dset = self.create_dataset(name, auto_increment, shape, dtype, data, attrs, timestamp,
+                                       *args, **kwargs)
+        else:
+            dset = self[name]
+        return dset
+
+    def create_resizable_dataset(self, name, shape=(0,), maxshape=(None,), auto_increment=True, dtype='f8', attrs=None, timestamp=True,
+                                 *args, **kwargs):
+        return self.create_dataset(name, auto_increment, shape, dtype, attrs, timestamp,
+                                   maxshape=maxshape, chunks=True, *args, **kwargs)
+
+    def require_resizable_dataset(self, name, shape=(0,), maxshape=(None,), auto_increment=True, dtype='f8', attrs=None, timestamp=True,
+                                  *args, **kwargs):
+        if name not in self:
+            dset = self.create_resizable_dataset(name, shape, maxshape, auto_increment, dtype, attrs, timestamp,
+                                                 *args, **kwargs)
+        else:
+            dset = self[name]
+        return dset
+
     def update_attrs(self, attribute_dict):
         """Update (create or modify) the attributes of this group."""
         attributes_from_dict(self, attribute_dict)
 
-    def append_dataset(self, name, value, shape=(0,), dtype='f8'):
+    def append_dataset(self, name, value, dtype='f8'):
         if name not in self:
-            dset = self.require_dataset(name, shape, dtype, maxshape=(None,), chunks=True)
+            if hasattr(value, 'shape'):
+                shape = (0,)+value.shape
+                maxshape = (None,)+value.shape
+            elif hasattr(value, '__len__'):
+                shape = (0, len(value))
+                maxshape = (None, len(value))  # tuple(None for i in shape)
+            else:
+                shape=(0,)
+                maxshape = (None,)
+            dset = self.require_dataset(name, shape, dtype, maxshape=maxshape, chunks=True)
         else:
             dset = self[name]
         index = dset.shape[0]
