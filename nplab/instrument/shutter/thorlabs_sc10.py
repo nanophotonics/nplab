@@ -16,10 +16,20 @@ class ThorLabsSC10(Shutter, serial.SerialInstrument):
     termination_character = "\r"  #: All messages to or from the instrument end with this character.
 
     def __init__(self, port=None):
-        super(ThorLabsSC10, self).__init__(port=port)
+        serial.SerialInstrument.__init__(self, port=port)
+        Shutter.__init__(self)
 
     def toggle(self):
         self.write('ens')
 
     def get_state(self):
         return self.query('ens?')
+
+if __name__ == '__main__':
+    import sys
+    from nplab.utils.gui import *
+    app = get_qt_app()
+    shutter = ThorLabsSC10('COM12')
+    ui = shutter.get_qt_ui()
+    ui.show()
+    sys.exit(app.exec_())
