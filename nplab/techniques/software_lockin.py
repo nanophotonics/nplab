@@ -8,14 +8,17 @@ def software_lockin(t, signal, reference, harmonic=1, trigger=None, smoothing=No
     Extract the amplitude and phase of a signal component at a frequency set by a reference
     signal.
 
-    :rtype : float, float
     :param t: a numpy array of time values
     :param signal: a numpy
     :param reference:
     :param harmonic:
     :param trigger:
     :param smoothing:
-    :return:
+    :param basis: cartesian (x,y) or polar (r,theta) return
+    :return: Depending on the basis, either a cartesian (real, imaginary) pair of values is
+             returned or a polar amplitude and angle (phase) pair of values.
+
+    :rtype : object
     """
     assert len(signal) == len(t) and len(reference) == len(t), 'all arrays must be the same length.'
     if type(t) != np.ndarray:
