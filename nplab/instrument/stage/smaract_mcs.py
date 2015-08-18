@@ -63,7 +63,7 @@ class SmaractError(Exception):
         print "MCS error: %s" % msg
 
 
-class SmaractMCS(Stage, Instrument):
+class SmaractMCS(Stage):
     """
     Smaract MCS controller interface for Smaract stages.
     """
@@ -102,7 +102,7 @@ class SmaractMCS(Stage, Instrument):
         # self.setup()
         self.is_open = False
         self._num_ch = None
-        self.axis_names = (i for i in range(self.num_ch))
+        self.axis_names = tuple(i for i in range(self.num_ch))
         self.positions = [0 for ch in range(self.num_ch)]
         self.levels = [0 for ch in range(self.num_ch)]
         self.voltages = [0 for ch in range(self.num_ch)]
@@ -511,7 +511,7 @@ class SmaractMCS(Stage, Instrument):
 
 class SmaractStageUI(StageUI):
     def __init__(self, stage):
-        super(SmaractStageUI, self).__init__(stage)
+        super(SmaractStageUI, self).__init__(stage, stage_step_min=50e-9)
 
     def move_axis_relative(self, index, axis, dir=1):
         if axis in [1,2,4,5]:
@@ -521,7 +521,7 @@ class SmaractStageUI(StageUI):
 
 class SmaractScanStageUI(StageUI):
     def __init__(self, stage):
-        super(SmaractScanStageUI, self).__init__(stage)
+        super(SmaractScanStageUI, self).__init__(stage, stage_step_max=100e-6)
 
     def move_axis_relative(self, index, axis, dir=1):
         if axis in [1,2,4,5]:
@@ -542,21 +542,17 @@ class SmaractScanStageUI(StageUI):
             p = engineering_format(self.stage.scan_position[i], base_unit='m', digits_of_precision=3)
             self.positions[i].setText(p)
 
-controls_base, controls_widget = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'smaract_mcs.ui'))
 
-class SmaractMCSUI(UiTools, controls_base, controls_widget):
+class SmaractMCSUI(QtGui.QWidget, UiTools):
     def __init__(self, mcs, parent=None):
         assert isinstance(mcs, SmaractMCS), "system must be a Smaract MCS"
         super(SmaractMCSUI, self).__init__()
         self.mcs = mcs
-        self.setupUi(self)
+        uic.loadUi(os.path.join(os.path.dirname(__file__), 'smaract_mcs.ui'), self)
         self.mcs_id.setText(str(mcs.mcs_id))
         self.num_ch.setText(str(mcs.num_ch))
         self.reference_button.clicked.connect(self.mcs.find_references)
         self.calibrate_button.clicked.connect(self.mcs.calibrate_system)
-        self.create_stage_interfaces()
-
-    def create_stage_interfaces(self):
         self.step_stage_widget = self.replace_widget(self.step_stage_layout, self.step_stage_widget, SmaractStageUI(self.mcs))
         self.scan_stage_widget = self.replace_widget(self.scan_stage_layout, self.scan_stage_widget, SmaractScanStageUI(self.mcs))
 

@@ -72,9 +72,15 @@ class Stage(Instrument):
 
     def set_axis_param(self, set_func, value, axis=None):
         if axis is None:
-            tuple(set_func(value, axis) for axis in self.axis_names)
+            if isinstance(value, collections.Sequence):
+                tuple(set_func(v, axis) for v,axis in zip(value, self.axis_names))
+            else:
+                tuple(set_func(value, axis) for axis in self.axis_names)
         elif isinstance(axis, collections.Sequence) and not isinstance(axis, str):
-            tuple(set_func(value, ax) for ax in axis)
+            if isinstance(value, collections.Sequence):
+                tuple(set_func(v, ax) for v,ax in zip(value, axis))
+            else:
+                tuple(set_func(value, ax) for ax in axis)
         else:
             set_func(value, axis)
 
@@ -84,13 +90,13 @@ class Stage(Instrument):
 class StageUI(QtGui.QWidget, UiTools):
     update_ui = QtCore.pyqtSignal([int], [str])
 
-    def __init__(self, stage, parent=None):
+    def __init__(self, stage, parent=None, stage_step_min=1e-9, stage_step_max=1e-3):
         assert isinstance(stage, Stage), "instrument must be a Stage"
         super(StageUI, self).__init__()
         self.stage = stage
         #self.setupUi(self)
         uic.loadUi(os.path.join(os.path.dirname(__file__), 'stage.ui'), self)
-        self.step_size_values = step_size_dict(1e-9, 1e-3)
+        self.step_size_values = step_size_dict(stage_step_min, stage_step_max)
         self.step_size = [self.step_size_values[self.step_size_values.keys()[0]] for axis in stage.axis_names]
         self.create_axes_layout()
         self.update_ui[int].connect(self.update_positions)
@@ -129,6 +135,7 @@ class StageUI(QtGui.QWidget, UiTools):
             position.setReadOnly(True)
             self.positions.append(position)
             set_position = QtGui.QLineEdit('0', self)
+            set_position.setMinimumWidth(40)
             self.set_positions.append(set_position)
             set_position_button = QtGui.QPushButton('', self)
             set_position_button.setIcon(QtGui.QIcon(os.path.join(path, 'go.png')))
@@ -144,7 +151,7 @@ class StageUI(QtGui.QWidget, UiTools):
             if i % 3 == 0:
                 group = QtGui.QGroupBox('axes {0}'.format(1 + (i / 3)), self)
                 layout = QtGui.QGridLayout()
-                layout.setSpacing(6)
+                layout.setSpacing(3)
                 group.setLayout(layout)
                 self.axes_layout.addWidget(group, 0, i / 3)
                 zero_button = QtGui.QPushButton('', self)

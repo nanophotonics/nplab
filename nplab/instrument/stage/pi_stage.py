@@ -1,32 +1,40 @@
 __author__ = 'alansanders'
 
 from nplab.instrument.visa_instrument import VisaInstrument
-from nplab.instrument.stage import Stage
+from nplab.instrument.stage import Stage, StageUI
 import time
 import numpy as np
+from functools import partial
 
 
-class PIStage(Stage, VisaInstrument):
+class PIStage(VisaInstrument, Stage):
     """
     Control interface for PI stages.
     """
     def __init__(self, address='ASRL3::INSTR'):
-        super(PIStage, self).__init__(address)
+        super(PIStage, self).__init__(address=address)
         self.instr.read_termination = '\n'
         self.instr.write_termination = '\n'
         self.axis_names = ('a', 'b', 'c')
         self.positions = [0 for ch in xrange(3)]
         self._stage_id = None
+        self.startup()
 
     def move(self, pos, axis=None, relative=False):
+        if relative:
+            self.set_axis_param(partial(self.move_axis, relative=True), pos, axis)
+        else:
+            self.set_axis_param(self.move_axis, pos, axis)
+
+    def move_axis(self, pos, axis, relative=False):
         if relative:
             self.write('mvr {0}{1}'.format(axis, 1e6*pos))
         else:
             self.write('mov {0}{1}'.format(axis, 1e6*pos))
-        raise NotImplementedError("You must override move() in a Stage subclass")
+        self.wait_until_stopped(axis)
 
     def get_position(self, axis=None):
-        return self.get_axis_param(lambda axis: 1e6*float(self.query('pos? {0}'.format(axis))), axis)
+        return self.get_axis_param(lambda axis: 1e-6*float(self.query('pos? {0}'.format(axis))), axis)
     position = property(fget=get_position, doc="Current position of the stage")
 
     def is_moving(self, axes=None):
@@ -41,6 +49,7 @@ class PIStage(Stage, VisaInstrument):
             time.sleep(0.005)
         sum_of_diffs = np.sum(positions-positions[0], axis=1)
         if np.any(sum_of_diffs > 0.01):
+            print sum_of_diffs
             return True
         else:
             return False
@@ -52,6 +61,8 @@ class PIStage(Stage, VisaInstrument):
 
     def startup(self):
         self.online = 1
+        while not self.online:
+            print self.online
         self.loop_mode = 1
         self.speed_mode = 0
         self.velocity = 100
@@ -67,13 +78,13 @@ class PIStage(Stage, VisaInstrument):
     def get_velocity(self, axis=None):
         return self.get_axis_param(lambda axis: float(self.query('vel? {0}'.format(axis))), axis)
     def set_velocity(self, value, axis=None):
-        self.set_axis_param(lambda value, axis: self.query('vel {0}{1}'.format(axis, value)), value, axis)
+        self.set_axis_param(lambda value, axis: self.write('vel {0}{1}'.format(axis, value)), value, axis)
     velocity = property(get_velocity, set_velocity)
 
     def get_drift_compensation(self, axis=None):
         return self.get_axis_param(lambda axis: bool(self.query('dco? {0}'.format(axis))), axis)
     def set_drift_compensation(self, value, axis=None):
-        self.set_axis_param(lambda value, axis: self.query('dco {0}{1}'.format(axis, value)), value, axis)
+        self.set_axis_param(lambda value, axis: self.write('dco {0}{1}'.format(axis, value)), value, axis)
     drift_compensation = property(get_drift_compensation, set_drift_compensation)
 
     def get_loop_mode(self, axis=None):
@@ -85,7 +96,7 @@ class PIStage(Stage, VisaInstrument):
         :param axis:
         :return:
         """
-        self.set_axis_param(lambda value, axis: self.query('svo {0}{1}'.format(axis, value)), value, axis)
+        self.set_axis_param(lambda value, axis: self.write('svo {0}{1}'.format(axis, value)), value, axis)
     loop_mode = property(get_loop_mode, set_loop_mode)
 
     def get_speed_mode(self, axis=None):
@@ -97,13 +108,13 @@ class PIStage(Stage, VisaInstrument):
         :param axis:
         :return:
         """
-        self.set_axis_param(lambda value, axis: self.query('vco {0}{1}'.format(axis, value)), value, axis)
+        self.set_axis_param(lambda value, axis: self.write('vco {0}{1}'.format(axis, value)), value, axis)
     speed_mode = property(get_speed_mode, set_speed_mode)
 
     def get_online(self):
-        return bool(self.query('online?'))
+        return bool(self.query('onl?'))
     def set_online(self, value):
-        self.write('online {0}'.format(value))
+        self.write('onl {0}'.format(value))
     online = property(get_online, set_online)
 
     def get_on_target(self):
@@ -115,3 +126,21 @@ class PIStage(Stage, VisaInstrument):
             self._stage_id = self.query('*idn?')
         return self._stage_id
     stage_id = property(get_id)
+
+    def get_qt_ui(self):
+        return StageUI(self, stage_step_min=0.1e-9, stage_step_max=100e-6)
+
+
+if __name__ == '__main__':
+    stage = PIStage()
+    stage.move((5e-6, 10e-6, 5e-6))
+    print stage.position
+    print stage.get_position()
+    print stage.get_position(axis=('a', 'c'))
+
+    import sys
+    from nplab.utils.gui import get_qt_app
+    app = get_qt_app()
+    ui = stage.get_qt_ui()
+    ui.show()
+    sys.exit(app.exec_())

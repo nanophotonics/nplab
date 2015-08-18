@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>281</width>
-    <height>194</height>
+    <width>257</width>
+    <height>186</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -39,6 +39,9 @@
           <string>Stepping Stage Controls</string>
          </property>
          <layout class="QVBoxLayout" name="step_stage_layout">
+          <property name="spacing">
+           <number>3</number>
+          </property>
           <property name="margin">
            <number>5</number>
           </property>
@@ -61,7 +64,7 @@
          </property>
          <layout class="QVBoxLayout" name="scan_stage_layout">
           <property name="spacing">
-           <number>-1</number>
+           <number>3</number>
           </property>
           <property name="margin">
            <number>5</number>
@@ -162,6 +165,19 @@
           </item>
          </layout>
         </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
        </item>
       </layout>
      </widget>
