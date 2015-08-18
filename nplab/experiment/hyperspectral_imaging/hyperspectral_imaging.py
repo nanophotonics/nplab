@@ -56,21 +56,6 @@ class HyperspectralScan(GridScanQT, ScanningExperimentHDF5):
         self._view_layer = value
         self.view_layer_updated.emit(value)
 
-    def set_stage(self, stage, move_method=None, pos_method=None):
-        assert isinstance(stage, Stage), 'stage must be an instance of Stage'
-        self.stage = stage
-        # print self.move
-        self.move = self.stage.move
-        # print self.move
-        # self.stage.configure()
-        # move_method = get_move_method(self, self.stage, self.stage_select)
-        # setattr(self, move_method.__name__, MethodType(move_method, self))
-        # position_method = get_position_method(self, self.stage, self.stage_select)
-        # setattr(self, position_method.__name__, MethodType(position_method, self))
-        # # possibly requires third argument of self.__class__ or HyperspectralAcquisition
-        self.axes = list(self.stage.axis_names[:self.num_axes])
-        self.set_init_to_current_position()
-
     def set_spectrometers(self, spectrometers):
         assert isinstance(spectrometers, Spectrometer) or isinstance(spectrometers, Spectrometers), \
             'spectrometer must be an instance of either Spectrometer or Spectrometers'

@@ -125,6 +125,25 @@ class GridScan(ScanningExperiment, TimedScan):
         """Convenience method that initialises a grid based on current parameters."""
         self.init_grid(self.axes, self.size, self.step, self.init)
 
+    def set_stage(self, stage, axes=None):
+        """
+        Sets the stage and move methods.
+
+        :param axes: sequence of axes
+        """
+        assert isinstance(stage, Stage), "stage must be an instance of Stage."
+        self.stage = stage
+        #self.move = self.stage.move
+        if axes is None:
+            self.axes = list(self.stage.axis_names[:self.num_axes])
+        else:
+            for ax in axes:
+                if ax not in self.stage.axis_names:
+                    raise ValueError('one of the supplied axes are invalid (not found in the stage axis names)')
+            self.num_axes = len(axes)
+            self.axes = list(axes)
+        self.set_init_to_current_position()
+
     def move(self, position, axis):
         """Move to a position along a given axis."""
         self.stage.move(position/self.stage_units, axis=axis)

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>397</width>
-    <height>170</height>
+    <width>435</width>
+    <height>158</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -36,66 +36,33 @@
        <layout class="QHBoxLayout" name="parameter_layout">
         <item>
          <widget class="QLabel" name="start_label">
-          <property name="font">
-           <font>
-            <pointsize>11</pointsize>
-           </font>
-          </property>
           <property name="text">
            <string>Start:</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QLineEdit" name="start">
-          <property name="font">
-           <font>
-            <pointsize>11</pointsize>
-           </font>
-          </property>
-         </widget>
+         <widget class="QLineEdit" name="start"/>
         </item>
         <item>
          <widget class="QLabel" name="stop_label">
-          <property name="font">
-           <font>
-            <pointsize>11</pointsize>
-           </font>
-          </property>
           <property name="text">
            <string>Stop:</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QLineEdit" name="stop">
-          <property name="font">
-           <font>
-            <pointsize>11</pointsize>
-           </font>
-          </property>
-         </widget>
+         <widget class="QLineEdit" name="stop"/>
         </item>
         <item>
          <widget class="QLabel" name="step_label">
-          <property name="font">
-           <font>
-            <pointsize>11</pointsize>
-           </font>
-          </property>
           <property name="text">
            <string>Step:</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QLineEdit" name="step">
-          <property name="font">
-           <font>
-            <pointsize>11</pointsize>
-           </font>
-          </property>
-         </widget>
+         <widget class="QLineEdit" name="step"/>
         </item>
         <item>
          <layout class="QVBoxLayout" name="step_layout">
@@ -116,11 +83,6 @@
               <height>50</height>
              </size>
             </property>
-            <property name="font">
-             <font>
-              <pointsize>11</pointsize>
-             </font>
-            </property>
             <property name="text">
              <string/>
             </property>
@@ -139,11 +101,6 @@
               <width>50</width>
               <height>50</height>
              </size>
-            </property>
-            <property name="font">
-             <font>
-              <pointsize>11</pointsize>
-             </font>
             </property>
             <property name="text">
              <string/>
@@ -177,11 +134,6 @@
         </property>
         <item row="1" column="1">
          <widget class="QLineEdit" name="est_scan_time">
-          <property name="font">
-           <font>
-            <pointsize>11</pointsize>
-           </font>
-          </property>
           <property name="readOnly">
            <bool>true</bool>
           </property>
@@ -189,11 +141,6 @@
         </item>
         <item row="0" column="4">
          <widget class="QPushButton" name="abort_button">
-          <property name="font">
-           <font>
-            <pointsize>11</pointsize>
-           </font>
-          </property>
           <property name="text">
            <string>Abort</string>
           </property>
@@ -201,11 +148,6 @@
         </item>
         <item row="0" column="1">
          <widget class="QLabel" name="est_scan_time_label">
-          <property name="font">
-           <font>
-            <pointsize>11</pointsize>
-           </font>
-          </property>
           <property name="text">
            <string>Estimated Scan Time:</string>
           </property>
@@ -213,11 +155,6 @@
         </item>
         <item row="0" column="2">
          <widget class="QPushButton" name="update_button">
-          <property name="font">
-           <font>
-            <pointsize>11</pointsize>
-           </font>
-          </property>
           <property name="text">
            <string>Update</string>
           </property>
@@ -225,11 +162,6 @@
         </item>
         <item row="0" column="0">
          <widget class="QLabel" name="total_points_label">
-          <property name="font">
-           <font>
-            <pointsize>11</pointsize>
-           </font>
-          </property>
           <property name="text">
            <string>Total Points:</string>
           </property>
@@ -237,11 +169,6 @@
         </item>
         <item row="0" column="3">
          <widget class="QPushButton" name="start_button">
-          <property name="font">
-           <font>
-            <pointsize>11</pointsize>
-           </font>
-          </property>
           <property name="text">
            <string>Start</string>
           </property>
@@ -249,11 +176,6 @@
         </item>
         <item row="1" column="0">
          <widget class="QLineEdit" name="total_points">
-          <property name="font">
-           <font>
-            <pointsize>11</pointsize>
-           </font>
-          </property>
           <property name="readOnly">
            <bool>true</bool>
           </property>
@@ -300,11 +222,6 @@
      </property>
      <item>
       <widget class="QLabel" name="status_label">
-       <property name="font">
-        <font>
-         <pointsize>11</pointsize>
-        </font>
-       </property>
        <property name="text">
         <string>Status:</string>
        </property>
@@ -312,11 +229,6 @@
      </item>
      <item>
       <widget class="QLineEdit" name="status">
-       <property name="font">
-        <font>
-         <pointsize>11</pointsize>
-        </font>
-       </property>
        <property name="readOnly">
         <bool>true</bool>
        </property>
@@ -324,11 +236,6 @@
      </item>
      <item>
       <widget class="QLabel" name="est_time_remain_label">
-       <property name="font">
-        <font>
-         <pointsize>11</pointsize>
-        </font>
-       </property>
        <property name="text">
         <string>Estimated Time Remaining:</string>
        </property>
@@ -336,11 +243,6 @@
      </item>
      <item>
       <widget class="QLineEdit" name="est_time_remain">
-       <property name="font">
-        <font>
-         <pointsize>11</pointsize>
-        </font>
-       </property>
        <property name="text">
         <string/>
        </property>
