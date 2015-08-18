@@ -1,8 +1,11 @@
 __author__ = 'alansanders'
 
 from nplab.instrument.visa_instrument import VisaInstrument, queried_property, queried_channel_property
+from nplab import inherit_docstring
 from functools import partial
 import numpy as np
+from nplab.utils.gui import *
+from nplab.ui.ui_tools import *
 
 
 class AgilentDSOChannel(object):
@@ -13,23 +16,15 @@ class AgilentDSOChannel(object):
     def capture(self):
         self.parent.write(':digitize channel{0}'.format(self.ch))
 
-    def validate(self, param, value):
-        if param == ':display':
-            assert value in [0, 1]
-        elif param == ':coupling':
-            assert value in ['ac', 'dc']
-        elif param == ':unit':
-            assert value in ['volt', 'ampere']
-
     display = queried_channel_property(':channel{0}:display?', ':channel{0}:display {1}',
-                                       fvalidate=partial(validate, param=':display'), dtype='int')
+                                       validate=[0, 1], dtype='int')
     range = queried_channel_property(':channel{0}:range?', ':channel{0}:range {1}')
     scale = queried_channel_property(':channel{0}:scale?', ':channel{0}:scale {1}')
     offset = queried_channel_property(':channel{0}:offset?', ':channel{0}:offset {1}')
     coupling = queried_channel_property(':channel{0}:coupling?', ':channel{0}:coupling {1}',
-                                        fvalidate=partial(validate, param=':coupling'), dtype='str')
+                                        validate=['ac', 'dc'], dtype='str')
     units = queried_channel_property(':channel{0}:unit?', ':channel{0}:unit {1}',
-                                     fvalidate=partial(validate, param=':unit'), dtype='str')
+                                     validate=['volt', 'ampere'], dtype='str')
     label = queried_channel_property(':channel{0}:label?', ':channel{0}:label {1}')
     probe = queried_channel_property(':channel{0}:probe?', ':channel{0}:probe {1}')
 
@@ -81,73 +76,50 @@ class AgilentDSO(VisaInstrument):
     def force_trigger(self):
         self.write(':trigger:force')
 
-    def validate(self, param, value):
-        if param == ':':
-            assert value in ['run', 'single', 'stop']
-        elif param == ':timebase:mode':
-            assert value in ['main', 'window', 'xy', 'roll', 'MAIN']
-        elif param == ':trigger:mode':
-            assert value in ['edge', 'glitch', 'pattern', 'tv', 'EDGE']
-        elif param == ':trigger:sweep':
-            assert value in ['normal', 'auto', 'NORM', 'AUTO']
-        elif param == ':trigger:nreject':
-            assert value in [0,1]
-        elif param == ':trigger:hfreject':
-            assert value in [0,1]
-        elif param == ':trigger:source':
-            assert value in ['channel1', 'channel2', 'external', 'line', 'wgen', 'CHAN1', 'CHAN2']
-        elif param == ':trigger:slope':
-            assert value in ['positive', 'negative', 'either', 'alternate', 'POS', 'NEG']
-        elif param == ':acquire:type':
-            assert value in ['normal', 'average', 'hresolution', 'peak']
-        elif param == ':waveform:points:mode':
-            assert value in ['normal', 'maximum', 'raw', 'NORM', 'MAX', 'RAW']
-        elif param == ':waveform:format':
-            assert value in ['byte', 'ascii']
-        elif param == ':waveform:byteorder':
-            assert value in ['lsbfirst', 'msbfirst', 'LSBFirst', 'MSBFirst', 'LSBF', 'MSBF']
-        elif param == ':waveform:unsigned':
-            assert value in [0,1]
-
     acquire_type = queried_property(':acquire:type?', ':acquire:type {0}',
-                                    fvalidate=partial(validate, param=':acquire:type'), dtype='str'),
+                                    validate=['normal', 'average', 'hresolution', 'peak'],
+                                    dtype='str'),
     acquire_complete = queried_property(':acquire:complete?', ':acquire:complete {0}'),
     acquire_count = queried_property(':acquire:count?', ':acquire:count {0}'),
     acquire_points = queried_property(':acquire:points?', dtype='int')
     armed = queried_property(':aer?')
-    #mode = queried_property(set_cmd=':{0}', fvalidate=partial(validate, param=':'))
     opc = queried_property('*opc?')
     operegister_condition = queried_property(':operegister:condition?', dtype='int')
     time_mode = queried_property(':timebase:mode?', ':timebase:mode {0}',
-                                 fvalidate=partial(validate, param=':timebase:mode'), dtype='str')
+                                 validate=['main', 'window', 'xy', 'roll', 'MAIN'],
+                                 dtype='str')
     time_range = queried_property(':timebase:range?', ':timebase:range {0}')
     time_scale = queried_property(':timebase:scale?', ':timebase:scale {0}')
     time_ref = queried_property(':timebase:reference?', ':timebase:reference {0}',
-                                fvalidate=partial(validate, param=':timebase:reference'), dtype='str')
+                                validate=['left', 'center', 'right', 'LEFT', 'CENT'], dtype='str')
     time_delay = queried_property(':timebase:delay?', ':timebase:delay {0}')
     trigger_sweep = queried_property(':trigger:sweep?', ':trigger:sweep {0}',
-                                     fvalidate=partial(validate, param=':trigger:sweep'), dtype='str')
+                                     validate=['normal', 'auto', 'NORM', 'AUTO'], dtype='str')
     trigger_mode = queried_property(':trigger:mode?', ':trigger:mode {0}',
-                                    fvalidate=partial(validate, param=':trigger:mode'), dtype='str')
+                                    validate=['edge', 'glitch', 'pattern', 'tv', 'EDGE'], dtype='str')
     trigger_level = queried_property(':trigger:level?', ':trigger:level {0}')
     trigger_source = queried_property(':trigger:source?', ':trigger:source {0}',
-                                      fvalidate=partial(validate, param=':trigger:source'), dtype='str')
+                                      validate=['channel1', 'channel2', 'external', 'line', 'wgen', 'CHAN1', 'CHAN2'],
+                                      dtype='str')
     trigger_slope = queried_property(':trigger:slope?', ':trigger:slope {0}',
-                                     fvalidate=partial(validate, param=':trigger:slope'), dtype='str')
+                                     validate=['positive', 'negative', 'either', 'alternate', 'POS', 'NEG'],
+                                     dtype='str')
     trigger_reject_noise = queried_property(':trigger:nreject?', ':trigger:nreject {0}',
-                                            fvalidate=partial(validate, param=':trigger:nreject'), dtype='int')
+                                            validate=[0, 1], dtype='int')
     trigger_filter = queried_property(':trigger:hfreject?', ':trigger:hfreject {0}',
-                                      fvalidate=partial(validate, param=':trigger:hfreject'), dtype='int')
+                                      validate=[0, 1], dtype='int')
     trigger_status = queried_property(':ter?', dtype='int')
     waveform_format = queried_property(':waveform:format?', ':waveform:format {0}',
-                                       fvalidate=partial(validate, param=':waveform:format'), dtype='str')
+                                       validate=['byte', 'ascii'], dtype='str')
     waveform_byteorder = queried_property(':waveform:byteorder?', ':waveform:byteorder {0}',
-                                          fvalidate=partial(validate, param='waveform:byteorder'), dtype='str')
+                                          validate=['lsbfirst', 'msbfirst', 'LSBFirst', 'MSBFirst', 'LSBF', 'MSBF'],
+                                          dtype='str')
     waveform_unsigned = queried_property(':waveform:unsigned?', ':waveform:unsigned {0}',
-                                         fvalidate=partial(validate, param=':waveform:unsigned'), dtype='int')
+                                         validate=[0, 1], dtype='int')
     waveform_points = queried_property(':waveform:points?', ':waveform:points {0}', dtype='int')
     waveform_points_mode = queried_property(':waveform:points:mode?', ':waveform:points:mode {0}',
-                                            fvalidate=partial(validate, param=':waveform:points:mode'), dtype='str')
+                                            validate=['normal', 'maximum', 'raw', 'NORM', 'MAX', 'RAW'],
+                                            dtype='str')
 
     # read parameters
     def set_source(self, ch):
@@ -185,6 +157,19 @@ class AgilentDSO(VisaInstrument):
         if force:
             self.force_trigger
         return bool(self.trigger_status)
+
+    @inherit_docstring(VisaInstrument.get_qt_ui)
+    def get_qt_ui(self):
+        return AgilentDsoUI(self)
+
+
+class AgilentDsoUI(QtGui.QWidget, UiTools):
+    def __init__(self, dso, parent=None):
+        assert isinstance(dso, DSO), 'dso must be an instance of DSO'
+        super(AgilentDsoUI, self).__init__()
+        self.dso = dso
+        self.parent = parent
+        uic.loadUi(os.path.join(os.path.dirname(__file__), 'agilent_dso.ui'), self)
 
 
 if __name__ == '__main__':
