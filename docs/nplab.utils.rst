@@ -12,6 +12,14 @@ nplab.utils.array_with_attrs module
     :undoc-members:
     :show-inheritance:
 
+nplab.utils.decorators module
+-----------------------------
+
+.. automodule:: nplab.utils.decorators
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 nplab.utils.formatting module
 -----------------------------
 

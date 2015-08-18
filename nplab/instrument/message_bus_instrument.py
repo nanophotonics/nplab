@@ -171,14 +171,17 @@ class MessageBusInstrument(nplab.instrument.Instrument):
 
 
 class queried_property(object):
-    def __init__(self, get_cmd=None, set_cmd=None, fvalidate=None, fdel=None, doc=None, dtype='float'):
+    def __init__(self, get_cmd=None, set_cmd=None, validate=None, valrange=None,
+                 fdel=None, doc=None, dtype='float'):
         self.dtype = dtype
         self.get_cmd = get_cmd
         self.set_cmd = set_cmd
-        self.fvalidate = fvalidate
+        self.validate = validate
+        self.valrange = valrange
         self.fdel = fdel
         self.__doc__ = doc
 
+    # TODO: standardise the return (single value only vs parsed result), consider bool
     def __get__(self, obj, objtype=None):
         if obj is None:
             return self
@@ -190,14 +193,21 @@ class queried_property(object):
             getter = obj.int_query
         else:
             getter = obj.query
-        return getter(self.get_cmd)
+        value = getter(self.get_cmd)
+        if self.dtype == 'bool':
+            value = bool(value)
+        return value
 
     def __set__(self, obj, value):
         print 'set', obj, value
         if self.set_cmd is None:
             raise AttributeError("can't set attribute")
-        if self.fvalidate is not None:
-            self.fvalidate(obj, value)
+        if self.validate is not None:
+            if value not in self.validate:
+                raise ValueError('invalid value supplied - value must be one of {}'.format(self.validate))
+        if self.valrange is not None:
+            if value < min(self.valrange) or value > max(self.valrange):
+                raise ValueError('invalid value supplied - value must be in the range {}-{}'.format(*self.valrange))
         message = self.set_cmd
         if '{0' in message:
             message = message.format(value)
@@ -213,8 +223,10 @@ class queried_property(object):
 
 
 class queried_channel_property(queried_property):
-    def __init__(self, get_cmd=None, set_cmd=None, fvalidate=None, fdel=None, doc=None, dtype='float'):
-        super(queried_channel_property, self).__init__(get_cmd, set_cmd, fvalidate, fdel, doc, dtype)
+    def __init__(self, get_cmd=None, set_cmd=None, validate=None, valrange=None,
+                 fdel=None, doc=None, dtype='float'):
+        super(queried_channel_property, self).__init__(get_cmd, set_cmd, validate, valrange,
+                                                       fdel, doc, dtype)
 
     def __get__(self, obj, objtype=None):
         assert hasattr(obj, 'ch') and hasattr(obj, 'parent'),\
@@ -234,15 +246,22 @@ class queried_channel_property(queried_property):
             message = message.format(obj.ch)
         elif '%' in message:
             message = message % obj.ch
-        return getter(message)
+        value = getter(message)
+        if self.dtype == 'bool':
+            value = bool(value)
+        return value
 
     def __set__(self, obj, value):
         assert hasattr(obj, 'ch') and hasattr(obj, 'parent'),\
         'object must have a ch attribute and a parent attribute'
         if self.set_cmd is None:
             raise AttributeError("can't set attribute")
-        if self.fvalidate is not None:
-            self.fvalidate(obj, value)
+        if self.validate is not None:
+            if value not in self.validate:
+                raise ValueError('invalid value supplied - value must be one of {}'.format(self.validate))
+        if self.valrange is not None:
+            if value < min(self.valrange) or value > max(self.valrange):
+                raise ValueError('invalid value supplied - value must be in the range {}-{}'.format(*self.valrange))
         message = self.set_cmd
         if '{0' in message:
             message = message.format(obj.ch, value)

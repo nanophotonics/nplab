@@ -1,6 +1,8 @@
 __author__ = 'alansanders'
 
-from nplab.instrument.visa_instrument import VisaInstrument
+from nplab import inherit_docstring
+from nplab.instrument.visa_instrument import VisaInstrument, queried_property
+from functools import partial
 import numpy as np
 from nplab.utils.gui import *
 from PyQt4 import uic
@@ -13,171 +15,98 @@ class Keithley2635A(VisaInstrument):
         self.instr.write_termination = '\n'
         self.reset()
 
-    ### Basic commands
-
     def reset(self):
-        self.instr.write('reset()')
+        """Reset the SMU to its default state."""
+        self.write('reset()')
 
-    ### Front panel commands
+    output = queried_property('print(smua.source.output)', 'smua.source.output={0}',
+                              validate=['smua.OUTPUT_ON', 'smua.OUTPUT_OFF', 0, 1], dtype='str',
+                              doc='Turn the SMU on or off')
+    source = queried_property('print(smua.source.func)', 'smua.source.func={0}',
+                              validate=['smua.OUTPUT_DCVOLTS', 'smua.OUTPUT_DCAMPS', 0, 1], dtype='str',
+                              doc='Set the source type, either voltage or current')
 
-    def get_output(self):
-        return self.instr.read('print(smua.source.output)')
-    def set_output(self, state):
-        assert state in ['smua.OUTPUT_ON', 'smua.OUTPUT_OFF', 0, 1], "Output must either be 0 (off) or 1 (on)"
-        self.instr.write('smua.source.output=%s' % state)
-    output = property(get_output, set_output)
+    # def set_src_voltage(self, voltage):
+    #    self.instr.write('smua.source.levelv=%s' % voltage)
+    #    self.check_voltage_range(voltage)
 
-    def get_source(self):
-        return self.instr.query('print(smua.source.func)')
-    def set_source(self, source):
-        assert source in ['smua.OUTPUT_DCVOLTS', 'smua.OUTPUT_DCAMPS', 0, 1], "Invalid mode"  # should this be a ValueError
-        self.instr.write('smua.source.func=%s' % source)
-    source = property(get_source, set_source)
+    src_voltage = queried_property('print(smua.source.levelv)', 'smua.source.levelv={0}',
+                                   doc='Source voltage')
+    src_current = queried_property('print(smua.source.leveli)', 'smua.source.leveli={0}',
+                                   doc='Source current')
+    src_voltage_range = queried_property('print(smua.source.rangev)', 'smua.source.rangev={0}',
+                                         doc='Source voltage range')
+    src_current_range = queried_property('print(smua.source.rangei)', 'smua.source.rangei={0}',
+                                         doc='Source current range')
+    meas_voltage_range = queried_property('print(smua.measure.rangev)', 'smua.measure.rangev={0}',
+                                          doc='Measured voltage range')
+    meas_current_range = queried_property('print(smua.measure.rangei)', 'smua.measure.rangei={0}',
+                                          doc='Measured current range')
+    src_compliance = queried_property('print(smua.source.compliance)', 'smua.source.compliance={0}',
+                                      doc='Source compliance')
+    src_voltage_limit = queried_property('print(smua.source.limitv)', 'smua.source.limitv={0}',
+                                         doc='Source voltage limit')
+    src_current_limit = queried_property('print(smua.source.limiti)', 'smua.source.limiti={0}',
+                                         doc='Source current limit')
 
-    def get_src_voltage(self):
-        return float(self.instr.query('print(smua.source.levelv)'))
-    def set_src_voltage(self, voltage):
-        self.instr.write('smua.source.levelv=%s' % voltage)
-        self.check_voltage_range(voltage)
-    src_voltage = property(get_src_voltage, set_src_voltage)
+    display = queried_property('print(display.smua.measure.func)', 'display.smua.measure.func={0}',
+                               validate=['display.MEASURE_DCAMPS', 'display.MEASURE_DCVOLTS', 'display.MEASURE_OHMS',
+                                         'display.MEASURE_WATTS', 0, 1, 2, 3],
+                               dtype='str', doc='Measurement displayed on the SMU front panel')
 
-    def get_src_current(self):
-        return float(self.instr.query('print(smua.source.leveli)'))
-    def set_src_current(self, current):
-        self.instr.write('smua.source.leveli=%s' % current)
-    src_current = property(get_src_current, set_src_current)
+    src_voltage_autorange = queried_property('print(smua.source.autorangev)', 'smua.source.autorangev=%s',
+                                             validate=[0, 1, False, True], dtype='int',
+                                             doc='Source voltage autorange')
+    src_current_autorange = queried_property('print(smua.source.autorangei)', 'smua.source.autorangei=%s',
+                                             validate=[0, 1, False, True], dtype='int',
+                                             doc='Source current autorange')
 
-    def get_src_voltage_range(self):
-        return float(self.instr.query('print(smua.source.rangev)'))
-    def set_src_voltage_range(self, voltage_range):
-        self.instr.write('smua.source.rangev=%s' % voltage_range)
-    src_voltage_range = property(get_src_voltage_range, set_src_voltage_range)
+    src_voltage_lowrange = queried_property('print(smua.source.lowrangev)', 'smua.source.lowrangev=%s',
+                                            doc='Minimum range the source voltage autorange will set')
+    src_current_lowrange = queried_property('print(smua.source.lowrangei)', 'smua.source.lowrangei=%s',
+                                            doc='Minimum range the source current autorange will set')
 
-    def get_src_current_range(self):
-        return float(self.instr.query('print(smua.source.rangei)'))
-    def set_src_current_range(self, current_range):
-        self.instr.write('smua.source.rangei=%s' % current_range)
-    src_current_range = property(get_src_current_range, set_src_current_range)
+    meas_voltage_autorange = queried_property('print(smua.measure.autorangev)', 'smua.measure.autorangev=%s',
+                                              validate=[0, 1, False, True], dtype='int',
+                                              doc='Measurement voltage autorange')
+    meas_current_autorange = queried_property('print(smua.measure.autorangei)', 'smua.measure.autorangei=%s',
+                                              validate=[0, 1, False, True], dtype='int',
+                                              doc='Measurement current autorange')
 
-    def get_meas_voltage_range(self):
-        return float(self.instr.query('print(smua.measure.rangev)'))
-    def set_meas_voltage_range(self, voltage_range):
-        self.instr.write('smua.measure.rangev=%s' % voltage_range)
-    meas_voltage_range = property(get_meas_voltage_range, set_meas_voltage_range)
-
-    def get_meas_current_range(self):
-        return float(self.instr.query('print(smua.measure.rangei)'))
-    def set_meas_current_range(self, current_range):
-        self.instr.write('smua.measure.rangei=%s' % current_range)
-    meas_current_range = property(get_meas_current_range, set_meas_current_range)
-
-    def get_src_compliance(self):
-        return float(self.instr.query('print(smua.source.compliance)'))
-    def set_src_compliance(self, compliance):
-        assert compliance in [0,1], "Autorange must either be 0 (off) or 1 (on)"
-        self.instr.write('smua.source.compliance=%s' % compliance)
-    src_compliance = property(get_src_compliance, set_src_compliance)
-
-    def get_src_voltage_limit(self):
-        return float(self.instr.query('print(smua.source.limitv)'))
-    def set_src_voltage_limit(self, limit):
-        self.instr.write('smua.source.limitv=%s' % limit)
-    src_voltage_limit = property(get_src_voltage_limit, set_src_voltage_limit)
-
-    def get_src_current_limit(self):
-        return float(self.instr.query('print(smua.source.limiti)'))
-    def set_src_current_limit(self, limit):
-        self.instr.write('smua.source.limiti=%s' % limit)
-    src_current_limit = property(get_src_current_limit, set_src_current_limit)
-
-    def get_display(self):
-        return self.instr.query('print(display.smua.measure.func)')
-    def set_display(self, display):
-        assert display in ['display.MEASURE_DCAMPS', 'display.MEASURE_DCVOLTS', 'display.MEASURE_OHMS', 'display.MEASURE_WATTS', 0,1,2,3], 'Invalid display given'
-        self.instr.write('display.smua.measure.func=%s' % display)
-    display = property(get_display, set_display)
-
-    def get_src_voltage_autorange(self):
-        return self.instr.query('print(smua.source.autorangev)')
-    def set_src_voltage_autorange(self, autorange):
-        assert autorange in [0,1, False, True], "Autorange must either be 0 (off) or 1 (on)"
-        self.instr.write('smua.source.autorangev=%s' % int(autorange))
-    src_voltage_autorange = property(get_src_voltage_autorange, set_src_voltage_autorange)
-
-    def get_src_current_autorange(self):
-        return self.instr.query('print(smua.source.autorangei)')
-    def set_src_current_autorange(self, autorange):
-        assert autorange in [0,1, False, True], "Autorange must either be 0 (off) or 1 (on)"
-        self.instr.write('smua.source.autorangei=%s' % int(autorange))
-    src_current_autorange = property(get_src_current_autorange, set_src_current_autorange)
-
-    def get_src_voltage_lowrange(self):
-        return self.instr.query('print(smua.source.lowrangev)')
-    def set_src_voltage_lowrange(self, low_range):
-        self.instr.write('smua.source.lowrangev=%s' % low_range)
-    src_voltage_lowrange = property(get_src_voltage_lowrange, set_src_voltage_lowrange)
-
-    def get_src_current_lowrange(self):
-        return self.instr.query('print(smua.source.lowrangei)')
-    def set_src_current_lowrange(self, low_range):
-        self.instr.write('smua.source.lowrangei=%s' % low_range)
-    src_current_lowrange = property(get_src_current_lowrange, set_src_current_lowrange)
-
-    def get_meas_voltage_autorange(self):
-        return self.instr.query('print(smua.measure.autorangev)')
-    def set_meas_voltage_autorange(self, autorange):
-        assert autorange in [0,1, False, True], "Autorange must either be 0 (off) or 1 (on)"
-        self.instr.write('smua.measure.autorangev=%s' % int(autorange))
-    meas_voltage_autorange = property(get_meas_voltage_autorange, set_meas_voltage_autorange)
-
-    def get_meas_current_autorange(self):
-        return self.instr.query('print(smua.measure.autorangei)')
-    def set_meas_current_autorange(self, autorange):
-        assert autorange in [0,1, False, True], "Autorange must either be 0 (off) or 1 (on)"
-        self.instr.write('smua.measure.autorangei=%s' % int(autorange))
-    meas_current_autorange = property(get_meas_current_autorange, set_meas_current_autorange)
-
-    def get_meas_voltage_lowrange(self):
-        return self.instr.query('print(smua.measure.lowrangev)')
-    def set_meas_voltage_lowrange(self, low_range):
-        self.instr.write('smua.measure.lowrangev=%s' % low_range)
-    meas_voltage_lowrange = property(get_meas_voltage_lowrange, set_meas_voltage_lowrange)
-
-    def get_meas_current_lowrange(self):
-        return self.instr.query('print(smua.measure.lowrangei)')
-    def set_meas_current_lowrange(self, low_range):
-        self.instr.write('smua.measure.lowrangei=%s' % low_range)
-    meas_current_lowrange = property(get_meas_current_lowrange, set_meas_current_lowrange)
-
-    ### Measurements
+    meas_voltage_lowrange = queried_property('print(smua.measure.lowrangev)', 'smua.measure.lowrangev=%s',
+                                             doc='Minimum range the measurement voltage autorange will set')
+    meas_current_lowrange = queried_property('print(smua.measure.lowrangei)', 'smua.measure.lowrangei=%s',
+                                             doc='Minimum range the measurement current autorange will set')
 
     def read_voltage(self):
+        """Measure the voltage."""
         return float(self.instr.query('print(smua.measure.v())'))
+
     def read_current(self):
+        """Measure the current."""
         return float(self.instr.query('print(smua.measure.i())'))
+
     def read_resistance(self):
+        """Measure the resistance."""
         return float(self.instr.query('print(smua.measure.r())'))
+
     def read_power(self):
+        """Measure the power."""
         return float(self.instr.query('print(smua.measure.p())'))
+
     def read_iv(self):
+        """Measure the voltage and the current."""
         self.instr.write('i,v = smua.measure.iv()')
-        return float(self.instr.query('print(i)')),\
+        return float(self.instr.query('print(i)')), \
                float(self.instr.query('print(v)'))
 
-    ### Other commands
-
-    def get_error(self):
+    @property
+    def error(self):
+        """Get the next error code from the SMU."""
         self.instr.write('errorCode, message = errorqueue.next()')
         code = self.instr.query('print(errorCode)')
         msg = self.instr.query('print(message)')
         return '{0:s}: {1:s}'.format(code, msg)
-
-    def measure_iv(self, autoscale=True):
-        current, voltage = self.read_iv()
-        if autoscale:
-            voltage = self.check_voltage_range(voltage)
-            current = self.check_current_range(current)
-        return voltage, current
 
     def check_current_range(self, i):
         i_range = self.get_meas_current_range()
@@ -216,19 +145,17 @@ class Keithley2635A(VisaInstrument):
                 # print 'v down', v, v_range
         return v
 
+    @inherit_docstring(VisaInstrument.get_qt_ui)
     def get_qt_ui(self):
         return SmuUI(self)
 
 
-smu_base, smu_widget = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'smu.ui'))
-
-
-class SmuUI(smu_base, smu_widget):
+class SmuUI(QtGui.QWidget):
     def __init__(self, smu, parent=None):
         super(SmuUI, self).__init__()
         self.smu = smu
         self.parent = parent
-        self.setupUi(self)
+        uic.loadUi(os.path.join(os.path.dirname(__file__), 'smu.ui'), self)
 
         self.current_button.clicked.connect(self.state_changed)
         self.voltage_button.clicked.connect(self.state_changed)
@@ -252,7 +179,6 @@ class SmuUI(smu_base, smu_widget):
         self.measurement_autorange.setChecked(bool(self.smu.meas_current_autorange))
         self.measurement_limit.setText(str(self.smu.src_current_limit))
         self.output.setChecked(False)
-
 
     def set_parameter(self):
         sender = self.sender()
@@ -324,7 +250,8 @@ class SmuUI(smu_base, smu_widget):
         current = self.smu.read_current()
         resistance = self.smu.read_resistance()
         power = self.smu.read_power()
-        self.measurements.setText('{0:.2e} V, {1:.2e} A, {2:.2e} Ohms, {3:.2e} W'.format(voltage, current, resistance, power))
+        self.measurements.setText(
+            '{0:.2e} V, {1:.2e} A, {2:.2e} Ohms, {3:.2e} W'.format(voltage, current, resistance, power))
 
     def on_activated(self, value):
         # print self.sender(), index, value
@@ -347,6 +274,7 @@ if __name__ == '__main__':
     smu.output = 0
 
     import sys
+
     app = get_qt_app()
     ui = smu.get_qt_ui()
     ui.show()

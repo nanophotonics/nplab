@@ -9,6 +9,7 @@ Subpackages
     nplab.instrument.camera
     nplab.instrument.electronics
     nplab.instrument.light_sources
+    nplab.instrument.shutter
     nplab.instrument.spectrometer
     nplab.instrument.stage
 

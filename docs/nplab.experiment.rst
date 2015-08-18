@@ -1,13 +1,29 @@
 nplab.experiment package
 ========================
 
+Subpackages
+-----------
+
+.. toctree::
+
+    nplab.experiment.hyperspectral_imaging
+    nplab.experiment.scanning_experiment
+
 Submodules
 ----------
 
-nplab.experiment.gridscanner module
------------------------------------
+nplab.experiment.experiment module
+----------------------------------
 
-.. automodule:: nplab.experiment.gridscanner
+.. automodule:: nplab.experiment.experiment
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+nplab.experiment.resources_rc module
+------------------------------------
+
+.. automodule:: nplab.experiment.resources_rc
     :members:
     :undoc-members:
     :show-inheritance:
