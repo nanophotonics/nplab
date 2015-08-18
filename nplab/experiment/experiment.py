@@ -99,6 +99,39 @@ class Experiment(object):
         dset.resize(index+1,0)
         dset[index,...] = value
 
+    def show_gui(self, blocking=True):
+        """Display a GUI window for the item of equipment.
+
+        You should override this method to display a window to control the
+        instrument.  If edit_traits/configure_traits methods exist, we'll fall
+        back to those as a default.
+
+        If you use blocking=False, it will return immediately - this may cause
+        issues with the Qt/Traits event loop.
+        """
+        try:
+            if hasattr(self,'get_qt_ui'):
+                from nplab.utils.gui import get_qt_app, qt
+                app = get_qt_app()
+                ui = self.get_qt_ui()
+                ui.show()
+                if blocking:
+                    print "Running GUI, this will block the command line until the window is closed."
+                    ui.windowModality = qt.Qt.ApplicationModal
+                    try:
+                        return app.exec_()
+                    except:
+                        print "Could not run the Qt application: perhaps it is already running?"
+                        return
+                else:
+                    return ui
+            elif blocking:
+                self.configure_traits()
+            else:
+                self.edit_traits()
+        except AttributeError:
+            raise NotImplementedError("It looks like the show_gui method hasn't been subclassed, there isn't a get_qt_ui() method, and the instrument is not using traitsui.")
+
 
 # class Experiment(HasTraits):
 #     experiment_code = Code #This is what runs in the background thread
