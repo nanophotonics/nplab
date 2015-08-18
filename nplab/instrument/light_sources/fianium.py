@@ -19,8 +19,9 @@ class Fianium(LightSource, serial.SerialInstrument):
                     )
     termination_character = "\n" #: All messages to or from the instrument end with this character.
 
-    def __init__(self, port=None):
-        super(LightSource, self).__init__(port=port)
+    def __init__(self, port=None, shutter=None):
+        serial.SerialInstrument.__init__(self, port=port)
+        LightSource.__init__(self, shutter=shutter)
         self.min_power = 0
         self.max_power = 2000
 
@@ -39,3 +40,15 @@ class Fianium(LightSource, serial.SerialInstrument):
         self.set_dac(value)
 
     power = property(get_power, set_power)
+
+
+if __name__ == '__main__':
+    import sys
+    from nplab.utils.gui import *
+    from nplab.instrument.shutter.thorlabs_sc10 import ThorLabsSC10
+    app = get_qt_app()
+    shutter = ThorLabsSC10('COM12')
+    fianium = Fianium('COM14', shutter)
+    ui = fianium.get_qt_ui()
+    ui.show()
+    sys.exit(app.exec_())

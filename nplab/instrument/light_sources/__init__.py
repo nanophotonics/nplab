@@ -4,11 +4,13 @@ from nplab.instrument import Instrument
 from nplab.utils.gui import *
 from PyQt4 import uic
 from nplab.ui.ui_tools import UiTools
+from nplab.instrument.shutter import Shutter
 
 
 class LightSource(Instrument):
 
     def __init__(self, shutter=None):
+        assert isinstance(shutter, Shutter) or shutter == None, 'invalid shutter supplied'
         super(LightSource, self).__init__()
         self.min_power = 0
         self.max_power = 1
@@ -36,9 +38,13 @@ class LightSourceUI(QtGui.QWidget, UiTools):
         self.power.setValidator(QtGui.QDoubleValidator())
         self.power.textChanged.connect(self.check_state)
         self.power.returnPressed.connect(self.update_param)
+        self.power_slider.setRange(self.light_source.min_power, self.light_source.max_power)
         self.power_slider.valueChanged[int].connect(self.update_param)
         self.power_slider.sliderReleased.connect(self.update_param)
         self.set_power_button.clicked.connect(self.on_click)
+
+        if self.light_source.shutter is not None:
+            self.control_layout.addWidget(self.light_source.shutter.get_qt_ui())
 
     def on_click(self):
         sender = self.sender()
