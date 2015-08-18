@@ -1,0 +1,4 @@
+#!/bin/bash
+cd `dirname $0`
+sphinx-apidoc -f -o ./docs ./nplab
+exit 0

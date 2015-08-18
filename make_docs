@@ -1,4 +1,6 @@
 #!/bin/bash
 cd `dirname $0`
+cd docs
 make html
 make latexpdf
+exit 0

@@ -4,6 +4,14 @@ nplab.instrument.spectrometer package
 Submodules
 ----------
 
+nplab.instrument.spectrometer.renderers module
+----------------------------------------------
+
+.. automodule:: nplab.instrument.spectrometer.renderers
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 nplab.instrument.spectrometer.seabreeze module
 ----------------------------------------------
 

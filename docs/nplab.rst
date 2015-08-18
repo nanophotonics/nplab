@@ -6,8 +6,11 @@ Subpackages
 
 .. toctree::
 
+    nplab.analysis
     nplab.experiment
     nplab.instrument
+    nplab.techniques
+    nplab.ui
     nplab.utils
 
 Submodules
