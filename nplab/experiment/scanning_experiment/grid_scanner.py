@@ -78,7 +78,8 @@ class GridScan(ScanningExperiment, TimedScan):
         :param value:
         :return:
         """
-        assert value in self._unit_conversion.keys(), 'a valid unit must be supplied'
+        if value not in self._unit_conversion:
+            raise ValueError('a valid unit must be supplied')
         unit_param = '_%s_unit' % param
         old_value = getattr(self, unit_param) if hasattr(self, unit_param) else value
         setattr(self, unit_param, value)
@@ -86,9 +87,12 @@ class GridScan(ScanningExperiment, TimedScan):
         a *= self._unit_conversion[old_value] / self._unit_conversion[value]
 
     num_axes = property(fget=lambda self: getattr(self, '_num_axes'), fset=_update_axes)
-    size_unit = property(fget=lambda self: getattr(self, '_size_unit'), fset=partial(rescale_parameter, param='size'))
-    step_unit = property(fget=lambda self: getattr(self, '_step_unit'), fset=partial(rescale_parameter, param='step'))
-    init_unit = property(fget=lambda self: getattr(self, '_init_unit'), fset=partial(rescale_parameter, param='init'))
+    size_unit = property(fget=lambda self: getattr(self, '_size_unit'),
+                         fset=lambda self, value: self.rescale_parameter('size', value))
+    step_unit = property(fget=lambda self: getattr(self, '_step_unit'),
+                         fset=lambda self, value: self.rescale_parameter('step', value))
+    init_unit = property(fget=lambda self: getattr(self, '_init_unit'),
+                         fset=lambda self, value: self.rescale_parameter('init', value))
 
     def run(self):
         """
@@ -305,9 +309,12 @@ class GridScanQT(GridScan, QtCore.QObject):
         getattr(self, '%s_updated' % param).emit(getattr(self, param))
 
     num_axes = property(fget=lambda self: getattr(self, '_num_axes'), fset=_update_axes)
-    size_unit = property(fget=lambda self: getattr(self, '_size_unit'), fset=partial(rescale_parameter, param='size'))
-    step_unit = property(fget=lambda self: getattr(self, '_step_unit'), fset=partial(rescale_parameter, param='step'))
-    init_unit = property(fget=lambda self: getattr(self, '_init_unit'), fset=partial(rescale_parameter, param='init'))
+    size_unit = property(fget=lambda self: getattr(self, '_size_unit'),
+                         fset=lambda self, value: self.rescale_parameter('size', value))
+    step_unit = property(fget=lambda self: getattr(self, '_step_unit'),
+                         fset=lambda self, value: self.rescale_parameter('step', value))
+    init_unit = property(fget=lambda self: getattr(self, '_init_unit'),
+                         fset=lambda self, value: self.rescale_parameter('init', value))
 
 #base, widget = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'gridscanner.ui'), from_imports=False)
 
@@ -346,9 +353,9 @@ class GridScanUI(QtGui.QWidget, UiTools):
         self.grid_scanner.step_updated.connect(partial(self.update_param, 'step'))
         self.grid_scanner.init_updated.connect(partial(self.update_param, 'init'))
 
-        self.size_unit.activated[str].connect(partial(setattr, self.grid_scanner, 'size_unit'))
-        self.step_unit.activated[str].connect(partial(setattr, self.grid_scanner, 'step_unit'))
-        self.init_unit.activated[str].connect(partial(setattr, self.grid_scanner, 'init_unit'))
+        self.size_unit.activated[str].connect(partial(self.grid_scanner.rescale_parameter, 'size'))
+        self.step_unit.activated[str].connect(partial(self.grid_scanner.rescale_parameter, 'step'))
+        self.init_unit.activated[str].connect(partial(self.grid_scanner.rescale_parameter, 'init'))
 
         self.size_up.clicked.connect(partial(self.grid_scanner.vary_axes, 'increase_size', 2.))
         self.size_down.clicked.connect(partial(self.grid_scanner.vary_axes, 'decrease_size', 2.))
@@ -364,6 +371,9 @@ class GridScanUI(QtGui.QWidget, UiTools):
 
         self.num_axes.setText(str(self.grid_scanner.num_axes))
         self.status.setText(self.grid_scanner.status)
+        self.size_unit.setCurrentIndex(self.size_unit.findText(self.grid_scanner.size_unit))
+        self.step_unit.setCurrentIndex(self.size_unit.findText(self.grid_scanner.step_unit))
+        self.init_unit.setCurrentIndex(self.size_unit.findText(self.grid_scanner.init_unit))
 
         self.resize(self.sizeHint())
 
@@ -522,6 +532,7 @@ if __name__ == '__main__':
     gs.stage.axis_names = ('x', 'y', 'z')
     gs.num_axes = 2
     gs.step /= 2
+    gs.step_unit = 'nm'
 
     if test == 'qt':
         gs.run(0.2)
