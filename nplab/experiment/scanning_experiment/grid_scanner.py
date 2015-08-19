@@ -16,11 +16,12 @@ from nplab.instrument.stage import Stage
 from functools import partial
 from nplab.utils.gui import *
 from nplab.ui.ui_tools import UiTools
+from nplab import inherit_docstring
 
 
 class GridScan(ScanningExperiment, TimedScan):
     """
-
+    Note that the axes (x,y,z) will relate to the indices (z,y,x) as per array standards.
     """
 
     def __init__(self):
@@ -86,13 +87,15 @@ class GridScan(ScanningExperiment, TimedScan):
         a = getattr(self, param)
         a *= self._unit_conversion[old_value] / self._unit_conversion[value]
 
-    num_axes = property(fget=lambda self: getattr(self, '_num_axes'), fset=_update_axes)
-    size_unit = property(fget=lambda self: getattr(self, '_size_unit'),
+    num_axes = property(fget=lambda self: self._num_axes, fset=_update_axes)
+    size_unit = property(fget=lambda self: self._size_unit,
                          fset=lambda self, value: self.rescale_parameter('size', value))
-    step_unit = property(fget=lambda self: getattr(self, '_step_unit'),
+    step_unit = property(fget=lambda self: self._step_unit,
                          fset=lambda self, value: self.rescale_parameter('step', value))
-    init_unit = property(fget=lambda self: getattr(self, '_init_unit'),
+    init_unit = property(fget=lambda self: self._init_unit,
                          fset=lambda self, value: self.rescale_parameter('init', value))
+
+    si_init = property(fget=lambda self: self.init*self._unit_conversion[self.init_unit])
 
     def run(self):
         """
@@ -119,7 +122,6 @@ class GridScan(ScanningExperiment, TimedScan):
             s0 = init[i] * self._unit_conversion[self.init_unit]
             ax = np.arange(0, s+st/2., st) - s/2. + s0
             scan_axes.append(ax)
-        scan_axes = scan_axes[::-1]
         self.grid_shape = tuple(ax.size for ax in scan_axes)
         self.total_points = reduce(operator.mul, self.grid_shape, 1)
         self.scan_axes = scan_axes
@@ -127,7 +129,8 @@ class GridScan(ScanningExperiment, TimedScan):
 
     def init_current_grid(self):
         """Convenience method that initialises a grid based on current parameters."""
-        self.init_grid(self.axes, self.size, self.step, self.init)
+        axes, size, step, init = (self.axes[::-1], self.size[::-1], self.step[::-1], self.init[::-1])
+        self.init_grid(axes, size, step, init)
 
     def set_stage(self, stage, axes=None):
         """
@@ -153,7 +156,7 @@ class GridScan(ScanningExperiment, TimedScan):
         self.stage.move(position/self.stage_units, axis=axis)
 
     def get_position(self, axis):
-        return self.stage.get_position(axis=axis)*self.stage_units
+        return self.stage.get_position(axis=axis)
 
     def update_drift_compensation(self):
         """Update the current drift compensation.
@@ -166,6 +169,7 @@ class GridScan(ScanningExperiment, TimedScan):
     def scan(self, axes, size, step, init):
         """Scans a grid, applying a function at each position."""
         self.abort_requested = False
+        axes, size, step, init = (axes[::-1], size[::-1], step[::-1], init[::-1])
         scan_axes = self.init_grid(axes, size, step, init)
         self.open_scan()
         # get the indices of points along each of the scan axes for use with snaking over array
@@ -207,7 +211,7 @@ class GridScan(ScanningExperiment, TimedScan):
         self.acquiring.clear()
         # move back to initial positions
         for i in range(len(axes)):
-            self.move(init[i], axes[i])
+            self.move(init[i]*self._unit_conversion[self._init_unit], axes[i])
         # finish the scan
         self.analyse_scan()
         self.close_scan()
@@ -225,10 +229,10 @@ class GridScan(ScanningExperiment, TimedScan):
 
     def set_init_to_current_position(self):
         for i, ax in enumerate(self.axes):
-            self.init[i] = self.stage.get_position(ax)*self.stage_units / self._unit_conversion[self.init_unit]
-        self.init = self.init
+            self.init[i] = self.stage.get_position(ax) / self._unit_conversion[self.init_unit]
 
 
+@inherit_docstring(GridScan)
 class GridScanQT(GridScan, QtCore.QObject):
     """
     A GridScanner subclass containing additional or redefined functions related to GUI operation.
@@ -308,6 +312,10 @@ class GridScanQT(GridScan, QtCore.QObject):
         super(GridScanQT, self).vary_axes(name, multiplier=2.)
         getattr(self, '%s_updated' % param).emit(getattr(self, param))
 
+    def set_init_to_current_position(self):
+        super(GridScanQT, self).set_init_to_current_position()
+        self.init_updated.emit(self.init)
+
     num_axes = property(fget=lambda self: getattr(self, '_num_axes'), fset=_update_axes)
     size_unit = property(fget=lambda self: getattr(self, '_size_unit'),
                          fset=lambda self, value: self.rescale_parameter('size', value))
@@ -375,12 +383,16 @@ class GridScanUI(QtGui.QWidget, UiTools):
         self.step_unit.setCurrentIndex(self.size_unit.findText(self.grid_scanner.step_unit))
         self.init_unit.setCurrentIndex(self.size_unit.findText(self.grid_scanner.init_unit))
 
+        self.set_init_button.clicked.connect(self.on_click)
+
         self.resize(self.sizeHint())
 
     def on_click(self):
         sender = self.sender()
         if sender == self.start_button:
             self.grid_scanner.run(self.rate)
+        elif sender == self.set_init_button:
+            self.grid_scanner.set_init_to_current_position()
 
     def update_axes(self):
         print self.axes_view.model().stringList(), self.grid_scanner.axes,\
@@ -531,6 +543,7 @@ if __name__ == '__main__':
     gs.stage = DummyStage()
     gs.stage.axis_names = ('x', 'y', 'z')
     gs.num_axes = 2
+    gs.size[0] = 2.
     gs.step /= 2
     gs.step_unit = 'nm'
 
