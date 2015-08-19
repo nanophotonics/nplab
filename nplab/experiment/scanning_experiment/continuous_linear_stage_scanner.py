@@ -26,7 +26,7 @@ class ContinuousLinearStageScan(ContinuousLinearScan):
         pass
 
 
-class ContinuousLinearStageScanQT(ContinuousLinearStageScan, ContinuousLinearScanQT):
+class ContinuousLinearStageScanQt(ContinuousLinearStageScan, ContinuousLinearScanQT):
     def __init__(self):
         ContinuousLinearStageScan.__init__(self)
         ContinuousLinearScanQT.__init__(self)
@@ -54,7 +54,7 @@ if __name__ == '__main__':
     from nplab.instrument.stage import DummyStage
     import time
 
-    class DummyLinearStageScan(ContinuousLinearStageScanQT):
+    class DummyLinearStageScan(ContinuousLinearStageScanQt):
         def __init__(self):
             super(DummyLinearStageScan, self).__init__()
             self.stage = None

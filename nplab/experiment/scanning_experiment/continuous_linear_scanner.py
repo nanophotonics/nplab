@@ -47,7 +47,7 @@ class ContinuousLinearScan(ScanningExperiment, TimedScan):
         self.status = 'scan complete'
 
 
-class ContinuousLinearScanQT(ContinuousLinearScan, QtCore.QObject):
+class ContinuousLinearScanQt(ContinuousLinearScan, QtCore.QObject):
 
     def __init__(self):
         ContinuousLinearScan.__init__(self)
@@ -56,7 +56,7 @@ class ContinuousLinearScanQT(ContinuousLinearScan, QtCore.QObject):
         self.timer.timeout.connect(self.update)
 
     def run(self, rate=0.1):
-        super(ContinuousLinearScanQT, self).run()
+        super(ContinuousLinearScanQt, self).run()
         self.acquiring.wait()
         self.timer.start(1000.*rate)
 
@@ -78,7 +78,7 @@ class ContinuousLinearScanQT(ContinuousLinearScan, QtCore.QObject):
 
 class ContinuousLinearScanUI(QtGui.QWidget, UiTools):
     def __init__(self, cont_linear_scan):
-        assert isinstance(cont_linear_scan, ContinuousLinearScanQT), 'An instance of ContinuousLinearScanQT must be supplied'
+        assert isinstance(cont_linear_scan, ContinuousLinearScanQt), 'An instance of ContinuousLinearScanQt must be supplied'
         super(ContinuousLinearScanUI, self).__init__()
 
         self.linear_scan = cont_linear_scan
@@ -132,7 +132,7 @@ if __name__ == '__main__':
     from matplotlib.figure import Figure
     import numpy as np
 
-    class DummyLinearScan(ContinuousLinearScanQT):
+    class DummyLinearScan(ContinuousLinearScanQt):
         def __init__(self):
             super(DummyLinearScan, self).__init__()
             self.step = 1.

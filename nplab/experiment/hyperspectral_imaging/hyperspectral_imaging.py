@@ -1,6 +1,6 @@
 __author__ = 'alansanders'
 
-from nplab.experiment.scanning_experiment import ScanningExperimentHDF5, GridScanQT
+from nplab.experiment.scanning_experiment import ScanningExperimentHDF5, GridScanQt
 from nplab.instrument.stage import Stage
 from nplab.instrument.spectrometer import Spectrometer, Spectrometers
 from nplab.instrument.light_sources import LightSource
@@ -29,11 +29,11 @@ pg.setConfigOption('foreground', 'k')
 # TODO: hyperspectral image renderer
 
 
-class HyperspectralScan(GridScanQT, ScanningExperimentHDF5):
+class HyperspectralScan(GridScanQt, ScanningExperimentHDF5):
     view_layer_updated = QtCore.pyqtSignal(int)
 
     def __init__(self):
-        GridScanQT.__init__(self)
+        GridScanQt.__init__(self)
         ScanningExperimentHDF5.__init__(self)
         self.spectrometer = None
         self.light_source = None
@@ -83,6 +83,7 @@ class HyperspectralScan(GridScanQT, ScanningExperimentHDF5):
 
     def open_scan(self):
         super(HyperspectralScan, self).open_scan()
+        print 'Saving scan to: {}'.format(self.f.file.filename)
         group = self.f.require_group('hyperspectral_images')
         self.data = group.create_group('scan_%d', attrs=dict(description=self.description))
         raw_group = self.data.create_group('raw_data')
@@ -300,7 +301,7 @@ class HyperspectralScanUI(QtGui.QWidget, UiTools):
         self.grid_scanner = grid_scanner
         uic.loadUi(os.path.join(os.path.dirname(__file__), 'hyperspectral_imaging.ui'), self)
         self.gridscanner_widget = self.replace_widget(self.main_layout, self.gridscanner_widget,
-                                                      GridScanQT.get_qt_ui_cls()(self.grid_scanner))
+                                                      GridScanQt.get_qt_ui_cls()(self.grid_scanner))
         self.gridscanner_widget.rate = 0.1
 
         #self.figure_widget = self.replace_widget(self.main_layout, self.figure_widget,

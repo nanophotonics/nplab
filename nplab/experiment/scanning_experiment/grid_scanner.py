@@ -235,7 +235,7 @@ class GridScan(ScanningExperiment, TimedScan):
 
 
 @inherit_docstring(GridScan)
-class GridScanQT(GridScan, QtCore.QObject):
+class GridScanQt(GridScan, QtCore.QObject):
     """
     A GridScanner subclass containing additional or redefined functions related to GUI operation.
     """
@@ -257,7 +257,7 @@ class GridScanQT(GridScan, QtCore.QObject):
         self.timer.timeout.connect(self.update)
 
     def run(self, rate=0.1):
-        super(GridScanQT, self).run()
+        super(GridScanQt, self).run()
         self.acquiring.wait()
         self.timer.start(1000*rate)
 
@@ -274,11 +274,11 @@ class GridScanQT(GridScan, QtCore.QObject):
 
         :return:
         """
-        super(GridScanQT, self)._update_axes(num_axes)
+        super(GridScanQt, self)._update_axes(num_axes)
         self.axes_updated.emit(self.axes)
 
     def init_grid(self, axes, size, step, init):
-        scan_axes = super(GridScanQT, self).init_grid(axes, size, step, init)
+        scan_axes = super(GridScanQt, self).init_grid(axes, size, step, init)
         self.grid_shape_updated.emit(self.grid_shape)
         self.total_points_updated.emit(self.total_points)
         return scan_axes
@@ -298,7 +298,7 @@ class GridScanQT(GridScan, QtCore.QObject):
         Rescales the list or array-type axes grid parameters and emits the new values
         to update the variables in the grid scanner.
         """
-        super(GridScanQT, self).rescale_parameter(param, value)
+        super(GridScanQt, self).rescale_parameter(param, value)
         a = getattr(self, param)
         updater = getattr(self, '%s_updated' % param)
         updater.emit(a)
@@ -311,11 +311,11 @@ class GridScanQT(GridScan, QtCore.QObject):
         :return:
         """
         param = name.split('_',1)[1]
-        super(GridScanQT, self).vary_axes(name, multiplier=2.)
+        super(GridScanQt, self).vary_axes(name, multiplier=2.)
         getattr(self, '%s_updated' % param).emit(getattr(self, param))
 
     def set_init_to_current_position(self):
-        super(GridScanQT, self).set_init_to_current_position()
+        super(GridScanQt, self).set_init_to_current_position()
         self.init_updated.emit(self.init)
 
     num_axes = property(fget=lambda self: getattr(self, '_num_axes'), fset=_update_axes)
@@ -331,7 +331,7 @@ class GridScanQT(GridScan, QtCore.QObject):
 #class GridScannerUI(UiTools, base, widget):
 class GridScanUI(QtGui.QWidget, UiTools):
     def __init__(self, grid_scanner):
-        assert isinstance(grid_scanner, GridScanQT), "A valid GridScannerQT subclass must be supplied"
+        assert isinstance(grid_scanner, GridScanQt), "A valid GridScannerQT subclass must be supplied"
         super(GridScanUI, self).__init__()
         self.grid_scanner = grid_scanner
         #self.setupUi(self)
@@ -449,7 +449,7 @@ if __name__ == '__main__':
 
     test = 'qt'
     if test == 'qt':
-        template = GridScanQT
+        template = GridScanQt
     else:
         template = GridScan
 

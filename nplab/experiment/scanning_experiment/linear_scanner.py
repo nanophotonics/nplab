@@ -89,7 +89,7 @@ class LinearScan(ScanningExperiment, TimedScan):
         self.status = 'scan complete'
 
 
-class LinearScanQT(LinearScan, QtCore.QObject):
+class LinearScanQt(LinearScan, QtCore.QObject):
     """
     A GridScanner subclass containing additional or redefined functions related to GUI operation.
     """
@@ -105,7 +105,7 @@ class LinearScanQT(LinearScan, QtCore.QObject):
         self.timer.timeout.connect(self.update)
 
     def run(self, rate=0.1):
-        super(LinearScanQT, self).run()
+        super(LinearScanQt, self).run()
         self.acquiring.wait()
         self.timer.start(1000.*rate)
 
@@ -117,7 +117,7 @@ class LinearScanQT(LinearScan, QtCore.QObject):
         return LinearScanUI
 
     def init_parameter(self, start, stop, step):
-        parameter = super(LinearScanQT, self).init_parameter(start, stop, step)
+        parameter = super(LinearScanQt, self).init_parameter(start, stop, step)
         self.total_points_updated.emit(self.total_points)
         return parameter
 
@@ -134,7 +134,7 @@ class LinearScanQT(LinearScan, QtCore.QObject):
 
 class LinearScanUI(QtGui.QWidget, UiTools):
     def __init__(self, linear_scanner):
-        assert isinstance(linear_scanner, LinearScanQT), "A valid LinearScanQT subclass must be supplied"
+        assert isinstance(linear_scanner, LinearScanQt), "A valid LinearScanQt subclass must be supplied"
         super(LinearScanUI, self).__init__()
         self.linear_scanner = linear_scanner
         uic.loadUi(os.path.join(os.path.dirname(__file__), 'linear_scanner.ui'), self)
@@ -206,7 +206,7 @@ if __name__ == '__main__':
 
     test = 'qt'
     if test == 'qt':
-        template = LinearScanQT
+        template = LinearScanQt
     else:
         template = LinearScan
 
