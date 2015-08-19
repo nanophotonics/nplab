@@ -12,7 +12,7 @@ from traits.api import HasTraits, String
 
 from weakref import WeakSet
 
-class Instrument(HasTraits):
+class Instrument(object):
     """Base class for all instrument-control classes.
 
     This class takes care of management of instruments, saving data, etc.

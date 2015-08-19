@@ -183,6 +183,7 @@ class queried_property(object):
 
     # TODO: standardise the return (single value only vs parsed result), consider bool
     def __get__(self, obj, objtype=None):
+        #print 'get', obj, objtype
         if obj is None:
             return self
         if self.get_cmd is None:
@@ -199,7 +200,7 @@ class queried_property(object):
         return value
 
     def __set__(self, obj, value):
-        print 'set', obj, value
+        #print 'set', obj, value
         if self.set_cmd is None:
             raise AttributeError("can't set attribute")
         if self.validate is not None:
@@ -213,7 +214,6 @@ class queried_property(object):
             message = message.format(value)
         elif '%' in message:
             message = message % value
-        print message
         obj.write(message)
 
     def __delete__(self, obj):
