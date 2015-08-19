@@ -361,27 +361,35 @@ class OceanOpticsControlUI(oo_base, SpectrometerControlUI, oo_widget):
         self.tec_temperature.textChanged.connect(self.update_param)
         self.tec_temperature.setText(str(spectrometer.tec_temperature))
 
-        self.enable_tec.stateChanged.connect(self.update_tec)
+        self.enable_tec.stateChanged.connect(self.update_enable_tec)
         self.enable_tec.setChecked(self.spectrometer.enable_tec)
+        self.read_tec.clicked.connect(self.update_tec)
 
-    def update_param(self, *args, **kwargs):
+    def update_param(self, value):
         sender = self.sender()
+        if sender.validator() is not None:
+            state = sender.validator().validate(value, 0)[0]
+            if state != QtGui.QValidator.Acceptable:
+                return
         if sender is self.integration_time:
             try:
-                self.spectrometer.integration_time = float(args[0])
+                self.spectrometer.integration_time = float(value)
             except ValueError:
                 pass
         elif sender is self.tec_temperature:
             try:
-                self.spectrometer.tec_temperature = float(args[0])
+                self.spectrometer.tec_temperature = float(value)
             except ValueError:
                 pass
 
-    def update_tec(self, state):
+    def update_enable_tec(self, state):
         if state == QtCore.Qt.Checked:
             self.spectrometer.enable_tec = True
         elif state == QtCore.Qt.Unchecked:
             self.spectrometer.enable_tec = False
+
+    def update_tec(self):
+        self.tec_temperature.setText(str(self.spectrometer.tec_temperature))
 
 
 # example code:

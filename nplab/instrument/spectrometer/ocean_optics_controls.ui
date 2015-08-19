@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>334</width>
-    <height>231</height>
+    <width>373</width>
+    <height>236</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -120,12 +120,32 @@
              <number>0</number>
             </property>
             <item>
-             <widget class="QLineEdit" name="tec_temperature"/>
+             <widget class="QLineEdit" name="tec_temperature">
+              <property name="minimumSize">
+               <size>
+                <width>40</width>
+                <height>0</height>
+               </size>
+              </property>
+             </widget>
             </item>
             <item>
              <widget class="QCheckBox" name="enable_tec">
               <property name="text">
                <string>Enable</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="read_tec">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="text">
+               <string>Read</string>
               </property>
              </widget>
             </item>
