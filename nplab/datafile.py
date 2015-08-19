@@ -78,10 +78,11 @@ def get_unique_filename(data_dir, basename='data', fformat='.h5'):
     return file_path
 
 
-def get_file(set_current=True):
+def get_file(destination='local', rel_path='Desktop/Data',
+             basename='data', fformat='.h5', set_current=True):
     """Convenience function to quickly get a current DataFile object."""
-    data_dir = get_data_dir()
-    fname = get_filename(data_dir)
+    data_dir = get_data_dir(destination, rel_path)
+    fname = get_filename(data_dir, basename, fformat)
     f = DataFile(fname, 'w')
     if set_current:
         f.make_current()
@@ -104,7 +105,7 @@ class Group(h5py.Group):
 
     def find_unique_name(self, name):
         """Find a unique name for a subgroup or dataset in this group.
-        
+
         :param name: If this contains a %d placeholder, it will be replaced with the lowest integer such that the new name is unique.  If no %d is included, _%d will be appended to the name if the name already exists in this group.
         """
         if "%d" not in name and name not in self:
@@ -118,12 +119,12 @@ class Group(h5py.Group):
             return (name % n)
 
     def numbered_items(self, name):
-        """Get a list of datasets/groups that have a given name + number, 
+        """Get a list of datasets/groups that have a given name + number,
         sorted by the number appended to the end.
-        
-        This function is intended to return items saved with 
+
+        This function is intended to return items saved with
         auto_increment=True, in the order they were added (by default they
-        come in alphabetical order, so 10 comes before 2).  `name` is the 
+        come in alphabetical order, so 10 comes before 2).  `name` is the
         name passed in without the _0 suffix.
         """
         items = [v for k, v in self.iteritems()
@@ -162,7 +163,7 @@ class Group(h5py.Group):
         """Create a new dataset, optionally with an auto-incrementing name.
 
         :param name: the name of the new dataset
-        :param auto_increment: if True (default), add a number to the dataset name to 
+        :param auto_increment: if True (default), add a number to the dataset name to
             ensure it's unique.  To force the addition of a number, append %d to the dataset name.
         :param shape: a tuple describing the dimensions of the data (only needed if data is not specified)
         :param dtype: data type to be saved (if not specifying data)
@@ -231,8 +232,8 @@ class Group(h5py.Group):
 
 
 class DataFile(Group):
-    """Represent an HDF5 file object.  
-    
+    """Represent an HDF5 file object.
+
     For the moment, this just represents the root group, as it's far easier!  May
     change in the future...
     """
