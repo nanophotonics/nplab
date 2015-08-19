@@ -201,10 +201,12 @@ class GridScan(ScanningExperiment, TimedScan):
                         self.move(scan_axes[2][i], axes[2])
                         self.indices = (k, j, i)
                         self.scan_function(k, j, i)
+                        self._step_times[k,j,i] = time.time()
                         self._index += 1
                 elif len(axes) == 2:  # for regular 2d grid scans ignore third axis i
                     self.indices = (k, j)
                     self.scan_function(k, j)
+                    self._step_times[k,j] = time.time()
                     self._index += 1
 
         self.print_scan_time(time.time() - scan_start_time)

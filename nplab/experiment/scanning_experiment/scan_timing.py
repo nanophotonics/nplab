@@ -28,7 +28,8 @@ class TimedScan(object):
         mask = np.isfinite(self._step_times)
         if not np.any(mask):
             return 0
-        average_step_time = np.mean(self._step_times[mask])
+        times = self._step_times[mask].flatten()
+        average_step_time = np.mean(np.diff(times))
         etr = (self.total_points - self._index) * average_step_time  # remaining steps = self.total_points - index
         return etr
 
