@@ -1,6 +1,6 @@
 __author__ = 'alansanders'
 
-from nplab.experiment.scanning_experiment import ContinuousLinearScan, ContinuousLinearScanQT
+from nplab.experiment.scanning_experiment import ContinuousLinearScan, ContinuousLinearScanQt
 from nplab.instrument.stage import Stage
 from nplab.utils.gui import *
 
@@ -26,23 +26,23 @@ class ContinuousLinearStageScan(ContinuousLinearScan):
         pass
 
 
-class ContinuousLinearStageScanQt(ContinuousLinearStageScan, ContinuousLinearScanQT):
+class ContinuousLinearStageScanQt(ContinuousLinearStageScan, ContinuousLinearScanQt):
     def __init__(self):
         ContinuousLinearStageScan.__init__(self)
-        ContinuousLinearScanQT.__init__(self)
+        ContinuousLinearScanQt.__init__(self)
 
     def run(self, rate=0.1):
-        ContinuousLinearScanQT.run(self, rate)
+        ContinuousLinearScanQt.run(self, rate)
 
     def get_qt_ui(self):
-        return ContinuousLinearScanQT.get_qt_ui(self)
+        return ContinuousLinearScanQt.get_qt_ui(self)
 
     @staticmethod
     def get_qt_ui_cls():
-        return ContinuousLinearScanQT.get_qt_ui_cls()
+        return ContinuousLinearScanQt.get_qt_ui_cls()
 
     def update(self, force=False):
-        ContinuousLinearScanQT.update(self, force)
+        ContinuousLinearScanQt.update(self, force)
 
 
 if __name__ == '__main__':
