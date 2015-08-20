@@ -14,8 +14,9 @@ import warnings
 import time
 
 matplotlib.use('Qt4Agg')
-# from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
-from nplab.ui.mpl_gui import FigureCanvasWithDeferredDraw as FigureCanvas
+from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
+import matplotlib.gridspec as gridspec
+#from nplab.ui.mpl_gui import FigureCanvasWithDeferredDraw as FigureCanvas
 from matplotlib.figure import Figure
 from functools import partial
 from types import MethodType
@@ -74,18 +75,19 @@ class HyperspectralScan(GridScanQt, ScanningExperimentHDF5):
         return '{}'.format(i) if i != 0 else ''
 
     def init_scan(self):
-        assert isinstance(self.stage, Stage), 'stage must be a Stage'
-        assert isinstance(self.spectrometer, Spectrometer) or \
-               isinstance(self.spectrometer, Spectrometers), \
-               'spectrometer must be a Spectrometer or Spectrometers'
-        if not self._created:
-            self.init_figure()
+        # these checks are performed in case equipment is set without using the set_ method
+        if not isinstance(self.stage, Stage):
+            raise ValueError('stage must be a Stage')
+        if not isinstance(self.spectrometer, (Spectrometer, Spectrometers)):
+            raise ValueError('spectrometer must be a Spectrometer or Spectrometers')
+        # if not self._created:
+        #     self.init_figure()
 
     def open_scan(self):
         super(HyperspectralScan, self).open_scan()
-        print 'Saving scan to: {}'.format(self.f.file.filename)
         group = self.f.require_group('hyperspectral_images')
         self.data = group.create_group('scan_%d', attrs=dict(description=self.description))
+        print 'Saving scan to: {}'.format(self.f.file.filename), self.data
         raw_group = self.data.create_group('raw_data')
         for axis_name, axis_values in zip(self.axes_names, self.scan_axes):
             self.data.create_dataset(axis_name, data=axis_values)
@@ -108,6 +110,7 @@ class HyperspectralScan(GridScanQt, ScanningExperimentHDF5):
         elif isinstance(self.spectrometer, Spectrometers):
             self.read_spectra = self.spectrometer.read_spectra
             self.process_spectra = self.spectrometer.process_spectra
+        self.init_figure()
 
     def close_scan(self):
         super(HyperspectralScan, self).close_scan()
@@ -155,53 +158,47 @@ class HyperspectralScan(GridScanQt, ScanningExperimentHDF5):
     def init_figure(self):
         if self.fig is None:
             return
-        self.spectrum_plots = [pg.PlotCurveItem() for i in xrange(self.num_spectrometers)]
-        self.image_plots = [pg.ImageItem() for i in xrange(self.num_spectrometers)]
-        for item in self.image_plots:
-            plot = self.fig.addPlot()
-            plot.addItem(item)
-        self.fig.nextRow()
-        plot = self.fig.addPlot()
-        for item in self.spectrum_plots:
-            plot.addItem(item)
-        self._created = True
-
-        pos = np.array([0.0, 0.2, 0.5, 1.0])
-        color = np.array([[0,0,0,255], [255,0,0,255], [255,255,0,255], [255,255,255,255]], dtype=np.ubyte)
-        map = pg.ColorMap(pos, color)
-        lut = map.getLookupTable(0.0, 1.0, 256)
-        for item in self.image_plots:
-            item.setLookupTable(lut)
-
-    def update_axis_image(self, ax, spectrometer, data_id):
-        if not self.request_complete:
-            self.request_data = True
-            return
-        self.request_complete = False
-        data = self.check_for_data()
-        #data = self.set_latest_view(spectrometer, data_id)
-        if data:
-            data, = data
-            if not np.any(np.isfinite(data)):
-                return
-            if not ax.collections:
-                mult = 1. / self._unit_conversion[self.size_unit]
-                ax.pcolormesh(mult * self.scan_axes[-1], mult * self.scan_axes[-2], data,
-                              cmap=matplotlib.cm.afmhot)
-                cid = self.fig.canvas.mpl_connect('button_press_event', self.on_mouse_click)
-                cid = self.fig.canvas.mpl_connect('pick_event', self.onpick4)
-            else:
-                img, = ax.collections
-                img.set_array(data[:-1, :-1].ravel())
-                img_min = data[np.isfinite(data)].min()
-                img_max = data[np.isfinite(data)].max()
-                img.set_clim(img_min, img_max)
-                ax.relim()
-                ax.draw_artist(ax.patch)
-                ax.draw_artist(img)
-            return True
-        else:
-            return False
+        self.fig.clear()
+        gs = gridspec.GridSpec(2, 2, hspace=0.5, wspace=0.5)
+        ax1 = self.fig.add_subplot(gs[0,0])
+        ax2 = self.fig.add_subplot(gs[0,1])
+        for ax in (ax1, ax2):
+            ax.set_xlabel('x')
+            ax.set_ylabel('y')
+            ax.set_aspect('equal')
+            mult = 1./self._unit_conversion[self.step_unit]
+            x, y = (mult*self.scan_axes[-1], mult*self.scan_axes[-2])
+            ax.set_xlim(x.min(), x.max())
+            ax.set_ylim(y.min(), y.max())
+        ax3 = self.fig.add_subplot(gs[1,:])
+        ax3.set_xlabel('wavelength (nm)')
+        ax3.set_ylabel('intensity (a.u.)')
+        ax4 = ax3.twinx()
+        ax4.set_ylabel('intensity (a.u.)')
+        gs.tight_layout(self.fig)
+        cid = self.fig.canvas.mpl_connect('button_press_event', self.on_mouse_click)
+        # pos = np.array([0.0, 0.2, 0.5, 1.0])
+        # color = np.array([[0,0,0,255], [255,0,0,255], [255,255,0,255], [255,255,255,255]], dtype=np.ubyte)
+        # map = pg.ColorMap(pos, color)
+        # lut = map.getLookupTable(0.0, 1.0, 256)
+        #
+        # self.spectrum_plots = [pg.PlotCurveItem() for i in xrange(self.num_spectrometers)]
+        # self.image_plots = [pg.ImageItem(lut=lut) for i in xrange(self.num_spectrometers)]
+        # for item in self.image_plots:
+        #     plot = self.fig.addPlot()
+        #     plot.addItem(item)
+        #     plot.setAspectLocked(True)
+        #     rect=np.array([-self.size[0]/2.,-self.size[1]/2.,
+        #                    self.size[0], self.size[1]])
+        #     rect /= (self._unit_conversion[self.step_unit]/self._unit_conversion[self.size_unit])
+        #     item.setImage(np.zeros((self.si_size[1]/self.si_step[1],
+        #                             self.si_size[0]/self.si_step[0])))
+        #     item.setRect(QtCore.QRectF(*rect))
+        # self.fig.nextRow()
+        # plot = self.fig.addPlot()
+        # for item in self.spectrum_plots:
+        #     plot.addItem(item)
+        # self._created = True
 
     def update(self, force=False):
         super(HyperspectralScan, self).update(force)
@@ -218,43 +215,35 @@ class HyperspectralScan(GridScanQt, ScanningExperimentHDF5):
                 img, wavelengths, spectrum = data_group
                 if not np.any(np.isfinite(img)):
                     return
-                self.image_plots[i].setImage(img, xvals=self.scan_axes[-1], yvals=self.scan_axes[-2])
-                self.spectrum_plots[i].setData(x=wavelengths, y=spectrum, pen=colours[i])
+                # self.image_plots[i].setImage(img)
+                # self.spectrum_plots[i].setData(x=wavelengths, y=spectrum, pen=colours[i])
 
-    def update2(self):
-        if self.fig.canvas is None:
-            return
-        if self.num_spectrometers == 1:
-            if not self.fig.axes:
-                self.ax = self.fig.add_subplot(111)
-                self.ax.set_aspect('equal')
-                mult = 1. / self._unit_conversion[self.size_unit]
-                x, y = (mult * self.scan_axes[0], mult * self.scan_axes[1])
-                self.ax.set_xlim(x.min(), x.max())
-                self.ax.set_ylim(y.min(), y.max())
-                self.fig.canvas.draw()
-            if not self.update_axis_image(self.ax, self.spectrometer, 0):
-                return
-        elif self.num_spectrometers > 1:
-            n = len(self.spectrometer)
-            for i in range(n):
-                if not self.fig.axes or len(self.fig.axes) != n:
-                    self.ax = self.fig.add_subplot(n, 1, i + 1)
-                    self.ax.set_aspect('equal')
-                    mult = 1. / self._unit_conversion[self.size_unit]
-                    x, y = (mult * self.scan_axes[0], mult * self.scan_axes[1])
-                    self.ax.set_xlim(x.min(), x.max())
-                    self.ax.set_ylim(y.min(), y.max())
-                    self.fig.canvas.draw()
-                if not self.update_axis_image(self.ax, self.spectrometer[i], i):
-                    return
-
-        if self.fig.canvas is not None:
-            self.fig.canvas.update()
-            self.fig.canvas.flush_events()
-            #self.fig.canvas.draw()
-            #self.fig.canvas.draw_in_main_loop()
-            QtCore.QCoreApplication.processEvents()
+                ax = self.fig.axes[i]
+                if not ax.collections:
+                    mult = 1. / self._unit_conversion[self.step_unit]
+                    ax.pcolormesh(mult * self.scan_axes[-1], mult * self.scan_axes[-2], img,
+                                  cmap=matplotlib.cm.afmhot)
+                else:
+                    plot, = ax.collections
+                    plot.set_array(img[:-1, :-1].ravel())
+                    img_min = img[np.isfinite(img)].min()
+                    img_max = img[np.isfinite(img)].max()
+                    plot.set_clim(img_min, img_max)
+                    ax.relim()
+                    #ax.draw_artist(ax.patch)
+                    #ax.draw_artist(plot)
+                ax = self.fig.axes[i+2]
+                c = 'r' if i == 0 else 'b'
+                if not ax.lines:
+                    ax.plot(wavelengths, spectrum, c=c)
+                else:
+                    plot, = ax.lines
+                    plot.set_data(wavelengths, spectrum)
+                    ax.relim()
+                    ax.autoscale_view()
+            #self.fig.canvas.update()
+            #self.fig.canvas.flush_events()
+            self.fig.canvas.draw()
 
     @property
     def estimated_step_time(self):
@@ -277,20 +266,11 @@ class HyperspectralScan(GridScanQt, ScanningExperimentHDF5):
         return HyperspectralScanUI(self)
 
     def on_mouse_click(self, event):
-        init_scale = self._unit_conversion[self.size_unit] / self._unit_conversion[self.init_unit]
+        init_scale = self._unit_conversion[self.step_unit] / self._unit_conversion[self.init_unit]
         self.init[:2] = (event.xdata * init_scale, event.ydata * init_scale)
         self.init_updated.emit(self.init)
-
-    def onpick4(self, event):
-        artist = event.artist
-        if isinstance(artist, matplotlib.image.AxesImage):
-            im = artist
-            A = im.get_array()
-            print 'onpick4 image', A.shape
-
-    def on_mouse_click(self, event):
-        pos = event.scenePos()
-        print "Image position:", self.image_plots[0].mapFromScene(pos)
+    #     pos = event.scenePos()
+    #     print "Image position:", self.image_plots[0].mapFromScene(pos)
 
 
 class HyperspectralScanUI(QtGui.QWidget, UiTools):
@@ -302,14 +282,12 @@ class HyperspectralScanUI(QtGui.QWidget, UiTools):
         uic.loadUi(os.path.join(os.path.dirname(__file__), 'hyperspectral_imaging.ui'), self)
         self.gridscanner_widget = self.replace_widget(self.main_layout, self.gridscanner_widget,
                                                       GridScanQt.get_qt_ui_cls()(self.grid_scanner))
-        self.gridscanner_widget.rate = 0.1
+        self.gridscanner_widget.rate = 1./20.
 
-        #self.figure_widget = self.replace_widget(self.main_layout, self.figure_widget,
-        #                                         FigureCanvas(self.grid_scanner.fig))
+        self.grid_scanner.fig = Figure()  # pg.GraphicsLayoutWidget()
+        # self.grid_scanner.fig.scene().sigMouseClicked.connect(self.grid_scanner.on_mouse_click)
         self.figure_widget = self.replace_widget(self.main_layout, self.figure_widget,
-                                                 pg.GraphicsLayoutWidget())
-        self.grid_scanner.fig = self.figure_widget
-        self.grid_scanner.fig.scene().sigMouseClicked.connect(self.grid_scanner.on_mouse_click)
+                                                 FigureCanvas(self.grid_scanner.fig))
 
         self.init_stage_select()
         self.init_view_wavelength_controls()

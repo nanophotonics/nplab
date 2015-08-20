@@ -83,7 +83,7 @@ def get_file(destination='local', rel_path='Desktop/Data',
     """Convenience function to quickly get a current DataFile object."""
     data_dir = get_data_dir(destination, rel_path)
     fname = get_filename(data_dir, basename, fformat)
-    f = DataFile(fname, 'w')
+    f = DataFile(fname)
     if set_current:
         f.make_current()
     return f

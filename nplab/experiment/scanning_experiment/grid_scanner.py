@@ -94,7 +94,8 @@ class GridScan(ScanningExperiment, TimedScan):
                          fset=lambda self, value: self.rescale_parameter('step', value))
     init_unit = property(fget=lambda self: self._init_unit,
                          fset=lambda self, value: self.rescale_parameter('init', value))
-
+    si_size = property(fget=lambda self: self.size*self._unit_conversion[self.size_unit])
+    si_step = property(fget=lambda self: self.step*self._unit_conversion[self.step_unit])
     si_init = property(fget=lambda self: self.init*self._unit_conversion[self.init_unit])
 
     def run(self):
