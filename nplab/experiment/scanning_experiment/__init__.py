@@ -1,3 +1,8 @@
+"""
+Scanning experiment classes supporting experiments that scan a number of dependent variables
+and measure the response of independent variables. Both fixed size and continuously running
+scans are possible.
+"""
 __author__ = 'alansanders'
 
 from .scanning_experiment import ScanningExperiment, ScanningExperimentHDF5

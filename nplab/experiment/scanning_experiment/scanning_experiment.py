@@ -1,3 +1,7 @@
+"""
+The base scanning experiment classes are found in this file, supporting the basic functionality
+of scanning experiments and adding supporting for utilising HDF5 files for data storage.
+"""
 __author__ = 'alansanders'
 
 from nplab.experiment import Experiment
