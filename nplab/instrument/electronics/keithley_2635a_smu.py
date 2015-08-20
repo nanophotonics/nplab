@@ -1,6 +1,5 @@
 __author__ = 'alansanders'
 
-from nplab import inherit_docstring
 from nplab.instrument.visa_instrument import VisaInstrument, queried_property
 from functools import partial
 import numpy as np
@@ -145,7 +144,6 @@ class Keithley2635A(VisaInstrument):
                 # print 'v down', v, v_range
         return v
 
-    @inherit_docstring(VisaInstrument.get_qt_ui)
     def get_qt_ui(self):
         return SmuUI(self)
 
