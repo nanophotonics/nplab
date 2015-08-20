@@ -160,7 +160,12 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
     @classmethod
     def get_current_spectrometers(cls):
         """get a Spectrometers instance containing all previously instanced spectrometers"""
-        return Spectrometers(cls.get_instances())
+        instances = cls.get_instances()
+        print instances
+        if instances == []:
+            return cls.get_spectrometers()
+        else:
+            return Spectrometers(instances)
 
     def __init__(self, index):
         """initialise the spectrometer"""
