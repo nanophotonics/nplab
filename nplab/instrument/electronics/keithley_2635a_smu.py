@@ -1,3 +1,7 @@
+"""
+Classes related to the Keithley 2635A SMU.
+"""
+
 __author__ = 'alansanders'
 
 from nplab.instrument.visa_instrument import VisaInstrument, queried_property
@@ -8,6 +12,7 @@ from PyQt4 import uic
 
 
 class Keithley2635A(VisaInstrument):
+    """Interface to the Keithley 2635A SMU."""
     def __init__(self, address='GPIB0::26::INSTR'):
         super(Keithley2635A, self).__init__(address)
         self.instr.read_termination = '\n'
