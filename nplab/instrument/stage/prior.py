@@ -4,6 +4,7 @@ import re
 import numpy as np
 import time
 
+
 class ProScan(serial.SerialInstrument, stage.Stage):
     """
     This class handles the Prior stage.
@@ -18,6 +19,7 @@ class ProScan(serial.SerialInstrument, stage.Stage):
                     )
     termination_character = "\r" #: All messages to or from the instrument end with this character.
     termination_line = "END" #: If multi-line responses are recieved, they must end with this string
+
     def __init__(self, port=None, use_si_units = False):
         """
         Set up the serial port and so on.
@@ -46,9 +48,11 @@ class ProScan(serial.SerialInstrument, stage.Stage):
         self.query("BLSH 0") #turn off backlash control
         
         self.use_si_units = use_si_units
+
     def move_rel(self, dx, block=True):
         """Make a relative move by dx microns/metres (see move)"""
         return self.move(dx, relative=True, block=block)
+
     def move(self, x, relative=False, block=True):
         """
         Move to coordinate x (a np.array of coordinates) in microns, or metres if use_si_units is true
@@ -67,19 +71,26 @@ class ProScan(serial.SerialInstrument, stage.Stage):
                     time.sleep(0.02)
         except KeyboardInterrupt:
             self.emergency_stop()
+
     def get_position(self, axis=None):
         """return the current position in microns"""
         if axis is not None:
             return self.select_axis(self.get_position(), axis)
         else:
             pos = self.parsed_query('P',r"%f,%f,%f")
-            if self.use_si_units: pos = np.array(pos)/1e6
+            if self.use_si_units:
+                pos = np.array(pos)/1e6
             return np.array(pos) * self.resolution
+
+    position = property(get_position)
+
     def is_moving(self):
         """return true if the stage is in motion"""
         return self.int_query("$,S")>0
+
     def emergency_stop(self):
         return self.query("K")
+
     def test_communications(self):
         """Check there is a prior stage at the other end of the COM port."""
         response = self.query("?",multiline=True)
