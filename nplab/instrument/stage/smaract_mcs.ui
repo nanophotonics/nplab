@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>257</width>
-    <height>186</height>
+    <width>306</width>
+    <height>204</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,6 +16,12 @@
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <widget class="QTabWidget" name="tabWidget">
+     <property name="tabPosition">
+      <enum>QTabWidget::North</enum>
+     </property>
+     <property name="tabShape">
+      <enum>QTabWidget::Rounded</enum>
+     </property>
      <property name="currentIndex">
       <number>0</number>
      </property>
@@ -28,51 +34,88 @@
         <number>5</number>
        </property>
        <item>
-        <widget class="QGroupBox" name="step_stage_group">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
+        <widget class="QToolBox" name="toolBox">
+         <property name="currentIndex">
+          <number>1</number>
          </property>
-         <property name="title">
-          <string>Stepping Stage Controls</string>
-         </property>
-         <layout class="QVBoxLayout" name="step_stage_layout">
-          <property name="spacing">
-           <number>3</number>
+         <widget class="QWidget" name="stepping_page">
+          <property name="geometry">
+           <rect>
+            <x>0</x>
+            <y>0</y>
+            <width>266</width>
+            <height>85</height>
+           </rect>
           </property>
-          <property name="margin">
-           <number>5</number>
+          <attribute name="label">
+           <string>Stepping</string>
+          </attribute>
+          <layout class="QVBoxLayout" name="verticalLayout_3">
+           <item>
+            <widget class="QGroupBox" name="step_stage_group">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="title">
+              <string>Stepping Stage Controls</string>
+             </property>
+             <layout class="QVBoxLayout" name="step_stage_layout">
+              <property name="spacing">
+               <number>3</number>
+              </property>
+              <property name="margin">
+               <number>5</number>
+              </property>
+              <item>
+               <widget class="QWidget" name="step_stage_widget" native="true"/>
+              </item>
+             </layout>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="scanning_page">
+          <property name="geometry">
+           <rect>
+            <x>0</x>
+            <y>0</y>
+            <width>266</width>
+            <height>85</height>
+           </rect>
           </property>
-          <item>
-           <widget class="QWidget" name="step_stage_widget" native="true"/>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item>
-        <widget class="QGroupBox" name="scan_stage_group">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="title">
-          <string>Scanning Stage Controls</string>
-         </property>
-         <layout class="QVBoxLayout" name="scan_stage_layout">
-          <property name="spacing">
-           <number>3</number>
-          </property>
-          <property name="margin">
-           <number>5</number>
-          </property>
-          <item>
-           <widget class="QWidget" name="scan_stage_widget" native="true"/>
-          </item>
-         </layout>
+          <attribute name="label">
+           <string>Scanning</string>
+          </attribute>
+          <layout class="QVBoxLayout" name="verticalLayout_4">
+           <item>
+            <widget class="QGroupBox" name="scan_stage_group">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="title">
+              <string>Scanning Stage Controls</string>
+             </property>
+             <layout class="QVBoxLayout" name="scan_stage_layout">
+              <property name="spacing">
+               <number>3</number>
+              </property>
+              <property name="margin">
+               <number>5</number>
+              </property>
+              <item>
+               <widget class="QWidget" name="scan_stage_widget" native="true"/>
+              </item>
+             </layout>
+            </widget>
+           </item>
+          </layout>
+         </widget>
         </widget>
        </item>
       </layout>
