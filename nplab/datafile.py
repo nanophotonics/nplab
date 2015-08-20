@@ -16,6 +16,7 @@ import os.path
 import datetime
 import re
 import sys
+from collections import Sequence
 
 
 def attributes_from_dict(group_or_dataset, dict_of_attributes):
@@ -217,13 +218,14 @@ class Group(h5py.Group):
             if hasattr(value, 'shape'):
                 shape = (0,)+value.shape
                 maxshape = (None,)+value.shape
-            elif hasattr(value, '__len__'):
+            elif isinstance(value, Sequence):
                 shape = (0, len(value))
                 maxshape = (None, len(value))  # tuple(None for i in shape)
             else:
                 shape=(0,)
                 maxshape = (None,)
-            dset = self.require_dataset(name, shape, dtype, maxshape=maxshape, chunks=True)
+            dset = self.require_dataset(name, shape=shape, dtype=dtype,
+                                        maxshape=maxshape, chunks=True)
         else:
             dset = self[name]
         index = dset.shape[0]
