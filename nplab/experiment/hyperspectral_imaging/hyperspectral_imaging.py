@@ -58,8 +58,9 @@ class HyperspectralScan(GridScanQt, ScanningExperimentHDF5):
         self.view_layer_updated.emit(value)
 
     def set_spectrometers(self, spectrometers):
-        assert isinstance(spectrometers, Spectrometer) or isinstance(spectrometers, Spectrometers), \
-            'spectrometer must be an instance of either Spectrometer or Spectrometers'
+        if not isinstance(spectrometers, (Spectrometer, Spectrometers)):
+            raise ValueError('spectrometer must be an instance of either Spectrometer or '
+                             'Spectrometers')
         self.spectrometer = spectrometers
         if isinstance(spectrometers, Spectrometers):
             self.num_spectrometers = len(spectrometers.spectrometers)
@@ -163,8 +164,8 @@ class HyperspectralScan(GridScanQt, ScanningExperimentHDF5):
         ax1 = self.fig.add_subplot(gs[0,0])
         ax2 = self.fig.add_subplot(gs[0,1])
         for ax in (ax1, ax2):
-            ax.set_xlabel('x')
-            ax.set_ylabel('y')
+            ax.set_xlabel('$x$')
+            ax.set_ylabel('$y$')
             ax.set_aspect('equal')
             mult = 1./self._unit_conversion[self.step_unit]
             x, y = (mult*self.scan_axes[-1], mult*self.scan_axes[-2])
