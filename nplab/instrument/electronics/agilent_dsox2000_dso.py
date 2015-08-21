@@ -152,10 +152,16 @@ class AgilentDSO(VisaInstrument):
         time, trace = self.scale_trace(trace)
         return time, trace
 
-    def check_trigger(self, force):
+    def check_trigger(self, force=False):
         if force:
             self.force_trigger()
         return bool(self.trigger_status)
+
+    def is_running(self):
+        if (self.operegister_condition == 4128):
+            return False
+        else:
+            return True
 
     def get_qt_ui(self):
         return AgilentDsoUI(self)
@@ -173,11 +179,19 @@ class AgilentDsoUI(QtGui.QWidget, UiTools):
 
 if __name__ == '__main__':
     dso = AgilentDSO()
+    dso.trigger_sweep = 'auto'
     print dso.time_range
     print dso.channel1.range
     dso.capture()
     t,v = dso.read_trace(1)
 
-    import matplotlib.pyplot as plt
-    plt.plot(1e3*t,v)
-    plt.show()
+    #import matplotlib.pyplot as plt
+    #plt.plot(1e3*t,v)
+    #plt.show()
+
+    print dso.check_trigger(force=True)
+    dso.single_shot()
+    print dso.check_trigger(force=False)
+    while not dso.check_trigger(force=False):
+        continue
+    print 'triggered'
