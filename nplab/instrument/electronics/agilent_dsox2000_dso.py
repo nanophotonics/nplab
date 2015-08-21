@@ -1,7 +1,6 @@
 __author__ = 'alansanders'
 
 from nplab.instrument.visa_instrument import VisaInstrument, queried_property, queried_channel_property
-from nplab import inherit_docstring
 from functools import partial
 import numpy as np
 from nplab.utils.gui import *
@@ -25,7 +24,7 @@ class AgilentDSOChannel(object):
                                         validate=['ac', 'dc'], dtype='str')
     units = queried_channel_property(':channel{0}:unit?', ':channel{0}:unit {1}',
                                      validate=['volt', 'ampere'], dtype='str')
-    label = queried_channel_property(':channel{0}:label?', ':channel{0}:label {1}')
+    label = queried_channel_property(':channel{0}:label?', ':channel{0}:label {1}', dtype='str')
     probe = queried_channel_property(':channel{0}:probe?', ':channel{0}:probe {1}')
 
 
@@ -155,17 +154,17 @@ class AgilentDSO(VisaInstrument):
 
     def check_trigger(self, force):
         if force:
-            self.force_trigger
+            self.force_trigger()
         return bool(self.trigger_status)
 
-    @inherit_docstring(VisaInstrument.get_qt_ui)
     def get_qt_ui(self):
         return AgilentDsoUI(self)
 
 
 class AgilentDsoUI(QtGui.QWidget, UiTools):
     def __init__(self, dso, parent=None):
-        assert isinstance(dso, DSO), 'dso must be an instance of DSO'
+        if not isinstance(dso, AgilentDSO):
+            raise ValueError('dso must be an instance of DSO')
         super(AgilentDsoUI, self).__init__()
         self.dso = dso
         self.parent = parent
