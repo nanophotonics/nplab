@@ -47,8 +47,13 @@ class Stage(Instrument):
         """Pick an element from a tuple, indexed by axis name."""
         assert axis in self.axis_names, ValueError("{0} is not a valid axis name.".format(axis))
         return iterable[self.axis_names.index(axis)]
-
-    position = property(fget=get_position, doc="Current position of the stage")
+    
+    def _get_position_proxy(self):
+        """Return self.get_position() (this is a convenience to avoid having
+        to redefine the position property every time you subclass - don't call
+        it directly)"""
+        return self.get_position()
+    position = property(fget=_get_position_proxy, doc="Current position of the stage (all axes)")
 
     def is_moving(self, axes=None):
         """Returns True if any of the specified axes are in motion."""
