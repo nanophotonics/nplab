@@ -1,39 +1,34 @@
 __author__ = 'alansanders'
 
+import ctypes
+pvcam = ctypes.windll.pvcam32
+import nplab.instrument.ccd.pvcam_h as pv
 import ctypes as ct
-
-pvcam = ct.windll.pvcam32
-import pvcam_h as pv
 import numpy as np
-import numpy.ma as ma
-from time import sleep
-import threading
-from nplab.instrument import Instrument
-
-
-def print_pv_error():
-    i = pvcam.pl_error_code()
-    msg = ct.create_string_buffer(20)
-    pvcam.pl_error_message(i, msg)
-    print 'PVCam Error:', i, msg
+import time
+from nplab.instrument.ccd import CCD
+from nplab.utils.gui import *
+from nplab.ui.ui_tools import UiTools
+from nplab import inherit_docstring
 
 
 class PixisError(Exception):
     def __init__(self, msg):
         print msg
-        print_pv_error()
+        i = pvcam.pl_error_code()
+        msg = ct.create_string_buffer(20)
+        pvcam.pl_error_message(i, msg)
+        print 'PVCam Error:', i, msg
         pvcam.pl_pvcam_uninit()
 
 
-class Pixis256E(Instrument):
+class Pixis256E(CCD):
     def __init__(self):
         super(Pixis256E, self).__init__()
         cam_selection = ct.c_int16()
-        # Initialize the PVCam Library and Open the Camera #
+        # Initialize the PVCam library and open the camera #
         self.open_lib()
-        print 'trying to allocate0', (ct.c_int * 10)()
         self.open_cam(cam_selection)
-        self._comms_lock = threading.RLock()
         self._sequence_set = False
         self._current_frame = None
 
@@ -44,10 +39,39 @@ class Pixis256E(Instrument):
         self.latest_raw_image = None
         self.masked_image = None
 
+        #print 'trying to allocate0', (ct.c_int16 * 10)()
+
     def __del__(self):
         if self.cam_open:
             self.close_cam()
         self.close_lib()
+
+    def read_image(self, exposure, timing='timed', mode='kinetics', new=True, end=True, *args,
+                   **kwargs):
+        """
+        Read an image.
+
+        :param exposure: Exposure time
+        :param timing: 'timed' or 'trigger'
+        :param mode: 'kinetics'
+        :param new: If it is the first sequence in a set then new (True) sets up the sequence
+        :param end: If it is the last sequence in a set then end (True) finishes the sequence
+        :param kwargs: k_size=1
+
+        :return:
+        """
+        if new:  # only setup the first time in a set of sequences
+            # setup sequence
+            if mode == 'kinetics':
+                k_size = kwargs['k_size'] if 'k_size' in kwargs else 1
+                self.setup_kinetics(exposure, k_size, timing)
+        self.start_sequence()  # start acquisition
+        while not self.check_readout():  # wait for image
+            continue
+        image = self.readout_image()  # readout
+        if end:  # shutdown sequence if it is the last one
+            self.finish_sequence()
+        return image
 
     def open_lib(self):
         if not pvcam.pl_pvcam_init():
@@ -57,14 +81,13 @@ class Pixis256E(Instrument):
 
     def close_lib(self):
         pvcam.pl_pvcam_uninit()
-        print "Pixis closed"
+        print "pvcam closed"
 
     def open_cam(self, cam_selection):
         cam_name = ct.create_string_buffer(20)
         self._handle = ct.c_int16()
         if not pvcam.pl_cam_get_name(cam_selection, cam_name):
             raise PixisError("didn't get cam name")
-        # print 'trying to allocate1', (ct.c_int * 10)()
         if not pvcam.pl_cam_open(cam_name, ct.byref(self._handle), pv.OPEN_EXCLUSIVE):
             raise PixisError("camera didn't open")
         self.cam_open = True
@@ -80,12 +103,8 @@ class Pixis256E(Instrument):
         param_access = ct.c_uint16()
         param_id = ct.c_uint32(param_id)
 
-        # if not isinstance(param_value, ctypes._SimpleCData):
-        #    if param_id in [4,5,6,76]:
-        #        param_value = ctypes.c_int16(param_value)
-
-        assert isinstance(param_value,
-                          ct._SimpleCData), "The parameter value must be passed as a ctypes instance, not a python value."
+        if not isinstance(param_value, ct._SimpleCData):
+            raise TypeError("The parameter value must be passed as a ctypes instance, not a python value.")
 
         b_status = pvcam.pl_get_param(self._handle, param_id,
                                       pv.ATTR_AVAIL, ct.cast(ct.byref(b_param), ct.c_void_p))
@@ -123,7 +142,7 @@ class Pixis256E(Instrument):
         region.sbin, region.pbin = (1, 1)
 
     def setup_kinetics(self, exposure, k_size, timing='trigger'):
-        if self._sequence_set:
+        if self._sequence_set:  # uninitialise all previous sequences
             self.finish_kinetics()
 
         params = {
@@ -185,157 +204,165 @@ class Pixis256E(Instrument):
             # pvcam.pl_exp_start_seq(self._handle, frame)
             # self._current_frame = frame
 
-    def arm_kinetics(self):
+    def start_sequence(self):
+        """
+        Create a frame and start the kinetics exposure sequence. Call this method
+        after setting up the trigger and then wait until check_kinetics confirms
+        readout.
+        """
         frame = (ct.c_uint16 * (self.size.value // 2))()
-        self.shutter.set_attr('arm', self.exposure)
         pvcam.pl_exp_start_seq(self._handle, frame)
         self._current_frame = frame
 
-    def check_kinetics(self):
+    def check_readout(self):
+        """
+        Poll the readout status and return if the readout is complete or if it
+        fails.
+        """
         status = ct.c_int16()
         pvcam.pl_exp_check_status(self._handle, ct.byref(status),
                                   ct.byref(ct.c_int32()))
         if status.value == pv.READOUT_FAILED:
             raise PixisError("Data collection error")
         elif status.value == pv.READOUT_COMPLETE:
-            return 1
+            return True
         else:
-            return 0
+            return False
 
-    def read_kinetics(self):
-        return self.frame_to_array(self._current_frame)
+    def readout_image(self):
+        """If the readout is complete a valid frame is returned."""
+        return np.array(list(self._current_frame)).reshape((256, 1024))
 
-    def finish_kinetics(self):
+    def finish_sequence(self):
         pvcam.pl_exp_finish_seq(self._handle, self._current_frame, 0)
         pvcam.pl_exp_uninit_seq()
         self._sequence_set = False
 
-    def read_image(self):
-        assert self._sequence_set, 'The acquisition sequence must be setup'
-        frame = (ct.c_uint16 * (self.size.value // 2))()
-        if self.timing == 'timed':
-            # open shutter and wait
-            self.shutter.ser.write('open\n')
-            sleep(150e-3)
-        elif self.timing == 'trigger':
-            self.shutter.set_attr('arm', self.exposure)
-        # start the acquisition
-        pvcam.pl_exp_start_seq(self._handle, frame)
-        # wait until the acquisition is complete
-        status = ct.c_int16()
-        while (pvcam.pl_exp_check_status(self._handle, ct.byref(status),
-                                         ct.byref(ct.c_int32())) \
-                       and (
-                    status.value != pv.READOUT_COMPLETE and status.value != pv.READOUT_FAILED)):
-            continue
-        if self.timing == 'timed':
-            # close the shutter
-            self.shutter.ser.write('close\n')
-        # check the result of the acquisition
-        if status.value == pv.READOUT_FAILED:
-            raise PixisError("Data collection error")
-        # stop the acqusition sequence
-        pvcam.pl_exp_finish_seq(self._handle, frame, 0)
-        # pvcam.pl_exp_uninit_seq()
-
-        a = self.frame_to_array(frame)
-        # print "data written"
-        return a
-
-    def process_image(self, image):
-        if self.is_background_compensated:
-            assert image.shape == self.background.shape, "The supplied image was not the same shape as the background. Have you supplied background and reference images?"
-            if self.is_referenced:
-                old_error_settings = np.seterr(all='ignore')
-                processed_image = (image - self.background) / (self.reference - self.background)
-                np.seterr(**old_error_settings)
-                processed_image[np.isinf(
-                    processed_image)] = np.NaN  # if the reference is nearly 0, we get infinities - just make them all NaNs.
-                return processed_image  # NB we shouldn't work directly with self.latest_spectrum or it will play havoc with updates...
-            else:
-                return image - self.background
-        else:
-            return image
-
-    def update_image(self, image=None):
-        self.latest_raw_image = self.read_image() if image is None else image
-        self.latest_image = self.process_image(self.latest_raw_image)
-        return self.latest_image
-
-    def _get_masked_image(self):
-        if self.is_referenced:
-            return ma.array(self.latest_image, mask=(self.reference - self.background) < (
-                                                                                         self.reference - self.background).max() * self.reference_threshold)
-        else:
-            return self.latest_image
-
-    def frame_to_array(self, frame):
-        a = np.array(list(frame))
-        # a = np.ctypeslib.as_array(frame)
-        a = a.reshape((256, 1024))
-        return a
-
-    def _take_image_fired(self):
-        fin = False
-        if not self._sequence_set:
-            self.setup_kinetics(self.exposure, 1, timing=self.timing_mode)
-            fin = True
-        if self.timing_mode == 'trigger':
-            self.arm_kinetics()
-            while not (self.check_kinetics()): continue
-            img = self.read_kinetics()
-            self.update_image(img)
-        else:
-            self.update_image()
-            # if fin: self.finish_kinetics()
-
-    def _update_setup(self):
-        self.setup_kinetics(self.exposure, 1, self.timing_mode)
-
     metadata_property_names = ('exposure',)
+
+    def read_background(self):
+        """Acquire a new spectrum and use it as a background measurement."""
+        self.background = self.read_image(self.exposure, self.timing, self.mode,
+                                          new=True, end=True)
+        self.update_config('background', self.background)
+
+    def read_reference(self):
+        """Acquire a new spectrum and use it as a reference."""
+        self.reference = self.read_image(self.exposure, self.timing, self.mode,
+                                         new=True, end=True)
+        self.update_config('reference', self.reference)
+
+
+@inherit_docstring(Pixis256E)
+class Pixis256EQt(Pixis256E):
+    """Pixis256E subclass with Qt signals for GUI interaction."""
+
+    image_taken = QtCore.pyqtSignal(np.ndarray)
+
+    @inherit_docstring(Pixis256E.__init__)
+    def __init__(self):
+        super(Pixis256EQt, self).__init__()
+
+    @inherit_docstring(Pixis256E.read_image)
+    def read_image(self, exposure, timing='timed', mode='kinetics', new=True, end=True, *args,
+                   **kwargs):
+        image = super(Pixis256EQt, self).read_image(exposure, timing='timed', mode='kinetics',
+                                                    new=True, end=True, *args, **kwargs)
+        self.image_taken.emit(image)
+        return image
+
+
+class Pixis256EUI(QtGui.QWidget, UiTools):
+    def __init__(self, pixis):
+        if not isinstance(pixis, Pixis256EQt):
+            raise TypeError('pixis is not an instance of Pixis256EQt')
+        self.pixis = pixis
+
+        self.exposure.setValidator(QtGui.QIntValidator())
+        self.exposure.textChanged.connect(self.check_state)
+        self.exposure.textChanged.connect(self.on_text_change)
+        self.mode.activated.connect(self.on_activated)
+        self.timing.activated.connect(self.on_activated)
+        self.cont_clears.stateChanged.connect(self.on_state_change)
+        self.take_image_button.clicked.connect(self.on_click)
+        self.take_bkgd_button.clicked.connect(self.on_click)
+        self.clear_bkgd_button.clicked.connect(self.on_click)
+        self.take_ref_button.clicked.connect(self.on_click)
+        self.clear_ref_button.clicked.connect(self.on_click)
+
+        self.pixis.image_taken.connect()
+
+    def on_text_change(self, text):
+        sender = super(Pixis256EUI, self).on_text_change(text)
+        if sender == False:
+            return
+        elif sender == self.exposure:
+            self.pixis.exposure = float(sender)
+
+    def on_click(self):
+        sender = self.sender()
+        if sender == self.take_image_button:
+            self.pixis.read_image(self.pixis.exposure, self.pixis.timing, self.pixis.mode,
+                                  new=True, end=True)
+        elif sender == self.take_bkgd_button:
+            self.pixis.read_background()
+        elif sender == self.clear_bkgd_button:
+            self.pixis.clear_background()
+        elif sender == self.take_ref_button:
+            self.pixis.read_reference()
+        elif sender == self.clear_ref_button:
+            self.pixis.clear_reference()
+
+    def on_activated(self, item):
+        sender = self.sender()
+        if sender == self.mode:
+            self.pixis.mode = item
+        elif sender == self.timing:
+            self.pixis.timing = item
+
+    def on_state_change(self, state):
+        sender = self.sender()
+        if sender == self.cont_clears:
+            if state == QtCore.Qt.Checked:
+                self.pixis.cont_clears = True
+            elif state == QtCore.Qt.Unchecked:
+                self.pixis.cont_clears = False
 
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
-    p = Pixis256E()
+    p = Pixis256EQt()
     p.exposure = 40
 
-
     def test():
-        # print p.check_kinetics()
         p.setup_kinetics(p.exposure, 1)
-        print p.check_kinetics()
+        print p.check_readout()
         imgs = []
         print 'ready'
         shots = 3
         for i in range(shots):
+            print 'shot {0}'.format(i+1)
             p.arm_kinetics()
-            while not (p.check_kinetics()): continue
+            while not (p.check_readout()): continue
             print "triggered"
-            img = p.read_kinetics()
-            img = p.process_image(img)
+            img = p.readout_image()
             imgs.append(img)
-        sleep(1)
-        p.setup_kinetics(p.exposure, 1, timing='timed')
-        imgs.append(p.read_image())
-        p.finish_kinetics()
+        time.sleep(0.1)
+        p.read_image(p.exposure, timing='timed', mode='kinetics', k_size=1)
         p.close_cam()
         print 'finished'
-        # print img.shape
-        # print img
 
+        print imgs
         print 'plotting data'
-        fig, axes = plt.subplots(shots + 1, sharex=True)
+        fig, axes = plt.subplots(shots+1, sharex=True)
         for i, ax in enumerate(axes):
             img = ax.imshow(imgs[i])
-            img.set_clim(0, 1500)
-        plt.savefig('c:/users/hera/desktop/pixis_test.png')
         print 'done'
         plt.show()
 
+    p.read_image(p.exposure, timing='timed', mode='kinetics', new=True, end= False, k_size=1)
+    img = p.read_image(p.exposure, timing='timed', mode='kinetics', new=False, end= True, k_size=1)
+    print img
 
-    # p.setup_kinetics(p.exposure, 1, timing='timed')
-    # p.read_image()
-    # p.read_image()
-    # p.finish_kinetics()
+    test()
