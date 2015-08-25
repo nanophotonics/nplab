@@ -38,7 +38,7 @@ class HDF5Browser(QtGui.QWidget, UiTools):
         self.treeWidget.itemClicked.connect(self.on_click)
         self.treeWidget.customContextMenuRequested.connect(self.context_menu)
         self.refreshButton.clicked.connect(self.refresh)
-        self.figureWidget = self.replace_widget(self.horizontalLayout, self.figureWidget, FigureCanvas(self.fig))
+        self.figureWidget = self.replace_widget(self.figureWidgetContainer, self.figureWidget, FigureCanvas(self.fig))
 
     def __del__(self):
         pass  # self.f.close()
@@ -91,7 +91,7 @@ class HDF5Browser(QtGui.QWidget, UiTools):
         renderer_suitabilities = [d.is_suitable(h5object) for d in renderers]
         max_renderer = max(renderer_suitabilities)
         best_renderer = renderers[renderer_suitabilities.index(max_renderer)]
-        self.figureWidget = self.replace_widget(self.horizontalLayout, self.figureWidget, best_renderer(h5object, self))
+        self.figureWidget = self.replace_widget(self.figureWidgetContainer, self.figureWidget, best_renderer(h5object, self))
 
 
 if __name__ == '__main__':

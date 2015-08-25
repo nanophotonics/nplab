@@ -59,6 +59,7 @@ class DataRenderer1D(FigureRenderer):
     def display_data(self):
         ax = self.fig.add_subplot(111)
         ax.plot(self.h5object)
+        ax.set_aspect("auto")
         ax.relim()
         ax.autoscale_view()
         self.fig.canvas.draw()

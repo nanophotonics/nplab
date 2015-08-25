@@ -214,6 +214,7 @@ class Group(h5py.Group):
         attributes_from_dict(self, attribute_dict)
 
     def append_dataset(self, name, value, dtype=None):
+        """Append the given data to an existing dataset, creating it if it doesn't exist."""
         if name not in self:
             if hasattr(value, 'shape'):
                 shape = (0,)+value.shape
@@ -232,6 +233,32 @@ class Group(h5py.Group):
         dset.resize(index+1,0)
         dset[index,...] = value
 
+    def show_gui(self, blocking=True):
+        """Display a GUI window with an interactive browser for this group.
+
+        If you use blocking=False, it will return immediately - this may cause
+        issues with the Qt/Traits event loop.
+        """
+        from nplab.utils.gui import get_qt_app, qt
+        app = get_qt_app()
+        ui = self.get_qt_ui()
+        ui.show()
+        if blocking:
+            print "Running GUI, this will block the command line until the window is closed."
+            ui.windowModality = qt.Qt.ApplicationModal
+            try:
+                return app.exec_()
+            except:
+                print "Could not run the Qt application: perhaps it is already running?"
+                return
+        else:
+            return ui
+
+    def get_qt_ui(self):
+        """Return a file browser widget for this group."""
+        from nplab.ui.hdf5_browser import HDF5Browser
+        return HDF5Browser(self)
+        
 
 class DataFile(Group):
     """Represent an HDF5 file object.
