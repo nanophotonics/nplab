@@ -105,6 +105,9 @@ class OpenCVCamera(Camera):
         ret, frame = self.raw_snapshot()
         return cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
 
+    def get_metadata(self):
+        return {}
+
 
 if __name__ == '__main__':
     cam = OpenCVCamera()
