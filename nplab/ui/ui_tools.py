@@ -4,7 +4,7 @@ from nplab.utils.gui import *
 
 
 class UiTools(object):
-
+    """Methods useful to inherit when creating Qt user interfaces."""
     def replace_widget(self, layout, old_widget, new_widget, **kwargs):
         if isinstance(layout, QtGui.QGridLayout):
             index = layout.indexOf(old_widget)
@@ -32,3 +32,11 @@ class UiTools(object):
             color = '#f6989d'  # red
         sender.setStyleSheet('QLineEdit { background-color: %s }' % color)
         return True if state == QtGui.QValidator.Acceptable else False
+
+    def on_text_change(self, text):
+        sender = self.sender()
+        if sender.validator() is not None:
+            state = sender.validator().validate(text, 0)[0]
+            if state != QtGui.QValidator.Acceptable:
+                return False
+        return sender
