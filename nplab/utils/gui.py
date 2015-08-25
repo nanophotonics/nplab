@@ -73,7 +73,7 @@ def get_qt_app():
     return app
 
 
-def popup_widget(widget):
+def popup_widget(widget): # TODO: what is "widget"?
     if widget.isVisible():  # doesn't need to be created and shown just brought to the front
         pass
     else:
@@ -82,12 +82,25 @@ def popup_widget(widget):
 
 
 def show_widget(Widget, *args, **kwargs):
-    """Show the specified widget GUI in a QT application."""
+    """Show the specified widget GUI in a QT application.  
+    
+    NB Widget is a class."""
     app = get_qt_app()
     ui = Widget(*args, **kwargs)
     ui.show()
     sys.exit(app.exec_())
 
+def show_guis(instruments, block=True):
+    """Display the Qt user interfaces of a list of instruments."""
+    app = get_qt_app()
+    uis = [i.get_qt_ui() for i in instruments if hasattr(i, "get_qt_ui")]
+    traits = [i.edit_traits() for i in instruments if hasattr(i, "edit_traits")]
+    for ui in uis:
+        ui.show()
+    if block:
+        return app.exec_()
+    else:
+        return uis, traits
 
 if __name__ == '__main__':
     import matplotlib

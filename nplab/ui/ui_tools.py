@@ -34,6 +34,9 @@ class UiTools(object):
         return True if state == QtGui.QValidator.Acceptable else False
 
     def on_text_change(self, text):
+        """This method makes it easy to validate text input.
+        
+        TODO: instructions on how to use it!"""
         sender = self.sender()
         if sender.validator() is not None:
             state = sender.validator().validate(text, 0)[0]
