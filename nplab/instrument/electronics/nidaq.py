@@ -157,12 +157,14 @@ class NIDAQ(Instrument):
 
 
 
-class i_task(Task):
+class Itask(Task):
     """Essentially a wrapper for the NIDAQ Task object that allows multiple
     Tasks to be run without initialisation each time the Task needs to be run:
     """
     def __init__(self):
+        Task.__init__(self)
         self.mode = None
+#        print "five"
     
     def setupmulti_ao(self,device_id,channels,minoutput,maxoutput):
         """ The command required to setup a task/channel in the analog output 
