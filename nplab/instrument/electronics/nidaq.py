@@ -164,7 +164,7 @@ class Itask(Task):
     def __init__(self):
         Task.__init__(self)
         self.mode = None
-#        print "five"
+
     
     def setupmulti_ao(self,device_id,channels,minoutput,maxoutput):
         """ The command required to setup a task/channel in the analog output 
