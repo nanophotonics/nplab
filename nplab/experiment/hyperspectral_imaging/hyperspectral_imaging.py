@@ -115,6 +115,7 @@ class HyperspectralScan(GridScanQt, ScanningExperimentHDF5):
 
     def close_scan(self):
         super(HyperspectralScan, self).close_scan()
+        self.data.file.flush()
         time.sleep(0.1)
         if self.safe_exit:
             if isinstance(self.light_source.shutter, Shutter):
