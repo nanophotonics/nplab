@@ -47,7 +47,7 @@ class Stage(Instrument):
         """Pick an element from a tuple, indexed by axis name."""
         assert axis in self.axis_names, ValueError("{0} is not a valid axis name.".format(axis))
         return iterable[self.axis_names.index(axis)]
-    
+
     def _get_position_proxy(self):
         """Return self.get_position() (this is a convenience to avoid having
         to redefine the position property every time you subclass - don't call
@@ -95,7 +95,7 @@ class Stage(Instrument):
 class StageUI(QtGui.QWidget, UiTools):
     update_ui = QtCore.pyqtSignal([int], [str])
 
-    def __init__(self, stage, parent=None, stage_step_min=1e-9, stage_step_max=1e-3):
+    def __init__(self, stage, parent=None, stage_step_min=1e-9, stage_step_max=1e-3, default_step=1e-6):
         assert isinstance(stage, Stage), "instrument must be a Stage"
         super(StageUI, self).__init__()
         self.stage = stage
@@ -103,7 +103,7 @@ class StageUI(QtGui.QWidget, UiTools):
         uic.loadUi(os.path.join(os.path.dirname(__file__), 'stage.ui'), self)
         self.step_size_values = step_size_dict(stage_step_min, stage_step_max)
         self.step_size = [self.step_size_values[self.step_size_values.keys()[0]] for axis in stage.axis_names]
-        self.create_axes_layout()
+        self.create_axes_layout(default_step)
         self.update_ui[int].connect(self.update_positions)
         self.update_ui[str].connect(self.update_positions)
         self.update_pos_button.clicked.connect(partial(self.update_positions, None))
@@ -128,7 +128,7 @@ class StageUI(QtGui.QWidget, UiTools):
         for axis in axes:
             self.move_axis_absolute(0, axis)
 
-    def create_axes_layout(self, stack_multiple_stages='horizontal'):
+    def create_axes_layout(self, default_step=1e-6, stack_multiple_stages='horizontal'):
         path = os.path.dirname(os.path.realpath(nplab.ui.__file__))
         icon_size = QtCore.QSize(12, 12)
         self.positions = []
@@ -171,6 +171,9 @@ class StageUI(QtGui.QWidget, UiTools):
             step_size_select = QtGui.QComboBox(self)
             step_size_select.addItems(self.step_size_values.keys())
             step_size_select.activated[str].connect(partial(self.on_activated, i))
+            step_str = engineering_format(default_step, 'm')
+            step_index = self.step_size_values.keys().index(step_str)
+            step_size_select.setCurrentIndex(step_index)
             layout.addWidget(QtGui.QLabel(str(ax), self), i % 3, 5)
             layout.addWidget(step_size_select, i % 3, 6)
             if i % 3 == 0:

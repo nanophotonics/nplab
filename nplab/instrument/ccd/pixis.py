@@ -1,9 +1,8 @@
 __author__ = 'alansanders'
 
-import ctypes
-pvcam = ctypes.windll.pvcam32
-import nplab.instrument.ccd.pvcam_h as pv
 import ctypes as ct
+pvcam = ct.windll.pvcam32
+import nplab.instrument.ccd.pvcam_h as pv
 import numpy as np
 import time
 from nplab.instrument.ccd import CCD
@@ -18,15 +17,19 @@ class PixisError(Exception):
         i = pvcam.pl_error_code()
         msg = ct.create_string_buffer(20)
         pvcam.pl_error_message(i, msg)
-        print 'PVCam Error:', i, msg
-        pvcam.pl_pvcam_uninit()
+        print 'self.pvcam Error:', i, msg
+        pvcam.pl_self.pvcam_uninit()
 
 
 class Pixis256E(CCD):
     def __init__(self):
         super(Pixis256E, self).__init__()
+        try:
+            self.pvcam = ct.windll.pvcam32
+        except WindowsError as e:
+            print 'pvcam not found'
         cam_selection = ct.c_int16()
-        # Initialize the PVCam library and open the camera #
+        # Initialize the self.pvcam library and open the camera #
         self.open_lib()
         self.open_cam(cam_selection)
         self._sequence_set = False
@@ -42,6 +45,7 @@ class Pixis256E(CCD):
         #print 'trying to allocate0', (ct.c_int16 * 10)()
 
     def __del__(self):
+        print 'deleting'
         if self.cam_open:
             self.close_cam()
         self.close_lib()
@@ -74,28 +78,30 @@ class Pixis256E(CCD):
         return image
 
     def open_lib(self):
-        if not pvcam.pl_pvcam_init():
-            raise PixisError("failed to init pvcam")
+        if not self.pvcam.pl_pvcam_init():
+            raise PixisError("failed to init self.pvcam")
         else:
-            print 'init pvcam complete'
+            print 'init self.pvcam complete'
 
     def close_lib(self):
-        pvcam.pl_pvcam_uninit()
+        self.pvcam.pl_pvcam_uninit()
         print "pvcam closed"
 
     def open_cam(self, cam_selection):
         cam_name = ct.create_string_buffer(20)
         self._handle = ct.c_int16()
-        if not pvcam.pl_cam_get_name(cam_selection, cam_name):
+        if not self.pvcam.pl_cam_get_name(cam_selection, cam_name):
             raise PixisError("didn't get cam name")
-        if not pvcam.pl_cam_open(cam_name, ct.byref(self._handle), pv.OPEN_EXCLUSIVE):
+        if not self.pvcam.pl_cam_open(cam_name, ct.byref(self._handle), pv.OPEN_EXCLUSIVE):
             raise PixisError("camera didn't open")
         self.cam_open = True
 
     def close_cam(self):
-        if self._sequence_set: self.finish_kinetics()
-        pvcam.pl_cam_close(self._handle)
+        if self._sequence_set:
+            self.finish_sequence()
+        self.pvcam.pl_cam_close(self._handle)
         self.cam_open = False
+        print 'cam closed'
 
     def set_any_param(self, param_id, param_value):
         b_status = ct.c_bool()
@@ -106,15 +112,15 @@ class Pixis256E(CCD):
         if not isinstance(param_value, ct._SimpleCData):
             raise TypeError("The parameter value must be passed as a ctypes instance, not a python value.")
 
-        b_status = pvcam.pl_get_param(self._handle, param_id,
+        b_status = self.pvcam.pl_get_param(self._handle, param_id,
                                       pv.ATTR_AVAIL, ct.cast(ct.byref(b_param), ct.c_void_p))
         if b_param:
-            b_status = pvcam.pl_get_param(self._handle, param_id,
+            b_status = self.pvcam.pl_get_param(self._handle, param_id,
                                           pv.ATTR_ACCESS,
                                           ct.cast(ct.byref(param_access), ct.c_void_p))
 
             if param_access.value == pv.ACC_READ_WRITE or param_access.value == pv.ACC_WRITE_ONLY:
-                if not pvcam.pl_set_param(self._handle, param_id,
+                if not self.pvcam.pl_set_param(self._handle, param_id,
                                           ct.cast(ct.byref(param_value), ct.c_void_p)):
                     print "error: param %d (value = %d) did not get set" % (
                     param_id.value, param_value.value)
@@ -132,10 +138,10 @@ class Pixis256E(CCD):
 
     def set_full_frame(self, region):
         ser_size = ct.c_uint16()
-        pvcam.pl_get_param(self._handle, pv.PARAM_SER_SIZE,
+        self.pvcam.pl_get_param(self._handle, pv.PARAM_SER_SIZE,
                            pv.ATTR_DEFAULT, ct.cast(ct.byref(ser_size), ct.c_void_p))
         par_size = ct.c_uint16()
-        pvcam.pl_get_param(self._handle, pv.PARAM_PAR_SIZE,
+        self.pvcam.pl_get_param(self._handle, pv.PARAM_PAR_SIZE,
                            pv.ATTR_DEFAULT, ct.cast(ct.byref(par_size), ct.c_void_p))
         region.s1, region.s2, region.p1, region.p2 = (0, ser_size.value - 1,
                                                       0, par_size.value - 1)
@@ -143,7 +149,7 @@ class Pixis256E(CCD):
 
     def setup_kinetics(self, exposure, k_size, timing='trigger'):
         if self._sequence_set:  # uninitialise all previous sequences
-            self.finish_kinetics()
+            self.finish_sequence()
 
         params = {
             pv.PARAM_PMODE: (ct.c_uint32(pv.PMODE_KINETICS), 'pmode'),
@@ -168,7 +174,7 @@ class Pixis256E(CCD):
         for p in read_params:
             self.get_any_param(p)
 
-        if not pvcam.pl_exp_init_seq():
+        if not self.pvcam.pl_exp_init_seq():
             raise PixisError("init_seq failed!")
 
         exp_time = ct.c_uint32(exposure)
@@ -180,7 +186,7 @@ class Pixis256E(CCD):
             timing_mode = pv.TRIGGER_FIRST_MODE
         elif timing == 'timed':
             timing_mode = pv.TIMED_MODE
-        if pvcam.pl_exp_setup_seq(self._handle, 1, 1, ct.byref(region),
+        if self.pvcam.pl_exp_setup_seq(self._handle, 1, 1, ct.byref(region),
                                   timing_mode, exp_time, ct.byref(size)):
             # print "frame size = %d" % size.value
             pass
@@ -201,7 +207,7 @@ class Pixis256E(CCD):
             # if not status: print 'problem with clear while exposing'
 
             # frame = (ct.c_uint16 * (self.size.value//2))()
-            # pvcam.pl_exp_start_seq(self._handle, frame)
+            # self.pvcam.pl_exp_start_seq(self._handle, frame)
             # self._current_frame = frame
 
     def start_sequence(self):
@@ -211,7 +217,7 @@ class Pixis256E(CCD):
         readout.
         """
         frame = (ct.c_uint16 * (self.size.value // 2))()
-        pvcam.pl_exp_start_seq(self._handle, frame)
+        self.pvcam.pl_exp_start_seq(self._handle, frame)
         self._current_frame = frame
 
     def check_readout(self):
@@ -220,7 +226,7 @@ class Pixis256E(CCD):
         fails.
         """
         status = ct.c_int16()
-        pvcam.pl_exp_check_status(self._handle, ct.byref(status),
+        self.pvcam.pl_exp_check_status(self._handle, ct.byref(status),
                                   ct.byref(ct.c_int32()))
         if status.value == pv.READOUT_FAILED:
             raise PixisError("Data collection error")
@@ -234,8 +240,8 @@ class Pixis256E(CCD):
         return np.array(list(self._current_frame)).reshape((256, 1024))
 
     def finish_sequence(self):
-        pvcam.pl_exp_finish_seq(self._handle, self._current_frame, 0)
-        pvcam.pl_exp_uninit_seq()
+        self.pvcam.pl_exp_finish_seq(self._handle, self._current_frame, 0)
+        self.pvcam.pl_exp_uninit_seq()
         self._sequence_set = False
 
     metadata_property_names = ('exposure',)
@@ -254,7 +260,7 @@ class Pixis256E(CCD):
 
 
 @inherit_docstring(Pixis256E)
-class Pixis256EQt(Pixis256E):
+class Pixis256EQt(Pixis256E, QtCore.QObject):
     """Pixis256E subclass with Qt signals for GUI interaction."""
 
     image_taken = QtCore.pyqtSignal(np.ndarray)
@@ -343,17 +349,18 @@ if __name__ == '__main__':
         shots = 3
         for i in range(shots):
             print 'shot {0}'.format(i+1)
-            p.arm_kinetics()
+            p.start_sequence()
             while not (p.check_readout()): continue
             print "triggered"
             img = p.readout_image()
             imgs.append(img)
+        p.finish_sequence()
         time.sleep(0.1)
-        p.read_image(p.exposure, timing='timed', mode='kinetics', k_size=1)
-        p.close_cam()
+        img = p.read_image(p.exposure, timing='timed', mode='kinetics', k_size=1)
+        imgs.append(img)
+        #p.close_cam()
         print 'finished'
 
-        print imgs
         print 'plotting data'
         fig, axes = plt.subplots(shots+1, sharex=True)
         for i, ax in enumerate(axes):
