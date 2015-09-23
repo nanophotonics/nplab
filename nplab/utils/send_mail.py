@@ -68,7 +68,7 @@ def send_email(to_address, message, subject="[nplab] Notification", raise_except
         header = "From: {0}\r\nTo: {1}\r\nSubject: {2}\r\n\r\n".format(NPLAB_FROM_ADDRESS, to_address, subject)
         server = smtplib.SMTP(NPLAB_SMTP_SERVER, 25)
         server.sendmail(NPLAB_FROM_ADDRESS, to_address, header + message)
-        server.close()
+        server.quit()
     except Exception as e:
         if raise_exceptions:
             raise e
