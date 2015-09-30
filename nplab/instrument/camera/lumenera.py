@@ -111,7 +111,7 @@ class LumeneraCamera(Camera):
         self._cameraIsStreaming = False
         
         super(LumeneraCamera,self).__init__() #NB this comes after setting up the hardware
-     
+    
     def close(self):
         """Stop communication with the camera and allow it to be re-used."""
         super(LumeneraCamera, self).close()
@@ -132,10 +132,18 @@ class LumeneraCamera(Camera):
         with self.acquisition_lock:
             for i in range(10):
                 try:
-                    frame = self.cam.TakeSnapshot()
+                    # first we must construct the settings object.
+                    # we need to make sure there's enough time in the timeout
+                    # to cope with the exposure.
+                    settings = self.cam.default_snapshot()
+                    settings.timeout = self.cam.GetProperty('exposure')[0] + 500
+                    frame = self.cam.TakeSnapshot(snapshot=settings)
                     assert frame is not None, "Failed to capture a frame"
-                    frame_pointer = frame.ctypes.data_as(ctypes.POINTER(ctypes.c_byte))
-                    return True, self.convert_frame(frame_pointer, np.product(frame.shape))
+                    frame_pointer = frame.ctypes.data_as(
+                                        ctypes.POINTER(ctypes.c_byte))
+                    return True, self.convert_frame(
+                                            frame_pointer, 
+                                            np.product(frame.shape))
                 except Exception as e:
                     print "Attempt number {0} failed to capture a frame from the camera: {1}".format(i,e)
         print "Camera.raw_snapshot() has failed to capture a frame."
@@ -235,22 +243,8 @@ class LumeneraCamera(Camera):
             self.start_streaming()
         else:
             self.stop_streaming()
-#            print "starting live view thread"
-#            try:
-#                self._live_view_stop_event = threading.Event()
-#                self._live_view_thread = threading.Thread(target=self._live_view_function)
-#                self._live_view_thread.start()
-#            except AttributeError as e: #if any of the attributes aren't there
-#                print "Error:", e
-#        else:
-#            print "stopping live view thread"
-#            try:
-#                self._live_view_stop_event.set()
-#                self._live_view_thread.join()
-#                del(self._live_view_stop_event, self._live_view_thread)
-#            except AttributeError:
-#                raise Exception("Tried to stop live view but it doesn't appear to be running!")
-#    def _live_view_function(self):
-#        """this function should only EVER be executed by _live_view_changed."""
-#        while not self._live_view_stop_event.wait(timeout=0.1):
-#            self.update_latest_frame()
+
+if __name__ == "__main__":
+    cam = LumeneraCamera(1)
+    cam.show_gui(True)
+    cam.close()
