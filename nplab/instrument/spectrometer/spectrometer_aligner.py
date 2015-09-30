@@ -106,13 +106,13 @@ class SpectrometerAligner(HasTraits, Instrument):
         help stability if the points passed in are e.g. a circle."""
         #NB we're not bothering with sample coordinates here...
         self._action_lock.acquire()
-        here = np.array(self.stage.position())
+        here = np.array(self.stage.position)
         positions = [here]
         powers = [self.merit_function()]
         for p in points: #iterate through the points and measure the merit function
             self.stage.move(here+p)
             time.sleep(self.settling_time)
-            positions.append(self.stage.position())
+            positions.append(self.stage.position)
             powers.append(self.merit_function())
         if fit_method=="parabola": #parabolic fit: fit a 2D parabola to the data.  More responsive but less stable than centre of mass.
             try:
@@ -193,7 +193,7 @@ class SpectrometerAligner(HasTraits, Instrument):
         tolerance of 1, as the comparison is sum(dx**2/tolerance**2) < 1.0
         """
         self._action_lock.acquire()
-        positions = [np.array(self.stage.position())]
+        positions = [np.array(self.stage.position)]
         powers = [self.merit_function()]
         for i in range(max_steps):
             pos = self.iterate_circle(stepsize,npoints, print_move=verbose)[2]
@@ -215,7 +215,7 @@ class SpectrometerAligner(HasTraits, Instrument):
         
         we run iterate_circle until the movement produced is small enough."""
         self._action_lock.acquire()
-        positions = [np.array(self.stage.position())]
+        positions = [np.array(self.stage.position)]
         powers = [self.merit_function()]
         for i in range(max_steps):
             #pos = self.iterate_circle(stepsize,npoints,print_move,plot_args={'color':"blue",'cla':(i==0)})[2]
@@ -231,7 +231,7 @@ class SpectrometerAligner(HasTraits, Instrument):
     def z_scan(self, dz):
         """Take spectra at (relative) z positions dz and return as a 2D array"""
         spectra = []
-        here = self.stage.position()
+        here = self.stage.position
         for z in dz:
             self.stage.move(np.array([0,0,z])+here)
             time.sleep(self.settling_time)
