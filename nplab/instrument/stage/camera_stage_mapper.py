@@ -194,7 +194,9 @@ class CameraStageMapper(HasTraits):
         self.camera_to_sample = A
         self._action_lock.release()
     def flush_camera_and_wait(self):
-        """take and discard a number of images from the camera to make sure the image is fresh"""
+        """take and discard a number of images from the camera to make sure the image is fresh
+        
+        This functionality should really be in the camera, not the aligner!"""
         time.sleep(self.settling_time)
         for i in range(self.frames_to_discard):
             self.camera.raw_snapshot()
