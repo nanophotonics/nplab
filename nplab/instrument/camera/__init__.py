@@ -7,7 +7,7 @@ Created on Wed Jun 11 12:28:18 2014
 
 
 import traits
-from traits.api import HasTraits, Property, Instance, Float, String, Button, Bool, on_trait_change
+from traits.api import HasTraits, Property, Instance, Float, String, Button, Bool, on_trait_change, Range
 import traitsui
 from traitsui.api import View, Item, HGroup, VGroup
 from traitsui.table_column import ObjectColumn
@@ -79,6 +79,8 @@ class Camera(Instrument, HasTraits):
     live_view = Bool
     parameters = traits.trait_types.List(trait=Instance(CameraParameter))
     filter_function = None
+    description = String("Description...")
+    zoom = Float(1.0)
     
     old_traits_view = View(VGroup(
                     Item(name="image_plot",editor=ComponentEditor(),show_label=False,springy=True),
@@ -100,8 +102,9 @@ class Camera(Instrument, HasTraits):
                     VGroup(
                         HGroup(
                             Item(name="live_view"),
+                            Item(name="zoom"),
                             Item(name="take_snapshot",show_label=False),
-                            Item(name="edit_camera_properties",show_label=False),
+                            Item(name="edit_camera_properties",label="Properties",show_label=False),
                         ),
                         HGroup(
                             Item(name="description"),
@@ -225,6 +228,13 @@ class Camera(Instrument, HasTraits):
         """populate the list of camera settings that can be adjusted."""
         self.parameters = [CameraParameter(self, n) for n in self.parameter_names()]
         
+    def _zoom_changed(self):
+        """Update the graph to reflect the value of zoom required"""
+        r = self.image_plot.range2d
+        for axisrange in [r.x_range, r.y_range]:
+            axisrange.low = 0.5-0.5/self.zoom
+            axisrange.high = 0.5+0.5/self.zoom
+
     def _setup_plot(self):
         """Construct the Chaco plot used for displaying the image"""
         self._image_plot_data = ArrayPlotData(latest_frame=self.latest_frame,

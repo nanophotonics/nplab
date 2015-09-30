@@ -88,6 +88,7 @@ class LumeneraCamera(Camera):
                     VGroup(
                         VGroup(
                             Item(name="exposure"),
+                            Item(name="zoom"),
                             Item(name="gain"),
                             Item(name="live_view")
                             ), #the vgroup is a trick to make the column narrower
