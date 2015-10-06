@@ -164,7 +164,7 @@ class LumeneraCamera(Camera):
         self.last_frame_time = now
         try:
             #last_frame = np.ctypeslib.as_array(frame_pointer, shape=(h, w)).astype(np.ubyte, copy=True)
-            self.latest_frame = self.convert_frame(frame_pointer, frame_size)
+            self.update_latest_frame(self.convert_frame(frame_pointer, frame_size))
         except:
             print "invalid frame size"        
     def convert_frame(self, frame_pointer, frame_size):

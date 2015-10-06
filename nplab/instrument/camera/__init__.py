@@ -78,7 +78,10 @@ class Camera(Instrument, HasTraits):
     edit_camera_properties = Button
     live_view = Bool
     parameters = traits.trait_types.List(trait=Instance(CameraParameter))
-    filter_function = None
+    filter_function = None 
+    """This function is run on the image before it's displayed in live view.  
+    It should accept, and return, an RGB image as its argument."""
+    
     description = String("Description...")
     zoom = Float(1.0)
     
