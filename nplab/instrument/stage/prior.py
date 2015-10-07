@@ -53,7 +53,7 @@ class ProScan(serial.SerialInstrument, stage.Stage):
         """Make a relative move by dx microns/metres (see move)"""
         return self.move(dx, relative=True, block=block)
 
-    def move(self, x, relative=False, block=True):
+    def move(self, x, relative=False, axis=None, block=True):
         """
         Move to coordinate x (a np.array of coordinates) in microns, or metres if use_si_units is true
         
@@ -61,6 +61,8 @@ class ProScan(serial.SerialInstrument, stage.Stage):
         we return immediately.  relative=True does relative motion, otherwise
         motion is absolute.
         """
+        if axis is not None:
+            return self.move_axis(x, axis, relative=relative, block=block)
         querystring = "GR" if relative else "G" #allow for absolute or relative moves
         if self.use_si_units: x = np.array(x) * 1e6
         for i in range(len(x)): querystring += " %d" % int(x[i]/self.resolution)
