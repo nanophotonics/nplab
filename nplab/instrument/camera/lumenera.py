@@ -109,16 +109,27 @@ class LumeneraCamera(Camera):
             layout="split"), kind="live",resizable=True,width=500,height=600,title="Camera")
     def __init__(self,camera_number=1):
         self.cam = lucam.Lucam(camera_number) #lucam is 1-indexed...
+        self._camera_number = camera_number
         self._cameraIsStreaming = False
         
         super(LumeneraCamera,self).__init__() #NB this comes after setting up the hardware
     
+    def reset(self):
+        """Close down the Lumenera camera, wait, and re-open.  Useful if it crashes."""
+        live_view_setting = self.live_view        
+        self.live_view = False
+        self.cam.CameraClose()
+        time.sleep(2)
+        self.cam = lucam.Lucam(self._camera_number)
+        self.live_view = live_view_setting
+        
     def close(self):
         """Stop communication with the camera and allow it to be re-used."""
+        self.live_view = False
         super(LumeneraCamera, self).close()
         self.cam.CameraClose()
         
-    def raw_snapshot(self, suppress_errors = False, video_priority = None):
+    def raw_snapshot(self, suppress_errors=False, reset_on_error=True, video_priority=None):
         """Take a snapshot and return it.  Bypass filters etc.
         
         If video_priority is specified, don't interrupt video streaming and
@@ -148,6 +159,13 @@ class LumeneraCamera(Camera):
                 except Exception as e:
                     print "Attempt number {0} failed to capture a frame from the camera: {1}".format(i,e)
         print "Camera.raw_snapshot() has failed to capture a frame."
+        if reset_on_error:
+            print "Camera dropped lots of frames.  Turning it off and on again.  Fingers crossed!"
+            self.reset() #try turning it off and on again!!
+            return self.raw_snapshot(self, 
+                                     suppress_errors=suppress_errors, 
+                                     reset_on_error=False, #this matters: avoid infinite loop!
+                                     video_priority=video_priority)
         if not suppress_errors:
             raise IOError("Dropped too many frames from camera :(")
         else:
