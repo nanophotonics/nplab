@@ -159,8 +159,8 @@ class Group(h5py.Group):
         """Return a subgroup, creating it if it does not exist."""
         return Group(super(Group, self).require_group(name).id)  # wrap the returned group
 
-    def create_dataset(self, name, auto_increment=True, shape=None, dtype=None, data=None, attrs=None, timestamp=True,
-                       *args, **kwargs):
+    def create_dataset(self, name, auto_increment=True, shape=None, dtype=None,
+                       data=None, attrs=None, timestamp=True, *args, **kwargs):
         """Create a new dataset, optionally with an auto-incrementing name.
 
         :param name: the name of the new dataset
@@ -197,11 +197,13 @@ class Group(h5py.Group):
 
     def create_resizable_dataset(self, name, shape=(0,), maxshape=(None,), auto_increment=True, dtype=None, attrs=None, timestamp=True,
                                  *args, **kwargs):
+        """See create_dataset documentation"""
         return self.create_dataset(name, auto_increment, shape, dtype, attrs, timestamp,
                                    maxshape=maxshape, chunks=True, *args, **kwargs)
 
     def require_resizable_dataset(self, name, shape=(0,), maxshape=(None,), auto_increment=True, dtype=None, attrs=None, timestamp=True,
                                   *args, **kwargs):
+        """Create a resizeable dataset, or return the dataset if it exists."""
         if name not in self:
             dset = self.create_resizable_dataset(name, shape, maxshape, auto_increment, dtype, attrs, timestamp,
                                                  *args, **kwargs)
@@ -258,7 +260,7 @@ class Group(h5py.Group):
         """Return a file browser widget for this group."""
         from nplab.ui.hdf5_browser import HDF5Browser
         return HDF5Browser(self)
-        
+
 
 class DataFile(Group):
     """Represent an HDF5 file object.

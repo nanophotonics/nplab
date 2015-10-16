@@ -10,6 +10,8 @@ Instrument (or possibly Experiment) should call self.log instead.
 import nplab
 import numpy as np
 
+print_logs_to_console = False
+
 def log(message, from_class=None, from_object=None,
         create_datafile=False, assert_datafile=False):
         """Add a message to the NPLab log, stored in the current datafile.
@@ -37,7 +39,9 @@ def log(message, from_class=None, from_object=None,
             df = nplab.current_datafile(create_if_none=create_datafile,
                                         create_if_closed=create_datafile)
             logs = df.require_group("nplab_log")
-            dset = logs.create_dataset("entry_%d", data=np.string(message))
+            dset = logs.create_dataset("entry_%d",
+                                       data=np.string_(message),
+                                       timestamp=True)
             #save the object and class if supplied.
             if from_object is not None:
                 dset.attrs.create("object",np.string_("%x" % id(from_object)))
@@ -49,6 +53,10 @@ def log(message, from_class=None, from_object=None,
                         pass
             if from_class is not None:
                 dset.attrs.create("class",np.string_(from_class))
+
+            #if nothing's gone wrong, and we've been asked to, print the message
+            if print_logs_to_console:
+                print "log: " + message
 
         except Exception as e:
             print "Couldn't log to file: " + message
