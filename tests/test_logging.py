@@ -60,7 +60,11 @@ def test_long_log(tmpdir):
     N = 10000
     for i in range(N):
         instr.do_something()
-    assert len(df['nplab_log'].numbered_items("entry")) == N
+        print i
+    #assert len(df['nplab_log'].keys()) == N #SLOW!
+    assert df['nplab_log/entry_%d' % (N-1)], "Last log entry was missing!"
+    with pytest.raises(KeyError):
+        df['nplab_log/entry_%d' % N] #zero-indexet - this shouldn't exist!
 
     df.close()
 
