@@ -116,18 +116,26 @@ class LumeneraCamera(Camera):
     
     def restart(self):
         """Close down the Lumenera camera, wait, and re-open.  Useful if it crashes."""
-        live_view_setting = self.live_view        
+        live_view_setting = self.live_view 
+        cam.log("Attempting to restart camera")
         self.live_view = False
         self.cam.CameraClose()
+        cam.log("Camera closed")
         try:
             del self.cam
+            cam.log("Camera deleted")
         except Exception as e:
             print "Warning, an exception was raised deleting the old camera:\n{0}".format(e)
         time.sleep(2)
+        cam.log("Creating new camera object")
         self.cam = lucam.Lucam(self._camera_number)
+        cam.log("New camera object greated")
+        cam.log("Setting live view, gain and exposure")
         self.live_view = live_view_setting
         self.gain = self.metadata['gain']
         self.exposure = self.metadata['exposure']
+        cam.log("Camera restarted")
+        
         
     def close(self):
         """Stop communication with the camera and allow it to be re-used."""
