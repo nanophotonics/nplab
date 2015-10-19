@@ -31,14 +31,20 @@ class Stage(Instrument):
         """Make a relative move, see move() with relative=True."""
         self.move(position, axis, relative=True)
 
-    def move_axis(self, pos, axis, relative=False):
-        """Move along one axis."""
+    def move_axis(self, pos, axis, relative=False, **kwargs):
+        """Move along one axis.
+        
+        This function moves only in one axis, by calling self.move with 
+        appropriately generated values (i.e. it supplies all axes with position
+        instructions, but those not moving just get the current position).
+        
+        It's intended for use in stages that don't support single-axis moves."""
         if axis not in self.axis_names:
             raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
 
         full_position = np.zeros((len(self.axis_names))) if relative else self.position
         full_position[self.axis_names.index(axis)] = pos
-        self.move(full_position, relative=relative)
+        self.move(full_position, relative=relative, **kwargs)
 
     def get_position(self, axis=None):
         raise NotImplementedError("You must override get_position in a Stage subclass.")
