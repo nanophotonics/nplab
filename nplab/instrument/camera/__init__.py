@@ -87,12 +87,12 @@ class Camera(Instrument, HasTraits):
     save_snapshot = Button
     edit_camera_properties = Button
     
-    live_view = Bool
+    live_view = Bool(False)
     """When live_view is true, the camera runs (in a background thread) and
     takes frames continuously, which can be displayed in a preview window or
     accessed using latest_frame."""
     
-    video_priority - Bool(False)
+    video_priority = Bool(False)
     """Set video_priority to True to avoid disturbing the video stream when
     taking images.  raw_snapshot may ignore the setting, but get_image and by
     extension rgb_image and gray_image will honour it."""
@@ -169,7 +169,6 @@ class Camera(Instrument, HasTraits):
             print "Failed to get an image from the camera"
     
     def get_next_frame(self, timeout=60, discard_frames=0, 
-                       exception_on_timeout=True, 
                        assert_live_view=True, raw=True):
         """Wait for the next frame to arrive and return it.
         
@@ -185,8 +184,6 @@ class Camera(Instrument, HasTraits):
         wait for several frames to be acquired before getting a "fresh" one.
         The default setting of 0 means the first new frame that arrives is
         returned.
-        @param: exception_on_timeout: If True (default) an exception is raised
-        if we don't get a new frame within the timeout specified.
         @param: assert_live_view: If True (default) raise an assertion error if
         live view is not enabled - this function is intended only to be used
         when that is the case.
@@ -195,17 +192,15 @@ class Camera(Instrument, HasTraits):
         """
         if assert_live_view:
             assert self.live_view, """Can't wait for the next frame if live view is not enabled!"""
-        for i in range(discard_frames): #wait for a fresh frame
-            if not self.latest_frame_updated.wait(timeout): break
-        # NB if it times out, we don't wait for another frame.
-        if self.latest_frame_updated.wait(timeout):
-            if raw:
-                return self.latest_raw_frame
-            else:
-                return self.latest_frame
+        for i in range(discard_frames + 1): #wait for a fresh frame
+            self.latest_frame_updated.clear() #reset the flag
+            if not self.latest_frame_updated.wait(timeout): #wait for frame
+                raise TimeoutError("Timed out waiting for a fresh frame from the video stream.")
+                
+        if raw:
+            return self.latest_raw_frame
         else:
-            if exception_on_timeout:
-                raise IOError("Timed out while waiting for a fresh frame in the video stream")
+            return self.latest_frame
     
     def _save_snapshot_fired(self):
         d=self.create_dataset('snapshot', data=self.update_latest_frame(), attrs=self.get_metadata())
