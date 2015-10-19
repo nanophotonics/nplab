@@ -114,14 +114,20 @@ class LumeneraCamera(Camera):
         
         super(LumeneraCamera,self).__init__() #NB this comes after setting up the hardware
     
-    def reset(self):
+    def restart(self):
         """Close down the Lumenera camera, wait, and re-open.  Useful if it crashes."""
         live_view_setting = self.live_view        
         self.live_view = False
         self.cam.CameraClose()
+        try:
+            del self.cam
+        except Exception as e:
+            print "Warning, an exception was raised deleting the old camera:\n{0}".format(e)
         time.sleep(2)
         self.cam = lucam.Lucam(self._camera_number)
         self.live_view = live_view_setting
+        self.gain = self.metadata['gain']
+        self.exposure = self.metadata['exposure']
         
     def close(self):
         """Stop communication with the camera and allow it to be re-used."""
@@ -129,12 +135,19 @@ class LumeneraCamera(Camera):
         super(LumeneraCamera, self).close()
         self.cam.CameraClose()
         
-    def raw_snapshot(self, suppress_errors=False, reset_on_error=True, video_priority=None):
+    def raw_snapshot(self, suppress_errors=False, reset_on_error=True, video_priority=None, retrieve_metadata=True):
         """Take a snapshot and return it.  Bypass filters etc.
         
-        If video_priority is specified, don't interrupt video streaming and
-        just return the latest frame.  If it's set to false, stop the video
-        stream, take a snapshot, and re-start the video stream."""
+        @param: video_priority: If this is set to True, don't interrupt video
+        streaming and just return the latest frame.  If it's set to false,
+        stop the video stream, take a snapshot, and re-start the video stream.
+        @param: suppress_errors: don't raise an exception if we can't get a 
+        valid frame.
+        @param: reset_on _error: attempt to turn the camera off and on again
+        if it's not behaving(!)
+        @param: retrieve_metadata: by default, we retrieve certain camera 
+        parameters (gain, exposure, etc.) when we take a frame, and store them
+        in self.metadata.  Set this to false to disable the behaviour."""
         if video_priority is None:
             video_priority = self.video_priority
         if self._cameraIsStreaming and video_priority:
@@ -153,6 +166,9 @@ class LumeneraCamera(Camera):
                     assert frame is not None, "Failed to capture a frame"
                     frame_pointer = frame.ctypes.data_as(
                                         ctypes.POINTER(ctypes.c_byte))
+                    if retrieve_metadata:
+                        self.metadata = {'exposure':self.exposure,
+                                         'gain':self.gain,}
                     return True, self.convert_frame(
                                             frame_pointer, 
                                             np.product(frame.shape))
@@ -161,7 +177,7 @@ class LumeneraCamera(Camera):
         print "Camera.raw_snapshot() has failed to capture a frame."
         if reset_on_error:
             print "Camera dropped lots of frames.  Turning it off and on again.  Fingers crossed!"
-            self.reset() #try turning it off and on again!!
+            self.restart() #try restarting the camera!
             return self.raw_snapshot(self, 
                                      suppress_errors=suppress_errors, 
                                      reset_on_error=False, #this matters: avoid infinite loop!
