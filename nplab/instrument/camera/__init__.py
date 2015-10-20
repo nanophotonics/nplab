@@ -70,36 +70,43 @@ class Camera(Instrument, HasTraits):
     """Generic class for representing cameras.
     
     This should always be subclassed in order to make a useful instrument."""
-    latest_frame = traits.trait_numeric.Array(dtype=np.uint8,shape=(None, None, 3)) #the last frame acquired by the camera
+    latest_frame = traits.trait_numeric.Array(dtype=np.uint8,shape=(None, None, 3))
+    """the last frame acquired by the camera.  Particularly useful when
+    live_view is enabled.  See also latest_frame_updated."""
+    latest_raw_frame = traits.trait_numeric.Array()
+    """the last frame acquired by the camera.  Particularly useful when
+    live_view is enabled.  This is before processing by any filter function
+    that may be in effect. See also latest_frame_updated."""
+    
+    latest_frame_updated = None
+    """This threading.Event is set every time the latest frame is updated."""
+    
     image_plot = Instance(Plot) #chaco plot used to display the latest frame
     take_snapshot = Button
     save_jpg_snapshot = Button
     save_snapshot = Button
     edit_camera_properties = Button
-    live_view = Bool
+    
+    live_view = Bool(False)
+    """When live_view is true, the camera runs (in a background thread) and
+    takes frames continuously, which can be displayed in a preview window or
+    accessed using latest_frame."""
+    
+    video_priority = Bool(False)
+    """Set video_priority to True to avoid disturbing the video stream when
+    taking images.  raw_snapshot may ignore the setting, but get_image and by
+    extension rgb_image and gray_image will honour it."""
+    
     parameters = traits.trait_types.List(trait=Instance(CameraParameter))
+    
     filter_function = None 
     """This function is run on the image before it's displayed in live view.  
     It should accept, and return, an RGB image as its argument."""
     
     description = String("Description...")
     zoom = Float(1.0)
-    
-    old_traits_view = View(VGroup(
-                    Item(name="image_plot",editor=ComponentEditor(),show_label=False,springy=True),
-                    HGroup(
-                        VGroup(
-                            Item(name="take_snapshot",show_label=False),
-                            Item(name="save_snapshot",show_label=False),
-                            HGroup(Item(name="live_view")), #the hgroup is a trick to make the column narrower
-                        springy=False),
-                        Item(name="parameters",show_label=False,springy=True,
-                             editor=traitsui.api.TableEditor(columns=
-                                 [ObjectColumn(name="name", editable=False),
-                                  ObjectColumn(name="value")])),
-                    springy=True),
-                layout="split"), kind="live",resizable=True,width=500,height=600,title="Camera")
-                
+    """Sets the zoom of the preview video (in the default camera UI)."""
+
     traits_view = View(VGroup(
                     Item(name="image_plot",editor=ComponentEditor(),show_label=False,springy=True),
                     VGroup(
@@ -131,7 +138,8 @@ class Camera(Instrument, HasTraits):
         super(Camera,self).__init__()
         self._setup_plot()
         self.initialise_parameters()
-        self.acquisition_lock = threading.Lock()        
+        self.acquisition_lock = threading.Lock()    
+        self.latest_frame_updated = threading.Event()
         
     def __del__(self):
         self.close()
@@ -150,13 +158,50 @@ class Camera(Instrument, HasTraits):
         if frame is None: 
             frame = self.color_image()
         if frame is not None:
+            self.latest_raw_frame = frame
             if self.filter_function is not None:
                 self.latest_frame=self.filter_function(frame)
             else:
-                self.latest_frame=frame
+                self.latest_frame=frame #This doesn't duplicate latest_raw_frame thanks to numpy :)
+            self.latest_frame_updated.set()
             return self.latest_frame
         else:
             print "Failed to get an image from the camera"
+    
+    def get_next_frame(self, timeout=60, discard_frames=0, 
+                       assert_live_view=True, raw=True):
+        """Wait for the next frame to arrive and return it.
+        
+        This function is mostly intended for acquiring frames from a video
+        stream that's running in live view - it returns a fresh frame without
+        interrupting the video.  If called with timeout=None when live view is
+        false, it may take a very long time to return.
+        
+        @param: timeout: Maximum length of time to wait for a new frame.  None
+        waits forever, but this may be a bad idea (could hang your script).
+        @param: discard_frames: Wait for this many new frames before returning
+        one.  This option is useful if the camera buffers frames, so you must
+        wait for several frames to be acquired before getting a "fresh" one.
+        The default setting of 0 means the first new frame that arrives is
+        returned.
+        @param: assert_live_view: If True (default) raise an assertion error if
+        live view is not enabled - this function is intended only to be used
+        when that is the case.
+        @param: raw: The default (True) returns a raw frame - False returns the
+        frame after processing by the filter function if any.
+        """
+        if assert_live_view:
+            assert self.live_view, """Can't wait for the next frame if live view is not enabled!"""
+        for i in range(discard_frames + 1): #wait for a fresh frame
+            self.latest_frame_updated.clear() #reset the flag
+            if not self.latest_frame_updated.wait(timeout): #wait for frame
+                raise TimeoutError("Timed out waiting for a fresh frame from the video stream.")
+                
+        if raw:
+            return self.latest_raw_frame
+        else:
+            return self.latest_frame
+    
     def _save_snapshot_fired(self):
         d=self.create_dataset('snapshot', data=self.update_latest_frame(), attrs=self.get_metadata())
         d.attrs.create('description',self.description)
@@ -187,9 +232,22 @@ class Camera(Instrument, HasTraits):
     def raw_snapshot(self):
         """Take a snapshot and return it.  No filtering or conversion."""
         return True, np.zeros((640,480,3),dtype=np.uint8)
+        
+    def get_image(self):
+        """Take an image from the camera, respecting video priority.
+        
+        If live view is enabled and video_priority is true, return the next
+        frame in the video stream.  Otherwise, return a specially-acquired
+        image from raw_snapshot.
+        """
+        if self.live_view and self.video_priority:
+            return self.get_next_frame(raw=True)
+        else:
+            return self.raw_snapshot()
+            
     def color_image(self):
         """Get a colour image (bypass filtering, etc.)"""
-        ret, frame = self.raw_snapshot()
+        ret, frame = self.get_image()
         try:
             assert frame.shape[2]==3
             return frame
@@ -201,7 +259,7 @@ class Camera(Instrument, HasTraits):
                 return None
     def gray_image(self):
         """Get a colour image (bypass filtering, etc.)"""
-        ret, frame = self.raw_snapshot()
+        ret, frame = self.get_image()
         try:
             assert len(frame.shape)==2
             return frame
