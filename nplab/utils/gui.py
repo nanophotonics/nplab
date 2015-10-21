@@ -10,10 +10,8 @@ import sys
 import warnings
 ui_toolkit = 'native'  # by default use pyqt4
 if os.environ.get('QT_API') is None:
-    print "defaulting to pyqt"
     os.environ['QT_API'] = 'pyqt'  # by default use pyqt4
 qt_api = os.environ.get('QT_API')
-print "Using "+qt_api
 
 #print "api environment variable is (gui): "+os.environ['QT_API']
 
