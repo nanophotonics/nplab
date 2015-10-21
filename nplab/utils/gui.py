@@ -7,10 +7,13 @@ Various utility functions for GUI-related stuff.
 
 import os
 import sys
+import warnings
 ui_toolkit = 'native'  # by default use pyqt4
 if os.environ.get('QT_API') is None:
+    print "defaulting to pyqt"
     os.environ['QT_API'] = 'pyqt'  # by default use pyqt4
 qt_api = os.environ.get('QT_API')
+print "Using "+qt_api
 
 #print "api environment variable is (gui): "+os.environ['QT_API']
 
@@ -26,7 +29,7 @@ if ui_toolkit == 'native' and os.environ['QT_API'] == 'pyside':
         from PySide import QtCore as qt
         from PySide import QtGui as qtgui
     except:
-        print "Warning: falling back to PyQt4"
+        warnings.warn("Warning: falling back to PyQt4", UserWarning)
         ui_toolkit = 'pyqt'
         from PyQt4 import QtCore, QtGui
         from PyQt4 import QtCore as qt
