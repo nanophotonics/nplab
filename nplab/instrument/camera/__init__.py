@@ -5,7 +5,7 @@ Created on Wed Jun 11 12:28:18 2014
 @author: Richard Bowman
 """
 
-
+import nplab.utils.gui #load Qt correctly - do this BEFORE traits
 import traits
 from traits.api import HasTraits, Property, Instance, Float, String, Button, Bool, on_trait_change, Range
 import traitsui
@@ -22,6 +22,7 @@ import os
 import datetime
 from PyQt4 import QtGui
 from PIL import Image
+import warnings
 
 from nplab.instrument import Instrument
 
@@ -136,10 +137,10 @@ class Camera(Instrument, HasTraits):
                     
     def __init__(self):
         super(Camera,self).__init__()
-        self._setup_plot()
         self.initialise_parameters()
         self.acquisition_lock = threading.Lock()    
         self.latest_frame_updated = threading.Event()
+        self._setup_plot()
         
     def __del__(self):
         self.close()
@@ -298,10 +299,14 @@ class Camera(Instrument, HasTraits):
 
     def _setup_plot(self):
         """Construct the Chaco plot used for displaying the image"""
+        
         self._image_plot_data = ArrayPlotData(latest_frame=self.latest_frame,
                                               across=[0,1],middle=[0.5,0.5])
         self.image_plot = Plot(self._image_plot_data)
-        self.image_plot.img_plot("latest_frame",origin="top left")
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore") #this line raises a futurewarning
+            #it's a bug in Enable that's not been fixed for ages.
+            self.image_plot.img_plot("latest_frame",origin="top left")
         self.image_plot.plot(("across","middle"),color="yellow") #crosshair
         self.image_plot.plot(("middle","across"),color="yellow")
         
