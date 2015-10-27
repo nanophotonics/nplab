@@ -242,7 +242,7 @@ class Camera(Instrument, HasTraits):
         image from raw_snapshot.
         """
         if self.live_view and self.video_priority:
-            return self.get_next_frame(raw=True)
+            return True, self.get_next_frame(raw=True)
         else:
             return self.raw_snapshot()
             
