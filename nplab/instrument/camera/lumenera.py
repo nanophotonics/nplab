@@ -112,6 +112,9 @@ class LumeneraCamera(Camera):
         self._camera_number = camera_number
         self._cameraIsStreaming = False
         
+        #populate metadata - important in case we restart
+        self.metadata = {'exposure':self.exposure, 'gain':self.gain,}
+        
         super(LumeneraCamera,self).__init__() #NB this comes after setting up the hardware
     
     def restart(self):
@@ -186,8 +189,7 @@ class LumeneraCamera(Camera):
         if reset_on_error:
             print "Camera dropped lots of frames.  Turning it off and on again.  Fingers crossed!"
             self.restart() #try restarting the camera!
-            return self.raw_snapshot(self, 
-                                     suppress_errors=suppress_errors, 
+            return self.raw_snapshot(suppress_errors=suppress_errors, 
                                      reset_on_error=False, #this matters: avoid infinite loop!
                                      video_priority=video_priority)
         if not suppress_errors:
