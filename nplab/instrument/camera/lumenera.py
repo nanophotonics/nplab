@@ -123,7 +123,7 @@ class LumeneraCamera(Camera):
         self.log("Camera closed")
         try:
             del self.cam
-            cam.log("Camera deleted")
+            self.log("Camera deleted")
         except Exception as e:
             print "Warning, an exception was raised deleting the old camera:\n{0}".format(e)
         time.sleep(2)
