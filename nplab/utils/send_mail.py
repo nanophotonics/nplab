@@ -54,3 +54,28 @@ def SendMessage(address,msg,subject):
             print 'successfully sent the mail'
         except:
             print "failed to send mail"
+            
+NPLAB_FROM_ADDRESS = "physics-np-bounces@lists.cam.ac.uk"#np-lab-notifications@phy.cam.ac.uk"
+NPLAB_SMTP_SERVER = "ppsw.cam.ac.uk"
+
+def send_email(to_address, message, subject="[nplab] Notification", raise_exceptions=False):
+    """Send an email (only works for PCs on the Physics network).
+    
+    Uses the np-lab-notifications email address as the "from" address and
+    sends unencrypted through ppsw.cam.ac.uk, so this will only work for PCs
+    on the University network."""
+    try:
+        header = "From: {0}\r\nTo: {1}\r\nSubject: {2}\r\n\r\n".format(NPLAB_FROM_ADDRESS, to_address, subject)
+        server = smtplib.SMTP(NPLAB_SMTP_SERVER, 25)
+        server.sendmail(NPLAB_FROM_ADDRESS, to_address, header + message)
+        server.quit()
+    except Exception as e:
+        if raise_exceptions:
+            raise e
+        else:
+            print "Warning: errror while sending email to {0}: {1}".format(to_address, e)
+
+if __name__ == "__main__":
+    import datetime
+    #send_email("rwb27@cam.ac.uk", "Test email from nplab, sent at {0}".format(datetime.datetime.now().isoformat()))
+    

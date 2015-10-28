@@ -80,7 +80,7 @@ class DataRenderer2D(FigureRenderer):
 
     def display_data(self):
         ax = self.fig.add_subplot(111)
-        ax.imshow(self.h5object)
+        ax.imshow(self.h5object, aspect="auto")
         # ax.relim()
         # ax.autoscale_view()
         self.fig.canvas.draw()
@@ -94,8 +94,29 @@ class DataRenderer2D(FigureRenderer):
         elif len(h5object.shape) < 2:
             return -1
 
+class DataRendererRGB(FigureRenderer):
+    """This renderer is suitable for showing RGB images"""
+    def __init__(self, h5object, parent=None):
+        super(DataRenderer2D, self).__init__(h5object, parent)
 
-renderers = [HDF5InfoRenderer, DataRenderer1D, DataRenderer2D]
+    def display_data(self):
+        ax = self.fig.add_subplot(111)
+        ax.imshow(self.h5object)
+        # ax.relim()
+        # ax.autoscale_view()
+        self.fig.canvas.draw()
+
+    @classmethod
+    def is_suitable(cls, h5object):
+        if not isinstance(h5object, h5py.Dataset):
+            return -1
+        if len(h5object.shape) == 3 and h5object.shape[2]==3:
+            return 5
+        elif len(h5object.shape) != 2:
+            return -1
+
+
+renderers = [HDF5InfoRenderer, DataRenderer1D, DataRenderer2D, DataRendererRGB]
 
 if __name__ == '__main__':
     import sys, h5py, os, numpy as np

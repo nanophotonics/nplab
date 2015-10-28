@@ -110,8 +110,9 @@ class CameraStageMapper(HasTraits):
         """
         shift=[999.,999.]
         n=0
-        camera_live_view = self.camera.live_view
-        self.camera.live_view = False
+        if self.disable_live_view:
+            camera_live_view = self.camera.live_view
+            self.camera.live_view = False
         while np.sqrt(np.sum(np.array(shift)**2))>tolerance and n<max_iterations:
             n+=1
             try:
@@ -123,7 +124,8 @@ class CameraStageMapper(HasTraits):
             print "Performed %d iterations but did not converge on the feature to within %.3fum" % (n, tolerance)
         else:
             print "Centered on feature in %d iterations." % n
-        self.camera.live_view = camera_live_view #reenable live view if necessary
+        if self.disable_live_view:
+            self.camera.live_view = camera_live_view #reenable live view if necessary
     def centre_on_feature_iterate(self, feature_image, search_size=(50,50)):
         try:
             self.flush_camera_and_wait()
@@ -192,7 +194,9 @@ class CameraStageMapper(HasTraits):
         self.camera_to_sample = A
         self._action_lock.release()
     def flush_camera_and_wait(self):
-        """take and discard a number of images from the camera to make sure the image is fresh"""
+        """take and discard a number of images from the camera to make sure the image is fresh
+        
+        This functionality should really be in the camera, not the aligner!"""
         time.sleep(self.settling_time)
         for i in range(self.frames_to_discard):
             self.camera.raw_snapshot()
@@ -215,7 +219,8 @@ class CameraStageMapper(HasTraits):
         positions = [here]                              #positions keeps track of where we sample
         powers = [self.autofocus_merit_function()]      #powers holds the value of the merit fn at each point
         camera_live_view = self.camera.live_view
-        self.camera.live_view = False
+        if self.disable_live_view:
+            self.camera.live_view = False
         for z in dz:
             self.stage.move(np.array([0,0,z])+here)     #visit each point and evaluate merit function
  #           time.sleep(0.5)

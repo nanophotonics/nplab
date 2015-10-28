@@ -22,7 +22,15 @@ class LightSource(Instrument):
     def set_power(self, value):
         print value
 
-    power = property(get_power, set_power)
+    def _get_power(self):
+        """Wrapper for get_power so we don't need to redefine properties"""
+        return self.get_power()
+    
+    def _set_power(self, value):
+        """Wrapper for get_power so we don't need to redefine properties"""
+        return self.set_power(value)
+        
+    power = property(_get_power, _set_power)
 
     def get_qt_ui(self):
         return LightSourceUI(self)

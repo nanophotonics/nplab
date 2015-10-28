@@ -49,6 +49,9 @@ coverage.xml
 
 # Sphinx documentation
 docs/_build/
+docs/modules.rst
+docs/nplab.rst
+docs/nplab.*.rst
 
 # VIM backups
 *.*~

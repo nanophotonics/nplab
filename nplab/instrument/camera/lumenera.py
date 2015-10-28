@@ -88,6 +88,7 @@ class LumeneraCamera(Camera):
                     VGroup(
                         VGroup(
                             Item(name="exposure"),
+                            Item(name="zoom"),
                             Item(name="gain"),
                             Item(name="live_view")
                             ), #the vgroup is a trick to make the column narrower
@@ -108,21 +109,56 @@ class LumeneraCamera(Camera):
             layout="split"), kind="live",resizable=True,width=500,height=600,title="Camera")
     def __init__(self,camera_number=1):
         self.cam = lucam.Lucam(camera_number) #lucam is 1-indexed...
+        self._camera_number = camera_number
         self._cameraIsStreaming = False
         
+        #populate metadata - important in case we restart
+        self.metadata = {'exposure':self.exposure, 'gain':self.gain,}
+        
         super(LumeneraCamera,self).__init__() #NB this comes after setting up the hardware
-     
+    
+    def restart(self):
+        """Close down the Lumenera camera, wait, and re-open.  Useful if it crashes."""
+        live_view_setting = self.live_view 
+        self.log("Attempting to restart camera")
+        self.live_view = False
+        self.cam.CameraClose()
+        self.log("Camera closed")
+        try:
+            del self.cam
+            self.log("Camera deleted")
+        except Exception as e:
+            print "Warning, an exception was raised deleting the old camera:\n{0}".format(e)
+        time.sleep(2)
+        self.log("Creating new camera object")
+        self.cam = lucam.Lucam(self._camera_number)
+        self.log("New camera object greated")
+        self.log("Setting live view, gain and exposure")
+        self.live_view = live_view_setting
+        self.gain = self.metadata['gain']
+        self.exposure = self.metadata['exposure']
+        self.log("Camera restarted")
+        
+        
     def close(self):
         """Stop communication with the camera and allow it to be re-used."""
+        self.live_view = False
         super(LumeneraCamera, self).close()
         self.cam.CameraClose()
         
-    def raw_snapshot(self, suppress_errors = False, video_priority = None):
+    def raw_snapshot(self, suppress_errors=False, reset_on_error=True, video_priority=None, retrieve_metadata=True):
         """Take a snapshot and return it.  Bypass filters etc.
         
-        If video_priority is specified, don't interrupt video streaming and
-        just return the latest frame.  If it's set to false, stop the video
-        stream, take a snapshot, and re-start the video stream."""
+        @param: video_priority: If this is set to True, don't interrupt video
+        streaming and just return the latest frame.  If it's set to false,
+        stop the video stream, take a snapshot, and re-start the video stream.
+        @param: suppress_errors: don't raise an exception if we can't get a 
+        valid frame.
+        @param: reset_on _error: attempt to turn the camera off and on again
+        if it's not behaving(!)
+        @param: retrieve_metadata: by default, we retrieve certain camera 
+        parameters (gain, exposure, etc.) when we take a frame, and store them
+        in self.metadata.  Set this to false to disable the behaviour."""
         if video_priority is None:
             video_priority = self.video_priority
         if self._cameraIsStreaming and video_priority:
@@ -132,13 +168,30 @@ class LumeneraCamera(Camera):
         with self.acquisition_lock:
             for i in range(10):
                 try:
-                    frame = self.cam.TakeSnapshot()
+                    # first we must construct the settings object.
+                    # we need to make sure there's enough time in the timeout
+                    # to cope with the exposure.
+                    settings = self.cam.default_snapshot()
+                    settings.timeout = self.cam.GetProperty('exposure')[0] + 500
+                    frame = self.cam.TakeSnapshot(snapshot=settings)
                     assert frame is not None, "Failed to capture a frame"
-                    frame_pointer = frame.ctypes.data_as(ctypes.POINTER(ctypes.c_byte))
-                    return True, self.convert_frame(frame_pointer, np.product(frame.shape))
+                    frame_pointer = frame.ctypes.data_as(
+                                        ctypes.POINTER(ctypes.c_byte))
+                    if retrieve_metadata:
+                        self.metadata = {'exposure':self.exposure,
+                                         'gain':self.gain,}
+                    return True, self.convert_frame(
+                                            frame_pointer, 
+                                            np.product(frame.shape))
                 except Exception as e:
                     print "Attempt number {0} failed to capture a frame from the camera: {1}".format(i,e)
         print "Camera.raw_snapshot() has failed to capture a frame."
+        if reset_on_error:
+            print "Camera dropped lots of frames.  Turning it off and on again.  Fingers crossed!"
+            self.restart() #try restarting the camera!
+            return self.raw_snapshot(suppress_errors=suppress_errors, 
+                                     reset_on_error=False, #this matters: avoid infinite loop!
+                                     video_priority=video_priority)
         if not suppress_errors:
             raise IOError("Dropped too many frames from camera :(")
         else:
@@ -155,7 +208,7 @@ class LumeneraCamera(Camera):
         self.last_frame_time = now
         try:
             #last_frame = np.ctypeslib.as_array(frame_pointer, shape=(h, w)).astype(np.ubyte, copy=True)
-            self.latest_frame = self.convert_frame(frame_pointer, frame_size)
+            self.update_latest_frame(self.convert_frame(frame_pointer, frame_size))
         except:
             print "invalid frame size"        
     def convert_frame(self, frame_pointer, frame_size):
@@ -235,22 +288,8 @@ class LumeneraCamera(Camera):
             self.start_streaming()
         else:
             self.stop_streaming()
-#            print "starting live view thread"
-#            try:
-#                self._live_view_stop_event = threading.Event()
-#                self._live_view_thread = threading.Thread(target=self._live_view_function)
-#                self._live_view_thread.start()
-#            except AttributeError as e: #if any of the attributes aren't there
-#                print "Error:", e
-#        else:
-#            print "stopping live view thread"
-#            try:
-#                self._live_view_stop_event.set()
-#                self._live_view_thread.join()
-#                del(self._live_view_stop_event, self._live_view_thread)
-#            except AttributeError:
-#                raise Exception("Tried to stop live view but it doesn't appear to be running!")
-#    def _live_view_function(self):
-#        """this function should only EVER be executed by _live_view_changed."""
-#        while not self._live_view_stop_event.wait(timeout=0.1):
-#            self.update_latest_frame()
+
+if __name__ == "__main__":
+    cam = LumeneraCamera(1)
+    cam.show_gui(True)
+    cam.close()

@@ -5,7 +5,6 @@ Classes related to the Keithley 2635A SMU.
 __author__ = 'alansanders'
 
 from nplab.instrument.visa_instrument import VisaInstrument, queried_property
-from functools import partial
 import numpy as np
 from nplab.utils.gui import *
 from PyQt4 import uic
@@ -276,9 +275,4 @@ if __name__ == '__main__':
     print smu.read_resistance()
     smu.output = 0
 
-    import sys
-
-    app = get_qt_app()
-    ui = smu.get_qt_ui()
-    ui.show()
-    sys.exit(app.exec_())
+    smu.show_gui()
