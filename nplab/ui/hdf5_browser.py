@@ -11,7 +11,7 @@ import matplotlib
 matplotlib.use('Qt4Agg')
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-from data_renderers import *
+from data_renderers import suitable_renderers
 from nplab.ui.ui_tools import UiTools
 
 
@@ -24,7 +24,7 @@ class HDF5Browser(QtGui.QWidget, UiTools):
 
     def __init__(self, f, parent=None):
         super(HDF5Browser, self).__init__(parent)
-        self.f = f
+        self.f = f #TODO: don't call this f - call it data_group or something.
         self.fig = Figure()
         # self.setupUi(self)
         uic.loadUi(os.path.join(os.path.dirname(__file__), 'hdf5_browser.ui'), self)
@@ -88,9 +88,7 @@ class HDF5Browser(QtGui.QWidget, UiTools):
     def on_click(self, item, column):
         item.setExpanded(True)
         h5object = item.data(column, QtCore.Qt.UserRole)
-        renderer_suitabilities = [d.is_suitable(h5object) for d in renderers]
-        max_renderer = max(renderer_suitabilities)
-        best_renderer = renderers[renderer_suitabilities.index(max_renderer)]
+        best_renderer = suitable_renderers(h5object)[0]
         self.figureWidget = self.replace_widget(self.figureWidgetContainer, self.figureWidget, best_renderer(h5object, self))
 
 
