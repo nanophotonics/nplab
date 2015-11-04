@@ -21,7 +21,7 @@ class HyperspectralImage(object):
     miscalled.'''
 
     def __init__(self, file_location,
-                 data_location='hyperspectral_images',
+                 data_location='hyperspectral scans',
                  scan_id=None):
         super(HyperspectralImage, self).__init__()
         self.f, self.scan = load_data(file_location, data_location, scan_id)
@@ -150,27 +150,27 @@ class HyperspectralImage(object):
     # Data properties
     @property
     def spectra(self):
-        ndim = len(self.scan['hs_image'].shape)-1
+        ndim = len(self.scan['spectra'].shape)-1
         if ndim == 2:
-            roi = np.s_[self._y_roi, self._x_roi, self._wavelength_roi]
+            roi = np.s_[self._x_roi, self._y_roi, self._wavelength_roi]
         elif ndim == 3:
-            roi = np.s_[self._z_roi, self._y_roi, self._x_roi, self._wavelength_roi]
-        a = self.scan['hs_image'][roi]
+            roi = np.s_[self._x_roi, self._y_roi, self._z_roi, self._wavelength_roi]
+        a = self.scan['spectra'][roi]
         a = np.where(np.isfinite(a), a, 0.0)
         return a
     @property
     def spectra2(self):
-        if 'wavelength2' in self.scan and 'hs_image2' in self.scan:
-            ndim = len(self.scan['hs_image2'].shape)-1
+        if 'wavelength2' in self.scan and 'spectra2' in self.scan:
+            ndim = len(self.scan['spectra2'].shape)-1
             if ndim == 2:
-                roi = np.s_[self._y_roi, self._x_roi, self._wavelength2_roi]
+                roi = np.s_[self._x_roi, self._y_roi, self._wavelength2_roi]
             elif ndim == 3:
-                roi = np.s_[self._z_roi, self._y_roi, self._x_roi, self._wavelength2_roi]
-            a = self.scan['hs_image2'][roi]
+                roi = np.s_[self._x_roi, self._y_roi, self._z_roi, self._wavelength2_roi]
+            a = self.scan['spectra2'][roi]
             a = np.where(np.isfinite(a), a, 0.0)
             return a
         else:
-            print 'There is no hs_image2 dataset'
+            print 'There is no spectra2 dataset'
 
     def _load_calibrations(self):
         self.fitfunc = lambda x,a,b,c: a*x**2 + b*x + c
@@ -185,7 +185,7 @@ class HyperspectralImage(object):
         name = dataset.name.rsplit('/', 1)[1]
         if name in ['x', 'y', 'z']:
             a = (a - (a.min()+a.max())/2.0)
-        elif 'hs_image' in name:
+        elif 'spectra' in name:
             a = np.where(np.isfinite(a), a, 0.0)
         return a
 
@@ -196,14 +196,14 @@ class HyperspectralImage(object):
         wavelength = self.wavelength2 if polarisation == 2 else self.wavelength
         return wavelength, data
 
-    def get_image(self, wl, polarisation=1, axis=0, axslice=None):
+    def get_image(self, wl, polarisation=1, axis=2, axslice=None):
         """Returns an image at a given wavelength (layer slice)."""
         wavelength, spectra = self.get_spectra(polarisation)
         if spectra.ndim == 3:
             return spectra[:,:, get_nearest(wavelength, wl)]
         elif spectra.ndim > 3:
             assert axslice is not None, 'slice argument required for 3d images'
-            return spectra[axslice, :, :, get_nearest(wavelength, wl)]
+            return spectra[:,:, axslice, get_nearest(wavelength, wl)]
         else:
             return None
 
@@ -219,8 +219,7 @@ class HyperspectralImage(object):
             y_roi = np.s_[:]
         else:
             y_roi = get_roi(self.y, ylims[0], ylims[1])
-        spectra = spectra[axslice, y_roi, x_roi, :] if spectra.ndim > 3 else spectra[y_roi,
-                                                                             x_roi, :]
+        spectra = spectra[x_roi,y_roi,axslice,:] if spectra.ndim > 3 else spectra[x_roi,y_roi,:]
         spectrum = np.mean(spectra, axis=(0,1))
         if return_patch:
             x, y = (self.x[x_roi], self.y[y_roi])
@@ -241,7 +240,7 @@ class HyperspectralImage(object):
         wavelength, spectra = self.get_spectra(polarisation)
         if spectra.ndim > 3:
             assert axslice is not None, 'slice argument required for 3d images'
-            spectra = spectra[axslice,:,:,:]
+            spectra = spectra[:,:,axslice,:]
         img = cr.reconstruct_colour_image(spectra, wavelength, norm)
         return img
 
@@ -251,7 +250,7 @@ class HyperspectralImage(object):
         wavelength, spectra = self.get_spectra(polarisation)
         if spectra.ndim > 3:
             assert axslice is not None, 'slice argument required for 3d images'
-            spectra = spectra[axslice,:,:,:]
+            spectra = spectra[:,:,axslice,:]
         h, w, s = spectra.shape
         img = np.zeros((h,w))
         for pos in product(range(h), range(w)):

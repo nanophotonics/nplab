@@ -73,7 +73,7 @@ class HyperspectralScan(GridScanQt, ScanningExperimentHDF5):
 
     @staticmethod
     def _suffix(i):
-        return '{}'.format(i) if i != 0 else ''
+        return '{}'.format(i+1) if i != 0 else ''
 
     def init_scan(self):
         # these checks are performed in case equipment is set without using the set_ method

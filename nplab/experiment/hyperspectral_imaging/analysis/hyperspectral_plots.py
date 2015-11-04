@@ -84,7 +84,7 @@ def plot_wavelength(hs_image, ax, wl, polarisation=1, wlnorm=True, rescale_axes=
     _format_image_plot(ax, xlabel=xlabel, ylabel=ylabel)
     tx, ty = locs[loc]
     ax.text(tx, ty, str(wl)+' nm', va='top', ha='right',
-            transform=ax.transAxes, color='white', fontsize='small')
+            transform=ax.transAxes, color='white', fontsize='small', fontweight='bold')
     return img
 
 
