@@ -27,9 +27,10 @@ class ThorLabsSC10(Shutter, serial.SerialInstrument):
 
 if __name__ == '__main__':
     import sys
-    from nplab.utils.gui import *
-    app = get_qt_app()
+#    from nplab.utils.gui import *
+#    app = get_qt_app()
     shutter = ThorLabsSC10('COM12')
-    ui = shutter.get_qt_ui()
-    ui.show()
-    sys.exit(app.exec_())
+#    ui = shutter.get_qt_ui()
+#    ui.show()
+#    sys.exit(app.exec_())
+    shutter.show_gui()
