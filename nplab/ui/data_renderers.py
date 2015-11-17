@@ -224,7 +224,7 @@ class DataRenderer2DPG(DataRenderer, QtGui.QWidget):
             data = np.array(self.h5object)
      #       vb.setAspectLocked()
         data = np.transpose(data)
-                
+        data[np.where(np.isnan(data))] = 0        
         img = pg.ImageItem(data)
         vb.addItem(img)
         vb.autoRange()
@@ -369,7 +369,9 @@ class MultiSpectrum2D(DataRenderer, QtGui.QWidget):
             print "Number of spectrum not referenced"+str(reference_counter)
             print "Number of spectrum not background subtracted"+str(background_counter)
         Title = Title + " spectrum"
-                
+         
+        data[np.where(np.isnan(data))] = 0
+
       #  plot.plot(x = np.array(self.h5object.attrs['wavelengths']), y = np.array(h5object),name = h5object.name)
         labelStyle = {'font-size': '14pt'}
         vb.setLabel('left', 'Spectrum number',**labelStyle)
