@@ -413,6 +413,7 @@ class MultiSpectrum2D(DataRenderer, QtGui.QWidget):
         if 'wavelengths' in h5object.attrs.keys():
             if len(h5object.shape) == 1 and len(np.array(h5object.attrs['wavelengths']))<len(np.array(h5object)) and len(np.array(h5object))%len(np.array(h5object.attrs['wavelengths'])) == 0:          
                 suitability = suitability + 30 
+                return suitability
         else:
             return -1
         if len(h5object.shape) == 2 :
