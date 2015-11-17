@@ -443,9 +443,10 @@ class DataRenderer3DPG(DataRenderer, QtGui.QWidget):
         self.display_data()
 
     def display_data(self):
-        
+        data = np.array(self.h5object)
+        data[np.where(np.isnan(data))] = 0 
         img = pg.ImageView()
-        img.setImage(np.array(self.h5object))
+        img.setImage(data)
         img.setMinimumSize(950,750)
         img.view.setAspectLocked(False)
         self.layout.addWidget(img)
@@ -600,6 +601,7 @@ class HyperSpec(DataRenderer, QtGui.QWidget):
 
     def display_data(self):
         data = np.array(self.h5object)
+        data[np.where(np.isnan(data))] = 0 
         XYimg = pg.ImageView(view=pg.PlotItem())
         XZimg = pg.ImageView(view=pg.PlotItem())
         YZimg = pg.ImageView(view=pg.PlotItem())
