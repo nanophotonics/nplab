@@ -2,6 +2,7 @@ __author__ = 'alansanders'
 
 import h5py
 from nplab.utils.gui import *
+from nplab.utils.array_with_attrs import ArrayWithAttrs
 from PyQt4 import uic
 import matplotlib
 
@@ -10,6 +11,7 @@ from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import pyqtgraph as pg
 import numpy as np
+
 
 
 
@@ -531,16 +533,21 @@ add_renderer(DataRendererRGB)
 
 class SpectrumRenderer(FigureRendererPG):
     def display_data(self):
+        if len(self.h5object.shape)==2:
+            h5list = []
+            for line in range(len(self.h5object[:,0])):
+                ldata = np.array(self.h5object)[line]
+                linedata = ArrayWithAttrs(ldata,attrs = self.h5object.attrs)
+                linedata.name = self.h5object.name+"_"+str(line)
+                h5list.append(linedata)
+            self.h5object = h5list
         if type(self.h5object)!=list:
             self.h5object = [self.h5object]
-            
         plot = self.figureWidget
         plot.addLegend(offset = (-1,1))
-        curves =[]
         icolour = 0
         for h5object in self.h5object:
             icolour = icolour+1
-
             Data = np.array(h5object)
             Title = "A"
             if 'background' in h5object.attrs.keys():
@@ -564,7 +571,6 @@ class SpectrumRenderer(FigureRendererPG):
     @classmethod
     def is_suitable(cls, h5object):
         suitability = 0
-        
         if type(h5object)==list:
             for i in h5object:
                 if not isinstance(i, h5py.Dataset):
@@ -574,22 +580,33 @@ class SpectrumRenderer(FigureRendererPG):
             return -1
         if len(h5object.shape) == 1:
             suitability = suitability + 10
-        elif len(h5object.shape) > 1:
+                
+        if len(h5object.shape) > 2:
             return -1
+  
         if 'wavelengths' in h5object.attrs.keys():#
-            if len(h5object.attrs['wavelengths']) != len(np.array(h5object)):
+            if len(h5object.shape) == 2:
+                if len(np.array(h5object)[:,0])<20:
+                    suitability = suitability + len(h5object)-20
+                else:
+                    return -1
+            elif len(h5object.attrs['wavelengths']) != len(np.array(h5object)):
+                print "the number of bins does not equal the number of wavelengths!"
                 return -1
             suitability = suitability + 10
         else:
             return -1
+         
         if 'background' in h5object.attrs.keys():
             suitability = suitability + 10
         if 'reference' in h5object.attrs.keys():
             suitability = suitability + 10
-        if 'wavelengths' in h5object.attrs.keys():#
-            if len(h5object.attrs['wavelengths']) != len(np.array(h5object)):
-                return -1
-            suitability = suitability + 10
+     #   if 'wavelengths' in h5object.attrs.keys():#
+      #      if len(h5object.attrs['wavelengths']) != len(np.array(h5object)):
+       #         return -1
+         #   suitability = suitability + 10
+
+                      
         return suitability    
 #            
 add_renderer(SpectrumRenderer)    
