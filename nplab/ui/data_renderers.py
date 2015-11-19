@@ -400,15 +400,20 @@ class MultiSpectrum2D(DataRenderer, QtGui.QWidget):
     def is_suitable(cls, h5object):
         suitability = 0
         if type(h5object) == list:
+            setshape = np.shape(h5object[0])
             for listitem in h5object:
+                if not isinstance(listitem, h5py.Dataset):
+                    return -1
                 if len(np.shape(listitem)) != 1 :
                     return -1
-            if 'background' in h5object[0]:
-                suitability = suitability + 9
-            if 'reference' in h5object[0]:
-                suitability = suitability + 9
+                if np.shape(listitem) != setshape: # only suitable for spectrum of equal size
+                    return -1               
             if 'wavelengths' in h5object[0]:
                 suitability = suitability + 9
+                if 'background' in h5object[0]:
+                    suitability = suitability + 9
+                if 'reference' in h5object[0]:
+                    suitability = suitability + 9
             return suitability 
         elif not isinstance(h5object, h5py.Dataset):
             return -1
