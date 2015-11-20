@@ -664,14 +664,14 @@ add_renderer(SpectrumRenderer)
 
 
 class HyperSpec(DataRenderer, QtGui.QWidget):
-    """ A renderer for large spectral datasets experessing them in a colour map using
+    """ A renderer for large hyper spectral datasets experessing them in a colour map using
     pyqt graph. Allowing the user to interact with the graph i.e. zooming into 
     selected region and changing the colour scheme through the use of a histogramLUT 
-    widget on the right of the image.
+    widget on the right of the image. A slider is also available to change the current
+    wavelength shown in the image.
     
-    If a background and/or reference are within the attributes for the datafile 
-    they will also be applied. 
-    
+    X/y/z attributes will be used as axis on the plots if available.
+
     """
     def __init__(self, h5object, parent=None):
         super(HyperSpec, self).__init__(h5object, parent)
@@ -684,78 +684,90 @@ class HyperSpec(DataRenderer, QtGui.QWidget):
     def display_data(self):
         data = np.array(self.h5object)
         data[np.where(np.isnan(data))] = 0 
-        XYimg = pg.ImageView(view=pg.PlotItem())
-        XZimg = pg.ImageView(view=pg.PlotItem())
-        YZimg = pg.ImageView(view=pg.PlotItem())
         
-        Xmidpoint = int(np.shape(data)[0]/2)
-        Ymidpoint = int(np.shape(data)[1]/2)
-        Zmidpoint = int(np.shape(data)[2]/2)
+        dims = len(np.shape(data))
         
-        XYdata = np.transpose(data[:,:,Zmidpoint,:])
-        XZdata = np.transpose(data[:,Ymidpoint,:,:])
-        YZdata = np.transpose(data[Xmidpoint,:,:,:])
-        print np.shape(XYdata)
+        Images = []
+        midpoints = []
         
-        XYimg.setImage(XYdata,xvals = np.array(self.h5object.attrs['wavelengths']),autoHistogramRange = True)
-        XZimg.setImage(XZdata,xvals = np.array(self.h5object.attrs['wavelengths']),autoHistogramRange = True)
-        YZimg.setImage(YZdata,xvals = np.array(self.h5object.attrs['wavelengths']),autoHistogramRange = True)
+        for dim in range(dims-1):
+            Images.append(pg.ImageView(view=pg.PlotItem()))
+            midpoints.append(int(np.shape(data)[dim]/2))
+
+     
+        Imagedata = []
         
-        XConvertionC = 0
+        Imagedata.append(np.transpose(data[:,:,midpoints[2],:]))
+        Imagedata.append(np.transpose(data[:,midpoints[1],:,:]))
+        Imagedata.append(np.transpose(data[midpoints[0],:,:,:]))
+        
         XConvertionM = 1
-        YConvertionC = 0
-        YConvertionM = 1            
-        ZConvertionC = 0
+        YConvertionM = 1        
         ZConvertionM = 1
-
-        XYimg.getView().setTitle("X(Y)")
-        XZimg.getView().setTitle("X (Z)")
-        YZimg.getView().setTitle("Y(Z)")  
-
         
         if len(self.h5object.attrs['x']) > 1:
-           XConvertionC= self.h5object.attrs['x'][0]
            XConvertionM = self.h5object.attrs['x'][1] - self.h5object.attrs['x'][0]
         if len(self.h5object.attrs['y']) > 1:
-            YConvertionC= self.h5object.attrs['y'][0]
-            YConvertionM = self.h5object.attrs['y'][1] - self.h5object.attrs['y'][0]
+            YConvertionM = self.h5object.attrs['y'][1] - self.h5object.attrs['y'][0]                    
         if len(self.h5object.attrs['z']) > 1:
-            ZConvertionC= self.h5object.attrs['z'][0]
             ZConvertionM = self.h5object.attrs['z'][1] - self.h5object.attrs['z'][0]
+            
+        convertionfactors = [[YConvertionM,XConvertionM],[ZConvertionM,XConvertionM],[ZConvertionM,YConvertionM]]
+        
+        labels = [["X","Y"],["X","Z"],["Y","Z"]]
+                
+        for imgNum in range(len(Imagedata)):
+            if len(Imagedata[imgNum][0,0,:]) == 1:
+                Imagedata[imgNum] = np.swapaxes(Imagedata[imgNum],1,2)
+                con = convertionfactors[imgNum][1]
+                convertionfactors[imgNum][1] = convertionfactors[imgNum][0]
+                convertionfactors[imgNum][0] = con
+                
+                conlabel = labels[imgNum][0]
+                labels[imgNum][0] = labels[imgNum][1]
+                labels[imgNum][1] = conlabel
 
-        XYimg.getImageItem().translate(XConvertionC,YConvertionC)
-        XYimg.getImageItem().scale(XConvertionM,YConvertionM)
-        XZimg.getImageItem().translate(XConvertionC,ZConvertionC)
-        XZimg.getImageItem().scale(XConvertionM,ZConvertionM)
-        YZimg.getImageItem().translate(YConvertionC,ZConvertionC)
-        YZimg.getImageItem().scale(YConvertionM,ZConvertionM)
+  
+        
+        for imgNom in range(len(Images)):
+            Images[imgNom].setImage(Imagedata[imgNom],xvals = np.array(self.h5object.attrs['wavelengths']),autoHistogramRange = True)
+      
 
-        XYimg.autoLevels()
-        XYimg.autoRange()
-        XZimg.autoLevels()
-        XZimg.autoRange()
-        YZimg.autoLevels()
-        YZimg.autoRange()
+        
+ 
+       
+    
+        Images[0].getImageItem().scale(convertionfactors[0][0],convertionfactors[0][1])
+       # XYimg.getImageItem().translate(YConvertionC,XConvertionC)
+        
+        Images[1].getImageItem().scale(convertionfactors[1][0],convertionfactors[1][1])
+       # XZimg.getImageItem().translate(ZConvertionC,XConvertionC)
+        
+        Images[2].getImageItem().scale(convertionfactors[2][0], convertionfactors[2][1])
+      #  YZimg.getImageItem().translate(ZConvertionC,YConvertionC)
         
         
-        XYimg.ui.roiBtn.hide()
-        XYimg.ui.menuBtn.hide()       
-        XZimg.ui.roiBtn.hide()
-        XZimg.ui.menuBtn.hide()
-        YZimg.ui.roiBtn.hide()
-        YZimg.ui.menuBtn.hide()
+               
         
-        XYimg.setMinimumSize(750,550)
-        XZimg.setMinimumSize(750,550)
-        YZimg.setMinimumSize(750,550)
-        
-        XYimg.view.setAspectLocked(False)
-        XZimg.view.setAspectLocked(False)
-        YZimg.view.setAspectLocked(False)
-        
-        self.layout.addWidget(XYimg,0,0)
-        self.layout.addWidget(XZimg,0,1)
-        self.layout.addWidget(YZimg,1,0)
+   #     Images[0].getView().setTitle("X(Y)")
+    #    Images[1].getView().setTitle("X(Z)")
+     #   Images[2].getView().setTitle("Y(Z)")  
+
+        for imgNom in range(len(Images)): 
+            Images[imgNom].autoLevels()
+            Images[imgNom].autoRange()
+            Images[imgNom].ui.roiBtn.hide()
+            Images[imgNom].ui.menuBtn.hide() 
+            Images[imgNom].setMinimumSize(550,350)
+            Images[imgNom].view.setAspectLocked(False)
+            
+            Images[imgNom].getView().setTitle(labels[imgNom][0]+"("+labels[imgNom][1]+")")
+            Images[imgNom].getView().setLabel("left" , labels[imgNom][0])
+            Images[imgNom].getView().setLabel("bottom" , labels[imgNom][1])
+      
+        self.layout.addWidget(Images[0],0,0)
+        self.layout.addWidget(Images[1],0,1)
+        self.layout.addWidget(Images[2],1,0)
         
         
         self.setLayout(self.layout)
