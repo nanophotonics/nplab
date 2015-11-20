@@ -62,6 +62,7 @@ hdf5_info_base, hdf5_info_widget = uic.loadUiType(os.path.join(os.path.dirname(_
 
 
 class HDF5InfoRenderer(DataRenderer, hdf5_info_base, hdf5_info_widget):
+    """ A renderer returning the basic HDF5 info"""
     def __init__(self, h5object, parent=None):
         super(HDF5InfoRenderer, self).__init__(h5object, parent)
         self.parent = parent
@@ -83,6 +84,7 @@ class HDF5InfoRenderer(DataRenderer, hdf5_info_base, hdf5_info_widget):
 add_renderer(HDF5InfoRenderer)
 
 class TextRenderer(DataRenderer, QtGui.QWidget):
+    """A renderer returning the objects name type and shape if a dataset object"""
     def __init__(self, h5object, parent=None):
         super(TextRenderer, self).__init__(h5object, parent)
         
@@ -106,6 +108,7 @@ add_renderer(TextRenderer)
 
 
 class AttrsRenderer(TextRenderer):
+    """ A renderer displaying the Attributes of the HDF5 object selected"""
     def text(self, h5object):
         text = "Attributes:\n"
         for key, value in h5object.attrs.iteritems():
@@ -118,6 +121,9 @@ class AttrsRenderer(TextRenderer):
 add_renderer(AttrsRenderer)
 
 class FigureRenderer(DataRenderer, QtGui.QWidget):
+    """A renderer class which sets up a matplotlib figure for use 
+    in more complicated renderers
+    """
     def __init__(self, h5object, parent=None):
         super(FigureRenderer, self).__init__(h5object, parent)
         self.fig = Figure()
@@ -133,6 +139,9 @@ class FigureRenderer(DataRenderer, QtGui.QWidget):
         self.fig.canvas.draw()
 
 class FigureRendererPG(DataRenderer, QtGui.QWidget):
+    """A renderer class which sets up a pyqtgraph for use 
+    in more complicated renderers
+    """
     def __init__(self, h5object, parent=None):
         super(FigureRendererPG, self).__init__(h5object, parent)
         pg.setConfigOption('background', 'w')
@@ -149,6 +158,10 @@ class FigureRendererPG(DataRenderer, QtGui.QWidget):
 #        
 #        
 class DataRenderer1DPG(FigureRendererPG):
+    """ A renderer for 1D datasets experessing them in a line graph using
+    pyqt graph. Allowing the user to interact with the graph i.e. zooming into 
+    selected region or performing transformations of the axis
+    """
     def display_data(self):
        # plot = self.figureWidget.plot()
         if type(self.h5object)!= list:
@@ -167,10 +180,7 @@ class DataRenderer1DPG(FigureRendererPG):
                 Ydata = np.array(h5object)
                 Xdata = np.arange(len(Ydata))
             self.figureWidget.plot(x = Xdata, y = Ydata,name = h5object.name, pen =(icolour,len(self.h5object)))
-            icolour = icolour + 1
-       # plot.setPen((200,200,100), width = 2)
-    #    plot.setData(self.h5object)
-        
+            icolour = icolour + 1        
         self.figureWidget.setLabel('left', 'A Y axis')
         self.figureWidget.setLabel('bottom', 'An X axis')
         
@@ -185,13 +195,18 @@ class DataRenderer1DPG(FigureRendererPG):
             return 11
         elif np.shape(h5object)[0] == 2 or np.shape(h5object)[1] == 2:
             return 12           
-            
+
         elif len(h5object.shape) > 1:
             return -1
 #            
 add_renderer(DataRenderer1DPG)
 
 class DataRenderer2DPG(DataRenderer, QtGui.QWidget):
+    """ A renderer for 2D datasets images experessing them in a colour map using
+    pyqt graph. Allowing the user to interact with the graph i.e. zooming into 
+    selected region and changing the colour scheme through the use of a histogramLUT 
+    widget on the right of the image.
+    """
     def __init__(self, h5object, parent=None):
         super(DataRenderer2DPG, self).__init__(h5object, parent)
         pg.setConfigOption('background', 'w')
@@ -203,10 +218,6 @@ class DataRenderer2DPG(DataRenderer, QtGui.QWidget):
         self.display_data()
 
     def display_data(self):
-#        if type(self.h5object) == list:
-#            print " multiple data sets recived"
-#        else:
-
         v = pg.GraphicsView()
         vb = pg.ViewBox()
 
@@ -215,7 +226,6 @@ class DataRenderer2DPG(DataRenderer, QtGui.QWidget):
     
         w = pg.HistogramLUTWidget()
         self.layout.addWidget(w, 0, 1)
-   #     print "\n"+str(np.shape(np.array(self.h5object)))+"\n"
         if type(self.h5object)==list:
             for i in range(len(self.h5object)):
                 if i == 0:    
@@ -255,6 +265,11 @@ class DataRenderer2DPG(DataRenderer, QtGui.QWidget):
 add_renderer(DataRenderer2DPG)
 
 class DataRenderer2DRBGPG(DataRenderer, QtGui.QWidget):
+    """ A renderer for 2D pictures/RGB images experessing them in a colour map using
+    pyqt graph. Allowing the user to interact with the graph i.e. zooming into 
+    selected region and changing the colour scheme through the use of a histogramLUT 
+    widget on the right of the image.
+    """
     def __init__(self, h5object, parent=None):
         super(DataRenderer2DRBGPG, self).__init__(h5object, parent)
         pg.setConfigOption('background', 'w')
@@ -291,6 +306,19 @@ add_renderer(DataRenderer2DRBGPG)
 
 
 class MultiSpectrum2D(DataRenderer, QtGui.QWidget):
+    """ A renderer for large spectral datasets experessing them in a colour map using
+    pyqt graph. Allowing the user to interact with the graph i.e. zooming into 
+    selected region and changing the colour scheme through the use of a histogramLUT 
+    widget on the right of the image.
+    
+    If a background and/or reference are within the attributes for the datafile 
+    they will also be applied. If this is the case it will be expressed in the 
+    title of the colourmap.
+    
+    This renderer is also avaible for users attempting to look at multiple spectra 
+    in seperate datasets at the same time through selection while pressing
+    control/shift as used in most windows apps.
+    """
     def __init__(self, h5object, parent=None):
         super(MultiSpectrum2D, self).__init__(h5object, parent)
         pg.setConfigOption('background', 'w')
@@ -439,6 +467,12 @@ class MultiSpectrum2D(DataRenderer, QtGui.QWidget):
 add_renderer(MultiSpectrum2D)
 
 class DataRenderer3DPG(DataRenderer, QtGui.QWidget):
+    """ A renderer for 2D datasets images experessing them in a colour map using
+    pyqt graph. Allowing the user to interact with the graph i.e. zooming into 
+    selected region and changing the colour scheme through the use of a histogramLUT 
+    widget on the right of the image while also allowing the user to scroll through the
+    frames that make the image 3-d dimensional.
+    """
     def __init__(self, h5object, parent=None):
         super(DataRenderer3DPG, self).__init__(h5object, parent)
         pg.setConfigOption('background', 'w')
@@ -475,6 +509,10 @@ add_renderer(DataRenderer3DPG)
 
    
 class DataRenderer1D(FigureRenderer):
+    """ A renderer for 1D datasets experessing them in a line graph using
+    matplotlib. Allow this does not allow the user to interact with the
+    figure it is often found to be more stable.
+    """
     def display_data(self):
         ax = self.fig.add_subplot(111)
         ax.plot(self.h5object)
@@ -496,6 +534,10 @@ add_renderer(DataRenderer1D)
 
 
 class DataRenderer2D(FigureRenderer):
+    """ A renderer for 2D datasets experessing them in a colourmap graph using
+    matplotlib. Allow this does not allow the user to interact with the
+    figure it is often found to be more stable.
+    """
     def display_data(self):
         ax = self.fig.add_subplot(111)
         ax.imshow(self.h5object, aspect="auto", cmap="cubehelix")
@@ -514,7 +556,10 @@ add_renderer(DataRenderer2D)
 
 
 class DataRendererRGB(FigureRenderer):
-    """This renderer is suitable for showing RGB images"""
+    """ A renderer for RGB images/datasets experessing them in a colourmap graph using
+    matplotlib. Allow this does not allow the user to interact with the
+    figure it is often found to be more stable.
+    """
     def display_data(self):
         ax = self.fig.add_subplot(111)
         ax.imshow(self.h5object)
@@ -532,6 +577,18 @@ class DataRendererRGB(FigureRenderer):
 add_renderer(DataRendererRGB)
 
 class SpectrumRenderer(FigureRendererPG):
+    """ A renderer for  spectral datasets experessing them in a line graph using
+    pyqt graph. Allowing the user to interact with the graph i.e. zooming into 
+    selected region or performing mathematical transfomations on the axis
+    
+    If a background and/or reference are within the attributes for the datafile 
+    they will also be applied. If this is the case it will be expressed in the 
+    title of the graph.
+    
+    This renderer is also avaible for users attempting to look at multiple spectra 
+    in seperate datasets at the same time through selection while pressing
+    control/shift as used in most windows apps.
+    """
     def display_data(self):
         if len(self.h5object.shape)==2:
             h5list = []
@@ -600,19 +657,22 @@ class SpectrumRenderer(FigureRendererPG):
         if 'background' in h5object.attrs.keys():
             suitability = suitability + 10
         if 'reference' in h5object.attrs.keys():
-            suitability = suitability + 10
-     #   if 'wavelengths' in h5object.attrs.keys():#
-      #      if len(h5object.attrs['wavelengths']) != len(np.array(h5object)):
-       #         return -1
-         #   suitability = suitability + 10
-
-                      
+            suitability = suitability + 10                
         return suitability    
 #            
 add_renderer(SpectrumRenderer)    
 
 
 class HyperSpec(DataRenderer, QtGui.QWidget):
+    """ A renderer for large spectral datasets experessing them in a colour map using
+    pyqt graph. Allowing the user to interact with the graph i.e. zooming into 
+    selected region and changing the colour scheme through the use of a histogramLUT 
+    widget on the right of the image.
+    
+    If a background and/or reference are within the attributes for the datafile 
+    they will also be applied. 
+    
+    """
     def __init__(self, h5object, parent=None):
         super(HyperSpec, self).__init__(h5object, parent)
         pg.setConfigOption('background', 'w')
