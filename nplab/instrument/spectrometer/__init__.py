@@ -18,6 +18,7 @@ import os
 import inspect
 import datetime
 from nplab.instrument import Instrument
+import warnings
 
 
 class Spectrometer(Instrument):
@@ -54,6 +55,11 @@ class Spectrometer(Instrument):
     config_file = property(open_config_file)
 
     def update_config(self, name, data):
+        """Update the configuration file for this spectrometer.
+        
+        A file is created in the nplab directory that holds configuration
+        data for the spectrometer, including reference/background.  This
+        function allows values to be stored in that file."""
         f = self.config_file
         if name not in f:
             f.create_dataset(name, data=data)
@@ -63,6 +69,7 @@ class Spectrometer(Instrument):
             f.flush()
 
     def get_model_name(self):
+        """The model name of the spectrometer."""
         if self._model_name is None:
             self._model_name = 'model_name'
         return self._model_name
@@ -70,6 +77,8 @@ class Spectrometer(Instrument):
     model_name = property(get_model_name)
 
     def get_serial_number(self):
+        """The spectrometer's serial number (as a string)."""
+        warnings.warn("Using the default implementation for get_serial_number: this should be overridden!",DeprecationWarning)
         if self._serial_number is None:
             self._serial_number = 'serial_number'
         return self._serial_number
@@ -77,14 +86,21 @@ class Spectrometer(Instrument):
     serial_number = property(get_serial_number)
 
     def get_integration_time(self):
+        """The integration time of the spectrometer (this function is a stub)!"""
+        warnings.warn("Using the default implementation for integration time: this should be overridden!",DeprecationWarning)
         return 0
 
     def set_integration_time(self, value):
+        """Set the integration time of the spectrometer (this is a stub)!"""
+        warnings.warn("Using the default implementation for integration time: this should be overridden!",DeprecationWarning)
         print 'setting 0'
 
     integration_time = property(get_integration_time, set_integration_time)
 
     def get_wavelengths(self):
+        """An array of wavelengths corresponding to the spectrometer's pixels."""
+        warnings.warn("Using the default implementation for wavelengths: this should be overridden!",DeprecationWarning)
+
         if self._wavelengths is None:
             self._wavelengths = np.arange(400,1200,1)
         return self._wavelengths
@@ -92,6 +108,8 @@ class Spectrometer(Instrument):
     wavelengths = property(get_wavelengths)
 
     def read_spectrum(self):
+        """Take a reading on the spectrometer and return it"""
+        warnings.warn("Using the default implementation for read_spectrum: this should be overridden!",DeprecationWarning)
         self.latest_raw_spectrum = np.zeros(0)
         return self.latest_raw_spectrum
 

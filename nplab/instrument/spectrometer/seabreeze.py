@@ -43,6 +43,7 @@ from PyQt4 import uic
 import h5py
 import inspect
 import datetime
+from nplab.utils.array_with_attrs import ArrayWithAttrs
 
 try:
     seabreeze = ctypes.cdll.seabreeze
@@ -120,23 +121,12 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
     @staticmethod
     def shutdown_seabreeze():
         """shut down seabreeze, useful if anything has gone wrong"""
-        seabreeze.seabreeze_shutdown()
+        shutdown_seabreeze()
 
     @classmethod
     def list_spectrometers(cls):
-        """list all spectrometers available"""
-        spectrometers = []
-        n = 0
-        try:
-            while True:  # we stop when we run out of spectrometers, signified by an exception
-                # the line below creates a spectrometer, initialises, gets the serial number, and closes again
-                spectrometers.append(cls(n).serial_number)
-                # if the spectrometer does not exist, it raises an exception.
-                n += 1
-        except OceanOpticsError:
-            pass
-        finally:
-            return spectrometers
+        """List the serial numbers of all spectrometers connected to the computer"""
+        return list_spectrometers()
 
     @classmethod
     def get_spectrometer_instances(cls):
@@ -159,7 +149,11 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
 
     @classmethod
     def get_current_spectrometers(cls):
-        """get a Spectrometers instance containing all previously instanced spectrometers"""
+        """Return the currently-open spectrometers, or all spectrometers.
+        
+        If one or more spectrometers are currently open, create a Spectrometers
+        wrapper and include them in it.  If not, attempt to open and wrap all
+        spectrometers connected to the computer."""
         instances = cls.get_instances()
         print instances
         if instances == []:
@@ -168,7 +162,7 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
             return Spectrometers(instances)
 
     def __init__(self, index):
-        """initialise the spectrometer"""
+        """Initialise the spectrometer"""
         self.index = index  # the spectrometer's ID, used by all seabreeze functions
         self._comms_lock = threading.RLock()
         self._isOpen = False
@@ -180,8 +174,8 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
         self.enable_tec = True
 
     def __del__(self):
-        super(OceanOpticsSpectrometer, self).__del__()
         self._close()
+        super(OceanOpticsSpectrometer, self).__del__()
         return self
 
     def _open(self, force=False):
@@ -227,6 +221,7 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
     model_name = property(get_model_name)
 
     def get_serial_number(self):
+        """The spectrometer's serial number."""
         if self._serial_number is None:
             N = 32  # make a buffer for the DLL to return a string into
             s = ctypes.create_string_buffer(N)
@@ -239,7 +234,7 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
     serial_number = property(get_serial_number)
 
     def get_usb_descriptor(self, id):
-        """get the spectrometer's USB descriptor"""
+        """The spectrometer's USB descriptor"""
         N = 32  # make a buffer for the DLL to return a string into
         s = ctypes.create_string_buffer(N)
         e = ctypes.c_int()
@@ -248,15 +243,18 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
         return s.value
 
     def get_integration_time(self):
-        """return the last set integration time"""
-        # note there is no API call to get the integration time
+        """The current integration time.
+        
+        The SeaBreeze API doesn't seem to allow us to get the current integration time, so 
+        we work around it by cacheing the last used integration time.  Note that this will 
+        return None if you've not set the integration time."""
         if hasattr(self, "_latest_integration_time"):
             return self._latest_integration_time
         else:
             return None
 
     def set_integration_time(self, milliseconds):
-        """set the integration time"""
+        """Set the integration time"""
         e = ctypes.c_int()
         if milliseconds < self.minimum_integration_time:
             raise ValueError("Cannot set integration time below %d microseconds" % self.minimum_integration_time)
@@ -267,7 +265,7 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
     integration_time = property(get_integration_time, set_integration_time)
 
     def get_minimum_integration_time(self):
-        """minimum allowable value for integration time"""
+        """Minimum allowable value for integration time"""
         if self._minimum_integration_time is None:
             e = ctypes.c_int()
             min_time = seabreeze.seabreeze_get_minimum_integration_time_micros(self.index, byref(e))
@@ -278,12 +276,11 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
     minimum_integration_time = property(get_minimum_integration_time)
 
     def get_tec_enable(self):
+        """Whether or not the thermo-electric cooler is enabled."""
         return self._tec_enabled
 
     def set_tec_enable(self, state=True):
-        """
-        Turn the cooling system on or off.
-        """
+        """Turn the cooling system on or off."""
         e = ctypes.c_int()
         seabreeze.seabreeze_set_tec_enable(self.index, byref(e), c_int(state))
         check_error(e)
@@ -292,7 +289,7 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
     enable_tec = property(get_tec_enable, set_tec_enable)
 
     def get_tec_temperature(self):
-        """get current temperature"""
+        """Current temperature."""
         e = ctypes.c_int()
         read_tec_temperature = seabreeze.seabreeze_read_tec_temperature
         read_tec_temperature.restype = c_double
@@ -301,7 +298,7 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
         return temperature
 
     def set_tec_temperature(self, temperature):
-        """enable the cooling system and set the temperature"""
+        """Enable the cooling system and set the temperature"""
         if not self.enable_tec:
             self.enable_tec = True
         e = ctypes.c_int()
@@ -323,23 +320,31 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
         return np.array(list(wavelengths_carray))
 
     def get_wavelengths(self):
-        """Return the cached wavelengths property"""
+        """Wavelength values for each pixel.  
+        
+        NB this caches the value so it's only retrieved from the spectrometer once."""
         if self._wavelengths is None:
             self._wavelengths = self.read_wavelengths()
         return self._wavelengths
 
     wavelengths = property(get_wavelengths)
 
-    def read_spectrum(self):
-        """get the current reading from the spectrometer's sensor"""
-        self._comms_lock.acquire()
+    def read_spectrum(self, bundle_metadata=False):
+        """Get the current reading from the spectrometer's sensor.
+        
+        Acquire a new spectrum and return it.  If bundle_metadata is true, this will be
+        returned as an ArrayWithAttrs, including the current metadata."""
         e = ctypes.c_int()
         N = seabreeze.seabreeze_get_formatted_spectrum_length(self.index, byref(e))
-        spectrum_carray = (c_double * N)()  # this should create a c array of doubles, length N
-        seabreeze.seabreeze_get_formatted_spectrum(self.index, byref(e), byref(spectrum_carray), N)
-        self._comms_lock.release()  # NB we release the lock before throwing exceptions
+        with self._comms_lock:
+            spectrum_carray = (c_double * N)()  # this should create a c array of doubles, length N
+            seabreeze.seabreeze_get_formatted_spectrum(self.index, byref(e), byref(spectrum_carray), N)
         check_error(e)  # throw an exception if something went wrong
-        return np.array(list(spectrum_carray))
+        new_spectrum = np.array(list(spectrum_carray))
+        if bundle_metadata:
+            return ArrayWithAttrs(new_spectrum, attrs=self.metadata)
+        else:
+            return new_spectrum
 
     def get_qt_ui(self, control_only=False):
         """Return a Qt Widget for controlling the spectrometer.
