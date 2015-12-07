@@ -19,6 +19,14 @@ nplab.experiment.hyperspectral_imaging.analysis.hyperspectral_imaging module
     :undoc-members:
     :show-inheritance:
 
+nplab.experiment.hyperspectral_imaging.analysis.hyperspectral_imaging_legacy module
+-----------------------------------------------------------------------------------
+
+.. automodule:: nplab.experiment.hyperspectral_imaging.analysis.hyperspectral_imaging_legacy
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 nplab.experiment.hyperspectral_imaging.analysis.hyperspectral_plots module
 --------------------------------------------------------------------------
 

@@ -36,6 +36,22 @@ nplab.utils.gui module
     :undoc-members:
     :show-inheritance:
 
+nplab.utils.image module
+------------------------
+
+.. automodule:: nplab.utils.image
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+nplab.utils.log module
+----------------------
+
+.. automodule:: nplab.utils.log
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 nplab.utils.send_mail module
 ----------------------------
 

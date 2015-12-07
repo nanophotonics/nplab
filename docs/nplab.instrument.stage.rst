@@ -4,6 +4,14 @@ nplab.instrument.stage package
 Submodules
 ----------
 
+nplab.instrument.stage.PyAPT module
+-----------------------------------
+
+.. automodule:: nplab.instrument.stage.PyAPT
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 nplab.instrument.stage.camera_stage_mapper module
 -------------------------------------------------
 

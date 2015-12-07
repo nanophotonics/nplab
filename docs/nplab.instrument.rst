@@ -7,6 +7,7 @@ Subpackages
 .. toctree::
 
     nplab.instrument.camera
+    nplab.instrument.ccd
     nplab.instrument.electronics
     nplab.instrument.light_sources
     nplab.instrument.shutter
