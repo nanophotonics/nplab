@@ -379,10 +379,10 @@ class MultiSpectrum2D(DataRenderer, QtGui.QWidget):
             if 'reference' in self.h5object[i].attrs.keys():
                 if ListData == True:
                     if len(np.array(data[i])) == len(np.array(self.h5object[i].attrs['reference'])):
-                        data[i] = data[i]/np.array(self.h5object[i].attrs['reference'])     
+                        data[i] = data[i]/(np.array(self.h5object[i].attrs['reference'])- np.array(self.h5object[i].attrs['background']))   
                 else:
                     if len(np.array(data)) == len(np.array(self.h5object[i].attrs['reference'])):
-                        data = data/np.array(self.h5object[i].attrs['reference'])[:,np.newaxis]
+                        data = data/(np.array(self.h5object[i].attrs['reference'])[:,np.newaxis]- np.array(self.h5object[i].attrs['background'])[:,np.newaxis])
                 Title = Title + " referenced"
             else:
                 reference_counter = reference_counter +1
@@ -590,7 +590,9 @@ class SpectrumRenderer(FigureRendererPG):
     control/shift as used in most windows apps.
     """
     def display_data(self):
-        if len(self.h5object.shape)==2:
+        if type(self.h5object)==list:
+            print "Merging multiple datasets"
+        elif len(self.h5object.shape)==2:
             h5list = []
             for line in range(len(self.h5object[:,0])):
                 ldata = np.array(self.h5object)[line]
@@ -598,7 +600,7 @@ class SpectrumRenderer(FigureRendererPG):
                 linedata.name = self.h5object.name+"_"+str(line)
                 h5list.append(linedata)
             self.h5object = h5list
-        if type(self.h5object)!=list:
+        elif type(self.h5object)!=list:
             self.h5object = [self.h5object]
         plot = self.figureWidget
         plot.addLegend(offset = (-1,1))
@@ -611,10 +613,10 @@ class SpectrumRenderer(FigureRendererPG):
                 if len(np.array(h5object)) == len(np.array(h5object.attrs['background'])):
                     Data = Data - np.array(h5object.attrs['background'])
                     Title = Title + " background subtracted"
-            if 'reference' in h5object.attrs.keys():
-                if len(np.array(h5object)) == len(np.array(h5object.attrs['reference'])):
-                    Data = Data/np.array(h5object.attrs['reference'])
-                    Title = Title + " referenced"
+                if 'reference' in h5object.attrs.keys():
+                    if len(np.array(h5object)) == len(np.array(h5object.attrs['reference'])):
+                        Data = Data/(np.array(h5object.attrs['reference'])- np.array(h5object.attrs['background']))
+                        Title = Title + " referenced"
     
             plot.plot(x = np.array(h5object.attrs['wavelengths']), y = np.array(Data),name = h5object.name, pen =(icolour,len(self.h5object)) )
             Title = Title + " spectrum"
@@ -783,7 +785,82 @@ class HyperSpec(DataRenderer, QtGui.QWidget):
             return -1
 
 add_renderer(HyperSpec)
-    
+
+
+class PumpProbeRaw(DataRenderer, QtGui.QWidget):
+    ''' A renderer for Pump probe experiments, leaving the data un changed'''
+    """ A renderer for 1D datasets experessing them in a line graph using
+    pyqt graph. Allowing the user to interact with the graph i.e. zooming into 
+    selected region or performing transformations of the axis
+    """
+    def __init__(self, h5object, parent=None):
+        super(PumpProbeRaw, self).__init__(h5object, parent)
+        pg.setConfigOption('background', 'w')
+        pg.setConfigOption('foreground', 'k')
+        self.layout = QtGui.QGridLayout()
+        self.setLayout(self.layout)
+        self.display_data()
+        
+    def display_data(self):
+       # plot = self.figureWidget.plot()
+        if type(self.h5object)!= list:
+            self.h5object = [self.h5object]
+        icolour = 0    
+        Plots = []
+        axes ={0 : 'X',1 : 'Y', 2 : 'R'}
+        
+        for axis in axes:
+            Plots.append(pg.PlotWidget())
+            
+        
+        for h5object in self.h5object:
+            for axis in axes.keys():
+                data = np.array(self.h5object)
+                print np.shape(data)
+                Plots[axis].plot(x = data[0,:,5], y = data[0,:,axis],name = h5object.name,pen =(icolour,len(self.h5object)))
+                Plots[axis].setLabel('left',axes[axis]+" (V)")
+                Plots[axis].setLabel('bottom', 'Time (ps)')
+            icolour = icolour + 1        
+
+        for plot in Plots:
+            plot.addLegend(offset = (-1,1))
+        self.layout.addWidget(Plots[0],0,0)
+        self.layout.addWidget(Plots[1],0,1)
+        self.layout.addWidget(Plots[2],1,0)
+   
+    @classmethod
+    def is_suitable(cls, h5object):
+        suitability = 0
+        if type(h5object) == list:
+            h5object = h5object[0]
+        if not isinstance(h5object, h5py.Dataset):
+            return -1
+        if len(h5object.shape) == 2:
+            if h5object.shape[1] == 6:
+                suitability = suitability + 11
+        elif len(h5object.shape) > 2:
+            return -1
+        if 'repeats' in h5object.attrs.keys():
+            suitability = suitability + 10
+        if 'start' in h5object.attrs.keys():
+            suitability = suitability + 10
+        if 'finish' in h5object.attrs.keys():
+            suitability = suitability + 10
+        if 'stepsize' in h5object.attrs.keys():
+            suitability = suitability + 10
+        if 'velocity' in h5object.attrs.keys():
+            suitability = suitability + 10      
+        if 'acceleration' in h5object.attrs.keys():
+            suitability = suitability + 10    
+        if 'filter' in h5object.attrs.keys():
+            suitability = suitability + 10      
+        if 'sensitivity' in h5object.attrs.keys():
+            suitability = suitability + 10    
+        return suitability
+            
+#            
+add_renderer(PumpProbeRaw)
+        
 if __name__ == '__main__':
     import sys, h5py, os, numpy as np
 
