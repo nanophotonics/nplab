@@ -3,7 +3,7 @@
 # but it does need us to be in a git repository
 
 import nplab
-import os, sys
+import os, sys, platform
 
 class GitFolderMissing(Exception):
     """Exception to be raised if the git folder is not found."""
@@ -33,7 +33,41 @@ def latest_commit():
     f.close()
     return sha1
 
-if __name__ == '__main__':
-    print "Current branch: " + os.path.join(git_folder(),*(current_branch().split('/')))
-    print "Current commit: " + latest_commit()
+def all_module_versions_string():
+    """A string containing the version of all loaded modules with accessible version info."""
+    modulestring = ""
+    for m in sys.modules.values():
+        try:
+            modulestring += m.__name__ + ": " + m.__version__ + "\n"
+        except:
+            pass
+    return modulestring
 
+def platform_string():
+    """A string identifying the platform (OS, Python version, etc.)"""
+    platform_info = ""
+    for f in dir(platform):
+        try:
+            platform_info += f + ": " + str(getattr(platform, f)()) + "\n"
+        except:
+            pass
+    return platform_info
+
+def version_info_string():
+    """Construct a big string with all avaliable version info."""
+    version_string = "NPLab %s\n" % nplab.__version__
+    try:
+        version_string += "Branch: %s\n" % current_branch()
+        version_string += "Commit: %s\n" % latest_commit()
+    except GitFolderMissing:
+        version_string += "Release version (not in a Git repository)\n"
+    version_string += "\n"
+    version_string += "Module versions:\n"
+    version_string += all_module_versions_string()
+    version_string += "\n"
+    version_string += "Platform information:\n"
+    version_string += platform_string()
+    return version_string
+
+if __name__ == '__main__':
+    print version_info_string()

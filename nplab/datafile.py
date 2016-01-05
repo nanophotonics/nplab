@@ -17,6 +17,7 @@ import datetime
 import re
 import sys
 from collections import Sequence
+import nplab.utils.version
 
 
 def attributes_from_dict(group_or_dataset, dict_of_attributes):
@@ -269,7 +270,7 @@ class DataFile(Group):
     change in the future...
     """
 
-    def __init__(self, name, mode=None, *args, **kwargs):
+    def __init__(self, name, mode=None, save_version_info=True *args, **kwargs):
         """Open or create an HDF5 file.
 
         :param name: The filename/path of the HDF5 file to open or create, or an h5py File object
@@ -284,13 +285,23 @@ class DataFile(Group):
                 Create the file, fail with an error if it exists
             a
                 Open read/write if the file exists, otherwise create it.
+        :param save_version_info: If True (default), save a string attribute at top-level
+        with information about the current module and system.
         """
         if isinstance(name, h5py.File):
             f=name #if it's already an open file, just use it
         else:
             f = h5py.File(name, mode, *args, **kwargs)  # open the file
         super(DataFile, self).__init__(f.id)  # initialise a Group object with the root group of the file (saves re-wrapping all the functions for File)
-
+        if save_version_info and self.mode != 'r':
+            #Save version information if needed
+            n=0
+            while "version_info_%04d" % n in self.attrs:
+                n += 1
+            try:
+                self.attrs.create("version_info_%04d" % n, nplab.utils.version.version_info_string())
+            except:
+                print "Error: could not save version information"
     def flush(self):
         self.file.flush()
 

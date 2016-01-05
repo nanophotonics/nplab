@@ -7,6 +7,7 @@ NanoPhotonics group's lab work.
 
 __author__ = 'alansanders,rwb27'
 __all__ = []
+__version__ = '0.1-dev'
 
 from nplab.datafile import current as current_datafile
 from nplab.utils.array_with_attrs import ArrayWithAttrs
