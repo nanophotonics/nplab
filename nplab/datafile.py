@@ -270,7 +270,7 @@ class DataFile(Group):
     change in the future...
     """
 
-    def __init__(self, name, mode=None, save_version_info=True *args, **kwargs):
+    def __init__(self, name, mode=None, save_version_info=True, *args, **kwargs):
         """Open or create an HDF5 file.
 
         :param name: The filename/path of the HDF5 file to open or create, or an h5py File object
@@ -293,7 +293,7 @@ class DataFile(Group):
         else:
             f = h5py.File(name, mode, *args, **kwargs)  # open the file
         super(DataFile, self).__init__(f.id)  # initialise a Group object with the root group of the file (saves re-wrapping all the functions for File)
-        if save_version_info and self.mode != 'r':
+        if save_version_info and self.file.mode != 'r':
             #Save version information if needed
             n=0
             while "version_info_%04d" % n in self.attrs:
