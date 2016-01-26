@@ -7,7 +7,9 @@ import serial
 
 
 class Uniblitz(Shutter, SerialInstrument):
-    # port settings
+    """
+    Shutter controller from Uniblitz for BX51 white light path
+    """
     port_settings = dict(baudrate=9600,
                          bytesize=serial.EIGHTBITS,
                          parity=serial.PARITY_NONE,
@@ -17,7 +19,6 @@ class Uniblitz(Shutter, SerialInstrument):
                          xonxoff=False, rtscts=False, dsrdtr=False,
                          )
     termination_character = "\r"  #: All messages to or from the instrument end with this character.
-    
 
     def __init__(self, port=None):
         super(Uniblitz, self).__init__()
@@ -31,6 +32,8 @@ class Uniblitz(Shutter, SerialInstrument):
             self.open_shutter()
 
     def open_shutter(self):
+        # using write commands from the instrument class causes errors (at least on my computer...)
+        # Error message: 'ser' does not have an attribute 'outWaiting'
         self.ser.write('@')
         self.shutter_state = 1
 
