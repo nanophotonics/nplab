@@ -10,19 +10,16 @@ class Uniblitz(Shutter, SerialInstrument):
     """
     Shutter controller from Uniblitz for BX51 white light path
     """
-    port_settings = dict(baudrate=9600,
-                         bytesize=serial.EIGHTBITS,
-                         parity=serial.PARITY_NONE,
-                         stopbits=serial.STOPBITS_ONE,
-                         timeout=1,  # wait at most one second for a response
-                         writeTimeout=1,  # similarly, fail if writing takes >1s
-                         xonxoff=False, rtscts=False, dsrdtr=False,
-                         )
-    termination_character = "\r"  #: All messages to or from the instrument end with this character.
-
     def __init__(self, port=None):
-        super(Uniblitz, self).__init__()
-        Shutter.__init__(self)
+        self.port_settings = {'baudrate': 9600,
+                        'bytesize':serial.EIGHTBITS,
+                        'parity':serial.PARITY_NONE,
+                        'stopbits':serial.STOPBITS_ONE,
+                        'timeout':1, #wait at most one second for a response
+                        'writeTimeout':1, #similarly, fail if writing takes >1s
+                        }
+        self.termination_character = "\r"
+        SerialInstrument.__init__(self, port=port)
         self.shutter_state = 0
 
     def toggle(self):
@@ -44,6 +41,6 @@ class Uniblitz(Shutter, SerialInstrument):
 
 if __name__ == '__main__':
 
-    shutter = Uniblitz('COM4')
+    shutter = Uniblitz('COM5')
     shutter.show_gui()
     shutter.close()
