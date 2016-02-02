@@ -90,12 +90,13 @@ def get_file(destination='local', rel_path='Desktop/Data',
         f.make_current()
     return f
 
-def wrap_h5py_item(h5py_item):
+def wrap_h5py_item(item):
     """Wrap an h5py object: groups are returned as Group objects, datasets are unchanged."""
-    if instanceof(h5py_item, h5py.Group)
-        return Group(h5py_item)
-    else
-        return h5py_item
+    if isinstance(item, h5py.Group):
+        # wrap groups before returning them (this makes our group objects rather than h5py.Group)
+        return Group(item.id)
+    else:
+        return item  # for now, don't bother wrapping datasets
 
 class Group(h5py.Group):
     """HDF5 Group, a collection of datasets and subgroups.
@@ -105,11 +106,7 @@ class Group(h5py.Group):
 
     def __getitem__(self, key):
         item = super(Group, self).__getitem__(key)  # get the dataset or group
-        if isinstance(item, h5py.Group):
-            return Group(
-                item.id)  # wrap groups before returning them (this makes our group objects rather than h5py.Group)
-        else:
-            return item  # for now, don't bother wrapping datasets
+        return wrap_h5py_item(item) #wrap as a Group if necessary
 
     def find_unique_name(self, name):
         """Find a unique name for a subgroup or dataset in this group.
