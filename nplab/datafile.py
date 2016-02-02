@@ -90,6 +90,12 @@ def get_file(destination='local', rel_path='Desktop/Data',
         f.make_current()
     return f
 
+def wrap_h5py_item(h5py_item):
+    """Wrap an h5py object: groups are returned as Group objects, datasets are unchanged."""
+    if instanceof(h5py_item, h5py.Group)
+        return Group(h5py_item)
+    else
+        return h5py_item
 
 class Group(h5py.Group):
     """HDF5 Group, a collection of datasets and subgroups.
@@ -129,7 +135,7 @@ class Group(h5py.Group):
         come in alphabetical order, so 10 comes before 2).  `name` is the
         name passed in without the _0 suffix.
         """
-        items = [v for k, v in self.iteritems()
+        items = [wrap_h5py_item(v) for k, v in self.iteritems()
                  if k.startswith(name)  # only items that start with `name`
                  and re.match(r"_*(\d+)$", k[len(name):])]  # and end with numbers
         return sorted(items, key=h5_item_number)
