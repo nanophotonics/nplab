@@ -262,6 +262,11 @@ class Group(h5py.Group):
         from nplab.ui.hdf5_browser import HDF5Browser
         return HDF5Browser(self)
 
+    @property
+    def basename(self):
+        """Return the last part of self.name, i.e. just the final component of the path."""
+        return self.name.rsplit("/", 1)[-1]
+
 
 class DataFile(Group):
     """Represent an HDF5 file object.
