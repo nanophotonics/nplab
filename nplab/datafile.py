@@ -320,7 +320,16 @@ class DataFile(Group):
         """Set this as the default location for all new data."""
         global _current_datafile
         _current_datafile = self
-
+        
+    @property
+    def filename(self):
+        """ Returns the filename (full path) of the current datafile """
+        return self.file.filename
+     
+    @property
+    def dirname(self):
+        """ Returns the path of the datafolder the current datafile is in"""
+        return os.path.dirname(self.file.filename)
 
 _current_datafile = None
 
