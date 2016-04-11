@@ -180,9 +180,18 @@ class DataRenderer1DPG(FigureRendererPG):
                 Ydata = np.array(h5object)
                 Xdata = np.arange(len(Ydata))
             self.figureWidget.plot(x = Xdata, y = Ydata,name = h5object.name, pen =(icolour,len(self.h5object)))
-            icolour = icolour + 1        
-        self.figureWidget.setLabel('left', 'A Y axis')
-        self.figureWidget.setLabel('bottom', 'An X axis')
+            icolour = icolour + 1
+            
+        try:
+            self.figureWidget.setLabel('bottom', h5object.attrs['X label'])
+        except:
+            self.figureWidget.setLabel('bottom', 'An X axis')
+            
+        try:
+            self.figureWidget.setLabel('left', h5object.attrs['Y label'])
+        except:
+            self.figureWidget.setLabel('left', 'An X axis')
+
         
    
     @classmethod
@@ -200,6 +209,58 @@ class DataRenderer1DPG(FigureRendererPG):
             return -1
 #            
 add_renderer(DataRenderer1DPG)
+
+class Scatter_plot1DPG(FigureRendererPG):
+    """ A renderer for 1D datasets experessing them in a scatter graph using
+    pyqt graph. Allowing the user to interact with the graph i.e. zooming into 
+    selected region or performing transformations of the axis
+    """
+
+    def display_data(self):
+       # plot = self.figureWidget.plot()
+        if type(self.h5object)!= list:
+            self.h5object = [self.h5object]
+        icolour = 0    
+        self.figureWidget.addLegend(offset = (-1,1))
+        for h5object in self.h5object:
+            try:
+                if np.shape(h5object)[0] == 2 or np.shape(h5object)[1] == 2:
+                    Xdata = np.array(h5object)[0]
+                    Ydata = np.array(h5object)[1]
+                else:
+                    Ydata = np.array(h5object)
+                    Xdata = np.arange(len(Ydata))
+            except IndexError:
+                Ydata = np.array(h5object)
+                Xdata = np.arange(len(Ydata))
+            self.figureWidget.plot(x = Xdata, y = Ydata,name = h5object.name, pen =None, symbol ='o',symbolPen = (icolour,len(self.h5object)),symbolBrush = (icolour,len(self.h5object)))
+            icolour = icolour + 1
+            
+        try:
+            self.figureWidget.setLabel('bottom', h5object.attrs['X label'])
+        except:
+            self.figureWidget.setLabel('bottom', 'An X axis')
+            
+        try:
+            self.figureWidget.setLabel('left', h5object.attrs['Y label'])
+        except:
+            self.figureWidget.setLabel('left', 'An X axis')
+          
+    @classmethod
+    def is_suitable(cls, h5object):
+        if type(h5object) == list:
+            h5object = h5object[0]
+        if not isinstance(h5object, h5py.Dataset):
+            return -1
+        if len(h5object.shape) == 1:
+            return 11
+        elif np.shape(h5object)[0] == 2 or np.shape(h5object)[1] == 2:
+            return 12           
+
+        elif len(h5object.shape) > 1:
+            return -1
+#            
+add_renderer(Scatter_plot1DPG)
 
 class DataRenderer2DPG(DataRenderer, QtGui.QWidget):
     """ A renderer for 2D datasets images experessing them in a colour map using
@@ -809,25 +870,40 @@ class PumpProbeRaw(DataRenderer, QtGui.QWidget):
         Plots = []
         axes ={0 : 'X',1 : 'Y', 2 : 'R'}
         
+    #    self.Spinbox = QtGui.QSpinBox()
+   #     self.Spinbox.setValue(stepperoffset)
+     #   self.Spinbox.valueChanged.connect(self.change_in_stepperoffset())
         for axis in axes:
             Plots.append(pg.PlotWidget())
-            
+       
+        for plot in Plots:
+            plot.addLegend(offset = (-1,1))
+        
+        stepperoffset = -2.0
         
         for h5object in self.h5object:
             for axis in axes.keys():
-                data = np.array(self.h5object)
-                print np.shape(data)
-                Plots[axis].plot(x = data[0,:,5], y = data[0,:,axis],name = h5object.name,pen =(icolour,len(self.h5object)))
+                data = np.array(h5object)
+                data[np.where(data[:,7]%2 != 0),5] +=  stepperoffset
+                data[:,5] = -1*(data[:,5]-(884.0))
+             #   print np.where(data[:,7]%2 != 0)
+                Plots[axis].plot(x = data[:,5], y = data[:,axis],name = h5object.name,pen =(icolour,len(self.h5object)))
                 Plots[axis].setLabel('left',axes[axis]+" (V)")
                 Plots[axis].setLabel('bottom', 'Time (ps)')
             icolour = icolour + 1        
-
-        for plot in Plots:
-            plot.addLegend(offset = (-1,1))
+        
+        
+ #       print self.Spinbox.value
         self.layout.addWidget(Plots[0],0,0)
         self.layout.addWidget(Plots[1],0,1)
         self.layout.addWidget(Plots[2],1,0)
-   
+    #    self.layout.addWidget(self.Spinbox,1,1)
+        
+    def change_in_stepperoffset(self):
+     #   self.display_data(stepperoffset = self.Spinbox.value())
+        print "HI"
+        
+        
     @classmethod
     def is_suitable(cls, h5object):
         suitability = 0
@@ -838,29 +914,119 @@ class PumpProbeRaw(DataRenderer, QtGui.QWidget):
         if len(h5object.shape) == 2:
             if h5object.shape[1] == 6:
                 suitability = suitability + 11
-        elif len(h5object.shape) > 2:
+            else:
+                return -1
+        else:
             return -1
         if 'repeats' in h5object.attrs.keys():
-            suitability = suitability + 10
+            suitability = suitability + 50
         if 'start' in h5object.attrs.keys():
-            suitability = suitability + 10
+            suitability = suitability + 50
         if 'finish' in h5object.attrs.keys():
-            suitability = suitability + 10
+            suitability = suitability + 50
         if 'stepsize' in h5object.attrs.keys():
-            suitability = suitability + 10
+            suitability = suitability + 20
         if 'velocity' in h5object.attrs.keys():
-            suitability = suitability + 10      
+            suitability = suitability + 20      
         if 'acceleration' in h5object.attrs.keys():
-            suitability = suitability + 10    
+            suitability = suitability + 20    
         if 'filter' in h5object.attrs.keys():
-            suitability = suitability + 10      
+            suitability = suitability + 20      
         if 'sensitivity' in h5object.attrs.keys():
-            suitability = suitability + 10    
+            suitability = suitability + 20    
         return suitability
             
 #            
 add_renderer(PumpProbeRaw)
+    
+
+class PumpProbeRawXOnly(DataRenderer, QtGui.QWidget):
+    ''' A renderer for Pump probe experiments, leaving the data un changed'''
+    """ A renderer for 1D datasets experessing them in a line graph using
+    pyqt graph. Allowing the user to interact with the graph i.e. zooming into 
+    selected region or performing transformations of the axis
+    """
+    def __init__(self, h5object, parent=None):
+        super(PumpProbeRawXOnly, self).__init__(h5object, parent)
+        pg.setConfigOption('background', 'w')
+        pg.setConfigOption('foreground', 'k')
+        self.layout = QtGui.QGridLayout()
+        self.setLayout(self.layout)
+        self.display_data()
         
+    def display_data(self):
+       # plot = self.figureWidget.plot()
+        if type(self.h5object)!= list:
+            self.h5object = [self.h5object]
+        icolour = 0    
+        Plots = []
+        axes ={0 : 'X'}
+        
+    #    self.Spinbox = QtGui.QSpinBox()
+   #     self.Spinbox.setValue(stepperoffset)
+     #   self.Spinbox.valueChanged.connect(self.change_in_stepperoffset())
+        for axis in axes:
+            Plots.append(pg.PlotWidget())
+       
+        for plot in Plots:
+            plot.addLegend(offset = (-1,1))
+        
+        stepperoffset = -2.0
+        
+        for h5object in self.h5object:
+            for axis in axes.keys():
+                data = np.array(h5object)
+                data[np.where(data[:,7]%2 != 0),5] +=  stepperoffset
+                data[:,5] = -1*(data[:,5]-(884.0))
+                data[:,0] = data[:,0]/4.0
+             #   print np.where(data[:,7]%2 != 0)
+                Plots[axis].plot(x = data[:,5], y = data[:,axis],name = h5object.name,pen =(icolour,len(self.h5object)))
+                Plots[axis].setLabel('left',"dV/V")
+                Plots[axis].setLabel('bottom', 'Time (ps)')
+            icolour = icolour + 1        
+        
+        
+ #       print self.Spinbox.value
+        self.layout.addWidget(Plots[0],0,0)
+    #    self.layout.addWidget(self.Spinbox,1,1)
+        
+
+        
+        
+    @classmethod
+    def is_suitable(cls, h5object):
+        suitability = 0
+        if type(h5object) == list:
+            h5object = h5object[0]
+        if not isinstance(h5object, h5py.Dataset):
+            return -1
+        if len(h5object.shape) == 2:
+            if h5object.shape[1] == 6:
+                suitability = suitability + 11
+            else:
+                return -1
+        else:
+            return -1
+        if 'repeats' in h5object.attrs.keys():
+            suitability = suitability + 50
+        if 'start' in h5object.attrs.keys():
+            suitability = suitability + 50
+        if 'finish' in h5object.attrs.keys():
+            suitability = suitability + 50
+        if 'stepsize' in h5object.attrs.keys():
+            suitability = suitability + 20
+        if 'velocity' in h5object.attrs.keys():
+            suitability = suitability + 20      
+        if 'acceleration' in h5object.attrs.keys():
+            suitability = suitability + 20    
+        if 'filter' in h5object.attrs.keys():
+            suitability = suitability + 20      
+        if 'sensitivity' in h5object.attrs.keys():
+            suitability = suitability + 20    
+        return suitability
+            
+#            
+add_renderer(PumpProbeRawXOnly)    
 if __name__ == '__main__':
     import sys, h5py, os, numpy as np
 

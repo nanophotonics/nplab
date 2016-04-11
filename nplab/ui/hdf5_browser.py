@@ -102,12 +102,12 @@ class HDF5Browser(QtGui.QWidget, UiTools):
         else:
             self.selected_objects = item.data(column, QtCore.Qt.UserRole)
         
-        print self.treeWidget.selectedItems()
+    #    print self.treeWidget.selectedItems()
         
         self.possible_renderers = suitable_renderers(self.selected_objects)
         self.figureWidget = self.replace_widget(self.figureWidgetContainer, self.figureWidget, self.possible_renderers[0](self.selected_objects, self))
         self.possible_renderer_names = [renderers.__name__ for renderers in self.possible_renderers]
-        print self.possible_renderer_names
+    #    print self.possible_renderer_names
         self.rendererselection.clear()
         self.rendererselection.addItems(self.possible_renderer_names)
         

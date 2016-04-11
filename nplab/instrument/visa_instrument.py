@@ -42,8 +42,17 @@ class VisaInstrument(MessageBusInstrument):
         return self.instr.read(*args, **kwargs)
 
     def query(self, *args, **kwargs):
-        return self.instr.query(*args, **kwargs)
+        return self.instr.query_delay(*args, **kwargs)
 
+    def clear_read_buffer(self):
+        empty_buffer = False
+        while empty_buffer == False:
+            try:
+                self.instr.read()
+            except Exception:
+                print "Buffer emptied"
+                empty_buffer = True
+                
     #idn = property(fget=partial(query, message='*idn?'))
     idn = queried_property('*idn?', dtype='str')
 
