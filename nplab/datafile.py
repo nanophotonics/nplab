@@ -17,6 +17,7 @@ import datetime
 import re
 import sys
 from collections import Sequence
+import nplab.utils.version
 
 
 def attributes_from_dict(group_or_dataset, dict_of_attributes):
@@ -89,6 +90,13 @@ def get_file(destination='local', rel_path='Desktop/Data',
         f.make_current()
     return f
 
+def wrap_h5py_item(item):
+    """Wrap an h5py object: groups are returned as Group objects, datasets are unchanged."""
+    if isinstance(item, h5py.Group):
+        # wrap groups before returning them (this makes our group objects rather than h5py.Group)
+        return Group(item.id)
+    else:
+        return item  # for now, don't bother wrapping datasets
 
 class Group(h5py.Group):
     """HDF5 Group, a collection of datasets and subgroups.
@@ -98,11 +106,7 @@ class Group(h5py.Group):
 
     def __getitem__(self, key):
         item = super(Group, self).__getitem__(key)  # get the dataset or group
-        if isinstance(item, h5py.Group):
-            return Group(
-                item.id)  # wrap groups before returning them (this makes our group objects rather than h5py.Group)
-        else:
-            return item  # for now, don't bother wrapping datasets
+        return wrap_h5py_item(item) #wrap as a Group if necessary
 
     def find_unique_name(self, name):
         """Find a unique name for a subgroup or dataset in this group.
@@ -128,7 +132,7 @@ class Group(h5py.Group):
         come in alphabetical order, so 10 comes before 2).  `name` is the
         name passed in without the _0 suffix.
         """
-        items = [v for k, v in self.iteritems()
+        items = [wrap_h5py_item(v) for k, v in self.iteritems()
                  if k.startswith(name)  # only items that start with `name`
                  and re.match(r"_*(\d+)$", k[len(name):])]  # and end with numbers
         return sorted(items, key=h5_item_number)
@@ -261,6 +265,11 @@ class Group(h5py.Group):
         from nplab.ui.hdf5_browser import HDF5Browser
         return HDF5Browser(self)
 
+    @property
+    def basename(self):
+        """Return the last part of self.name, i.e. just the final component of the path."""
+        return self.name.rsplit("/", 1)[-1]
+
 
 class DataFile(Group):
     """Represent an HDF5 file object.
@@ -269,7 +278,7 @@ class DataFile(Group):
     change in the future...
     """
 
-    def __init__(self, name, mode=None, *args, **kwargs):
+    def __init__(self, name, mode=None, save_version_info=True, *args, **kwargs):
         """Open or create an HDF5 file.
 
         :param name: The filename/path of the HDF5 file to open or create, or an h5py File object
@@ -284,13 +293,23 @@ class DataFile(Group):
                 Create the file, fail with an error if it exists
             a
                 Open read/write if the file exists, otherwise create it.
+        :param save_version_info: If True (default), save a string attribute at top-level
+        with information about the current module and system.
         """
         if isinstance(name, h5py.File):
             f=name #if it's already an open file, just use it
         else:
             f = h5py.File(name, mode, *args, **kwargs)  # open the file
         super(DataFile, self).__init__(f.id)  # initialise a Group object with the root group of the file (saves re-wrapping all the functions for File)
-
+        if save_version_info and self.file.mode != 'r':
+            #Save version information if needed
+            n=0
+            while "version_info_%04d" % n in self.attrs:
+                n += 1
+            try:
+                self.attrs.create("version_info_%04d" % n, nplab.utils.version.version_info_string())
+            except:
+                print "Error: could not save version information"
     def flush(self):
         self.file.flush()
 
@@ -301,7 +320,16 @@ class DataFile(Group):
         """Set this as the default location for all new data."""
         global _current_datafile
         _current_datafile = self
-
+        
+    @property
+    def filename(self):
+        """ Returns the filename (full path) of the current datafile """
+        return self.file.filename
+     
+    @property
+    def dirname(self):
+        """ Returns the path of the datafolder the current datafile is in"""
+        return os.path.dirname(self.file.filename)
 
 _current_datafile = None
 

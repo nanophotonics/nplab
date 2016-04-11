@@ -58,3 +58,7 @@ docs/nplab.*.rst
 
 # profiling statistics files
 *.stats
+
+# user specified files
+*.xml
+*.iml
