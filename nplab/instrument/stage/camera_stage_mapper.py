@@ -92,7 +92,7 @@ class CameraStageMapper(HasTraits):
     def camera_centre_position(self):
         """return the position of the centre of the camera view, on the sample"""
         return -self.stage.position
-    def centre_on_feature(self, feature_image, search_size=(50,50), tolerance=0.3, max_iterations=10):
+    def centre_on_feature(self, feature_image, search_size=(50,50), tolerance=0.3, max_iterations=10, **kwargs):
         """Adjust the stage slightly to centre on the given feature.
         
         This should be called immediately after moving the stage to centre on a
@@ -116,7 +116,9 @@ class CameraStageMapper(HasTraits):
         while np.sqrt(np.sum(np.array(shift)**2))>tolerance and n<max_iterations:
             n+=1
             try:
-                shift=self.centre_on_feature_iterate(feature_image)
+                shift=self.centre_on_feature_iterate(feature_image, 
+                                                     search_size=search_size, 
+                                                     **kwargs)
                 print "Centring on feature: moving by %.2f, %.2f" % tuple(shift)
             except:
                 print "Something went wrong with auto-centering - trying again." #don't worry, we incremented N so this won't go on forever!
@@ -126,10 +128,10 @@ class CameraStageMapper(HasTraits):
             print "Centered on feature in %d iterations." % n
         if self.disable_live_view:
             self.camera.live_view = camera_live_view #reenable live view if necessary
-    def centre_on_feature_iterate(self, feature_image, search_size=(50,50)):
+    def centre_on_feature_iterate(self, feature_image, search_size=(50,50), image_filter=lambda x: x):
         try:
             self.flush_camera_and_wait()
-            current_image = self.camera.color_image() #get the current image
+            current_image = image_filter(self.camera.color_image()) #get the current image
             corr = cv2.matchTemplate(current_image,feature_image,cv2.TM_SQDIFF_NORMED) #correlate them: NB the match position is the MINIMUM
             #restrict to just the search area, and invert so we find the maximum
             corr = -corr[(corr.shape[0]/2. - search_size[0]/2.):(corr.shape[0]/2. + search_size[0]/2.),
