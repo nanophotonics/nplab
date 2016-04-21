@@ -262,7 +262,7 @@ class CameraStageMapper(HasTraits):
             print "moving Z by %.3f" % pos[2]
             n+=1
         print "Autofocus: performed %d iterations" % n
-if __name__ == '__main__':
+#if __name__ == '__main__':
     #WARNING this is old, probably broken, code.
 #    import nplab.instrument.camera.lumenera as camera
 #    import nplab.instrument.stage.prior as prior_stage
