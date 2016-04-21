@@ -163,7 +163,7 @@ class LumeneraCamera(Camera):
             video_priority = self.video_priority
         if self._cameraIsStreaming and video_priority:
             #If appropriate, return the next frame from the video stream.
-            return self.get_next_frame()
+            return True, self.get_next_frame()
         
         with self.acquisition_lock:
             for i in range(10):
