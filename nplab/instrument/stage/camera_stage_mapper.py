@@ -263,32 +263,33 @@ class CameraStageMapper(HasTraits):
             n+=1
         print "Autofocus: performed %d iterations" % n
 if __name__ == '__main__':
-    import nplab.instrument.camera as camera
-    import nplab.instrument.stage.prior as prior_stage
-    c = camera.Camera(0)
-    s = prior_stage.ProScan()
-    
-    m = CameraStageMapper(c, s)
-    
-    m.autofocus_iterate(np.arange(-5,5,0.5))
-    m.calibrate(5)
-    
-    c.edit_traits()
-    m.edit_traits()
-    
-    def move_to_feature_at_point(x,y):
-        #first, extract image of where we want to go
-        p = m.camera_point_to_pixel([x,y])
-        feature_image = c.color_image()[p[0]-25:p[0]+25, p[1]-25:p[1]+25]
-        m.move_to_camera_point(x,y)
-        time.sleep(0.5)
-        shift=[999,999]
-        while np.sqrt(np.sum(np.array(shift)**2))>0.5:
-            shift=m.centre_on_feature(feature_image)
-            print "moving by %.2f, %.2f" % tuple(shift)
-            
-    
-    def close():
-        c.close()
-        s.close()
-    
+    #WARNING this is old, probably broken, code.
+#    import nplab.instrument.camera.lumenera as camera
+#    import nplab.instrument.stage.prior as prior_stage
+#    c = camera.Camera(0)
+#    s = prior_stage.ProScan()
+#    
+#    m = CameraStageMapper(c, s)
+#    
+#    m.autofocus_iterate(np.arange(-5,5,0.5))
+#    m.calibrate(5)
+#    
+#    c.edit_traits()
+#    m.edit_traits()
+#    
+#    def move_to_feature_at_point(x,y):
+#        #first, extract image of where we want to go
+#        p = m.camera_point_to_pixel([x,y])
+#        feature_image = c.color_image()[p[0]-25:p[0]+25, p[1]-25:p[1]+25]
+#        m.move_to_camera_point(x,y)
+#        time.sleep(0.5)
+#        shift=[999,999]
+#        while np.sqrt(np.sum(np.array(shift)**2))>0.5:
+#            shift=m.centre_on_feature(feature_image)
+#            print "moving by %.2f, %.2f" % tuple(shift)
+#            
+#    
+#    def close():
+#        c.close()
+#        s.close()
+#    
