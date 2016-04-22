@@ -6,7 +6,7 @@ __author__ = 'alansanders'
 
 from nplab.utils.gui import *
 from PyQt4 import uic
-from PyQt4 import QtGui, QtCore
+from PyQt4 import QtGui, QtCore #TODO: I think these should be wrapped by nplab.utils.gui? rwb
 import matplotlib
 import numpy as np
 import h5py
@@ -44,7 +44,7 @@ class HDF5Browser(QtGui.QWidget, UiTools):
         self.addItems(self.treeWidget.invisibleRootItem())   
         self.treeWidget.itemClicked.connect(self.on_click)
         self.treeWidget.customContextMenuRequested.connect(self.context_menu)
-        self.treeWidget.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
+        self.treeWidget.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection) #allow multiple items to be selected
         
         self.refreshButton.clicked.connect(self.refresh)
         self.CopyButton.clicked.connect(self.CopyActivated)
@@ -57,11 +57,20 @@ class HDF5Browser(QtGui.QWidget, UiTools):
         pass  # self.f.close()
 
     def addItems(self, parent):
+        """Populate the tree view with the contents of the HDF5 file."""
         root = self.addParent(parent, 0, self.root_name, self.f)
-        self.parents = {self.f.name: root}
-        self.f.visit(self.addChild)
+        self.parents = {self.f.name: root} #parents holds all the items in the list, organised by HDF5 path
+        self.f.visit(self.addChild) #visit every item in the HDF5 tree, and add it.
 
     def addParent(self, parent, column, title, data):
+        """Add an item to the HDF5 tree with parameters specified.
+        
+        Arguments:
+        parent: the QTreeWidgetItem the new entry should be within
+        column: the column into which we're going to put the data - always 0
+        title: the title of the item
+        data: the data stored with this itme (a reference to the HDF5 item)
+        """
         item = QtGui.QTreeWidgetItem(parent, [title])
         item.setData(column, QtCore.Qt.UserRole, data)
         item.setChildIndicatorPolicy(QtGui.QTreeWidgetItem.ShowIndicator)
@@ -69,6 +78,7 @@ class HDF5Browser(QtGui.QWidget, UiTools):
         return item
 
     def addChild(self, name):
+        """Add an item to the tree, based only on the HDF5 path."""
         h5parent = self.f[name].parent.name
         if h5parent in self.parents:
             parent = self.parents[h5parent]
@@ -76,15 +86,17 @@ class HDF5Browser(QtGui.QWidget, UiTools):
             print 'no parent', name, h5parent
             parent = self.parents['/']
         item = QtGui.QTreeWidgetItem(parent, [name.rsplit('/', 1)[-1]])
-        item.setData(0, QtCore.Qt.UserRole, self.f[name])
-        self.parents['/' + name] = item
+        item.setData(0, QtCore.Qt.UserRole, self.f[name]) #Question: does this read the data? Could be slow for large datasets if so...
+        self.parents['/' + name] = item #Add the item to our internal list, keyed on HDF5 path
 
     def refresh(self):
+        """Empty the tree and repopulate it."""
         self.treeWidget.clear()
         self.addItems(self.treeWidget.invisibleRootItem())
         
   
     def context_menu(self, position):
+        """Generate a right-click menu for the items"""
         menu = QtGui.QMenu()
         actions = {}
         
@@ -96,6 +108,7 @@ class HDF5Browser(QtGui.QWidget, UiTools):
             self.igorOpen()
 
     def on_click(self, item, column):
+        """Handle clicks on items in the tree."""
         item.setExpanded(True)
         if len(self.treeWidget.selectedItems())>1: 
             self.selected_objects = [treeitem.data(column, QtCore.Qt.UserRole) for treeitem in self.treeWidget.selectedItems() ]
@@ -112,6 +125,7 @@ class HDF5Browser(QtGui.QWidget, UiTools):
         self.rendererselection.addItems(self.possible_renderer_names)
         
     def RenderSelectorActivated(self,text):
+        """Change the figure widget to use the selected renderer."""
         for renderer in self.possible_renderers:
             if renderer.__name__ == text:
                 self.figureWidget = self.replace_widget(self.figureWidgetContainer, self.figureWidget, renderer(self.selected_objects, self))
@@ -119,11 +133,13 @@ class HDF5Browser(QtGui.QWidget, UiTools):
         
         
     def CopyActivated(self):
+        """Copy an image of the currently-displayed figure."""
         Pixelmap = QtGui.QPixmap.grabWidget(self.figureWidget)
         self.clipboard.setPixmap(Pixelmap)
         
         
     def igorOpen(self):
+        """Open the currently-selected item in Igor Pro."""
         igorpath = '"C:\\Program Files (x86)\\WaveMetrics\\Igor Pro Folder\\Igor.exe"'
         igortmpfile = os.path.dirname(os.path.realpath(__file__))+'\Igor'
         igortmpfile=igortmpfile.replace("\\","\\\\")
