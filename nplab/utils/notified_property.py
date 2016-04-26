@@ -51,50 +51,23 @@ discarding 10
 >>> f.c
 99
 
-To register for notification, 
+To register for notification, use register_for_property_changes
+
+>>> def a_changed(a):
+...     print "A changed to '{0}'".format(a)
+>>> register_for_property_changes(f, "a", a_changed)
+>>> f.a=6
+A changed to '6'
+
+If you inherit from `NotifiedPropertiesMixin` there will also be a method of
+the object called `register_for_property_changes` that doesn't require the
+object to be passed in.
         
 """
 
 import functools
 from weakref import WeakSet, WeakKeyDictionary
 
-#def add_notification(function, name=None):
-#    """Wrap a function so that, after it's executed, we notify that it's run.
-#    
-#    This is designed to be used on the setter method of a property, so that
-#    we can synchronise the property easily with a GUI.  It requires that the
-#    first argument of the function is `self`.  We assume the name of the 
-#    property is the name of the function - if this is not true, use the
-#    optional argument "name" (though you can't do that from the decorator).
-#    
-#    It also requires that the object has a function `notify_parameter_changed`
-#    that deals with notifications.  This is provided by the 
-#    `NotifiedPropertiesMixin` class.
-#    
-#    Use this to decorate your setter functions, so that it updates the UI if
-#    the setting is changed in software.
-#    
-#    Example::
-#    
-#    class foo():
-#        @property
-#        def a(self):
-#            return 0
-#        @a.setter
-#        @add_notification
-#        def a(self, newa):
-#            pass
-#    
-#    NB that you should put this decorator *after* the setter decorator.
-#    """
-#    if name is None:
-#        name = function.__name__ # Default to the function's name
-#    @functools.wraps(function)
-#    def f(self, *args, **kwargs):
-#        ret = function(self, *args, **kwargs)
-#        self.notify_parameter_changed(name)
-#        return ret
-#    return f
 
 class Property(object):
     """Emulate PyProperty_Type() in Objects/descrobject.c
@@ -163,12 +136,13 @@ class NotifiedProperty(Property):
         
         The function should accept one argument, which is the new value.
         """
-        callbacks = self.callbacks_by_object.get(obj, WeakSet())
-        callbacks.add(callback)
+        if obj not in self.callbacks_by_object.keys():
+            self.callbacks_by_object[obj] = WeakSet()
+        self.callbacks_by_object[obj].add(callback)
         
     def deregister_callback(self, obj, callback):
         """Remove a function from the list of callbacks."""
-        callbacks = self.callbacks_by_object.get(obj, WeakSet())
+        callbacks = self.callbacks_by_object[obj]
         callbacks.remove(callback)
         
     def send_notification(self, obj, value):
@@ -201,31 +175,23 @@ class DumbNotifiedProperty(NotifiedProperty):
     def fset(self, obj, value):
         self.values_by_object[obj] = value
         
+def register_for_property_changes(obj, property_name, callback):
+    """Register a function to be called when the property changes.
+    
+    Whenever the value of the named property changes, the callback
+    function will be called, with the new value as the only argument.
+    Note that it's the value that was passed as input to the setter, so
+    if you have cunning logic in there, it may be wrong and you might
+    want to consider retrieving the property at the start of this function
+    (at which point the setter has run, so any changes it makes are done)
+    """
+    prop = getattr(obj.__class__, property_name, None)
+    assert isinstance(prop, NotifiedProperty), "The specified property isn't available"
+    
+    # register the callback.  Note we need to pass the current object in so
+    # the property knows which object we're talking about.
+    prop.register_callback(obj, callback)
 
-#def notified_property(name, default=None, doc=None, fget=None, fset=None, fdel=None):
-#    """Return a property that notifies when it's changed.
-#    
-#    If you don't specify a getter or setter function, we'll generate them (and
-#    the property just behaves like a regular variable).  If you do specify a
-#    setter, you must also specify a setter - read-only properties
-#    don't make sense here, you can just use a regular property for that."""
-#    if fget is not None:
-#        assert fset is not None, ("You must specify both or neither of fget " +
-#                                  "and fset.  Read-only properties should be "+
-#                                  "reguar properties, not notified properties.")
-#        return property(fget=fget, fset=add_notification(fset, name=name), 
-#                        fdel=fdel)
-#        
-#    else:
-#        # make getter/setter methods that do nothing, so it is a dumb variable.
-#        internal_name = "_notified_property_internal_state_"+name
-#        def getter(self):
-#            return getattr(self, internal_name, None)
-#        def setter(self, newvalue):
-#            setattr(self, internal_name, newvalue)
-#            self.notify_parameter_changed(name)
-#        return property(fget=getter, fset=setter, fdel=fdel)
-        
 class NotifiedPropertiesMixin():
     """A mixin class that adds support for notified properties.
     
@@ -236,22 +202,9 @@ class NotifiedPropertiesMixin():
     
     It's then possible to register to find out whenever that property changes.
     """
-    def register_for_property(self, property_name, callback):
-        """Register a function to be called when the property changes.
-        
-        Whenever the value of the named property changes, the callback
-        function will be called, with the new value as the only argument.
-        Note that it's the value that was passed as input to the setter, so
-        if you have cunning logic in there, it may be wrong and you might
-        want to consider retrieving the property at the start of this function
-        (at which point the setter has run, so any changes it makes are done)
-        """
-        prop = getattr(self.__class__, property_name, None)
-        assert isinstance(prop, NotifiedProperty), "The specified property isn't available"
-        
-        # register the callback.  Note we need to pass the current object in so
-        # the property knows which object we're talking about.
-        prop.register_callback(self, callback)
+    @functools.wraps(register_for_property_changes)
+    def register_for_property_changes(self, property_name, callback):
+        return register_for_property_changes(self, property_name, callback)
         
 
 if __name__ == '__main__':

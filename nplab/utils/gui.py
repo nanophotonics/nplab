@@ -57,6 +57,7 @@ except AttributeError:
     QtCore.Signal = QtCore.pyqtSignal
     QtCore.Slot = QtCore.pyqtSlot
 
+QtGui.QApplication.setGraphicsSystem("raster")
 
 def get_qt_app():
     """Retrieve or create the QApplication instance.

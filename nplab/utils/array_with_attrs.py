@@ -62,3 +62,8 @@ class ArrayWithAttrs(np.ndarray):
         # dictionary.  We copy this from the source object if possible (while
         # ensuring it's the right type) or create a new, empty one if not.
         self.attrs = ensure_attribute_dict(getattr(obj, 'attrs', {}))
+
+def attribute_bundler(attrs):
+    """Return a function that bundles the supplied attributes with an array."""
+    def bundle_attrs(array):
+        return ArrayWithAttrs(array, attrs=attrs)

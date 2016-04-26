@@ -25,8 +25,10 @@ import datetime
 from PIL import Image
 import warnings
 import pyqtgraph as pg
+from weakref import WeakSet
 
 from nplab.instrument import Instrument
+from nplab.utils.notified_property import NotifiedProperty, DumbNotifiedProperty
 
 class CameraParameter(HasTraits):
     value = Property(Float(np.NaN))
@@ -80,7 +82,7 @@ class Camera(Instrument):
     you should override     
     """
     
-    video_priority = False
+    video_priority = DumbNotifiedProperty(False)
     """Set video_priority to True to avoid disturbing the video stream when
     taking images.  raw_snapshot may ignore the setting, but get_image and by
     extension rgb_image and gray_image will honour it."""
@@ -90,7 +92,7 @@ class Camera(Instrument):
     filter_function = None 
     """This function is run on the image before it's displayed in live view.  
     It should accept, and return, an RGB image as its argument."""
-
+    
     traits_view = View(VGroup(
                     Item(name="image_plot",editor=ComponentEditor(),show_label=False,springy=True),
                     VGroup(
@@ -117,14 +119,14 @@ class Camera(Instrument):
                         ),
                         kind="live",resizable=True,width=500,height=600,title="Camera Properties"
                     )
-                    
+    
     def __init__(self):
         super(Camera,self).__init__()
         self.initialise_parameters()
         self.acquisition_lock = threading.Lock()    
         self.latest_frame_updated = threading.Event()
         self._live_view = False
-        
+    
     def __del__(self):
         self.close()
 #        super(Camera,self).__del__() #apparently not...?
@@ -169,20 +171,6 @@ class Camera(Instrument):
         else:
             return self.latest_frame
     
-    def _save_snapshot_fired(self):
-        d=self.create_dataset('snapshot', data=self.update_latest_frame(), attrs=self.get_metadata())
-        d.attrs.create('description',self.description)
-        
-    def _save_jpg_snapshot_fired(self):
-        cur_img = self.update_latest_frame()
-        fname = QtGui.QFileDialog.getSaveFileName(
-                                caption = "Select Data File",
-                                directory = os.path.join(os.getcwd(),datetime.date.today().strftime("%Y-%m-%d.jpg")),
-                                filter = "Images (*.jpg *.jpeg)",
-                            )
-        j = Image.fromarray(cur_img)
-        j.save(fname)
-        
     def get_metadata(self):
         """Return a dictionary of camera settings."""
         ret = dict()
@@ -204,33 +192,47 @@ class Camera(Instrument):
         print "Warning: get_image is deprecated, use raw_image() instead."
         return self.raw_image()
         
-    def raw_image(self):
+    def raw_image(self, bundle_metadata=False, update_latest_frame=False):
         """Take an image from the camera, respecting video priority.
         
         If live view is enabled and video_priority is true, return the next
         frame in the video stream.  Otherwise, return a specially-acquired
         image from raw_snapshot.
         """
+        frame = None
         if self.live_view and self.video_priority:
-            return True, self.get_next_frame(raw=True)
+            frame = self.get_next_frame(raw=True)
         else:
-            return self.raw_snapshot()
+            status, frame = self.raw_snapshot()
+        if update_latest_frame:
+            self.latest_raw_frame = frame
+        # return it as an ArrayWithAttrs including self.metadata, if requested
+        return self.bundle_metadata(frame, bundle_metadata)
             
-    def color_image(self):
-        """Get a colour image (bypass filtering, etc.)"""
-        ret, frame = self.raw_image()
+    def color_image(self, **kwargs):
+        """Get a colour image (bypass filtering, etc.)
+        
+        Additional keyword arguments are passed to raw_image."""
+        frame = self.raw_image(**kwargs)
         try:
             assert frame.shape[2]==3
             return frame
         except:
             try:
                 assert len(frame.shape)==2
-                return np.vstack((frame,)*3) #turn gray into color by duplicating!
+                gray_frame = np.vstack((frame,)*3) #turn gray into color by duplicating!
+                if hasattr(frame, "attrs"):
+                    return ArrayWithAttrs(gray_frame, attrs=frame.attrs)
+                else:
+                    return gray_frame
             except:
                 raise Exception("Couldn't convert the camera's raw image to colour.")
-    def gray_image(self):
-        """Get a colour image (bypass filtering, etc.)"""
-        ret, frame = self.raw_image()
+        
+    def gray_image(self, **kwargs):
+        """Get a colour image (bypass filtering, etc.)
+        
+        Additional keyword arguments are passed to raw_image."""
+        frame = self.raw_image(**kwargs)
         try:
             assert len(frame.shape)==2
             return frame
@@ -241,12 +243,20 @@ class Camera(Instrument):
             except:
                 raise Exception("Couldn't convert the camera's raw image to grayscale.")
                 
+    def save_raw_image(self, update_latest_frame=True, attrs={}):
+        """Save an image to the default place in the default HDF5 file."""
+        d=self.create_dataset('snapshot_%d', 
+                              data=self.raw_image(
+                                  bundle_metadata=True,
+                                  update_latest_frame=update_latest_frame))
+        d.attrs.update(attrs)
+                
     def parameter_names(self):
         """Return a list of names of parameters that may be set."""
         return ['exposure','gain']
     
     _latest_raw_frame = None
-    @property
+    @NotifiedProperty
     def latest_raw_frame(self):
         """The last frame acquired by the camera.  
         
@@ -261,14 +271,15 @@ class Camera(Instrument):
         """Set the latest raw frame, and update the preview widget if any."""
         self._latest_raw_frame = frame
         self.latest_frame_updated.set()
-
-        if self._preview_widget is not None:
-            try:
-                self._preview_widget.update_image(self.latest_frame)
-            except Exception as e:
-                print "something went wrong updating the preview widget"
-                raise e
-            
+        
+        if self._preview_widgets is not None:
+            for w in self._preview_widgets:
+                try:
+                    w.update_image(self.latest_frame)
+                except Exception as e:
+                    print "something went wrong updating the preview widget"
+                    print e
+                
     @property
     def latest_frame(self):
         """The last frame acquired (in live view/from GUI), after filtering."""
@@ -285,7 +296,11 @@ class Camera(Instrument):
         This should rarely be used - raw_image, color_image and gray_image are
         the preferred way of acquiring data.  If you supply an image, it will
         use that image as if it was the most recent colour image to be 
-        acquired."""
+        acquired.
+        
+        Unless you need the filtered image, you should probably use 
+        raw_image, color_image or gray_image.
+        """
         if frame is None: 
             frame = self.color_image()
         if frame is not None:
@@ -299,13 +314,18 @@ class Camera(Instrument):
         """populate the list of camera settings that can be adjusted."""
         self.parameters = [CameraParameter(self, n) for n in self.parameter_names()]
             
-    @property
+    @NotifiedProperty
     def live_view(self):
         """Whether the camera is currently streaming and displaying video"""
         return self._live_view
     @live_view.setter
     def live_view(self, live_view):
-        """Turn live view on and off"""
+        """Turn live view on and off.
+        
+        This is used to start and stop streaming of the camera feed.  The
+        default implementation just repeatedly takes snapshots, but subclasses
+        are encouraged to override that behaviour by starting/stopping a stream
+        and using a callback function to update self.latest_raw_frame."""
         if live_view==True:
             if self._live_view:
                 return # do nothing if it's going already.
@@ -318,8 +338,8 @@ class Camera(Instrument):
             except AttributeError as e: #if any of the attributes aren't there
                 print "Error:", e
         else:
-            if self._live_view:
-                return # do nothing if it's going already.
+            if not self._live_view:
+                return # do nothing if it's not running.
             print "stopping live view thread"
             try:
                 self._live_view_stop_event.set()
@@ -329,11 +349,17 @@ class Camera(Instrument):
             except AttributeError:
                 raise Exception("Tried to stop live view but it doesn't appear to be running!")
     def _live_view_function(self):
-        """this function should only EVER be executed by _live_view_changed."""
+        """This function should only EVER be executed by _live_view_changed.
+        
+        Loop until the event tells us to stop, constantly taking snapshots.
+        Ideally you should override live_view to start and stop streaming
+        from the camera, using a callback function to update latest_raw_frame.
+        """
         while not self._live_view_stop_event.wait(timeout=0.1):
-            self.update_latest_frame()
-    
-    _preview_widget = None
+            success, frame = self.raw_snapshot()
+            self.update_latest_frame(frame)
+            
+    _preview_widgets = None
     def get_preview_widget(self):
         """A Qt Widget that can be used as a viewfinder for the camera.
         
@@ -341,9 +367,11 @@ class Camera(Instrument):
         a snapshot is taken using update_latest_frame.  Currently this returns
         a single widget instance - in future it might be able to generate (and
         keep updated) multiple widgets."""
-        if self._preview_widget is None:
-            self._preview_widget = CameraPreviewWidget()
-        return self._preview_widget
+        if self._preview_widgets is None:
+            self._preview_widgets = WeakSet()
+        new_widget = CameraPreviewWidget()
+        self._preview_widgets.add(new_widget)
+        return new_widget
     
     def get_qt_ui(self, control_only=False):
         """Create a QWidget that controls the camera.
@@ -386,7 +414,25 @@ class CameraControlUI(QtGui.QWidget, UiTools):
         super(CameraControlUI, self).__init__()
         self.camera=camera
         self.load_ui_from_file(__file__,"camera_controls_generic.ui")
-        self.auto_connect_by_name()
+        self.auto_connect_by_name(controlled_object=self.camera, verbose=True)
+        
+    def snapshot(self):
+        """Take a new snapshot and display it."""
+        self.camera.raw_image(update_latest_frame=True)
+    
+    def save_to_data_file(self):
+        self.camera.save_raw_image(
+            attrs={'description':self.description_lineedit.text()})
+        
+    def save_jpeg(self):
+        cur_img = self.camera.color_image()
+        fname = QtGui.QFileDialog.getSaveFileName(
+                                caption = "Select JPEG filename",
+                                directory = os.path.join(os.getcwd(),datetime.date.today().strftime("%Y-%m-%d.jpg")),
+                                filter = "Images (*.jpg *.jpeg)",
+                            )
+        j = Image.fromarray(cur_img)
+        j.save(fname)
         
     def __del__(self):
         pass
@@ -415,4 +461,13 @@ class CameraPreviewWidget(pg.GraphicsView):
         
     def update_image(self, newimage):
         """Update the image displayed in the preview widget."""
-        self.update_data_signal.emit(newimage)
+        self.update_data_signal.emit(newimage.astype(np.float))
+        
+class DummyCamera(Camera):
+    def raw_snapshot(self):
+        ran = np.random.random((100,100,3))
+        return True, (ran * 255.9).astype(np.uint8)
+        
+if __name__ == '__main__':
+    cam = DummyCamera()
+    cam.show_gui()

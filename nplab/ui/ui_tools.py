@@ -2,6 +2,7 @@ __author__ = 'alansanders'
 
 from nplab.utils.gui import *
 from nplab.utils.gui import QtGui, QtCore
+from nplab.utils.notified_property import NotifiedProperty, register_for_property_changes
 
 def strip_suffices(name, suffices=[]):
     """strip a string from the end of a name, if it's present."""
@@ -59,7 +60,7 @@ class UiTools(object):
                 return False
         return sender
     
-    def auto_connect_by_name(self, controlled_object=None, names=None):
+    def auto_connect_by_name(self, controlled_object=None, names=None, verbose=False):
         """Try to intelligently connect up widgets to an object's properties.
         
         Enumerate widgets of supported types, and connect them to properties
@@ -74,6 +75,8 @@ class UiTools(object):
         self._ui_controlled_object = controlled_object
         self._ui_polled_properties = []
         
+        self.slots_to_update_properties = {}
+        
         # Connect buttons to methods with the same name
         for button in self.findChildren(QtGui.QPushButton):
             name = strip_suffices(button.objectName(), ["_button","Button"])
@@ -86,10 +89,48 @@ class UiTools(object):
                     
                 assert callable(action), "To call it from a button, it must be callable!"
                 button.clicked.connect(action)
-                print "connected button '{0}' to {1}".format(name, action)
+                if verbose:
+                    print "connected button '{0}' to {1}".format(name, action)
             except:
-                print "didn't connect button with name '%s'" % name
-                pass        
+                if verbose:
+                    print "didn't connect button with name '%s'" % name    
         
         # Connect checkboxes to properties with the same name
-        
+        def checkbox_state_change_handler(obj, name):
+            "Generate a function to update a property when a checkbox changes."
+            def stateChanged(state):
+                if verbose:
+                    print "setting {0} to {1}".format(name, state == QtCore.Qt.Checked)
+                setattr(obj, name, state == QtCore.Qt.Checked)
+            return stateChanged
+            
+        for checkbox in self.findChildren(QtGui.QCheckBox):
+            name = strip_suffices(checkbox.objectName(), ["_checkbox","CheckBox"])
+            try:
+                # look for the named property first the controlled object, then use this one
+                obj = controlled_object if hasattr(controlled_object, name) else self
+                if checkbox.objectName() == name and obj is self:
+                    # don't overwrite the checkbox!
+                    if verbose:
+                        print "Warning: '{0}' not connected, name clash!".format(name)
+                    break
+                
+                # make a function to update the property, and keep track of it.
+                # NB this will always run - it makes a spurious property on
+                # the UI object if there's no connection to make.
+                stateChanged = checkbox_state_change_handler(obj, name)
+                checkbox.stateChanged.connect(stateChanged)
+                self.slots_to_update_properties[name] = stateChanged
+                
+                if verbose:
+                    if obj is self:
+                        print "connected checkbox '{0}' to UI object".format(name)
+                    else:
+                        print "connected checkbox '{0}' to target".format(name)
+            except Exception as e:
+                if verbose:
+                    print "didn't connect checkbox with name '%s'" % name
+                    print e
+                
+
+

@@ -12,6 +12,7 @@ import nplab
 
 from weakref import WeakSet
 import nplab.utils.log
+from nplab.utils.array_with_attrs import ArrayWithAttrs
 
 class Instrument(object):
     """Base class for all instrument-control classes.
@@ -109,6 +110,12 @@ class Instrument(object):
 
     metadata = property(get_metadata)
 
+    def bundle_metadata(self, data, enable=True):
+        """Add metadata to a dataset, if enable=True."""
+        if enable:
+            return ArrayWithAttrs(data, attrs=self.metadata)
+        else:
+            return data
 
     def show_gui(self, blocking=True):
         """Display a GUI window for the item of equipment.
