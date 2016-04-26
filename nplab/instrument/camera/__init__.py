@@ -93,33 +93,6 @@ class Camera(Instrument):
     """This function is run on the image before it's displayed in live view.  
     It should accept, and return, an RGB image as its argument."""
     
-    traits_view = View(VGroup(
-                    Item(name="image_plot",editor=ComponentEditor(),show_label=False,springy=True),
-                    VGroup(
-                        HGroup(
-                            Item(name="live_view"),
-                            Item(name="zoom"),
-                            Item(name="take_snapshot",show_label=False),
-                            Item(name="edit_camera_properties",label="Properties",show_label=False),
-                        ),
-                        HGroup(
-                            Item(name="description"),
-                            Item(name="save_snapshot",show_label=False),
-                            Item(name="save_jpg_snapshot",show_label=False),
-                        ), 
-                        springy=False,
-                    ),
-                    layout="split"), kind="live",resizable=True,width=500,height=600,title="Camera")
-                
-    properties_view = View(VGroup( #used to edit camera properties
-                        Item(name="parameters",show_label=False,springy=True,
-                         editor=traitsui.api.TableEditor(columns=
-                             [ObjectColumn(name="name", editable=False),
-                              ObjectColumn(name="value")])),
-                        ),
-                        kind="live",resizable=True,width=500,height=600,title="Camera Properties"
-                    )
-    
     def __init__(self):
         super(Camera,self).__init__()
         self.initialise_parameters()
@@ -164,7 +137,7 @@ class Camera(Instrument):
         for i in range(discard_frames + 1): #wait for a fresh frame
             self.latest_frame_updated.clear() #reset the flag
             if not self.latest_frame_updated.wait(timeout): #wait for frame
-                raise TimeoutError("Timed out waiting for a fresh frame from the video stream.")
+                raise IOError("Timed out waiting for a fresh frame from the video stream.")
                 
         if raw:
             return self.latest_raw_frame
@@ -180,9 +153,6 @@ class Camera(Instrument):
             except:
                 pass #if there was a problem getting metadata, ignore it.
         return ret
-    
-    def _edit_camera_properties_fired(self):
-        self.edit_traits(view="properties_view")
         
     def raw_snapshot(self):
         """Take a snapshot and return it.  No filtering or conversion."""
@@ -272,6 +242,7 @@ class Camera(Instrument):
         self._latest_raw_frame = frame
         self.latest_frame_updated.set()
         
+        # TODO: use the NotifiedProperty to do this with less code?
         if self._preview_widgets is not None:
             for w in self._preview_widgets:
                 try:
@@ -414,7 +385,7 @@ class CameraControlUI(QtGui.QWidget, UiTools):
         super(CameraControlUI, self).__init__()
         self.camera=camera
         self.load_ui_from_file(__file__,"camera_controls_generic.ui")
-        self.auto_connect_by_name(controlled_object=self.camera, verbose=True)
+        self.auto_connect_by_name(controlled_object=self.camera, verbose=False)
         
     def snapshot(self):
         """Take a new snapshot and display it."""
@@ -447,13 +418,13 @@ class CameraPreviewWidget(pg.GraphicsView):
         self.image_item = pg.ImageItem()
         self.view_box = pg.ViewBox(lockAspect=True)
         self.view_box.addItem(self.image_item)
-        #self.view_box.setContentsMargins(0,0,0,0) #not sure this does anything...
         self.view_box.setBackgroundColor([128,128,128,255])
         self.setCentralWidget(self.view_box)
         
         # We want to make sure we always update the data in the GUI thread.
         # This is done using the signal/slot mechanism
         self.update_data_signal.connect(self.update_widget, type=QtCore.Qt.QueuedConnection)
+        self._image_shape = ()
 
     def update_widget(self, newimage):
         """Draw the canvas, but do so in the Qt main loop to avoid threading nasties."""
@@ -461,7 +432,10 @@ class CameraPreviewWidget(pg.GraphicsView):
         
     def update_image(self, newimage):
         """Update the image displayed in the preview widget."""
-        self.update_data_signal.emit(newimage.astype(np.float))
+        self.update_data_signal.emit(newimage.transpose((1,0,2)).astype(np.float))
+        if self._image_shape != newimage.shape:
+            self._image_shape = newimage.shape
+            # TODO: autorange sensibly when the image changes size.
         
 class DummyCamera(Camera):
     def raw_snapshot(self):

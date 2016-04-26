@@ -77,6 +77,8 @@ class OpenCVCamera(Camera):
                 try:
                     ret, frame = self.cap.read()
                     assert ret, "Failed to capture a frame"
+                    if len(frame.shape) == 3:
+                        frame = cv2.cvtColor(frame, cv2.cv.CV_BGR2RGB)
                     return ret, frame
                 except Exception:
                     print "Attempt number {0} failed to capture a frame from the camera!".format(i)
