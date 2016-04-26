@@ -1,10 +1,25 @@
 __author__ = 'alansanders'
 
 from nplab.utils.gui import *
+from nplab.utils.gui import QtGui, QtCore
 
+def strip_suffices(name, suffices=[]):
+    """strip a string from the end of a name, if it's present."""
+    for s in suffices:
+        if name.endswith(s):
+            return name[:-len(s)]
+    return name
 
 class UiTools(object):
     """Methods useful to inherit when creating Qt user interfaces."""
+    def load_ui_from_file(self, current_file, filename):
+        """Load a form from a Qt Designer file, into the current object.
+        
+        Usually current_file should just be __file__, if the ui file is located
+        in the same directory as the python module you're writing.  Filename
+        is the UI file."""
+        uic.loadUi(os.path.join(os.path.dirname(current_file), filename), self)
+        
     def replace_widget(self, layout, old_widget, new_widget, **kwargs):
         if isinstance(layout, QtGui.QGridLayout):
             index = layout.indexOf(old_widget)
@@ -43,3 +58,38 @@ class UiTools(object):
             if state != QtGui.QValidator.Acceptable:
                 return False
         return sender
+    
+    def auto_connect_by_name(self, controlled_object=None, names=None):
+        """Try to intelligently connect up widgets to an object's properties.
+        
+        Enumerate widgets of supported types, and connect them to properties
+        of the object with the same name, or to another object's properties if
+        they are not properties of this object.
+        
+        e.g. if there's a button called "save_button", we'll first try to
+        connect self.save_button.clicked to self.save, then (if a controleld
+        object is specified) to self._controlled_object.save.
+        
+        """
+        self._ui_controlled_object = controlled_object
+        self._ui_polled_properties = []
+        
+        # Connect buttons to methods with the same name
+        for button in self.findChildren(QtGui.QPushButton):
+            name = strip_suffices(button.objectName(), ["_button","Button"])
+            try:
+                # look for the named function first in this object, then in the controlled object
+                try:
+                    action = getattr(self, name)
+                except AttributeError:
+                    action = getattr(controlled_object, name)
+                    
+                assert callable(action), "To call it from a button, it must be callable!"
+                button.clicked.connect(action)
+                print "connected button '{0}' to {1}".format(name, action)
+            except:
+                print "didn't connect button with name '%s'" % name
+                pass        
+        
+        # Connect checkboxes to properties with the same name
+        

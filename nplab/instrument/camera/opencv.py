@@ -34,8 +34,6 @@ from traits.api import HasTraits, Property, Instance, Float, String, Button, Boo
 import traitsui
 from traitsui.api import View, Item, HGroup, VGroup
 from traitsui.table_column import ObjectColumn
-import chaco
-from chaco.api import ArrayPlotData, Plot
 from enable.component_editor import ComponentEditor
 import threading
 import numpy as np
@@ -80,9 +78,8 @@ class OpenCVCamera(Camera):
                     ret, frame = self.cap.read()
                     assert ret, "Failed to capture a frame"
                     return ret, frame
-                except Exception as e:
+                except Exception:
                     print "Attempt number {0} failed to capture a frame from the camera!".format(i)
-                    exception = e
         print "Camera.raw_snapshot() has failed to capture a frame."
         if not suppress_errors:
             raise IOError("Dropped too many frames from camera :(")
@@ -94,21 +91,9 @@ class OpenCVCamera(Camera):
     
     def initialise_parameters(self):
         self.parameters = [OpenCVCameraParameter(self,n) for n in self.parameter_names()]
-        
-    def color_image(self):
-        """Get a colour image (bypass filtering, etc.)"""
-        ret, frame = self.raw_snapshot()
-        return cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
-        
-    def gray_image(self):
-        """Get a colour image (bypass filtering, etc.)"""
-        ret, frame = self.raw_snapshot()
-        return cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
 
-    def get_metadata(self):
-        return {}
 
 
 if __name__ == '__main__':
     cam = OpenCVCamera()
-    cam.configure_traits()
+    cam.show_gui()

@@ -6,6 +6,8 @@ Created on Wed Jun 11 12:28:18 2014
 """
 
 import nplab.utils.gui #load Qt correctly - do this BEFORE traits
+from nplab.utils.gui import QtCore, QtGui, uic
+from nplab.ui.ui_tools import UiTools
 import traits
 from traits.api import HasTraits, Property, Instance, Float, String, Button, Bool, on_trait_change, Range
 import traitsui
@@ -20,9 +22,9 @@ import enable
 import traceback
 import os
 import datetime
-from PyQt4 import QtGui
 from PIL import Image
 import warnings
+import pyqtgraph as pg
 
 from nplab.instrument import Instrument
 
@@ -67,46 +69,27 @@ class ImageClickTool(enable.api.BaseTool):
             self.plot.x_axis.mapper.map_data(event.x)
           
           
-class Camera(Instrument, HasTraits):
+class Camera(Instrument):
     """Generic class for representing cameras.
     
-    This should always be subclassed in order to make a useful instrument."""
-    latest_frame = traits.trait_numeric.Array(dtype=np.uint8,shape=(None, None, 3))
-    """the last frame acquired by the camera.  Particularly useful when
-    live_view is enabled.  See also latest_frame_updated."""
-    latest_raw_frame = traits.trait_numeric.Array()
-    """the last frame acquired by the camera.  Particularly useful when
-    live_view is enabled.  This is before processing by any filter function
-    that may be in effect. See also latest_frame_updated."""
+    This should always be subclassed in order to make a useful instrument.
     
-    latest_frame_updated = None
-    """This threading.Event is set every time the latest frame is updated."""
+    The minimum you should do is alter raw_snapshot to acquire and return a
+    frame from the camera.  All other acquisition functions can come from that.
+    If your camera also supports video streaming (for live view, for example)
+    you should override     
+    """
     
-    image_plot = Instance(Plot) #chaco plot used to display the latest frame
-    take_snapshot = Button
-    save_jpg_snapshot = Button
-    save_snapshot = Button
-    edit_camera_properties = Button
-    
-    live_view = Bool(False)
-    """When live_view is true, the camera runs (in a background thread) and
-    takes frames continuously, which can be displayed in a preview window or
-    accessed using latest_frame."""
-    
-    video_priority = Bool(False)
+    video_priority = False
     """Set video_priority to True to avoid disturbing the video stream when
     taking images.  raw_snapshot may ignore the setting, but get_image and by
     extension rgb_image and gray_image will honour it."""
     
-    parameters = traits.trait_types.List(trait=Instance(CameraParameter))
+    parameters = None
     
     filter_function = None 
     """This function is run on the image before it's displayed in live view.  
     It should accept, and return, an RGB image as its argument."""
-    
-    description = String("Description...")
-    zoom = Float(1.0)
-    """Sets the zoom of the preview video (in the default camera UI)."""
 
     traits_view = View(VGroup(
                     Item(name="image_plot",editor=ComponentEditor(),show_label=False,springy=True),
@@ -140,7 +123,7 @@ class Camera(Instrument, HasTraits):
         self.initialise_parameters()
         self.acquisition_lock = threading.Lock()    
         self.latest_frame_updated = threading.Event()
-        self._setup_plot()
+        self._live_view = False
         
     def __del__(self):
         self.close()
@@ -151,23 +134,6 @@ class Camera(Instrument, HasTraits):
         override in subclass if you want to shut down hardware."""
         self.live_view = False
         
-    def _take_snapshot_fired(self): self.update_latest_frame()
-    def update_latest_frame(self, frame=None):
-        """Take a new frame and store it as the "latest frame".
-        
-        Returns the image as displayed, including filters, etc."""
-        if frame is None: 
-            frame = self.color_image()
-        if frame is not None:
-            self.latest_raw_frame = frame
-            if self.filter_function is not None:
-                self.latest_frame=self.filter_function(frame)
-            else:
-                self.latest_frame=frame #This doesn't duplicate latest_raw_frame thanks to numpy :)
-            self.latest_frame_updated.set()
-            return self.latest_frame
-        else:
-            print "Failed to get an image from the camera"
     
     def get_next_frame(self, timeout=60, discard_frames=0, 
                        assert_live_view=True, raw=True):
@@ -235,6 +201,10 @@ class Camera(Instrument, HasTraits):
         return True, np.zeros((640,480,3),dtype=np.uint8)
         
     def get_image(self):
+        print "Warning: get_image is deprecated, use raw_image() instead."
+        return self.raw_image()
+        
+    def raw_image(self):
         """Take an image from the camera, respecting video priority.
         
         If live view is enabled and video_priority is true, return the next
@@ -248,7 +218,7 @@ class Camera(Instrument, HasTraits):
             
     def color_image(self):
         """Get a colour image (bypass filtering, etc.)"""
-        ret, frame = self.get_image()
+        ret, frame = self.raw_image()
         try:
             assert frame.shape[2]==3
             return frame
@@ -257,10 +227,10 @@ class Camera(Instrument, HasTraits):
                 assert len(frame.shape)==2
                 return np.vstack((frame,)*3) #turn gray into color by duplicating!
             except:
-                return None
+                raise Exception("Couldn't convert the camera's raw image to colour.")
     def gray_image(self):
         """Get a colour image (bypass filtering, etc.)"""
-        ret, frame = self.get_image()
+        ret, frame = self.raw_image()
         try:
             assert len(frame.shape)==2
             return frame
@@ -269,74 +239,186 @@ class Camera(Instrument, HasTraits):
                 assert frame.shape[2]==3
                 return np.mean(frame, axis=2, dtype=frame.dtype)
             except:
-                return None
+                raise Exception("Couldn't convert the camera's raw image to grayscale.")
                 
     def parameter_names(self):
         """Return a list of names of parameters that may be set."""
         return ['exposure','gain']
     
-    def _latest_frame_changed(self):
-        """Update the Chaco plot with the latest image."""
-        try:
-            self._image_plot_data.set_data("latest_frame",self.latest_frame)
-            self.image_plot.aspect_ratio = float(self.latest_frame.shape[1])/float(self.latest_frame.shape[0])
-        except Exception as e:
-            print "Warning: exception occurred when updating the image graph:", e
-            print "=========== Traceback ============"
-            traceback.print_exc()
-            print "============== End ==============="
+    _latest_raw_frame = None
+    @property
+    def latest_raw_frame(self):
+        """The last frame acquired by the camera.  
+        
+        This property is particularly useful when
+        live_view is enabled.  This is before processing by any filter function
+        that may be in effect.  May be NxMx3 or NxM for monochrome.  To get a
+        fresh frame, use raw_image().  Setting this property will update any
+        preview widgets that are in use."""
+        return self._latest_raw_frame
+    @latest_raw_frame.setter
+    def latest_raw_frame(self, frame):
+        """Set the latest raw frame, and update the preview widget if any."""
+        self._latest_raw_frame = frame
+        self.latest_frame_updated.set()
+
+        if self._preview_widget is not None:
+            try:
+                self._preview_widget.update_image(self.latest_frame)
+            except Exception as e:
+                print "something went wrong updating the preview widget"
+                raise e
+            
+    @property
+    def latest_frame(self):
+        """The last frame acquired (in live view/from GUI), after filtering."""
+        if self.filter_function is not None:
+            return self.filter_function(self.latest_raw_frame)
+        else:
+            return self.latest_raw_frame
+    
+    
+    def update_latest_frame(self, frame=None):
+        """Take a new frame and store it as the "latest frame"
+        
+        Returns the image as displayed, including filters, etc.
+        This should rarely be used - raw_image, color_image and gray_image are
+        the preferred way of acquiring data.  If you supply an image, it will
+        use that image as if it was the most recent colour image to be 
+        acquired."""
+        if frame is None: 
+            frame = self.color_image()
+        if frame is not None:
+            self.latest_raw_frame = frame
+            
+            return self.latest_frame
+        else:
+            print "Failed to get an image from the camera"    
     
     def initialise_parameters(self):
         """populate the list of camera settings that can be adjusted."""
         self.parameters = [CameraParameter(self, n) for n in self.parameter_names()]
-        
-    def _zoom_changed(self):
-        """Update the graph to reflect the value of zoom required"""
-        r = self.image_plot.range2d
-        for axisrange in [r.x_range, r.y_range]:
-            axisrange.low = 0.5-0.5/self.zoom
-            axisrange.high = 0.5+0.5/self.zoom
-
-    def _setup_plot(self):
-        """Construct the Chaco plot used for displaying the image"""
-        
-        self._image_plot_data = ArrayPlotData(latest_frame=self.latest_frame,
-                                              across=[0,1],middle=[0.5,0.5])
-        self.image_plot = Plot(self._image_plot_data)
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore") #this line raises a futurewarning
-            #it's a bug in Enable that's not been fixed for ages.
-            self.image_plot.img_plot("latest_frame",origin="top left")
-        self.image_plot.plot(("across","middle"),color="yellow") #crosshair
-        self.image_plot.plot(("middle","across"),color="yellow")
-        
-        #remove the axes... there ought to be a neater way to do this!
-        self.image_plot.underlays = [u for u in self.image_plot.underlays \
-                                    if not isinstance(u, chaco.axis.PlotAxis)]
-        self.image_plot.padding = 0 #fill the plot region with the image
-        self.image_plot_tool = ImageClickTool(self.image_plot)
-        self.image_plot.tools.append(self.image_plot_tool)
-
-    def _live_view_changed(self):
+            
+    @property
+    def live_view(self):
+        """Whether the camera is currently streaming and displaying video"""
+        return self._live_view
+    @live_view.setter
+    def live_view(self, live_view):
         """Turn live view on and off"""
-        if self.live_view==True:
+        if live_view==True:
+            if self._live_view:
+                return # do nothing if it's going already.
             print "starting live view thread"
             try:
                 self._live_view_stop_event = threading.Event()
                 self._live_view_thread = threading.Thread(target=self._live_view_function)
                 self._live_view_thread.start()
+                self._live_view = True
             except AttributeError as e: #if any of the attributes aren't there
                 print "Error:", e
         else:
+            if self._live_view:
+                return # do nothing if it's going already.
             print "stopping live view thread"
             try:
                 self._live_view_stop_event.set()
                 self._live_view_thread.join()
                 del(self._live_view_stop_event, self._live_view_thread)
+                self._live_view = False
             except AttributeError:
                 raise Exception("Tried to stop live view but it doesn't appear to be running!")
     def _live_view_function(self):
         """this function should only EVER be executed by _live_view_changed."""
         while not self._live_view_stop_event.wait(timeout=0.1):
             self.update_latest_frame()
+    
+    _preview_widget = None
+    def get_preview_widget(self):
+        """A Qt Widget that can be used as a viewfinder for the camera.
         
+        In live mode, this is continuously updated.  It's also updated whenever
+        a snapshot is taken using update_latest_frame.  Currently this returns
+        a single widget instance - in future it might be able to generate (and
+        keep updated) multiple widgets."""
+        if self._preview_widget is None:
+            self._preview_widget = CameraPreviewWidget()
+        return self._preview_widget
+    
+    def get_qt_ui(self, control_only=False):
+        """Create a QWidget that controls the camera.
+        
+        Specifying control_only=True returns just the controls for the camera.
+        Otherwise, you get both the controls and a preview window.
+        """
+        if control_only:
+            return CameraControlUI(self)
+        else:
+            return CameraUI(self)
+        
+        
+class CameraUI(QtGui.QWidget):
+    """Generic user interface for a camera."""
+    def __init__(self, camera):
+        assert isinstance(camera, Camera), "instrument must be a Camera"
+        #TODO: better checking (e.g. assert camera has color_image, gray_image methods)
+        super(CameraUI, self).__init__()
+        self.camera=camera
+        
+        # Set up the UI        
+        self.setWindowTitle(self.camera.__class__.__name__)
+        layout = QtGui.QVBoxLayout()
+        # The image display goes at the top of the window
+        self.preview_widget = self.camera.get_preview_widget()
+        layout.addWidget(self.preview_widget)
+        # The controls go in a layout, inside a group box.
+        self.controls = self.camera.get_qt_ui(control_only=True)
+        controls_layout = QtGui.QVBoxLayout()
+        controls_layout.addWidget(self.controls)
+        controls_layout.setContentsMargins(0,0,0,0)
+        controls_group = QtGui.QGroupBox()
+        controls_group.setTitle('Camera')
+        controls_group.setLayout(controls_layout)
+        layout.addWidget(controls_group)
+        layout.setContentsMargins(5,5,5,5)
+        layout.setSpacing(5)
+        self.setLayout(layout)
+        
+class CameraControlUI(QtGui.QWidget, UiTools):
+    """Controls for a camera (these are the really generic ones)"""
+    def __init__(self, camera):
+        assert isinstance(camera, Camera), "instrument must be a Camera"
+        #TODO: better checking (e.g. assert camera has color_image, gray_image methods)
+        super(CameraControlUI, self).__init__()
+        self.camera=camera
+        self.load_ui_from_file(__file__,"camera_controls_generic.ui")
+        self.auto_connect_by_name()
+        
+    def __del__(self):
+        pass
+
+class CameraPreviewWidget(pg.GraphicsView):
+    """A Qt Widget to display the live feed from a camera."""
+    update_data_signal = QtCore.pyqtSignal(np.ndarray)
+    
+    def __init__(self):
+        super(CameraPreviewWidget, self).__init__()
+        
+        self.image_item = pg.ImageItem()
+        self.view_box = pg.ViewBox(lockAspect=True)
+        self.view_box.addItem(self.image_item)
+        #self.view_box.setContentsMargins(0,0,0,0) #not sure this does anything...
+        self.view_box.setBackgroundColor([128,128,128,255])
+        self.setCentralWidget(self.view_box)
+        
+        # We want to make sure we always update the data in the GUI thread.
+        # This is done using the signal/slot mechanism
+        self.update_data_signal.connect(self.update_widget, type=QtCore.Qt.QueuedConnection)
+
+    def update_widget(self, newimage):
+        """Draw the canvas, but do so in the Qt main loop to avoid threading nasties."""
+        self.image_item.setImage(newimage)
+        
+    def update_image(self, newimage):
+        """Update the image displayed in the preview widget."""
+        self.update_data_signal.emit(newimage)
