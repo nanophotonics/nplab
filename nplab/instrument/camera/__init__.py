@@ -373,14 +373,8 @@ class CameraUI(QtGui.QWidget):
         layout.addWidget(self.preview_widget)
         # The controls go in a layout, inside a group box.
         self.controls = self.camera.get_qt_ui(control_only=True)
-        controls_layout = QtGui.QVBoxLayout()
-        controls_layout.addWidget(self.controls)
-        controls_layout.setContentsMargins(0,0,0,0)
-        controls_group = QtGui.QGroupBox()
-        controls_group.setTitle('Camera')
-        controls_group.setLayout(controls_layout)
-        layout.addWidget(controls_group)
-        layout.setContentsMargins(5,5,5,5)
+        layout.addWidget(self.controls)
+        #layout.setContentsMargins(5,5,5,5)
         layout.setSpacing(5)
         self.setLayout(layout)
         
