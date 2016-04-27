@@ -57,7 +57,8 @@ class OpenCVCameraParameter(CameraParameter):
     def _set_value(self, value):
         return self._cap.set(self._parameter_ID, value)
         
-           
+        
+        
 class OpenCVCamera(Camera):
     def __init__(self,capturedevice=0):
         self.cap=cv2.VideoCapture(capturedevice)

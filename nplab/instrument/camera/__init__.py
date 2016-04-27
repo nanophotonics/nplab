@@ -28,7 +28,7 @@ import pyqtgraph as pg
 from weakref import WeakSet
 
 from nplab.instrument import Instrument
-from nplab.utils.notified_property import NotifiedProperty, DumbNotifiedProperty
+from nplab.utils.notified_property import NotifiedProperty, DumbNotifiedProperty, register_for_property_changes
 
 class CameraParameter(HasTraits):
     value = Property(Float(np.NaN))
@@ -49,6 +49,33 @@ class CameraParameter(HasTraits):
     def default_traits_view(self):
         return View(Item(name="value", label=self.name),kind="live")
 
+class CameraParameter(NotifiedProperty):
+    """A quick way of creating a property that alters a camera parameter.
+    
+    The majority of cameras have some sort of mechanism for setting parameters
+    like gain, integration time, etc. etc. that involves calling an API
+    function that takes the property name as an argument.  This is a way
+    of nicely wrapping up the boilerplate code so that these properties map
+    onto properties of the camera object.
+    """
+    def __init__(self, parameter_name, doc=None):
+        """Create a property that reads and writes the given parameter.
+        
+        This internally uses the `get_camera_parameter` and 
+        `set_camera_parameter` methods, so make sure you override them.
+        """
+        if doc is None:
+            doc = "Adjust the camera parameter '{0}'".format(parameter_name)
+        super(CameraParameter, self).__init__(fget=self.fget, 
+                                                      fset=self.fset, 
+                                                      doc=doc)
+        self.parameter_name = parameter_name
+        
+    def fget(self, obj):
+        return obj.get_camera_parameter(self.parameter_name)
+            
+    def fset(self, obj, value):
+        obj.set_camera_parameter(self.parameter_name, value)
 
 class ImageClickTool(enable.api.BaseTool):
     """This handles clicks on the image and relays them to a callback function"""
@@ -95,7 +122,6 @@ class Camera(Instrument):
     
     def __init__(self):
         super(Camera,self).__init__()
-        self.initialise_parameters()
         self.acquisition_lock = threading.Lock()    
         self.latest_frame_updated = threading.Event()
         self._live_view = False
@@ -220,10 +246,6 @@ class Camera(Instrument):
                                   bundle_metadata=True,
                                   update_latest_frame=update_latest_frame))
         d.attrs.update(attrs)
-                
-    def parameter_names(self):
-        """Return a list of names of parameters that may be set."""
-        return ['exposure','gain']
     
     _latest_raw_frame = None
     @NotifiedProperty
@@ -281,9 +303,30 @@ class Camera(Instrument):
         else:
             print "Failed to get an image from the camera"    
     
-    def initialise_parameters(self):
-        """populate the list of camera settings that can be adjusted."""
-        self.parameters = [CameraParameter(self, n) for n in self.parameter_names()]
+    def camera_parameter_names(self):
+        """Return a list of names of parameters that may be set/read.
+        
+        This will list the names of all the members of this class that are 
+        `CameraParameter`s - you should define one of these for each of the 
+        properties of the camera you'd like to expose.
+        
+        If you need to support dynamic properties, I suggest you use a class
+        factory, and add CameraParameters at runtime.  You could do this from
+        within the class, but that's a courageous move.
+        
+        If you need more sophisticated control, I suggest subclassing
+        `CameraParameter`, though I can't currently see how that would help...
+        """
+        # first, identify all the CameraParameter properties we've got
+        return [p for p in dir(self.__class__) 
+                  if isinstance(getattr(self.__class__, p), CameraParameter)]
+    
+    def get_camera_parameter(self, parameter_name):
+        """Return the named property from the camera"""
+        raise NotImplementedError("You must override get_camera_parameter to use it")
+    def set_camera_parameter(self, parameter_name, value):
+        """Return the named property from the camera"""
+        raise NotImplementedError("You must override set_camera_parameter to use it")
             
     @NotifiedProperty
     def live_view(self):
@@ -344,14 +387,16 @@ class Camera(Instrument):
         self._preview_widgets.add(new_widget)
         return new_widget
     
-    def get_qt_ui(self, control_only=False):
+    def get_qt_ui(self, control_only=False, parameters_only=False):
         """Create a QWidget that controls the camera.
         
         Specifying control_only=True returns just the controls for the camera.
         Otherwise, you get both the controls and a preview window.
         """
         if control_only:
-            return CameraControlUI(self)
+            return CameraControlWidget(self)
+        elif parameters_only:
+            return CameraParametersWidget(self)
         else:
             return CameraUI(self)
         
@@ -377,12 +422,12 @@ class CameraUI(QtGui.QWidget):
         layout.setSpacing(5)
         self.setLayout(layout)
         
-class CameraControlUI(QtGui.QWidget, UiTools):
+class CameraControlWidget(QtGui.QWidget, UiTools):
     """Controls for a camera (these are the really generic ones)"""
     def __init__(self, camera):
         assert isinstance(camera, Camera), "instrument must be a Camera"
         #TODO: better checking (e.g. assert camera has color_image, gray_image methods)
-        super(CameraControlUI, self).__init__()
+        super(CameraControlWidget, self).__init__()
         self.camera=camera
         self.load_ui_from_file(__file__,"camera_controls_generic.ui")
         self.auto_connect_by_name(controlled_object=self.camera, verbose=False)
@@ -405,8 +450,95 @@ class CameraControlUI(QtGui.QWidget, UiTools):
         j = Image.fromarray(cur_img)
         j.save(fname)
         
+    def edit_camera_parameters(self):
+        """Pop up a camera parameters dialog box."""
+        self.camera_parameters_widget = CameraParametersWidget(self.camera)
+        self.camera_parameters_widget.show()
+        
     def __del__(self):
         pass
+
+class CameraParametersTableModel(QtCore.QAbstractTableModel):
+    """Class to manage a Qt table of a camera's parameters.
+    
+    With thanks to http://stackoverflow.com/questions/11736560/edit-table-in-
+    pyqt-using-qabstracttablemodel"""
+    def __init__(self, camera, parent=None):
+        super(CameraParametersTableModel, self).__init__(parent)
+        self.camera = camera
+        self.parameter_names = self.camera.camera_parameter_names()
+        
+        # Here, we register to get a callback if any of the parameters change
+        # so that we stay in sync with the camera.
+        self._callback_functions = dict()       
+        for i, pn in enumerate(self.parameter_names):
+            callback = self.callback_to_update_row(i)
+            register_for_property_changes(self.camera, pn, callback)
+            self._callback_functions[pn] = callback
+    
+    def callback_to_update_row(self, i):
+        """Return a callback function that refreshes the i-th parameter."""
+        def callback(value=None):
+            index = self.createIndex(i, 1)
+            self.dataChanged.emit(index, index)
+        return callback
+    
+    def rowCount(self, parent):
+        return len(self.parameter_names)
+    
+    def columnCount(self, parent):
+        return 2
+    
+    def data(self, index, role=QtCore.Qt.DisplayRole):
+        "Return the data for the table - property names left, values right."
+        if not index.isValid() or role != QtCore.Qt.DisplayRole:
+            return None
+        parameter_name = self.parameter_names[index.row()]
+        if index.column() == 0:
+            return parameter_name
+        else:
+            return getattr(self.camera, parameter_name)
+    
+    def headerData(self, i, orientation, role=QtCore.Qt.DisplayRole):
+        "Return data for the headers."
+        if role == QtCore.Qt.DisplayRole:
+            if orientation == QtCore.Qt.Horizontal:
+                return ["Parameter Name", "Parameter Value"][i]
+            else:
+                return ""
+        return None
+    
+    def setData(self, index, value, role=QtCore.Qt.DisplayRole):
+        """If the value is changed, update the corresponding property."""
+        assert index.column() == 1, "Can only edit second column!"
+        parameter_name = self.parameter_names[index.row()]
+        setattr(self.camera, parameter_name, float(value))
+        self.dataChanged.emit(index, index) # signal that the data has changed.
+        return True
+        
+    def flags(self, index):
+        "Return flags to tell Qt that only the second column is editable."
+        if index.column() == 1:
+            return (QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled | 
+                    QtCore.Qt.ItemIsSelectable)
+        else:
+            return QtCore.Qt.ItemIsEnabled
+    
+class CameraParametersWidget(QtGui.QWidget, UiTools):
+    """An editable table that controls a camera's acquisition parameters."""
+    def __init__(self, camera, *args, **kwargs):
+        super(CameraParametersWidget, self).__init__(*args, **kwargs)
+        self.camera = camera
+        self.table_model = CameraParametersTableModel(camera)
+        self.table_view = QtGui.QTableView()
+        self.table_view.setModel(self.table_model)
+        self.table_view.setCornerButtonEnabled(False)
+        self.table_view.resizeColumnsToContents()
+        self.table_view.horizontalHeader().setStretchLastSection(True)
+        
+        layout = QtGui.QVBoxLayout(self)
+        layout.addWidget(self.table_view)
+        self.setLayout(layout)
 
 class CameraPreviewWidget(pg.GraphicsView):
     """A Qt Widget to display the live feed from a camera."""
@@ -438,10 +570,20 @@ class CameraPreviewWidget(pg.GraphicsView):
             # TODO: autorange sensibly when the image changes size.
         
 class DummyCamera(Camera):
+    exposure = CameraParameter("exposure", "The exposure time in ms.")
+    gain = CameraParameter("gain", "The gain in units of bananas.")
+    def __init__(self):
+        super(DummyCamera, self).__init__()
+        self._camera_parameters = {'exposure':40, 'gain':1}
     def raw_snapshot(self):
         ran = np.random.random((100,100,3))
         return True, (ran * 255.9).astype(np.uint8)
+    def get_camera_parameter(self, name):
+        return self._camera_parameters[name]
+    def set_camera_parameter(self, name, value):
+        self._camera_parameters[name] = value
         
 if __name__ == '__main__':
     cam = DummyCamera()
-    cam.show_gui()
+    g=cam.show_gui(blocking=False)
+    
