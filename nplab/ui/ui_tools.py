@@ -98,60 +98,112 @@ class UiTools(object):
                 if verbose:
                     print "didn't connect button with name '%s'" % name    
         
-        # Connect checkboxes to properties with the same name
-        def checkbox_state_change_handler(obj, name):
-            "Generate a function to update a property when a checkbox changes."
-            def update_property(state):
-                if verbose:
-                    print "setting {0} to {1}".format(name, state == QtCore.Qt.Checked)
-                setattr(obj, name, state == QtCore.Qt.Checked)
-            return update_property
-        def checkbox_update_handler(control):
-            "Generate a function to update a property when a checkbox changes."
-            def update_control(value):
-                if control.isChecked() != bool(value):
-                    # NB if we don't check for an actual change, there's an
-                    # opportunity for an infinite loop here (which may be fixed
-                    # by Qt, but I'm not a betting man!)
-                    control.setChecked(bool(value))
-            return update_control
-            
-        for checkbox in self.findChildren(QtGui.QCheckBox):
-            name = strip_suffices(checkbox.objectName(), ["_checkbox","CheckBox"])
-            try:
-                # look for the named property first the controlled object, then use this one
-                obj = controlled_object if hasattr(controlled_object, name) else self
-                if checkbox.objectName() == name and obj is self:
-                    # don't overwrite the checkbox!
-                    if verbose:
-                        print "Warning: '{0}' not connected, name clash!".format(name)
-                    break
-                
-                # make a function to update the property, and keep track of it.
-                # NB this will always run - it makes a spurious property on
-                # the UI object if there's no connection to make.
-                stateChanged = checkbox_state_change_handler(obj, name)
-                checkbox.stateChanged.connect(stateChanged)
-                self.slots_to_update_properties[name] = stateChanged
-                
+        # Now, we try to connect properties with their controls.  This only
+        # works for the most common controls, defined in 
+        # auto_connectable_controls
+        
+        # Connect controls to properties with the same name
+        for name, c in auto_connectable_controls.iteritems():
+            for control in self.findChildren(c['qt_type']):
+                name = strip_suffices(control.objectName(), c['suffices'])
                 try:
-                    update_handler = checkbox_update_handler(checkbox)
-                    register_for_property_changes(obj, name, update_handler)
-                    self.callbacks_to_update_controls[name] = update_handler
-                except:
+                    # look for the named property first the controlled object, 
+                    # then use this object
+                    obj = controlled_object if hasattr(controlled_object, name) else self
+                    if control.objectName() == name and obj is self:
+                        # don't overwrite the control!
+                        if verbose:
+                            print "Warning: '{0}' not connected, name clash!".format(name)
+                        break
+                    
+                    # make a function to update the property, and keep track of it.
+                    # NB this will happen even if the property doesn't exist; in
+                    # that case it will add a new data member.
+                    # TODO: handle the case that I can't add new data mambers
+                    control_changed = c['control_change_handler'](obj, name)
+                    getattr(control, c['control_change_slot_name']).connect(control_changed)
+                    self.slots_to_update_properties[name] = control_changed
+                    
+                    # Also try to register for updates in the other direction
+                    # using NotifiedProperties
+                    update_handler = c['property_change_handler'](control)
+                    try:
+                        register_for_property_changes(obj, name, update_handler)
+                        self.callbacks_to_update_controls[name] = update_handler
+                    except:
+                        if verbose:
+                            print "Couldn't register for updates on {0}, perhaps \
+                                   it's not a NotifiedProperty?".format(name)
+                    
+                    # whether or not it's a NotifiedProperty, we can at least 
+                    # try to ensure we *start* with the same values!
+                    try:
+                        update_handler(getattr(obj, name))
+                        # this should fail if the property doesn't exist...
+                    except:
+                        if verbose:
+                            print "Failed to initialise {0}, perhaps there's \
+                                   matching property...".format(name)
+                            
+                    
                     if verbose:
-                        print "Couldn't register for updates on {0}, perhaps \
-                               it's not a NotifiedProperty?".format(name)
+                        if obj is self:
+                            print "connected checkbox '{0}' to UI object".format(name)
+                        else:
+                            print "connected checkbox '{0}' to target".format(name)
+                except Exception as e:
+                    if verbose:
+                        print "didn't connect checkbox with name '%s'" % name
+                        print e
                 
-                if verbose:
-                    if obj is self:
-                        print "connected checkbox '{0}' to UI object".format(name)
-                    else:
-                        print "connected checkbox '{0}' to target".format(name)
-            except Exception as e:
-                if verbose:
-                    print "didn't connect checkbox with name '%s'" % name
-                    print e
-                
+auto_connectable_controls = {}
 
-
+# code to update a boolean control based on a checkbox
+def checkbox_change_handler(obj, name):
+    "Generate a function to update a property when a checkbox changes."
+    def update_property(state):
+        setattr(obj, name, state == QtCore.Qt.Checked)
+    return update_property
+    
+def checkbox_update_handler(control):
+    "Generate a function to update a checkbox when its property changes."
+    def update_control(value):
+        if control.isChecked() != bool(value):
+            # NB if we don't check for an actual change, there's an
+            # opportunity for an infinite loop here (which may be fixed
+            # by Qt, but I'm not a betting man!)
+            control.setChecked(bool(value))
+    return update_control
+    
+auto_connectable_controls['checkbox'] = {
+    'qt_type': QtGui.QCheckBox,
+    'suffices': ["_checkbox","CheckBox"],
+    'control_change_handler': checkbox_change_handler,
+    'control_change_slot_name': 'stateChanged',
+    'property_change_handler': checkbox_update_handler,
+    }
+    
+# code to update a string control based on a lineedit
+def lineedit_change_handler(obj, name):
+    "Generate a function to update a property when a checkbox changes."
+    def update_property(text):
+        setattr(obj, name, text)
+    return update_property
+    
+def lineedit_update_handler(control):
+    "Generate a function to update a checkbox when its property changes."
+    def update_control(value):
+        if control.text() != value:
+            # NB if we don't check for an actual change, there's an
+            # opportunity for an infinite loop here (which may be fixed
+            # by Qt, but I'm not a betting man!)
+            control.setText(value)
+    return update_control
+    
+auto_connectable_controls['lineedit'] = {
+    'qt_type': QtGui.QLineEdit,
+    'suffices': ["_lineedit","LineEdit"],
+    'control_change_handler': lineedit_change_handler,
+    'control_change_slot_name': 'textChanged',
+    'property_change_handler': lineedit_update_handler,
+    }

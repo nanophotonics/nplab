@@ -76,27 +76,6 @@ class CameraParameter(NotifiedProperty):
             
     def fset(self, obj, value):
         obj.set_camera_parameter(self.parameter_name, value)
-
-class ImageClickTool(enable.api.BaseTool):
-    """This handles clicks on the image and relays them to a callback function"""
-    def __init__(self,plot):
-        super(ImageClickTool, self).__init__()
-        self.plot = plot
-        
-    def normal_left_up(self, event):
-        """Handle a regular click on the image.
-        
-        This calls the callback function with two numbers between 0 and 1,
-        corresponding to X and Y on the image.  Multiply by image size to get
-        pixel coordinates."""
-        if hasattr(self, "callback"):
-            self.callback(1.-self.plot.y_axis.mapper.map_data(event.y),
-                          self.plot.x_axis.mapper.map_data(event.x),)
-        else:
-            print "Clicked on image:", \
-            self.plot.y_axis.mapper.map_data(event.y),\
-            self.plot.x_axis.mapper.map_data(event.x)
-          
           
 class Camera(Instrument):
     """Generic class for representing cameras.
@@ -455,6 +434,8 @@ class CameraControlWidget(QtGui.QWidget, UiTools):
         self.camera_parameters_widget = CameraParametersWidget(self.camera)
         self.camera_parameters_widget.show()
         
+    description = DumbNotifiedProperty("Description...")
+        
     def __del__(self):
         pass
 
@@ -505,7 +486,7 @@ class CameraParametersTableModel(QtCore.QAbstractTableModel):
             if orientation == QtCore.Qt.Horizontal:
                 return ["Parameter Name", "Parameter Value"][i]
             else:
-                return ""
+                return None
         return None
     
     def setData(self, index, value, role=QtCore.Qt.DisplayRole):
