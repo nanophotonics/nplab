@@ -28,8 +28,8 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QGridLayout" name="gridLayout">
-   <item row="0" column="0">
+  <layout class="QHBoxLayout" name="horizontalLayout">
+   <item>
     <widget class="QGroupBox" name="camera_control_groupbox">
      <property name="title">
       <string>Camera Control</string>
@@ -66,7 +66,7 @@
      </layout>
     </widget>
    </item>
-   <item row="0" column="1">
+   <item>
     <widget class="QGroupBox" name="save_data_groupbox">
      <property name="title">
       <string>Save Data</string>
