@@ -170,7 +170,7 @@ class UiTools(object):
                         print "didn't connect {0} '{1}'".format(control_type, name)
                         print e
 
-class QuickControlBox(QtGui.QGroupBox):
+class QuickControlBox(QtGui.QGroupBox, UiTools):
     "A groupbox that can quickly add controls that synchronise with properties."
     def __init__(self, title="Quick Settings", *args, **kwargs):
         super(QuickControlBox, self).__init__(*args, **kwargs)
