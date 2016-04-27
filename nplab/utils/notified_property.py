@@ -113,11 +113,18 @@ class Property(object):
 
 class NotifiedProperty(Property):
     """A property that notifies when it's changed."""        
-    def __init__(self, fget=None, fset=None, fdel=None, doc=None):
+    def __init__(self, fget=None, fset=None, fdel=None, doc=None, read_back=False):
         """Return a property that notifies when it's changed.
         
         This subclasses the pure Python implementation of properties, adding
         support for notifying objects when it's changed.
+        
+        If read_back is True, the property is read immediately after it is
+        written, so that the value that's notified to any listening functions
+        is the correct one (this allows for validation of the new value, and
+        will make sure controls display what was actually done, rather than 
+        the value that was requested).  It's False by default, in case the
+        property that's connected to it is expensive to read.
         """
         super(NotifiedProperty, self).__init__(fget=fget, fset=fset, fdel=fdel, doc=doc)
         # We store a set of callbacks for each object (NB there's one property
@@ -125,11 +132,17 @@ class NotifiedProperty(Property):
         # This is weakly-referenced so if the objects die, we don't stop
         # Python garbage-collecting them.
         self.callbacks_by_object = WeakKeyDictionary()
+        self.read_back = read_back
     
     def __set__(self, obj, value):
+        """Update the property's value, and notify listeners of the change."""
         super(NotifiedProperty, self).__set__(obj, value)
-        # TODO: should I replace value below with self.__get__()?
-        self.send_notification(obj, value)
+        if self.read_back:
+            # This ensures the notified value is correct, at the expense of a read
+            self.send_notification(obj, self.__get__(obj))
+        else:
+            # This is faster, but notifies the requested value, not the actual one
+            self.send_notification(obj, value)
         
     def register_callback(self, obj, callback):
         """Add a function to be called whenever the value changes.

@@ -30,25 +30,6 @@ from weakref import WeakSet
 from nplab.instrument import Instrument
 from nplab.utils.notified_property import NotifiedProperty, DumbNotifiedProperty, register_for_property_changes
 
-class CameraParameter(HasTraits):
-    value = Property(Float(np.NaN))
-    name = String()
-
-    def __init__(self,parent,name):
-        self.parent = parent
-        self.name=name
-
-    def _get_value(self):
-        """get the value of this parameter"""
-        pass
-    
-    def _set_value(self, value):
-        """get the value of this parameter"""
-        pass
-    
-    def default_traits_view(self):
-        return View(Item(name="value", label=self.name),kind="live")
-
 class CameraParameter(NotifiedProperty):
     """A quick way of creating a property that alters a camera parameter.
     
@@ -57,8 +38,14 @@ class CameraParameter(NotifiedProperty):
     function that takes the property name as an argument.  This is a way
     of nicely wrapping up the boilerplate code so that these properties map
     onto properties of the camera object.
+    
+    NB the property will be read immediately after it's written, to ensure
+    that the value we send to any listening controls/indicators is correct
+    (otherwise we'd send them the value that was requested, even if it was
+    not valid).  This behaviour can be disabled by setting read_back to False
+    in the constructor.
     """
-    def __init__(self, parameter_name, doc=None):
+    def __init__(self, parameter_name, doc=None, read_back=True):
         """Create a property that reads and writes the given parameter.
         
         This internally uses the `get_camera_parameter` and 
@@ -68,7 +55,8 @@ class CameraParameter(NotifiedProperty):
             doc = "Adjust the camera parameter '{0}'".format(parameter_name)
         super(CameraParameter, self).__init__(fget=self.fget, 
                                                       fset=self.fset, 
-                                                      doc=doc)
+                                                      doc=doc,
+                                                      read_back=read_back)
         self.parameter_name = parameter_name
         
     def fget(self, obj):
@@ -405,7 +393,7 @@ class CameraUI(QtGui.QWidget):
         self.preview_widget = self.camera.get_preview_widget()
         layout.addWidget(self.preview_widget)
         # The controls go in a layout, inside a group box.
-        self.controls = self.camera.get_qt_ui(control_only=True)
+        self.controls = self.camera.get_control_widget()
         layout.addWidget(self.controls)
         #layout.setContentsMargins(5,5,5,5)
         layout.setSpacing(5)
