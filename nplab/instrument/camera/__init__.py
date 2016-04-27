@@ -306,7 +306,8 @@ class Camera(Instrument):
     def set_camera_parameter(self, parameter_name, value):
         """Return the named property from the camera"""
         raise NotImplementedError("You must override set_camera_parameter to use it")
-            
+    
+    _live_view = False
     @NotifiedProperty
     def live_view(self):
         """Whether the camera is currently streaming and displaying video"""
@@ -366,6 +367,14 @@ class Camera(Instrument):
         self._preview_widgets.add(new_widget)
         return new_widget
     
+    def get_control_widget(self):
+        """Return a widget that contains the camera controls but no image."""
+        return CameraControlWidget(self)
+        
+    def get_parameters_widget(self):
+        """Return a widget that controls the camera's settings."""
+        return CameraParametersWidget(self)
+        
     def get_qt_ui(self, control_only=False, parameters_only=False):
         """Create a QWidget that controls the camera.
         
@@ -373,11 +382,12 @@ class Camera(Instrument):
         Otherwise, you get both the controls and a preview window.
         """
         if control_only:
-            return CameraControlWidget(self)
+            return self.get_control_widget()
         elif parameters_only:
-            return CameraParametersWidget(self)
+            return self.get_parameters_widget(self)
         else:
             return CameraUI(self)
+            
         
         
 class CameraUI(QtGui.QWidget):
@@ -403,7 +413,7 @@ class CameraUI(QtGui.QWidget):
         
 class CameraControlWidget(QtGui.QWidget, UiTools):
     """Controls for a camera (these are the really generic ones)"""
-    def __init__(self, camera):
+    def __init__(self, camera, auto_connect=True):
         assert isinstance(camera, Camera), "instrument must be a Camera"
         #TODO: better checking (e.g. assert camera has color_image, gray_image methods)
         super(CameraControlWidget, self).__init__()
@@ -431,7 +441,7 @@ class CameraControlWidget(QtGui.QWidget, UiTools):
         
     def edit_camera_parameters(self):
         """Pop up a camera parameters dialog box."""
-        self.camera_parameters_widget = CameraParametersWidget(self.camera)
+        self.camera_parameters_widget = self.camera.get_parameters_widget()
         self.camera_parameters_widget.show()
         
     description = DumbNotifiedProperty("Description...")
@@ -493,6 +503,10 @@ class CameraParametersTableModel(QtCore.QAbstractTableModel):
         """If the value is changed, update the corresponding property."""
         assert index.column() == 1, "Can only edit second column!"
         parameter_name = self.parameter_names[index.row()]
+        try:
+            float(value) # make sure the input is valid
+        except:
+            return False
         setattr(self.camera, parameter_name, float(value))
         self.dataChanged.emit(index, index) # signal that the data has changed.
         return True
