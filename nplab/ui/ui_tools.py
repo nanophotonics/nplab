@@ -75,7 +75,10 @@ class UiTools(object):
         self._ui_controlled_object = controlled_object
         self._ui_polled_properties = []
         
-        self.slots_to_update_properties = {}
+        self.slots_to_update_properties = {} # holds callback functions to 
+                                # update properties when their controls change.
+        self.callbacks_to_update_controls = {} # holds callback functions to
+                                # update controls when their properties change.
         
         # Connect buttons to methods with the same name
         for button in self.findChildren(QtGui.QPushButton):
@@ -98,11 +101,20 @@ class UiTools(object):
         # Connect checkboxes to properties with the same name
         def checkbox_state_change_handler(obj, name):
             "Generate a function to update a property when a checkbox changes."
-            def stateChanged(state):
+            def update_property(state):
                 if verbose:
                     print "setting {0} to {1}".format(name, state == QtCore.Qt.Checked)
                 setattr(obj, name, state == QtCore.Qt.Checked)
-            return stateChanged
+            return update_property
+        def checkbox_update_handler(control):
+            "Generate a function to update a property when a checkbox changes."
+            def update_control(value):
+                if control.isChecked() != bool(value):
+                    # NB if we don't check for an actual change, there's an
+                    # opportunity for an infinite loop here (which may be fixed
+                    # by Qt, but I'm not a betting man!)
+                    control.setChecked(bool(value))
+            return update_control
             
         for checkbox in self.findChildren(QtGui.QCheckBox):
             name = strip_suffices(checkbox.objectName(), ["_checkbox","CheckBox"])
@@ -121,6 +133,15 @@ class UiTools(object):
                 stateChanged = checkbox_state_change_handler(obj, name)
                 checkbox.stateChanged.connect(stateChanged)
                 self.slots_to_update_properties[name] = stateChanged
+                
+                try:
+                    update_handler = checkbox_update_handler(checkbox)
+                    register_for_property_changes(obj, name, update_handler)
+                    self.callbacks_to_update_controls[name] = update_handler
+                except:
+                    if verbose:
+                        print "Couldn't register for updates on {0}, perhaps \
+                               it's not a NotifiedProperty?".format(name)
                 
                 if verbose:
                     if obj is self:

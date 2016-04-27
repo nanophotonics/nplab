@@ -57,9 +57,9 @@
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="camera_properties_button">
+       <widget class="QPushButton" name="edit_camera_parameters_button">
         <property name="text">
-         <string>Camera Properties</string>
+         <string>Camera Settings</string>
         </property>
        </widget>
       </item>
