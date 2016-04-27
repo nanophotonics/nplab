@@ -127,25 +127,29 @@ class Instrument(object):
         If you use blocking=False, it will return immediately - this may cause
         issues with the Qt/Traits event loop.
         """
-        try:
-            if hasattr(self,'get_qt_ui'):
-                from nplab.utils.gui import get_qt_app, qt
-                app = get_qt_app()
-                ui = self.get_qt_ui()
-                ui.show()
-                if blocking:
-                    print "Running GUI, this will block the command line until the window is closed."
-                    ui.windowModality = qt.Qt.ApplicationModal
-                    try:
-                        return app.exec_()
-                    except:
-                        print "Could not run the Qt application: perhaps it is already running?"
-                        return
-                else:
-                    return ui
-            elif blocking:
-                self.configure_traits()
+        if hasattr(self,'get_qt_ui'):
+            from nplab.utils.gui import get_qt_app, qt
+            app = get_qt_app()
+            ui = self.get_qt_ui()
+            ui.show()
+            if blocking:
+                print "Running GUI, this will block the command line until the window is closed."
+                ui.windowModality = qt.Qt.ApplicationModal
+                try:
+                    return app.exec_()
+                except:
+                    print "Could not run the Qt application: perhaps it is already running?"
+                    return
             else:
-                self.edit_traits()
-        except AttributeError:
-            raise NotImplementedError("It looks like the show_gui method hasn't been subclassed, there isn't a get_qt_ui() method, and the instrument is not using traitsui.")
+                return ui
+        else:
+            try:
+                if blocking:
+                    self.configure_traits()
+                else:
+                    self.edit_traits()
+            except NotImplementedError:
+                raise NotImplementedError("It looks like the show_gui \
+                          method hasn't been subclassed, there isn't a \
+                          get_qt_ui() method, and the instrument is not \
+                          using traitsui.")
