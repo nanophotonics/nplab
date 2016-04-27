@@ -158,52 +158,88 @@ class UiTools(object):
                 
 auto_connectable_controls = {}
 
-# code to update a boolean control based on a checkbox
-def checkbox_change_handler(obj, name):
-    "Generate a function to update a property when a checkbox changes."
-    def update_property(state):
-        setattr(obj, name, state == QtCore.Qt.Checked)
-    return update_property
+def control_change_handler(conversion=lambda x: x):
+    """Generate a function that produces callback functions.
     
-def checkbox_update_handler(control):
-    "Generate a function to update a checkbox when its property changes."
-    def update_control(value):
-        if control.isChecked() != bool(value):
-            # NB if we don't check for an actual change, there's an
-            # opportunity for an infinite loop here (which may be fixed
-            # by Qt, but I'm not a betting man!)
-            control.setChecked(bool(value))
-    return update_control
+    This function returns another function, which makes functions.  Sorry.
+    
+    The function returned by this function will have a docstring (!), it
+    takes in an object and a property name, and returns a callback function
+    that can be used to update a property when a Qt control changes.
+    
+    conversion (optional) specifies a function that converts between the
+    data type returned by Qt and the data type expected by the property.
+    """
+    def handler_generator(obj, name):
+        """Generate a function to update a property when a Qt control changes.
+        
+        Arguments:
+        obj: object
+            The object to which the property is attached
+        name: string
+            The name of the property to update
+        """
+        def update_property(value):
+            setattr(obj, name, conversion(value))
+        return update_property
+    return handler_generator
+def property_change_handler(value_name, conversion=lambda x: x):
+    """Generate a function that produces callback functions.
+    
+    These callback functions are for properties changing, and update controls,
+    but otherwise see `control_change_handler`.
+    
+    value_name: string
+        The name of the Qt property representing the control's value
+    conversion: function (optional)
+        A function to convert between the property's value and the control's
+    """
+    def handler_generator(control):
+        """Generate a function to update a control when a property changes."""
+        # first get hold of functions to get and set the control's value
+        getter = getattr(control, value_name)
+        setter = getattr(control, "set" + value_name[0].upper() + value_name[1:])
+        def update_control(value):
+            if getter() != conversion(value):
+                # If we're syncing in both directions, this is important to
+                # avoid infinite loops.  Qt is reasonably good about doing this
+                # but let's do belt-and-braces for safety.
+                setter(conversion(value))
+        return update_control
+    return handler_generator
     
 auto_connectable_controls['checkbox'] = {
     'qt_type': QtGui.QCheckBox,
     'suffices': ["_checkbox","CheckBox"],
-    'control_change_handler': checkbox_change_handler,
+    'control_change_handler': control_change_handler(lambda x: x==QtCore.Qt.Checked),
     'control_change_slot_name': 'stateChanged',
-    'property_change_handler': checkbox_update_handler,
+    'property_change_handler': property_change_handler("checked", bool),
     }
-    
-# code to update a string control based on a lineedit
-def lineedit_change_handler(obj, name):
-    "Generate a function to update a property when a checkbox changes."
-    def update_property(text):
-        setattr(obj, name, text)
-    return update_property
-    
-def lineedit_update_handler(control):
-    "Generate a function to update a checkbox when its property changes."
-    def update_control(value):
-        if control.text() != value:
-            # NB if we don't check for an actual change, there's an
-            # opportunity for an infinite loop here (which may be fixed
-            # by Qt, but I'm not a betting man!)
-            control.setText(value)
-    return update_control
-    
 auto_connectable_controls['lineedit'] = {
     'qt_type': QtGui.QLineEdit,
     'suffices': ["_lineedit","LineEdit"],
-    'control_change_handler': lineedit_change_handler,
+    'control_change_handler': control_change_handler(),
     'control_change_slot_name': 'textChanged',
-    'property_change_handler': lineedit_update_handler,
+    'property_change_handler': property_change_handler("text", str),
+    }
+auto_connectable_controls['plaintextedit'] = {
+    'qt_type': QtGui.QPlainTextEdit,
+    'suffices': ["_plaintextedit","PlainTextEdit","_textedit","_textbox"],
+    'control_change_handler': control_change_handler(),
+    'control_change_slot_name': 'textChanged',
+    'property_change_handler': property_change_handler("plainText", str),
+    }
+auto_connectable_controls['spinbox'] = {
+    'qt_type': QtGui.QSpinBox,
+    'suffices': ["_spinbox","SpinBox","_spin"],
+    'control_change_handler': control_change_handler(),
+    'control_change_slot_name': 'valueChanged',
+    'property_change_handler': property_change_handler("value", int),
+    }
+auto_connectable_controls['doublespinbox'] = {
+    'qt_type': QtGui.QSpinBox,
+    'suffices': ["_spinbox","SpinBox","_spin","_doublespinbox","DoubleSpinBox"],
+    'control_change_handler': control_change_handler(),
+    'control_change_slot_name': 'valueChanged',
+    'property_change_handler': property_change_handler("value", float),
     }
