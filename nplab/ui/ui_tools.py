@@ -10,6 +10,21 @@ def strip_suffices(name, suffices=[]):
         if name.endswith(s):
             return name[:-len(s)]
     return name
+    
+def first_object_with_attr(objects, name, raise_exception=True):
+    """Return the first object from a list that has the given attribute.
+    
+    Raise an exception if none of them has the object, if raise_exception
+    is True, otherwise return None.
+    """
+    for obj in objects:
+        if hasattr(obj, name):
+            return obj
+    if raise_exception:
+        raise AttributeError("None of the supplied objects had attribute '{0}'".format(name))
+    else:
+        return None
+    
 
 class UiTools(object):
     """Methods useful to inherit when creating Qt user interfaces."""
@@ -60,36 +75,44 @@ class UiTools(object):
                 return False
         return sender
     
-    def auto_connect_by_name(self, controlled_object=None, names=None, verbose=False):
+    def auto_connect_by_name(self, 
+                             controlled_object=None, 
+                             controlled_objects=[], 
+                             control_self=True, 
+                             verbose=False,
+                             ):
         """Try to intelligently connect up widgets to an object's properties.
         
         Enumerate widgets of supported types, and connect them to properties
-        of the object with the same name, or to another object's properties if
-        they are not properties of this object.
+        of the object with the same name.  The object in question is the
+        `controlled object` parameter, and multiple objects can be searched
+        in order - first `controlled_object`, then `controlled_objects`, then
+        this object (if control_self is True).
+        
+        The exception to this is buttons: they look in `self` first of all, 
+        then try the list of controlled objects.
         
         e.g. if there's a button called "save_button", we'll first try to
         connect self.save_button.clicked to self.save, then (if a controleld
         object is specified) to self._controlled_object.save.
         
         """
-        self._ui_controlled_object = controlled_object
-        self._ui_polled_properties = []
-        
         self.slots_to_update_properties = {} # holds callback functions to 
                                 # update properties when their controls change.
         self.callbacks_to_update_controls = {} # holds callback functions to
                                 # update controls when their properties change.
+        if controlled_object is not None:
+            controlled_objects = [controlled_object] + controlled_objects
+        if control_self:
+            controlled_objects = controlled_objects + [self]
         
         # Connect buttons to methods with the same name
         for button in self.findChildren(QtGui.QPushButton):
             name = strip_suffices(button.objectName(), ["_button","Button"])
             try:
-                # look for the named function first in this object, then in the controlled object
-                try:
-                    action = getattr(self, name)
-                except AttributeError:
-                    action = getattr(controlled_object, name)
-                    
+                # look for the named function first in this object, then in the controlled objects
+                obj = first_object_with_attr([self] + controlled_objects, name)
+                action=getattr(obj, name)
                 assert callable(action), "To call it from a button, it must be callable!"
                 button.clicked.connect(action)
                 if verbose:
@@ -103,23 +126,16 @@ class UiTools(object):
         # auto_connectable_controls
         
         # Connect controls to properties with the same name
-        for name, c in auto_connectable_controls.iteritems():
+        for control_type, c in auto_connectable_controls.iteritems():
             for control in self.findChildren(c['qt_type']):
                 name = strip_suffices(control.objectName(), c['suffices'])
                 try:
-                    # look for the named property first the controlled object, 
-                    # then use this object
-                    obj = controlled_object if hasattr(controlled_object, name) else self
-                    if control.objectName() == name and obj is self:
-                        # don't overwrite the control!
-                        if verbose:
-                            print "Warning: '{0}' not connected, name clash!".format(name)
-                        break
+                    # look for the named property on the controlled objects
+                    obj = first_object_with_attr(controlled_objects, name)
+                    assert getattr(obj, name) is not control, "Didn't connect"\
+                        " the object, as it would have overwritten itself!"
                     
                     # make a function to update the property, and keep track of it.
-                    # NB this will happen even if the property doesn't exist; in
-                    # that case it will add a new data member.
-                    # TODO: handle the case that I can't add new data mambers
                     control_changed = c['control_change_handler'](obj, name)
                     getattr(control, c['control_change_slot_name']).connect(control_changed)
                     self.slots_to_update_properties[name] = control_changed
@@ -132,8 +148,8 @@ class UiTools(object):
                         self.callbacks_to_update_controls[name] = update_handler
                     except:
                         if verbose:
-                            print "Couldn't register for updates on {0}, perhaps \
-                                   it's not a NotifiedProperty?".format(name)
+                            print "Couldn't register for updates on {0}, perhaps "\
+                                   "it's not a NotifiedProperty?".format(name)
                     
                     # whether or not it's a NotifiedProperty, we can at least 
                     # try to ensure we *start* with the same values!
@@ -142,20 +158,61 @@ class UiTools(object):
                         # this should fail if the property doesn't exist...
                     except:
                         if verbose:
-                            print "Failed to initialise {0}, perhaps there's \
-                                   matching property...".format(name)
+                            print "Failed to initialise {0}, perhaps there's "\
+                                   "no matching property...".format(name)
                             
                     
                     if verbose:
-                        if obj is self:
-                            print "connected checkbox '{0}' to UI object".format(name)
-                        else:
-                            print "connected checkbox '{0}' to target".format(name)
+                        print "connected {0} '{1}' to {2}".format(control_type, 
+                                 name, "UI" if obj is self else "target")
                 except Exception as e:
                     if verbose:
-                        print "didn't connect checkbox with name '%s'" % name
+                        print "didn't connect {0} '{1}'".format(control_type, name)
                         print e
-                
+
+class QuickControlBox(QtGui.QGroupBox):
+    "A groupbox that can quickly add controls that synchronise with properties."
+    def __init__(self, title="Quick Settings", *args, **kwargs):
+        super(QuickControlBox, self).__init__(*args, **kwargs)
+        self.setTitle(title)
+        self.setLayout(QtGui.QFormLayout())
+        self.controls = dict()
+    
+    def add_doublespinbox(self, name, vmin=None, vmax=None):
+        """Add a floating-point spin box control."""
+        sb = QtGui.QDoubleSpinBox()
+        self.controls[name] = sb
+        sb.setObjectName(name + "_spinbox")
+        if vmin is not None: sb.setMinimum(vmin)
+        if vmax is not None: sb.setMaximum(vmax)
+        self.layout().addRow(name.title(), sb)
+    
+    def add_spinbox(self, name, vmin=None, vmax=None):
+        """Add a floating-point spin box control."""
+        sb = QtGui.QSpinBox()
+        self.controls[name] = sb
+        sb.setObjectName(name + "_spinbox")
+        if vmin is not None: sb.setMinimum(vmin)
+        if vmax is not None: sb.setMaximum(vmax)
+        self.layout().addRow(name.title(), sb)
+        
+    def add_lineedit(self, name):
+        """Add a single-line text box control."""
+        le = QtGui.QLineEdit()
+        self.controls[name] = le
+        le.setObjectName(name + "_lineedit")
+        self.layout().addRow(name.title(), le)
+        
+    def add_button(self, name, title=None):
+        """Add a button."""
+        if title is None:
+            title = name
+        button = QtGui.QPushButton()
+        self.controls[name] = button
+        button.setText(title)
+        self.layout().addRow("", button)
+    
+
 auto_connectable_controls = {}
 
 def control_change_handler(conversion=lambda x: x):
@@ -213,7 +270,8 @@ auto_connectable_controls['checkbox'] = {
     'suffices': ["_checkbox","CheckBox"],
     'control_change_handler': control_change_handler(lambda x: x==QtCore.Qt.Checked),
     'control_change_slot_name': 'stateChanged',
-    'property_change_handler': property_change_handler("checked", bool),
+    'property_change_handler': property_change_handler("checkState", 
+                lambda x: QtCore.Qt.Checked if x else QtCore.Qt.Unchecked),
     }
 auto_connectable_controls['lineedit'] = {
     'qt_type': QtGui.QLineEdit,
@@ -237,7 +295,7 @@ auto_connectable_controls['spinbox'] = {
     'property_change_handler': property_change_handler("value", int),
     }
 auto_connectable_controls['doublespinbox'] = {
-    'qt_type': QtGui.QSpinBox,
+    'qt_type': QtGui.QDoubleSpinBox,
     'suffices': ["_spinbox","SpinBox","_spin","_doublespinbox","DoubleSpinBox"],
     'control_change_handler': control_change_handler(),
     'control_change_slot_name': 'valueChanged',
