@@ -1,8 +1,9 @@
 __author__ = 'alansanders'
 
-from nplab.utils.gui import *
-from nplab.utils.gui import QtGui, QtCore
+
+from nplab.utils.gui import QtGui, QtCore, uic
 from nplab.utils.notified_property import NotifiedProperty, register_for_property_changes
+import os
 
 def strip_suffices(name, suffices=[]):
     """strip a string from the end of a name, if it's present."""
@@ -206,12 +207,21 @@ class QuickControlBox(QtGui.QGroupBox, UiTools):
     def add_button(self, name, title=None):
         """Add a button."""
         if title is None:
-            title = name
+            title = name.title()
         button = QtGui.QPushButton()
         self.controls[name] = button
+        button.setObjectName(name + "_button")
         button.setText(title)
         self.layout().addRow("", button)
-    
+        
+    def add_checkbox(self, name, title=None):
+        if title is None:
+            title = name.title()
+        checkbox = QtGui.QCheckBox()
+        self.controls[name] = checkbox
+        checkbox.setObjectName(name + "_checkbox")
+        checkbox.setText(title)
+        self.layout().addRow("", checkbox)
 
 auto_connectable_controls = {}
 

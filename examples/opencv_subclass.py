@@ -45,3 +45,10 @@ if __name__ == '__main__':
     cam = MyOpenCVCamera()
     cam.show_gui()
     
+    gb = QuickControlBox()
+    gb.add_doublespinbox("gain")
+    gb.add_checkbox("live_view")
+    gb.auto_connect_by_name(cam, verbose=True)
+    gb.show()
+    cam.show_gui()
+    

@@ -148,6 +148,8 @@ class NotifiedProperty(Property):
         """Add a function to be called whenever the value changes.
         
         The function should accept one argument, which is the new value.
+        
+        NB if the function raises an exception, it will not be called again.
         """
         if obj not in self.callbacks_by_object.keys():
             self.callbacks_by_object[obj] = WeakSet()
@@ -155,13 +157,26 @@ class NotifiedProperty(Property):
         
     def deregister_callback(self, obj, callback):
         """Remove a function from the list of callbacks."""
-        callbacks = self.callbacks_by_object[obj]
-        callbacks.remove(callback)
+        try:
+            callbacks = self.callbacks_by_object[obj]
+        except KeyError:
+            raise KeyError("There don't appear to be any callbacks defined on this object!")
+        try:
+            callbacks.remove(callback)
+        except KeyError:
+            pass # Don't worry if callbacks are removed pointlessly!
+        
         
     def send_notification(self, obj, value):
         """Notify anyone that's interested that the value changed."""
-        for callback in self.callbacks_by_object.get(obj, []):
-            callback(value)
+        if obj in self.callbacks_by_object:
+            for callback in self.callbacks_by_object[obj].copy():
+                try:
+                    callback(value)
+                except:
+                    # Get rid of failed/deleted callbacks
+                    # Sometimes Qt objects don't delete cleanly, hence this bodge.
+                    self.deregister_callback(obj, callback)
             
 class DumbNotifiedProperty(NotifiedProperty):
     "A property that acts as a variable, except it notifies when it changes."
