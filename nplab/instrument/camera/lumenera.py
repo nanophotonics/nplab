@@ -38,7 +38,7 @@ Capture), and that its version matches your Python architecture (64 or 32 bit).
         raise ImportError(explanation) 
 
 import numpy as np
-from np.utils.gui import QtCore, QtGui
+from nplab.utils.gui import QtCore, QtGui
 from nplab.instrument.camera import Camera, CameraParameter
 from nplab.utils.notified_property import NotifiedProperty
         
