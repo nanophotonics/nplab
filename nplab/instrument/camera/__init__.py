@@ -535,7 +535,7 @@ class CameraPreviewWidget(pg.GraphicsView):
         self.view_box.addItem(self.image_item)
         self.view_box.setBackgroundColor([128,128,128,255])
         self.setCentralWidget(self.view_box)
-        
+
         # We want to make sure we always update the data in the GUI thread.
         # This is done using the signal/slot mechanism
         self.update_data_signal.connect(self.update_widget, type=QtCore.Qt.QueuedConnection)
@@ -550,6 +550,8 @@ class CameraPreviewWidget(pg.GraphicsView):
         self.update_data_signal.emit(newimage.transpose((1,0,2)).astype(np.float))
         if self._image_shape != newimage.shape:
             self._image_shape = newimage.shape
+            #Automatically changes the Viewbox limits (i.e. where you can look) to the new image size
+            self.view_box.setLimits(xMin = 0,xMax = self._image_shape[1],yMin=0,yMax = self._image_shape[0])
             # TODO: autorange sensibly when the image changes size.
         
 class DummyCamera(Camera):
