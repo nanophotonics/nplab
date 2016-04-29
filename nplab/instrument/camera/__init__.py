@@ -542,7 +542,7 @@ class CameraPreviewWidget(pg.GraphicsView):
         self._image_shape = ()
 
     def update_widget(self, newimage):
-        """Draw the canvas, but do so in the Qt main loop to avoid threading nasties."""
+        """Set the image, but do so in the Qt main loop to avoid threading nasties."""
         # I've explicitly dealt with the datatype of the source image, to avoid
         # a bug in the way pyqtgraph interacts with numpy 1.10.  This means
         # scaling the display values will fail for integer data.  I've thus
