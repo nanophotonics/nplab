@@ -543,11 +543,22 @@ class CameraPreviewWidget(pg.GraphicsView):
 
     def update_widget(self, newimage):
         """Draw the canvas, but do so in the Qt main loop to avoid threading nasties."""
-        self.image_item.setImage(newimage)
+        # I've explicitly dealt with the datatype of the source image, to avoid
+        # a bug in the way pyqtgraph interacts with numpy 1.10.  This means
+        # scaling the display values will fail for integer data.  I've thus
+        # forced floating-point for anything that isn't a u8, and assumed u8
+        # wants to be displayed raw.  You can always use filter_function to
+        # tweak the brightness/contrast.
+        if newimage.dtype =="uint8":
+            self.image_item.setImage(newimage, autoLevels=False)
+        else:
+            self.image_item.setImage(newimage.astype(float))
         
     def update_image(self, newimage):
         """Update the image displayed in the preview widget."""
-        self.update_data_signal.emit(newimage.transpose((1,0,2)).astype(np.float))
+        # NB compared to previous versions, pyqtgraph flips in y, hence the
+        # funny slice on the next line.
+        self.update_data_signal.emit(newimage[::-1,...].transpose((1,0,2)))
         if self._image_shape != newimage.shape:
             self._image_shape = newimage.shape
             # TODO: autorange sensibly when the image changes size.
