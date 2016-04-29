@@ -39,12 +39,13 @@ Capture), and that its version matches your Python architecture (64 or 32 bit).
 
 import numpy as np
 from nplab.utils.gui import QtCore, QtGui
-from nplab.instrument.camera import Camera, CameraParameter
+from nplab.instrument.camera import Camera, CameraParameter, CameraControlWidget
 from nplab.utils.notified_property import NotifiedProperty
         
 class LumeneraCamera(Camera):
     last_frame_time = -1
     fps = -1
+    metadata_property_names = ['gain', 'exposure']
     
 #    traits_view = View(VGroup(
 #                Item(name="image_plot",editor=ComponentEditor(),show_label=False,springy=True),
@@ -77,7 +78,7 @@ class LumeneraCamera(Camera):
         self._cameraIsStreaming = False
         
         #populate metadata - important in case we restart
-        self.metadata = {'exposure':self.exposure, 'gain':self.gain,}
+        self.auto_restore_metadata = {'exposure':self.exposure, 'gain':self.gain,} #
         
         super(LumeneraCamera,self).__init__() #NB this comes after setting up the hardware
     
@@ -99,8 +100,8 @@ class LumeneraCamera(Camera):
         self.log("New camera object greated")
         self.log("Setting live view, gain and exposure")
         self.live_view = live_view_setting
-        self.gain = self.metadata['gain']
-        self.exposure = self.metadata['exposure']
+        self.gain = self.auto_restore_metadata['gain']
+        self.exposure = self.auto_restore_metadata['exposure']
         self.log("Camera restarted")
         
         
@@ -136,9 +137,6 @@ class LumeneraCamera(Camera):
                     assert frame is not None, "Failed to capture a frame"
                     frame_pointer = frame.ctypes.data_as(
                                         ctypes.POINTER(ctypes.c_byte))
-                    if retrieve_metadata:
-                        self.metadata = {'exposure':self.exposure,
-                                         'gain':self.gain,}
                     return True, self.convert_frame(
                                             frame_pointer, 
                                             np.product(frame.shape))
@@ -261,7 +259,7 @@ class LumeneraCamera(Camera):
         "Get a Qt widget with the camera's controls (but no image display)"
         return LumeneraCameraControlWidget(self)
         
-def LumeneraCameraControlWidget(CameraControlWidget):
+class LumeneraCameraControlWidget(CameraControlWidget):
     pass
     
 
