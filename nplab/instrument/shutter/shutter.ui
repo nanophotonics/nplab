@@ -61,7 +61,7 @@
       <item>
        <widget class="QCheckBox" name="state">
         <property name="text">
-         <string>Open</string>
+         <string>toggle</string>
         </property>
        </widget>
       </item>
