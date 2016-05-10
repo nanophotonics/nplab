@@ -341,6 +341,18 @@ class Camera(Instrument):
             success, frame = self.raw_snapshot()
             self.update_latest_frame(frame)
             
+    legacy_click_callback = None
+    def set_legacy_click_callback(self, function):
+        """Set a function to be called when the image is clicked.
+        
+        Warning: this is only for compatibility with old code and will be removed
+        once camera_stage_mapper is updated!
+        """
+        self.legacy_click_callback = function
+        if self._preview_widgets is not None:
+            for w in self._preview_widgets:
+                w.add_legacy_click_callback(self.legacy_click_callback)
+            
     _preview_widgets = None
     def get_preview_widget(self):
         """A Qt Widget that can be used as a viewfinder for the camera.
@@ -353,6 +365,8 @@ class Camera(Instrument):
             self._preview_widgets = WeakSet()
         new_widget = CameraPreviewWidget()
         self._preview_widgets.add(new_widget)
+        if self.legacy_click_callback is not None:
+            new_widget.add_legacy_click_callback(self.legacy_click_callback)
         return new_widget
     
     def get_control_widget(self):
@@ -528,11 +542,31 @@ class CameraParametersWidget(QtGui.QWidget, UiTools):
         layout.addWidget(self.table_view)
         self.setLayout(layout)
 
-class ViewBoxWithNoPadding(pg.ViewBox):
-    """A pyqtgraph ViewBox that has no padding."""
+class PreviewViewBox(pg.ViewBox):
+    """A pyqtgraph ViewBox for use in the preview widget."""
     def suggestPadding(self, axis):
-        """Return a value to use for the padding on a given axis."""
+        """Return a value to use for the padding on a given axis.
+        
+        We always return zero so the image, by default, fills the window."""
         return 0
+        
+class PreviewImageItem(pg.ImageItem):
+    legacy_click_callback = None
+    def mouseClickEvent(self, ev):
+        """Handle a mouse click on the image."""
+        if ev.button() == QtCore.Qt.LeftButton:
+            print "imageitem got a click at {0}".format(ev.pos())
+            pos = np.array(ev.pos())
+            if self.legacy_click_callback is not None:
+                size = np.array(self.image.shape[:2])
+                point = pos/size
+                self.legacy_click_callback(point[1], point[0])
+                ev.accept()
+            else:
+                pass
+        else:
+            super(PreviewImageItem, self).mouseClickEvent(ev)
+    
 
 class CameraPreviewWidget(pg.GraphicsView):
     """A Qt Widget to display the live feed from a camera."""
@@ -541,8 +575,8 @@ class CameraPreviewWidget(pg.GraphicsView):
     def __init__(self):
         super(CameraPreviewWidget, self).__init__()
         
-        self.image_item = pg.ImageItem()
-        self.view_box = ViewBoxWithNoPadding(lockAspect=1.0)
+        self.image_item = PreviewImageItem()
+        self.view_box = PreviewViewBox(lockAspect=1.0, invertY=True)
         self.view_box.addItem(self.image_item)
         self.view_box.setBackgroundColor([128,128,128,255])
         self.setCentralWidget(self.view_box)
@@ -568,7 +602,10 @@ class CameraPreviewWidget(pg.GraphicsView):
         """Update the image displayed in the preview widget."""
         # NB compared to previous versions, pyqtgraph flips in y, hence the
         # funny slice on the next line.
-        self.update_data_signal.emit(newimage[::-1,...].transpose((1,0,2)))
+        self.update_data_signal.emit(newimage.transpose((1,0,2)))
+        
+    def add_legacy_click_callback(self, function):
+        
         
 class DummyCamera(Camera):
     exposure = CameraParameter("exposure", "The exposure time in ms.")

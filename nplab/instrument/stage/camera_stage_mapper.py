@@ -50,7 +50,7 @@ class CameraStageMapper(HasTraits):
         self.stage = stage
         self.camera_to_sample = np.identity(2)
         self.camera_centre = (0.5,0.5)
-        self.camera.image_plot_tool.callback = self.move_to_camera_point
+        self.camera.set_legacy_click_callback(self.move_to_camera_point)
         self._action_lock = threading.Lock() #prevent us from doing two things involving motion at once!
     def camera_pixel_to_point(self, p):
         """convert pixel coordinates to point coordinates (normalised 0-1)"""
