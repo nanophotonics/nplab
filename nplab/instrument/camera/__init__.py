@@ -605,6 +605,7 @@ class CameraPreviewWidget(pg.GraphicsView):
         self.update_data_signal.emit(newimage.transpose((1,0,2)))
         
     def add_legacy_click_callback(self, function):
+        self.image_item.legacy_click_callback = function
         
         
 class DummyCamera(Camera):
