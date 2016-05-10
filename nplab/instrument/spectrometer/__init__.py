@@ -19,6 +19,7 @@ import inspect
 import datetime
 from nplab.instrument import Instrument
 import warnings
+import pyqtgraph as pg
 
 
 class Spectrometer(Instrument):
@@ -181,10 +182,12 @@ class Spectrometer(Instrument):
         else:
             return spectrum
 
-    def get_qt_ui(self, control_only=False):
+    def get_qt_ui(self, control_only=False,display_only = False):
         """Create a Qt interface for the spectrometer"""
         if control_only:
             return SpectrometerControlUI(self)
+        elif display_only:
+            return SpectrometerDisplayUI(self)
         else:
             return SpectrometerUI(self)
 
@@ -404,26 +407,32 @@ class SpectrometerDisplayUI(UiTools, display_base, display_widget):
         super(SpectrometerDisplayUI, self).__init__()
         if isinstance(spectrometer, Spectrometers) and spectrometer.num_spectrometers == 1:
             spectrometer = spectrometer.spectrometers[0]
+        if isinstance(spectrometer,Spectrometer):
+            spectrometer.num_spectrometers = 1
         self.spectrometer = spectrometer
         print self.spectrometer
         self.setupUi(self)
-        self.fig = Figure()
-        self.figure_widget = self.replace_widget(self.display_layout,
-                                                 self.figure_widget, FigureCanvas(self.fig))
 
+        pg.setConfigOption('background', 'w')
+        pg.setConfigOption('foreground', 'k')
+        self.plotbox = QtGui.QGroupBox()
+        self.plotbox.setLayout(QtGui.QGridLayout())
+        self.plotlayout = self.plotbox.layout()          
+        self.plots =[]
+
+        for spectrometer_nom in range(self.spectrometer.num_spectrometers):
+            self.plots.append(pg.PlotWidget(labels = {'bottom':'Wavelength (nm)'}))
+            self.plotlayout.addWidget(self.plots[spectrometer_nom])
+
+        self.figure_widget = self.replace_widget(self.display_layout,
+                                                 self.figure_widget, self.plotbox)         
         self.take_spectrum_button.clicked.connect(self.button_pressed)
         self.live_button.clicked.connect(self.button_pressed)
         self.save_button.clicked.connect(self.button_pressed)
         self.threshold.setValidator(QtGui.QDoubleValidator())
         self.threshold.textChanged.connect(self.check_state)
 
-        for text_field in [self.x_max, self.x_min, self.y_max, self.y_min]:
-            text_field.setValidator(QtGui.QDoubleValidator())
-            text_field.textChanged.connect(self.update_limits)
-        for checkbox in [self.autoscale_x, self.autoscale_y]:
-            checkbox.stateChanged.connect(self.update_limits)
 
-        #self._display_thread = Thread(target=self.update_spectrum)
         self._display_thread = DisplayThread(self)
         self._display_thread.spectrum_ready.connect(self.update_display)
         self._display_thread.spectra_ready.connect(self.update_display)
@@ -463,22 +472,6 @@ class SpectrometerDisplayUI(UiTools, display_base, display_widget):
         spectrum = read_processed_spectrum()
         self.update_display(spectrum)
 
-    def update_limits(self, *args, **kwargs):
-        """Handle autoscaling/limit related parameter changes"""
-        try:
-            for ax in self.fig.axes:
-                if self.autoscale_x.checkState():
-                    ax.set_xlim(auto=True)
-                else:
-                    ax.set_xlim(float(self.x_min.text()),float(self.x_max.text()))
-                if self.autoscale_y.checkState():
-                    ax.set_ylim(auto=True)
-                else:
-                    ax.set_ylim(float(self.y_min.text()),float(self.y_max.text()))
-        except:
-            print "Uh oh, something went wrong setting the graph limits."
-
-
     def continuously_update_spectrum(self):
         t0 = time.time()
         while self.live_button.isChecked():
@@ -489,36 +482,30 @@ class SpectrometerDisplayUI(UiTools, display_base, display_widget):
             self.update_spectrum()
 
     def update_display(self, spectrum):
+        #Update the graphs  
         if self.enable_threshold.checkState() == QtCore.Qt.Checked:
             threshold = float(self.threshold.text())
             if isinstance(self.spectrometer, Spectrometers):
                 spectrum = [spectrometer.mask_spectrum(s, threshold) for (spectrometer, s) in zip(self.spectrometer.spectrometers, spectrum)]
             else:
                 spectrum = self.spectrometer.mask_spectrum(spectrum, threshold)
-        if not self.fig.axes:
+                    
+        if not self.plots[0].getPlotItem().listDataItems():
+            self.plotdata = []
             if isinstance(self.spectrometer, Spectrometers):
-                ax = self.fig.add_subplot(111)
-                ax.plot(self.spectrometer.wavelengths[0], spectrum[0], 'r-')
-                ax2 = ax.twinx()
-                ax2.plot(self.spectrometer.wavelengths[1], spectrum[1], 'b-')
-            else:
-                ax = self.fig.add_subplot(111)
-                ax.plot(self.spectrometer.wavelengths, spectrum, 'r-')
-            self.update_limits()
+                for spectrometer_nom in range(self.spectrometer.num_spectrometers):
+                    self.plotdata.append(self.plots[spectrometer_nom].plot(x = self.spectrometer.wavelengths[spectrometer_nom],y = spectrum[spectrometer_nom],pen =(spectrometer_nom,len(range(self.spectrometer.num_spectrometers)))))
+                    
+   
+            else:                
+                self.plotdata.append(self.plots[0].plot(x = self.spectrometer.wavelengths,y = spectrum,pen =(0,len(range(self.spectrometer.num_spectrometers)))))
         else:
             if isinstance(self.spectrometer, Spectrometers):
-                for i, axis in enumerate(self.fig.axes):
-                    l, = axis.lines
-                    l.set_data(self.spectrometer.wavelengths[i], spectrum[i])
-                    axis.relim()
-                    axis.autoscale_view()
+                for spectrometer_nom in range(self.spectrometer.num_spectrometers):
+                    self.plotdata[spectrometer_nom].setData(x = self.spectrometer.wavelengths[spectrometer_nom],y= spectrum[spectrometer_nom])
             else:
-                ax, = self.fig.axes
-                l, = ax.lines
-                l.set_data(self.spectrometer.wavelengths, spectrum)
-                ax.relim()
-                ax.autoscale_view()
-        self.fig.canvas.draw()
+                self.plotdata[0].setData(x = self.spectrometer.wavelengths,y= spectrum)
+
 
 
 class SpectrometerUI(QtGui.QWidget):
@@ -604,7 +591,9 @@ if __name__ == '__main__':
     from nplab.utils.gui import get_qt_app
     s1 = DummySpectrometer()
     s2 = DummySpectrometer()
-    spectrometers = Spectrometers([s1, s2])
+    s3 = DummySpectrometer()
+    s4 = DummySpectrometer()
+    spectrometers = Spectrometers([s1, s2,s3,s4])
     for spectrometer in spectrometers.spectrometers:
         spectrometer.integration_time = 100
     import timeit

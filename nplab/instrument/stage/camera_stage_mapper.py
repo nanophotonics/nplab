@@ -50,7 +50,7 @@ class CameraStageMapper(HasTraits):
         self.stage = stage
         self.camera_to_sample = np.identity(2)
         self.camera_centre = (0.5,0.5)
-        self.camera.image_plot_tool.callback = self.move_to_camera_point
+        self.camera.set_legacy_click_callback(self.move_to_camera_point)
         self._action_lock = threading.Lock() #prevent us from doing two things involving motion at once!
     def camera_pixel_to_point(self, p):
         """convert pixel coordinates to point coordinates (normalised 0-1)"""
@@ -201,12 +201,16 @@ class CameraStageMapper(HasTraits):
         This functionality should really be in the camera, not the aligner!"""
         time.sleep(self.settling_time)
         for i in range(self.frames_to_discard):
-            self.camera.raw_snapshot()
+            self.camera.raw_image() #acquire, then discard, an image from the camera
     def autofocus_merit_function(self): # we maximise this...
-        """take an image and calculate the focus metric, this is what we optimise"""
+        """Take an image and calculate the focus metric, this is what we optimise.
+        
+        Currently, this calculates the sum of the square of the Laplacian of the image
+        which should pick out sharp features quite effectively.  It can, however, be
+        thrown off by very bright objects if the camera is saturated."""
         self.flush_camera_and_wait()
 #        self.camera.update_latest_frame() #take an extra frame to make sure this one is fresh
-        img = self.camera.raw_snapshot()[1]
+        img = self.camera.raw_image()
 #        return np.sum((img - cv2.blur(img,(21,21))).astype(np.single)**2)
         return np.sum(cv2.Laplacian(cv2.cvtColor(img,cv2.COLOR_BGR2GRAY), ddepth=cv2.CV_32F)**2)
     @on_trait_change("do_autofocus")

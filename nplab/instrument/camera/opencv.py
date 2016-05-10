@@ -29,37 +29,8 @@ We are using Python %d.%d, so get the corresponding package.
         raise ImportError(explanation) 
     
 import cv2.cv
-import traits
-from traits.api import HasTraits, Property, Instance, Float, String, Button, Bool, on_trait_change
-import traitsui
-from traitsui.api import View, Item, HGroup, VGroup
-from traitsui.table_column import ObjectColumn
-import chaco
-from chaco.api import ArrayPlotData, Plot
-from enable.component_editor import ComponentEditor
-import threading
-import numpy as np
-
-from nplab.instrument.camera import Camera, CameraParameter, ImageClickTool
-
-class OpenCVCameraParameter(CameraParameter):
-    value = Property(Float(np.NaN))
-    name = String()
-    def __init__(self, parent, parameter_name):
-        self._cap = parent.cap
-        self.name = parameter_name.title().replace('_',' ')
-        try:
-            self._parameter_ID = getattr(cv2.cv,'CV_CAP_PROP_'+parameter_name.upper().replace(' ','_'))
-        except AttributeError:
-            raise AttributeError("%s is not a valid capture property, try CameraParameter.list_names()")
-            
-    def _get_value(self):
-        return self._cap.get(self._parameter_ID)
-        
-    def _set_value(self, value):
-        return self._cap.set(self._parameter_ID, value)
-        
-           
+from nplab.instrument.camera import Camera, CameraParameter
+    
 class OpenCVCamera(Camera):
     def __init__(self,capturedevice=0):
         self.cap=cv2.VideoCapture(capturedevice)
@@ -79,36 +50,33 @@ class OpenCVCamera(Camera):
                 try:
                     ret, frame = self.cap.read()
                     assert ret, "Failed to capture a frame"
+                    if len(frame.shape) == 3:
+                        frame = cv2.cvtColor(frame, cv2.cv.CV_BGR2RGB)
                     return ret, frame
-                except Exception as e:
+                except Exception:
                     print "Attempt number {0} failed to capture a frame from the camera!".format(i)
-                    exception = e
         print "Camera.raw_snapshot() has failed to capture a frame."
         if not suppress_errors:
             raise IOError("Dropped too many frames from camera :(")
         else:
             return False, None
         
-    def parameter_names(self):
-        return [name.replace("CV_CAP_PROP_","") for name in dir(cv2.cv) if "CV_CAP_PROP_" in name ]
-    
-    def initialise_parameters(self):
-        self.parameters = [OpenCVCameraParameter(self,n) for n in self.parameter_names()]
-        
-    def color_image(self):
-        """Get a colour image (bypass filtering, etc.)"""
-        ret, frame = self.raw_snapshot()
-        return cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
-        
-    def gray_image(self):
-        """Get a colour image (bypass filtering, etc.)"""
-        ret, frame = self.raw_snapshot()
-        return cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
+    def get_camera_parameter(self, parameter_name):
+        """Get the value of a camera parameter (though you should really use the property)"""
+        return self.cap.get(getattr(cv2.cv,parameter_name))
+    def set_camera_parameter(self, parameter_name, value):
+        """Set the value of a camera parameter (though you should really use the property)"""
+        return self.cap.set(getattr(cv2.cv,parameter_name), value)
 
-    def get_metadata(self):
-        return {}
-
+# Add properties to change the camera parameters, based on OpenCV's parameters.
+# It may be wise not to do this, and to filter them instead...
+for cvname in dir(cv2.cv):
+    if "CV_CAP_PROP_" in cvname:
+        name = cvname.replace("CV_CAP_PROP_","").lower()
+        setattr(OpenCVCamera, 
+                name, 
+                CameraParameter(cvname, doc="the camera property %s" % name))
 
 if __name__ == '__main__':
     cam = OpenCVCamera()
-    cam.configure_traits()
+    cam.show_gui()

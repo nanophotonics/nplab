@@ -87,8 +87,12 @@ class SerialInstrument(MessageBusInstrument):
     def write(self,query_string):
         """Write a string to the serial port"""
         assert self.ser.isOpen(), "Warning: attempted to write to the serial port before it was opened.  Perhaps you need to call the 'open' method first?"
-        if self.ser.outWaiting()>0: self.ser.flushOutput() #ensure there's nothing waiting
+        try:        
+            if self.ser.outWaiting()>0: self.ser.flushOutput() #ensure there's nothing waiting
+        except AttributeError:
+            if self.ser.out_waiting>0: self.ser.flushOutput() #ensure there's nothing waiting
         self.ser.write(query_string+self.termination_character)
+
     def flush_input_buffer(self):
         """Make sure there's nothing waiting to be read, and clear the buffer if there is."""
         if self.ser.inWaiting()>0: self.ser.flushInput()
