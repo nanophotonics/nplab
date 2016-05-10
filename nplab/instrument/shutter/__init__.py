@@ -32,7 +32,8 @@ class ShutterUI(QtGui.QWidget, UiTools):
         self.shutter = shutter
         super(ShutterUI, self).__init__(parent)
         uic.loadUi(os.path.join(os.path.dirname(__file__), 'shutter.ui'), self)
-        self.state.stateChanged.connect(self.on_change)
+        self.auto_connect_by_name(controlled_object = self.shutter)
+    #    self.state.stateChanged.connect(self.on_change)
 
     def on_change(self):
         self.shutter.toggle()
