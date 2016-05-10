@@ -528,6 +528,12 @@ class CameraParametersWidget(QtGui.QWidget, UiTools):
         layout.addWidget(self.table_view)
         self.setLayout(layout)
 
+class ViewBoxWithNoPadding(pg.ViewBox):
+    """A pyqtgraph ViewBox that has no padding."""
+    def suggestPadding(self, axis):
+        """Return a value to use for the padding on a given axis."""
+        return 0
+
 class CameraPreviewWidget(pg.GraphicsView):
     """A Qt Widget to display the live feed from a camera."""
     update_data_signal = QtCore.pyqtSignal(np.ndarray)
@@ -536,7 +542,7 @@ class CameraPreviewWidget(pg.GraphicsView):
         super(CameraPreviewWidget, self).__init__()
         
         self.image_item = pg.ImageItem()
-        self.view_box = pg.ViewBox(lockAspect=True)
+        self.view_box = ViewBoxWithNoPadding(lockAspect=1.0)
         self.view_box.addItem(self.image_item)
         self.view_box.setBackgroundColor([128,128,128,255])
         self.setCentralWidget(self.view_box)
@@ -558,17 +564,18 @@ class CameraPreviewWidget(pg.GraphicsView):
             self.image_item.setImage(newimage, autoLevels=False)
         else:
             self.image_item.setImage(newimage.astype(float))
+        # When the image shape changes, make sure the new image fills the window.
+        # NB we must do this after the widget is visible.
+        if self._image_shape != newimage.shape:
+            if self.isVisible():
+                self._image_shape = newimage.shape
+                self.view_box.autoRange(padding=0, items=[self.image_item])
         
     def update_image(self, newimage):
         """Update the image displayed in the preview widget."""
         # NB compared to previous versions, pyqtgraph flips in y, hence the
         # funny slice on the next line.
         self.update_data_signal.emit(newimage[::-1,...].transpose((1,0,2)))
-        if self._image_shape != newimage.shape:
-            self._image_shape = newimage.shape
-            #Automatically changes the Viewbox limits (i.e. where you can look) to the new image size
-            self.view_box.setLimits(xMin = 0,xMax = self._image_shape[1],yMin=0,yMax = self._image_shape[0])
-            # TODO: autorange sensibly when the image changes size.
         
 class DummyCamera(Camera):
     exposure = CameraParameter("exposure", "The exposure time in ms.")
