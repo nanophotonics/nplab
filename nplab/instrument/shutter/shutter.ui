@@ -45,23 +45,23 @@
        <number>5</number>
       </property>
       <item>
-       <widget class="QPushButton" name="open_shutter_pushButton">
+       <widget class="QPushButton" name="open_shutterButton">
         <property name="text">
          <string>Open</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="close_shutter_pushButton">
+       <widget class="QPushButton" name="close_shutterButton">
         <property name="text">
          <string>Close</string>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="state">
+       <widget class="QPushButton" name="toggleButton">
         <property name="text">
-         <string>toggle</string>
+         <string>Toggle</string>
         </property>
        </widget>
       </item>

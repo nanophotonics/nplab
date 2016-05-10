@@ -109,7 +109,7 @@ class UiTools(object):
         
         # Connect buttons to methods with the same name
         for button in self.findChildren(QtGui.QPushButton):
-            name = strip_suffices(button.objectName(), ["_button","Button"])
+            name = strip_suffices(button.objectName(), ["_button","Button","_pushButton"])
             try:
                 # look for the named function first in this object, then in the controlled objects
                 obj = first_object_with_attr([self] + controlled_objects, name)
@@ -277,7 +277,7 @@ def property_change_handler(value_name, conversion=lambda x: x):
     
 auto_connectable_controls['checkbox'] = {
     'qt_type': QtGui.QCheckBox,
-    'suffices': ["_checkbox","CheckBox"],
+    'suffices': ["_checkbox","CheckBox","_checkBox"],
     'control_change_handler': control_change_handler(lambda x: x==QtCore.Qt.Checked),
     'control_change_slot_name': 'stateChanged',
     'property_change_handler': property_change_handler("checkState", 
