@@ -285,7 +285,7 @@ class Camera(Instrument):
         `CameraParameter`, though I can't currently see how that would help...
         """
         # first, identify all the CameraParameter properties we've got
-        return [p for p in dir(self.__class__) 
+        return [p for p in dir(self.__class__)
                   if isinstance(getattr(self.__class__, p), CameraParameter)]
     
     def get_camera_parameter(self, parameter_name):
@@ -446,6 +446,11 @@ class CameraParametersTableModel(QtCore.QAbstractTableModel):
         super(CameraParametersTableModel, self).__init__(parent)
         self.camera = camera
         self.parameter_names = self.camera.camera_parameter_names()
+        for parameter_name in self.parameter_names[:]:   #Added to prevent properties the camera does not posses from trying to appear in the list of parameters
+            try:
+                getattr(self.camera, parameter_name)
+            except:
+                self.parameter_names.remove(parameter_name)
         
         # Here, we register to get a callback if any of the parameters change
         # so that we stay in sync with the camera.
@@ -471,7 +476,7 @@ class CameraParametersTableModel(QtCore.QAbstractTableModel):
     def data(self, index, role=QtCore.Qt.DisplayRole):
         "Return the data for the table - property names left, values right."
         if not index.isValid() or role != QtCore.Qt.DisplayRole:
-            return None
+            return None    
         parameter_name = self.parameter_names[index.row()]
         if index.column() == 0:
             return parameter_name

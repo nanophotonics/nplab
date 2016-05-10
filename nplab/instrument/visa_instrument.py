@@ -42,7 +42,7 @@ class VisaInstrument(MessageBusInstrument):
         return self.instr.read(*args, **kwargs)
 
     def query(self, *args, **kwargs):
-        return self.instr.query_delay(*args, **kwargs)
+        return self.instr.query(*args, **kwargs)
 
     def clear_read_buffer(self):
         empty_buffer = False

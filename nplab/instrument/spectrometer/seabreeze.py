@@ -346,13 +346,15 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
         else:
             return new_spectrum
 
-    def get_qt_ui(self, control_only=False):
+    def get_qt_ui(self, control_only=False, display_only = False):
         """Return a Qt Widget for controlling the spectrometer.
 
         If control_only is true, this will not contain a graph of the spectrum.
         """
         if control_only:
             return OceanOpticsControlUI(self)
+        elif display_only:
+            return SpectrometerDisplayUI(self)
         else:
             return SpectrometerUI(self)
 
