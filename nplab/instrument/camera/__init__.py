@@ -550,7 +550,6 @@ class CameraPreviewWidget(pg.GraphicsView):
         # We want to make sure we always update the data in the GUI thread.
         # This is done using the signal/slot mechanism
         self.update_data_signal.connect(self.update_widget, type=QtCore.Qt.QueuedConnection)
-        self._image_shape = ()
 
     def update_widget(self, newimage):
         """Set the image, but do so in the Qt main loop to avoid threading nasties."""
@@ -564,12 +563,6 @@ class CameraPreviewWidget(pg.GraphicsView):
             self.image_item.setImage(newimage, autoLevels=False)
         else:
             self.image_item.setImage(newimage.astype(float))
-        # When the image shape changes, make sure the new image fills the window.
-        # NB we must do this after the widget is visible.
-        if self._image_shape != newimage.shape:
-            if self.isVisible():
-                self._image_shape = newimage.shape
-                self.view_box.autoRange(padding=0, items=[self.image_item])
         
     def update_image(self, newimage):
         """Update the image displayed in the preview widget."""
