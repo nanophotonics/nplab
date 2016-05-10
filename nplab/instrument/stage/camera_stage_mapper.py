@@ -201,12 +201,16 @@ class CameraStageMapper(HasTraits):
         This functionality should really be in the camera, not the aligner!"""
         time.sleep(self.settling_time)
         for i in range(self.frames_to_discard):
-            self.camera.raw_snapshot()
+            self.camera.raw_image() #acquire, then discard, an image from the camera
     def autofocus_merit_function(self): # we maximise this...
-        """take an image and calculate the focus metric, this is what we optimise"""
+        """Take an image and calculate the focus metric, this is what we optimise.
+        
+        Currently, this calculates the sum of the square of the Laplacian of the image
+        which should pick out sharp features quite effectively.  It can, however, be
+        thrown off by very bright objects if the camera is saturated."""
         self.flush_camera_and_wait()
 #        self.camera.update_latest_frame() #take an extra frame to make sure this one is fresh
-        img = self.camera.raw_snapshot()[1]
+        img = self.camera.raw_image()
 #        return np.sum((img - cv2.blur(img,(21,21))).astype(np.single)**2)
         return np.sum(cv2.Laplacian(cv2.cvtColor(img,cv2.COLOR_BGR2GRAY), ddepth=cv2.CV_32F)**2)
     @on_trait_change("do_autofocus")
