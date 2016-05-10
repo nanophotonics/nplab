@@ -38,6 +38,7 @@ class MessageBusInstrument(nplab.instrument.Instrument):
     """
     termination_character = "\n" #: All messages to or from the instrument end with this character.
     termination_line = None #: If multi-line responses are recieved, they must end with this string
+    ignore_echo = False
 
     def write(self,query_string):
         """Write a string to the serial port"""
@@ -75,6 +76,14 @@ class MessageBusInstrument(nplab.instrument.Instrument):
         """
         self.flush_input_buffer()
         self.write(queryString)
+        if self.ignore_echo == True: # Needs Implementing for a multiline read!
+            first_line = self.readline(timeout).strip()
+            if first_line == queryString:
+                return self.readline(timeout).strip()
+            else:
+                print 'This command did not echo!!!'
+                return first_line
+
         if termination_line is not None:
             multiline = True
         if multiline:
