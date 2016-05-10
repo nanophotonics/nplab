@@ -580,6 +580,11 @@ class CameraPreviewWidget(pg.GraphicsView):
         self.view_box.addItem(self.image_item)
         self.view_box.setBackgroundColor([128,128,128,255])
         self.setCentralWidget(self.view_box)
+        self.crosshair = {'h_line': pg.InfiniteLine(pos=0,angle=0),
+                          'v_line': pg.InfiniteLine(pos=0,angle=90),}
+        for item in self.crosshair.values():
+            self.view_box.addItem(item)
+        self._image_shape = ()
 
         # We want to make sure we always update the data in the GUI thread.
         # This is done using the signal/slot mechanism
@@ -594,18 +599,27 @@ class CameraPreviewWidget(pg.GraphicsView):
         # wants to be displayed raw.  You can always use filter_function to
         # tweak the brightness/contrast.
         if newimage.dtype =="uint8":
-            self.image_item.setImage(newimage, autoLevels=False)
+            self.image_item.setImage(newimage.transpose((1,0,2)), autoLevels=False)
         else:
-            self.image_item.setImage(newimage.astype(float))
-        
+            self.image_item.setImage(newimage.transpose((1,0,2)).astype(float))
+        if newimage.shape != self._image_shape:
+            self._image_shape = newimage.shape
+            self.set_crosshair_centre((newimage.shape[0]/2.0, newimage.shape[1]/2.0))
+            
     def update_image(self, newimage):
         """Update the image displayed in the preview widget."""
         # NB compared to previous versions, pyqtgraph flips in y, hence the
         # funny slice on the next line.
-        self.update_data_signal.emit(newimage.transpose((1,0,2)))
+        self.update_data_signal.emit(newimage)
         
     def add_legacy_click_callback(self, function):
+        """Add an old-style (coordinates in fractions-of-an-image) callback."""
         self.image_item.legacy_click_callback = function
+    
+    def set_crosshair_centre(self, pos):
+        """Move the crosshair to centre on a given pixel coordinate."""
+        self.crosshair['h_line'].setValue(pos[0])
+        self.crosshair['v_line'].setValue(pos[1])
         
         
 class DummyCamera(Camera):
