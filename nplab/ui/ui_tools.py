@@ -212,7 +212,7 @@ class QuickControlBox(QtGui.QGroupBox, UiTools):
         self.controls[name] = button
         button.setObjectName(name + "_button")
         button.setText(title)
-        self.layout().addRow("", button)
+        self.layout().addRow(button)
         
     def add_checkbox(self, name, title=None):
         if title is None:
