@@ -4,13 +4,13 @@ of scanning experiments and adding supporting for utilising HDF5 files for data 
 """
 __author__ = 'alansanders'
 
-from nplab.experiment import Experiment
+from nplab.experiment import ExperimentWithDataDeque
 from threading import Thread
 import time
 from nplab import datafile
 
 
-class ScanningExperiment(Experiment):
+class ScanningExperiment(ExperimentWithDataDeque):
     """
     This class defines the core methods required for a threaded scanning experiment.
     """

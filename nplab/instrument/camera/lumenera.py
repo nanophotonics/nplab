@@ -263,14 +263,13 @@ class LumeneraCameraControlWidget(CameraControlWidget):
     """A control widget for the Lumenera camera, with extra buttons."""
     def __init__(self, camera, auto_connect=True):
         super(LumeneraCameraControlWidget, self).__init__(camera, auto_connect=False)
-        
         gb = QuickControlBox()
         gb.add_doublespinbox("exposure")
         gb.add_doublespinbox("gain")
         gb.add_button("show_camera_properties_dialog", title="Camera Setup")
         gb.add_button("show_video_format_dialog", title="Video Format")
         self.layout().insertWidget(1, gb) # put the extra settings in the middle
-        self.quick_settings_groupbox = gb
+        self.quick_settings_groupbox = gb        
         
         self.auto_connect_by_name(controlled_object=self.camera, verbose=False)
     
