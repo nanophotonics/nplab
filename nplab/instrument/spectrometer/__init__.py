@@ -108,11 +108,11 @@ class Spectrometer(Instrument):
 
     wavelengths = property(get_wavelengths)
 
-    def read_spectrum(self):
+    def read_spectrum(self, bundle_metadata=False):
         """Take a reading on the spectrometer and return it"""
         warnings.warn("Using the default implementation for read_spectrum: this should be overridden!",DeprecationWarning)
         self.latest_raw_spectrum = np.zeros(0)
-        return self.latest_raw_spectrum
+        return self.bundle_metadata(self.latest_raw_spectrum, enable=bundle_metadata)
 
     def read_background(self):
         """Acquire a new spectrum and use it as a background measurement."""
@@ -563,6 +563,8 @@ class SpectrometersUI(QtGui.QWidget):
 
 
 class DummySpectrometer(Spectrometer):
+    """A trivial stub spectrometer, for use in development."""
+    metadata_property_names = ["integration_time"]
     def __init__(self):
         super(DummySpectrometer, self).__init__()
         self._integration_time = 10
@@ -580,10 +582,11 @@ class DummySpectrometer(Spectrometer):
 
     wavelengths = property(get_wavelengths)
 
-    def read_spectrum(self):
+    def read_spectrum(self, bundle_metadata=False):
         from time import sleep
         sleep(self.integration_time/1000.)
-        return np.array([np.random.random() for wl in self.wavelengths])
+        return self.bundle_metadata(np.array([np.random.random() for wl in self.wavelengths]),
+                                    enable=bundle_metadata)
 
 
 if __name__ == '__main__':
