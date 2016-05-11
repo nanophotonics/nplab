@@ -2,25 +2,59 @@
 Experiment Module
 =================
 
-Experiments are usually subclasses of `Experiment`, as it provides the basic mechanisms for running things in the background.
+Experiments are usually subclasses of `Experiment`, as it provides the basic 
+mechanisms for running things in the background without the need to write a
+lot of threading code.
+
 """
 
-__author__ = 'alansanders'
+__author__ = 'alansanders, richard bowman'
 
 from nplab.utils.thread_utils import locked_action, background_action
-# import nplab
-# from traits.api import HasTraits, Code, Button, String
-# from traitsui.api import View, VGroup, Item, TextEditor
-
-from Queue import Queue
+from nplab.instrument import Instrument
+from nplab.utils.notified_property import NotifiedProperty, DumbNotifiedProperty
 from collections import deque
-import h5py
 import numpy as np
 import threading
 
 
-class Experiment(object):
+class Experiment(Instrument):
+    """A class representing an experimental protocol.
+    
+    This base class is a subclass of Instrument, so it provides all the GUI
+    code and data management that instruments have.  It's also got an
+    improved logging mechanism, designed for use as a status display, and some
+    template methods for running a long experiment in the background.
+    """
+    
+    latest_data = DumbNotifiedProperty(doc="The last dataset/group we acquired")
+    log_messages = DumbNotifiedProperty(doc="Log messages from the latest run")
+    
+    def run(self, *args, **kwargs):
+        """This method should be the meat of the experiment (needs overriden)."""
+        raise NotImplementedError()
 
+    @background_action
+    @locked_action
+    def run_in_background(self, *args, **kwargs):
+        """Run the experiment in a background thread.
+        
+        This is important in order to keep the GUI responsive.
+        """
+        self.log_messages = ""
+        self.run(*args, **kwargs)
+    
+    def log(self, message):
+        """Log a message to the current HDF5 file and to the experiment's history"""
+        self.log_messages += message + "\n"
+        super(Experiment, self).log(message)
+
+
+class ExperimentWithDataDeque(Experiment):
+    """Alan's Experiment class, using a deque for data management."""
+
+    latest_data = None    
+    
     def __init__(self):
         super(Experiment, self).__init__()
         #self.queue = Queue()
@@ -98,62 +132,3 @@ class Experiment(object):
         index = dset.shape[0]
         dset.resize(index+1,0)
         dset[index,...] = value
-
-    def show_gui(self, blocking=True):
-        """Display a GUI window for the item of equipment.
-
-        You should override this method to display a window to control the
-        instrument.  If edit_traits/configure_traits methods exist, we'll fall
-        back to those as a default.
-
-        If you use blocking=False, it will return immediately - this may cause
-        issues with the Qt/Traits event loop.
-        """
-        try:
-            if hasattr(self,'get_qt_ui'):
-                from nplab.utils.gui import get_qt_app, qt
-                app = get_qt_app()
-                ui = self.get_qt_ui()
-                ui.show()
-                if blocking:
-                    print "Running GUI, this will block the command line until the window is closed."
-                    ui.windowModality = qt.Qt.ApplicationModal
-                    try:
-                        return app.exec_()
-                    except:
-                        print "Could not run the Qt application: perhaps it is already running?"
-                        return
-                else:
-                    return ui
-            elif blocking:
-                self.configure_traits()
-            else:
-                self.edit_traits()
-        except AttributeError:
-            raise NotImplementedError("It looks like the show_gui method hasn't been subclassed, there isn't a get_qt_ui() method, and the instrument is not using traitsui.")
-
-
-# class Experiment(HasTraits):
-#     experiment_code = Code #This is what runs in the background thread
-#     run = Button
-#     experiment_log = String() #This is where the output goes
-#
-#     traits_view = View(VGroup(
-#                                Item("experiment_code",springy=True),
-#                                Item("run"),
-#                                Item("experiment_log", editor=TextEditor(multi_line=True),springy=True, style='custom' ),
-#                               ),resizable=True)
-#     def _run_fired(self):
-#         self.run_experiment_in_background()
-#         #We can't decorate this directly as it doesn't work with traits handlers!
-#     @background_action
-#     @locked_action
-#     def run_experiment_in_background(self):
-#         """run the experiment in a background thread"""
-#         def log(message):
-#             """Add the message to our output log."""
-#             self.experiment_log += str(message) + "\n"
-#         try:
-#             exec self.experiment_code in globals(), locals()
-#         except Exception as e:
-#             log("\n\nEXCEPTION!!\n\n"+str(e))

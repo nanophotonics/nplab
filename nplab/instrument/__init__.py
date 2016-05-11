@@ -3,13 +3,16 @@ Instrument Class
 ================
 
 This base class defines the standard behaviour for NPLab's instrument
-classes.
+classes, including default locations for saving data, the ability to find
+currently-existing instances of a given instrument class, and some GUI helper
+functions.
+
+There's also some support mechanisms for metadata creation, and the bundling
+of metadata in ArrayWithAttrs objects that include both data and metadata.
 """
 
 from nplab.utils.thread_utils import locked_action_decorator, background_action_decorator
 import nplab
-#from traits.api import HasTraits, String
-
 from weakref import WeakSet
 import nplab.utils.log
 from nplab.utils.array_with_attrs import ArrayWithAttrs

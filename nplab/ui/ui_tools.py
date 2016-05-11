@@ -250,7 +250,10 @@ def control_change_handler(conversion=lambda x: x):
             setattr(obj, name, conversion(value))
         return update_property
     return handler_generator
-def property_change_handler(value_name, conversion=lambda x: x):
+def property_change_handler(value_name, 
+                            conversion=lambda x: x, 
+                            setter_name=None, 
+                            getter_name=None):
     """Generate a function that produces callback functions.
     
     These callback functions are for properties changing, and update controls,
@@ -260,12 +263,23 @@ def property_change_handler(value_name, conversion=lambda x: x):
         The name of the Qt property representing the control's value
     conversion: function (optional)
         A function to convert between the property's value and the control's
+    setter_name: string
+        The name of the setter method called to change the value.  Usually this
+        can be left as the default, which uses ``setName`` where value_name is
+        name.
+    getter_name: string
+        The name of the getter method called to retrieve the value.  Usually
+        this can be omitted as the getter name is the same as the value_name.
     """
+    if setter_name is None:
+        setter_name = "set" + value_name[0].upper() + value_name[1:]
+    if getter_name is None:
+        getter_name = value_name
     def handler_generator(control):
         """Generate a function to update a control when a property changes."""
         # first get hold of functions to get and set the control's value
-        getter = getattr(control, value_name)
-        setter = getattr(control, "set" + value_name[0].upper() + value_name[1:])
+        getter = getattr(control, getter_name)
+        setter = getattr(control, setter_name)
         def update_control(value):
             if getter() != conversion(value):
                 # If we're syncing in both directions, this is important to
@@ -295,7 +309,7 @@ auto_connectable_controls['plaintextedit'] = {
     'suffices': ["_plaintextedit","PlainTextEdit","_textedit","_textbox"],
     'control_change_handler': control_change_handler(),
     'control_change_slot_name': 'textChanged',
-    'property_change_handler': property_change_handler("plainText", str),
+    'property_change_handler': property_change_handler("plainText", str, getter_name="toPlainText"),
     }
 auto_connectable_controls['spinbox'] = {
     'qt_type': QtGui.QSpinBox,
