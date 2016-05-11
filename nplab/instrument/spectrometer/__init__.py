@@ -564,7 +564,7 @@ class SpectrometersUI(QtGui.QWidget):
 
 class DummySpectrometer(Spectrometer):
     """A trivial stub spectrometer, for use in development."""
-    metadata_property_names = ["integration_time"]
+    metadata_property_names = ["integration_time", "wavelengths"]
     def __init__(self):
         super(DummySpectrometer, self).__init__()
         self._integration_time = 10

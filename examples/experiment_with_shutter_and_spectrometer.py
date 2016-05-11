@@ -40,6 +40,7 @@ class DumbIrradiationExperiment(Experiment):
                 self.log("closed shutter")
                 self.wait_or_stop(self.wait_time)
                 spectrum = self.spectrometer.read_spectrum(bundle_metadata=True)
+                print spectrum.attrs.keys()
                 dg.create_dataset("spectrum_%d", data=spectrum)
         except ExperimentStopped:
             pass #don't raise an error if we just clicked "stop"
