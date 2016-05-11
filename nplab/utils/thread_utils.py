@@ -102,6 +102,14 @@ def background_action_decorator(background_by_default=True, ):
 background_action = background_action_decorator(background_by_default=True)
 backgroundable_action = background_action_decorator(background_by_default=False)  
       
+def background_actions_running(obj):
+    """Determine whether an object has any currently-active background actions."""
+    if not hasattr(obj, "_nplab_background_action_threads"):
+        return False
+    for t in obj._nplab_background_action_threads:
+        if t.is_alive():
+            return True
+    return False
 
 if __file__ == "__main__":
     import time
