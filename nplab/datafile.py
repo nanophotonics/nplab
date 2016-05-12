@@ -22,15 +22,14 @@ import nplab.utils.version
 
 def attributes_from_dict(group_or_dataset, dict_of_attributes):
     """Update the metadata of an HDF5 object with a dictionary."""
-    # NB this is pointless - the attrs object defines update()...
-    #attrs = group_or_dataset.attrs
-    #for key, value in dict_of_attributes.iteritems():
-    #    if value is not None:
-    #        if key in attrs.keys():
-    #            attrs.modify(key, value)
-    #        else:
-    #            attrs.create(key, value)
-    group_or_dataset.attrs.update(dict_of_attributes)
+    attrs = group_or_dataset.attrs
+    for key, value in dict_of_attributes.iteritems():
+        if value is not None:
+            if key in attrs.keys():
+                attrs.modify(key, value)
+            else:
+                attrs.create(key, value)
+    #group_or_dataset.attrs.update(dict_of_attributes)
 
 
 def h5_item_number(group_or_dataset):
@@ -158,7 +157,7 @@ class Group(h5py.Group):
         if timestamp:
             g.attrs.create('creation_timestamp', datetime.datetime.now().isoformat())
         if attrs is not None:
-            g.attrs.update(attrs)#attributes_from_dict(g, attrs)
+            attributes_from_dict(g, attrs)
         return Group(g.id)  # make sure it's wrapped!
 
     def require_group(self, name):
@@ -186,9 +185,9 @@ class Group(h5py.Group):
         if timestamp:
             dset.attrs.create('creation_timestamp', datetime.datetime.now().isoformat())
         if hasattr(data, "attrs"): #if we have an ArrayWithAttrs, use the attrs!
-            dset.attrs.update(data.attrs)
+            attributes_from_dict(dset, data.attrs)
         if attrs is not None:
-            dset.attrs.update(attrs)  # quickly set the attributes
+            attributes_from_dict(dset, attrs)  # quickly set the attributes
         return dset
 
     create_dataset.__doc__ += '\n\n'+h5py.Group.create_dataset.__doc__
