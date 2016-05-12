@@ -10,12 +10,15 @@ rwb27, May 2016
 """
 
 import nplab
+import nplab.utils.gui 
 from nplab.instrument.spectrometer import Spectrometer
 from nplab.instrument.shutter import Shutter
 from nplab.experiment import Experiment, ExperimentStopped
 from nplab.utils.notified_property import DumbNotifiedProperty
 from nplab.ui.ui_tools import QuickControlBox
 from nplab.utils.gui import show_guis
+from nplab.utils.gui import QtCore, QtGui, uic, get_qt_app
+from nplab.ui.ui_tools import UiTools
 
 class DumbIrradiationExperiment(Experiment):
     """An example experiment that opens and closes a shutter, and takes spectra."""
@@ -55,6 +58,36 @@ class DumbIrradiationExperiment(Experiment):
         gb.add_button("stop")
         gb.auto_connect_by_name(self)
         return gb
+
+class DumbIrradiationExperiment_Gui(QtGui.QMainWindow, UiTools):
+    """
+    Import and editing of Pump probe gui including the replacement of widgets and formating of buttons
+    """
+    #, lockin, XYstage, Zstage, spectrometer, stepper,
+    def __init__(self, spec,shutter, experiment, parent=None):
+        super(DumbIrradiationExperiment_Gui, self).__init__(parent)
+        #Load ui code
+        uic.loadUi('DumbIrradiationExperimentGui.ui', self)
+        
+        #grabbing the current H5PY and intiating the data_browser
+        self.data_file = nplab.current_datafile()
+        self.data_file_tab = self.replace_widget(self.DataBrowser_tab_layout,self.DataBrowser_widget,self.data_file.get_qt_ui())
+        
+        #setup spectrometer tab gui and widget
+        self.spectrometer = spec
+        self.Spectrometer_widget = self.replace_widget(self.Spectrometer_Layout,self.Spectrometer_widget,self.spectrometer.get_qt_ui(display_only = True))
+        self.spectrometer_tab = self.replace_widget(self.Spectrometer_tab_Layout,self.Spectrometer_tab_widget,self.spectrometer.get_qt_ui())
+        
+        #Setting up stepper and Lockin widget 
+            # Display
+        self.Experiment = experiment
+        self.Experiment_controls_widget = self.replace_widget(self.Main_layout,self.Experiment_controls_widget,self.Experiment.get_qt_ui())
+            #Shutter control widget
+        self.shutter = shutter
+        self.StageControls_widget = self.replace_widget(self.Main_layout,self.shutter_controls_widget,self.shutter.get_qt_ui())
+
+
+    
             
 if __name__ == '__main__':
     from nplab.instrument.spectrometer import DummySpectrometer
@@ -67,4 +100,7 @@ if __name__ == '__main__':
     
     df = nplab.current_datafile()
     
-    show_guis([spectrometer, shutter, experiment, df])
+#    show_guis([spectrometer, shutter, experiment, df])
+    app = get_qt_app()
+    gui = DumbIrradiationExperiment_Gui(spec = spectrometer, shutter = shutter, experiment = experiment)
+    gui.show()    
