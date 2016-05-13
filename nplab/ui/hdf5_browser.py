@@ -23,15 +23,95 @@ import os
 
 # base, widget = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'hdf5_browser.ui'))
 
+class HDF5ItemViewer(QtGui.QWidget, UiTools):
+    """A Qt Widget for visualising one HDF5 element (group or dataset)."""
+    def __init__(self, item=None, parent=None, show_controls=True, show_refresh=True):
+        """Create a viewer widget for any dataset or datagroup object"""
+        super(HDF5ItemViewer, self).__init__(parent)
+        
+        self.figure_widget = QtGui.QWidget()
+        self.renderer_combobox = QtGui.QComboBox()
+        self.renderer_combobox.activated[int].connect(self.renderer_selected)        
+        
+        self.refresh_button = QtGui.QPushButton()
+        self.refresh_button.setText("Refresh")
+        self.refresh_button.clicked.connect(self.refresh)
+        
+        self.setLayout(QtGui.QVBoxLayout())
+        self.layout().addWidget(self.figure_widget, stretch=1)
+        self.layout().setContentsMargins(0,0,0,0)
+        
+        if show_controls:
+            hb = QtGui.QHBoxLayout()
+            hb.addWidget(self.renderer_combobox, stretch=1)
+            if show_refresh:
+                hb.addWidget(self.refresh_button, stretch=0)
+            self.layout().addLayout(hb, stretch=0)
+        
+    _data = None
+        
+    @property
+    def data(self):
+        """The dataset or group we are displaying"""
+        return self._data
+        
+    @data.setter
+    def data(self, newdata):
+        self._data = newdata
+        
+        # When data changes, update the list of renderers
+        renderers = suitable_renderers(self.data)
+        combobox = self.renderer_combobox
+        combobox.clear()
+        for i, renderer in enumerate(renderers):
+            combobox.addItem(renderer.__name__, renderer)
+            
+        # Attempt to keep the same renderer as we had before - or use the 
+        # "best" one.  NB setting the current index will trigger the renderer
+        # to be created in renderer_selected
+        try:
+            index = renderers.index(self.renderer.__class__)
+            combobox.setCurrentIndex(index)
+            self.renderer_selected(index)
+        except ValueError:
+            combobox.setCurrentIndex(0)
+            self.renderer_selected(0)
+            
+    _renderer = None
+    
+    @property
+    def renderer(self):
+        """The data renderer currently in use in the widget"""
+        return self._renderer
+        
+    @renderer.setter
+    def renderer(self, new_renderer):
+        self._renderer = new_renderer
+        # Replace the current renderer in the GUI with the new one:
+        self.figure_widget = self.replace_widget(self.layout(), self.figure_widget, new_renderer)
+    
+    def renderer_selected(self, index):
+        """Change the figure widget to use the selected renderer."""
+        # The class of the renderer is stored as the combobox data
+        RendererClass = self.renderer_combobox.itemData(index)
+        try:
+            self.renderer = RendererClass(self.data, self)
+        except TypeError:
+            # If the box is empty (e.g. it's just been cleared) use a blank widget
+            self.renderer = QtGui.QWidget()
+        
+    def refresh(self):
+        """Re-render the data, using the current renderer (if it is still appropriate)"""
+        self.data = self.data
+
+
 class HDF5Browser(QtGui.QWidget, UiTools):
-    """
-    Describe the class
+    """A Qt Widget for browsing an HDF5 file and graphing the data.
     """
 
     def __init__(self, f, parent=None):
         super(HDF5Browser, self).__init__(parent)
         self.f = f #TODO: don't call this f - call it data_group or something.
-        self.fig = Figure()
         # self.setupUi(self)
         uic.loadUi(os.path.join(os.path.dirname(__file__), 'hdf5_browser.ui'), self)
 
@@ -40,6 +120,9 @@ class HDF5Browser(QtGui.QWidget, UiTools):
         except AttributeError:
             self.root_name = self.f.file.filename
         self.setWindowTitle(self.root_name)
+        
+        self.viewer = HDF5ItemViewer(parent=self, show_controls=False)     
+        self.replace_widget(self.figureWidgetContainer, self.figureWidget, self.viewer)
         
         self.addItems(self.treeWidget.invisibleRootItem())   
         self.treeWidget.itemClicked.connect(self.on_click)
@@ -50,9 +133,7 @@ class HDF5Browser(QtGui.QWidget, UiTools):
         self.CopyButton.clicked.connect(self.CopyActivated)
         self.clipboard = QtGui.QApplication.clipboard()
         
-        self.figureWidget = self.replace_widget(self.figureWidgetContainer, self.figureWidget, FigureCanvas(self.fig))
-        self.figureWidget.setMinimumWidth(800)
-        self.rendererselection.activated[str].connect(self.RenderSelectorActivated) 
+        self.replace_widget(self.controlLayout, self.rendererselection, self.viewer.renderer_combobox)
     def __del__(self):
         pass  # self.f.close()
 
@@ -111,26 +192,9 @@ class HDF5Browser(QtGui.QWidget, UiTools):
         """Handle clicks on items in the tree."""
         item.setExpanded(True)
         if len(self.treeWidget.selectedItems())>1: 
-            self.selected_objects = [treeitem.data(column, QtCore.Qt.UserRole) for treeitem in self.treeWidget.selectedItems() ]
+            self.viewer.data = [treeitem.data(column, QtCore.Qt.UserRole) for treeitem in self.treeWidget.selectedItems() ]
         else:
-            self.selected_objects = item.data(column, QtCore.Qt.UserRole)
-        
-    #    print self.treeWidget.selectedItems()
-        
-        self.possible_renderers = suitable_renderers(self.selected_objects)
-        self.figureWidget = self.replace_widget(self.figureWidgetContainer, self.figureWidget, self.possible_renderers[0](self.selected_objects, self))
-        self.possible_renderer_names = [renderers.__name__ for renderers in self.possible_renderers]
-    #    print self.possible_renderer_names
-        self.rendererselection.clear()
-        self.rendererselection.addItems(self.possible_renderer_names)
-        
-    def RenderSelectorActivated(self,text):
-        """Change the figure widget to use the selected renderer."""
-        for renderer in self.possible_renderers:
-            if renderer.__name__ == text:
-                self.figureWidget = self.replace_widget(self.figureWidgetContainer, self.figureWidget, renderer(self.selected_objects, self))
-        
-        
+            self.viewer.data = item.data(column, QtCore.Qt.UserRole)
         
     def CopyActivated(self):
         """Copy an image of the currently-displayed figure."""

@@ -40,12 +40,12 @@
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>
-     <widget class="QWidget" name="">
+     <widget class="QWidget" name="layoutWidget">
       <layout class="QVBoxLayout" name="verticalLayout">
        <item>
         <widget class="QTreeWidget" name="treeWidget">
          <property name="sizePolicy">
-          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
            <horstretch>3</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
@@ -84,7 +84,7 @@
         </widget>
        </item>
        <item>
-        <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,0,0">
+        <layout class="QHBoxLayout" name="controlLayout" stretch="0,0,0">
          <property name="sizeConstraint">
           <enum>QLayout::SetMinimumSize</enum>
          </property>
@@ -155,8 +155,8 @@
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="">
-      <layout class="QVBoxLayout" name="figureWidgetContainer">
+     <widget class="QWidget" name="layoutWidget">
+      <layout class="QVBoxLayout" name="figureWidgetContainer" stretch="0">
        <item>
         <widget class="QWidget" name="figureWidget" native="true">
          <property name="sizePolicy">
@@ -178,10 +178,6 @@
     </widget>
    </item>
   </layout>
-  <zorder>splitter</zorder>
-  <zorder></zorder>
-  <zorder>main_splitter</zorder>
-  <zorder>rendererselection</zorder>
  </widget>
  <resources/>
  <connections/>
