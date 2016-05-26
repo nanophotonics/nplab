@@ -11,11 +11,13 @@ class PIStage(VisaInstrument, Stage):
     """
     Control interface for PI stages.
     """
-    def __init__(self, address='ASRL3::INSTR'):
+    def __init__(self, address='ASRL8::INSTR',timeout = 10,baud_rate = 57600):
         super(PIStage, self).__init__(address=address)
         self.instr.read_termination = '\n'
         self.instr.write_termination = '\n'
-        self.axis_names = ('a', 'b', 'c')
+        self.instr.baud_rate = 57600
+   #     self.instr.timeout = 10
+        self.axis_names = ('a', 'b')
         self.positions = [0 for ch in xrange(3)]
         self._stage_id = None
         self.startup()
@@ -133,14 +135,14 @@ class PIStage(VisaInstrument, Stage):
 
 if __name__ == '__main__':
     stage = PIStage()
-    stage.move((5e-6, 10e-6, 5e-6))
-    print stage.position
-    print stage.get_position()
-    print stage.get_position(axis=('a', 'c'))
-
-    import sys
-    from nplab.utils.gui import get_qt_app
-    app = get_qt_app()
-    ui = stage.get_qt_ui()
-    ui.show()
-    sys.exit(app.exec_())
+  #  stage.move((5e-6, 10e-6))
+#    print stage.position
+#    print stage.get_position()
+#    print stage.get_position(axis=('a', 'b'))
+#
+#    import sys
+#    from nplab.utils.gui import get_qt_app
+#    app = get_qt_app()
+#    ui = stage.get_qt_ui()
+#    ui.show()
+#    sys.exit(app.exec_())
