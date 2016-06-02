@@ -397,6 +397,31 @@ def set_current(datafile, **kwargs):
             kwargs['mode'] = 'r+'  # dirty hack to work around mode=a not working
             _current_datafile = DataFile(datafile, **kwargs)
 
+def open_file():
+    """Open an existing data file"""
+    global _current_datafile
+    try:  # we try to pop up a Qt file dialog
+        import nplab.utils.gui
+        from nplab.utils.gui import qtgui
+        app = nplab.utils.gui.get_qt_app()  # ensure Qt is running
+        fname = qtgui.QFileDialog.getOpenFileName(
+            caption="Select Existing Data File",
+            directory=os.path.join(os.getcwd()),
+            filter="HDF5 Data (*.h5 *.hdf5)",
+#            options=qtgui.QFileDialog.DontConfirmOverwrite,
+        )
+        if not isinstance(fname, basestring):
+            fname = fname[0]  # work around version-dependent Qt behaviour :(
+        if len(fname) > 0:
+            print fname
+            set_current(fname, mode='a')
+        else:
+            print "Cancelled by the user."
+    except:
+            print "File dialog went wrong :("
+
+    return _current_datafile  # if there is a file return it
+
 
 if __name__ == '__main__':
     help(Group.create_dataset)
