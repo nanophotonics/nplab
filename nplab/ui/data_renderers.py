@@ -1,9 +1,9 @@
 __author__ = 'alansanders'
 
 import h5py
-from nplab.utils.gui import *
+from nplab.utils.gui import QtGui, uic, get_qt_app
 from nplab.utils.array_with_attrs import ArrayWithAttrs
-from PyQt4 import uic
+import os
 import matplotlib
 
 matplotlib.use('Qt4Agg')
