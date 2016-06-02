@@ -124,7 +124,7 @@ class HDF5Browser(QtGui.QWidget, UiTools):
         self.viewer = HDF5ItemViewer(parent=self, show_controls=False)     
         self.replace_widget(self.figureWidgetContainer, self.figureWidget, self.viewer)
         
-        self.addItems(self.treeWidget.invisibleRootItem())   
+        self.addItems(self.treeWidget.invisibleRootItem())
         self.treeWidget.itemClicked.connect(self.on_click)
         self.treeWidget.customContextMenuRequested.connect(self.context_menu)
         self.treeWidget.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection) #allow multiple items to be selected
