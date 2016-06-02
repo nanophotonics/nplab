@@ -125,6 +125,7 @@ class HDF5Browser(QtGui.QWidget, UiTools):
         self.replace_widget(self.figureWidgetContainer, self.figureWidget, self.viewer)
         
         self.addItems(self.treeWidget.invisibleRootItem())
+        self.treeWidget.expandToDepth(0) # auto expand to first level
         self.treeWidget.itemClicked.connect(self.on_click)
         self.treeWidget.customContextMenuRequested.connect(self.context_menu)
         self.treeWidget.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection) #allow multiple items to be selected
@@ -174,6 +175,7 @@ class HDF5Browser(QtGui.QWidget, UiTools):
         """Empty the tree and repopulate it."""
         self.treeWidget.clear()
         self.addItems(self.treeWidget.invisibleRootItem())
+        self.treeWidget.expandToDepth(0) # auto expand to first level
         
   
     def context_menu(self, position):
