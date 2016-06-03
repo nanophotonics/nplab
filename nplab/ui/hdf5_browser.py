@@ -112,6 +112,13 @@ class HDF5ItemViewer(QtGui.QWidget, UiTools):
         """Re-render the data, using the current renderer (if it is still appropriate)"""
         self.data = self.data
 
+def split_number_from_name(name):
+    """Return a tuple with the name and an integer to allow sorting."""
+    basename = name.rstrip('0123456789')
+    try:
+        return (basename, int(name[len(basename):-1]))
+    except:
+        return (basename, -1)
 
 class HDF5Browser(QtGui.QWidget, UiTools):
     """A Qt Widget for browsing an HDF5 file and graphing the data.
@@ -133,7 +140,6 @@ class HDF5Browser(QtGui.QWidget, UiTools):
         self.replace_widget(self.figureWidgetContainer, self.figureWidget, self.viewer)
         
         self.addItems(self.treeWidget.invisibleRootItem())
-        self.treeWidget.expandToDepth(0) # auto expand to first level
         self.treeWidget.itemClicked.connect(self.on_click)
         self.treeWidget.customContextMenuRequested.connect(self.context_menu)
         self.treeWidget.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection) #allow multiple items to be selected
@@ -143,48 +149,49 @@ class HDF5Browser(QtGui.QWidget, UiTools):
         self.clipboard = QtGui.QApplication.clipboard()
         
         self.replace_widget(self.controlLayout, self.rendererselection, self.viewer.renderer_combobox)
+
     def __del__(self):
         pass  # self.f.close()
 
     def addItems(self, parent):
         """Populate the tree view with the contents of the HDF5 file."""
-        root = self.addParent(parent, 0, self.root_name, self.f)
-        self.parents = {self.f.name: root} #parents holds all the items in the list, organised by HDF5 path
-        self.f.visit(self.addChild) #visit every item in the HDF5 tree, and add it.
+        self._items_added = []
+        root = self.addToTree(parent, self.f, name=self.root_name, add_children=True)
+        self.treeWidget.expandToDepth(0) # auto-expand first level
 
-    def addParent(self, parent, column, title, data):
-        """Add an item to the HDF5 tree with parameters specified.
-        
-        Arguments:
-        parent: the QTreeWidgetItem the new entry should be within
-        column: the column into which we're going to put the data - always 0
-        title: the title of the item
-        data: the data stored with this itme (a reference to the HDF5 item)
+    def addToTree(self, parent, h5item, name=None, add_children=True):
+        """Add an HDF5 item to the tree view as a child of the given item.
+
+        If add_children is True (default), this works recursively and adds the
+        supplied HDF5 item's children (if any) to the tree.
         """
-        item = QtGui.QTreeWidgetItem(parent, [title])
-        item.setData(column, QtCore.Qt.UserRole, data)
-        item.setChildIndicatorPolicy(QtGui.QTreeWidgetItem.ShowIndicator)
-        item.setExpanded(False)
+        if h5item in self._items_added: # guard against circular links
+            print "Recursion detected, stopping!"
+            return
+        print "adding: " + h5item.name
+        if name is None:
+            name = h5item.name.rsplit('/', 1)[-1]
+        item = QtGui.QTreeWidgetItem(parent, [name]) #add the item
+        item.setData(0, QtCore.Qt.UserRole, h5item) #save a reference
+        self._items_added.append(h5item)
+
+        if add_children:
+            try:
+                keys = h5item.keys()
+                keys.sort(key=split_number_from_name)
+                print "adding children: {0}".format(keys)
+                for k in keys:
+                    self.addToTree(item, h5item[k])
+            except:
+                pass # if there are no items to add, just stop.
         return item
 
-    def addChild(self, name):
-        """Add an item to the tree, based only on the HDF5 path."""
-        h5parent = self.f[name].parent.name
-        if h5parent in self.parents:
-            parent = self.parents[h5parent]
-        else:
-            print 'no parent', name, h5parent
-            parent = self.parents['/']
-        item = QtGui.QTreeWidgetItem(parent, [name.rsplit('/', 1)[-1]])
-        item.setData(0, QtCore.Qt.UserRole, self.f[name]) #Question: does this read the data? Could be slow for large datasets if so...
-        self.parents['/' + name] = item #Add the item to our internal list, keyed on HDF5 path
+        
 
     def refresh(self):
         """Empty the tree and repopulate it."""
         self.treeWidget.clear()
-        self.addItems(self.treeWidget.invisibleRootItem())
-        self.treeWidget.expandToDepth(0) # auto expand to first level
-        
+        self.addItems(self.treeWidget.invisibleRootItem())        
   
     def context_menu(self, position):
         """Generate a right-click menu for the items"""
