@@ -168,7 +168,6 @@ class HDF5Browser(QtGui.QWidget, UiTools):
         if h5item in self._items_added: # guard against circular links
             print "Recursion detected, stopping!"
             return
-        print "adding: " + h5item.name
         if name is None:
             name = h5item.name.rsplit('/', 1)[-1]
         item = QtGui.QTreeWidgetItem(parent, [name]) #add the item
@@ -179,7 +178,6 @@ class HDF5Browser(QtGui.QWidget, UiTools):
             try:
                 keys = h5item.keys()
                 keys.sort(key=split_number_from_name)
-                print "adding children: {0}".format(keys)
                 for k in keys:
                     self.addToTree(item, h5item[k])
             except:
