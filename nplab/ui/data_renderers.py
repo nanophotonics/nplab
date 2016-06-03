@@ -204,15 +204,14 @@ class DataRenderer1DPG(FigureRendererPG):
     def is_suitable(cls, h5object):
         if type(h5object) == list:
             h5object = h5object[0]
-        if not isinstance(h5object, h5py.Dataset):
-            return -1
-        if len(h5object.shape) == 1:
-            return 11
-        elif np.shape(h5object)[0] == 2 or np.shape(h5object)[1] == 2:
-            return 12           
-
-        elif len(h5object.shape) > 1:
-            return -1
+        try:
+            assert isinstance(h5object, h5py.Dataset) #must be a dataset
+            if len(h5object.shape) == 1:
+                return 11 # yes to 1D data
+            elif np.shape(h5object)[0] == 2 or np.shape(h5object)[1] == 2:
+                return 12           
+        except:
+            return -1 #if the above code failed, we can't render it!
 #            
 add_renderer(DataRenderer1DPG)
 
@@ -256,16 +255,18 @@ class Scatter_plot1DPG(FigureRendererPG):
     def is_suitable(cls, h5object):
         if type(h5object) == list:
             h5object = h5object[0]
-        if not isinstance(h5object, h5py.Dataset):
-            return -1
-        if len(h5object.shape) == 1:
-            return 11
-        elif np.shape(h5object)[0] == 2 or np.shape(h5object)[1] == 2:
-            return 12           
-
-        elif len(h5object.shape) > 1:
-            return -1
-#            
+        try:
+            assert isinstance(h5object, h5py.Dataset) #must be a dataset
+            if len(h5object.shape) == 1:
+                return 11 # yes to 1D data
+            elif len(h5object.shape)==2:
+                if np.shape(h5object)[0] == 2 or np.shape(h5object)[1] == 2:
+                    return 12
+                else:
+                    return -1
+        except:
+            return -1 #if the above code failed, we can't render it!
+#
 add_renderer(Scatter_plot1DPG)
 
 class MultiSpectrum2D(DataRenderer, QtGui.QWidget):
