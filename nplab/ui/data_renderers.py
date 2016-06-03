@@ -89,6 +89,35 @@ class HDF5InfoRenderer(DataRenderer, hdf5_info_base, hdf5_info_widget):
 
 add_renderer(HDF5InfoRenderer)
 
+class ValueRenderer(DataRenderer, QtGui.QWidget):
+    """A renderer returning the objects name type and shape if a dataset object"""
+    def __init__(self, h5object, parent=None):
+        super(ValueRenderer, self).__init__(h5object, parent)
+        
+        #our layout is simple - just a single QLabel
+        self.label = QtGui.QLabel()
+        layout = QtGui.QVBoxLayout(self)
+        layout.addWidget(self.label)
+        self.setLayout(layout)
+        
+        self.label.setText(self.text(h5object))
+        
+    def text(self, h5object):
+        """Return the text that is displayed in the label"""
+        return str(h5object.value)
+
+    @classmethod
+    def is_suitable(cls, h5object):
+        try:
+            if len(h5object.shape)==0:
+                return 10
+            else:
+                return -1
+        except:
+            return -1
+
+add_renderer(ValueRenderer)
+
 class TextRenderer(DataRenderer, QtGui.QWidget):
     """A renderer returning the objects name type and shape if a dataset object"""
     def __init__(self, h5object, parent=None):
@@ -108,7 +137,7 @@ class TextRenderer(DataRenderer, QtGui.QWidget):
 
     @classmethod
     def is_suitable(cls, h5object):
-        return 0
+        return 1
 
 add_renderer(TextRenderer)
 
