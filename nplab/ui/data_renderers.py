@@ -51,7 +51,13 @@ def add_renderer(renderer_class):
 def suitable_renderers(h5object, return_scores=False):
     """Find renderers that can render a given object, in order of suitability.
     """
-    renderers_and_scores = [(r.is_suitable(h5object), r) for r in renderers]
+    renderers_and_scores = []
+    for r in renderers:
+        try:
+            renderers_and_scores.append((r.is_suitable(h5object), r))
+        except:
+            print "renderer {0} failed when checking suitability for {1}".format(r, h5object)
+            pass # renderers that cause exceptions shouldn't be used!
     renderers_and_scores.sort(key=lambda (score, r): score, reverse=True)
     if return_scores:
         return [(score, r) for score, r in renderers_and_scores if score >= 0]
@@ -83,6 +89,35 @@ class HDF5InfoRenderer(DataRenderer, hdf5_info_base, hdf5_info_widget):
 
 add_renderer(HDF5InfoRenderer)
 
+class ValueRenderer(DataRenderer, QtGui.QWidget):
+    """A renderer returning the objects name type and shape if a dataset object"""
+    def __init__(self, h5object, parent=None):
+        super(ValueRenderer, self).__init__(h5object, parent)
+        
+        #our layout is simple - just a single QLabel
+        self.label = QtGui.QLabel()
+        layout = QtGui.QVBoxLayout(self)
+        layout.addWidget(self.label)
+        self.setLayout(layout)
+        
+        self.label.setText(self.text(h5object))
+        
+    def text(self, h5object):
+        """Return the text that is displayed in the label"""
+        return str(h5object.value)
+
+    @classmethod
+    def is_suitable(cls, h5object):
+        try:
+            if len(h5object.shape)==0:
+                return 10
+            else:
+                return -1
+        except:
+            return -1
+
+add_renderer(ValueRenderer)
+
 class TextRenderer(DataRenderer, QtGui.QWidget):
     """A renderer returning the objects name type and shape if a dataset object"""
     def __init__(self, h5object, parent=None):
@@ -102,7 +137,7 @@ class TextRenderer(DataRenderer, QtGui.QWidget):
 
     @classmethod
     def is_suitable(cls, h5object):
-        return 0
+        return 1
 
 add_renderer(TextRenderer)
 
@@ -198,15 +233,14 @@ class DataRenderer1DPG(FigureRendererPG):
     def is_suitable(cls, h5object):
         if type(h5object) == list:
             h5object = h5object[0]
-        if not isinstance(h5object, h5py.Dataset):
-            return -1
-        if len(h5object.shape) == 1:
-            return 11
-        elif np.shape(h5object)[0] == 2 or np.shape(h5object)[1] == 2:
-            return 12           
-
-        elif len(h5object.shape) > 1:
-            return -1
+        try:
+            assert isinstance(h5object, h5py.Dataset) #must be a dataset
+            if len(h5object.shape) == 1:
+                return 11 # yes to 1D data
+            elif np.shape(h5object)[0] == 2 or np.shape(h5object)[1] == 2:
+                return 12           
+        except:
+            return -1 #if the above code failed, we can't render it!
 #            
 add_renderer(DataRenderer1DPG)
 
@@ -250,16 +284,18 @@ class Scatter_plot1DPG(FigureRendererPG):
     def is_suitable(cls, h5object):
         if type(h5object) == list:
             h5object = h5object[0]
-        if not isinstance(h5object, h5py.Dataset):
-            return -1
-        if len(h5object.shape) == 1:
-            return 11
-        elif np.shape(h5object)[0] == 2 or np.shape(h5object)[1] == 2:
-            return 12           
-
-        elif len(h5object.shape) > 1:
-            return -1
-#            
+        try:
+            assert isinstance(h5object, h5py.Dataset) #must be a dataset
+            if len(h5object.shape) == 1:
+                return 11 # yes to 1D data
+            elif len(h5object.shape)==2:
+                if np.shape(h5object)[0] == 2 or np.shape(h5object)[1] == 2:
+                    return 12
+                else:
+                    return -1
+        except:
+            return -1 #if the above code failed, we can't render it!
+#
 add_renderer(Scatter_plot1DPG)
 
 class MultiSpectrum2D(DataRenderer, QtGui.QWidget):
