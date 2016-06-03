@@ -51,7 +51,13 @@ def add_renderer(renderer_class):
 def suitable_renderers(h5object, return_scores=False):
     """Find renderers that can render a given object, in order of suitability.
     """
-    renderers_and_scores = [(r.is_suitable(h5object), r) for r in renderers]
+    renderers_and_scores = []
+    for r in renderers:
+        try:
+            renderers_and_scores.append((r.is_suitable(h5object), r))
+        except:
+            print "renderer {0} failed when checking suitability for {1}".format(r, h5object)
+            pass # renderers that cause exceptions shouldn't be used!
     renderers_and_scores.sort(key=lambda (score, r): score, reverse=True)
     if return_scores:
         return [(score, r) for score, r in renderers_and_scores if score >= 0]
