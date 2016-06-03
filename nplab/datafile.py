@@ -151,8 +151,8 @@ class Group(h5py.Group):
         behaviour described in find_unique_name.  Set this to False to cause
         an error if the desired name exists already.
         """
-        if auto_increment:
-            name = self.find_unique_name(name)
+        if auto_increment and name is not None:
+            name = self.find_unique_name(name) #name is None if creating via the dict interface
         g = super(Group, self).create_group(name)
         if timestamp:
             g.attrs.create('creation_timestamp', datetime.datetime.now().isoformat())
