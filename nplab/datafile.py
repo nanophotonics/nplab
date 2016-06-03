@@ -114,7 +114,7 @@ class Group(h5py.Group):
 
         :param name: If this contains a %d placeholder, it will be replaced with the lowest integer such that the new name is unique.  If no %d is included, _%d will be appended to the name if the name already exists in this group.
         """
-        if "%d" not in name and name not in self:
+        if "%d" not in name and name not in self.keys():
             return name  # simplest case: it's a unique name
         else:
             n = 0
@@ -179,7 +179,7 @@ class Group(h5py.Group):
 
         Further arguments are passed to h5py.Group.create_dataset.
         """
-        if auto_increment:
+        if auto_increment and name is not None: #name is None if we are creating via the dict interface
             name = self.find_unique_name(name)
         dset = super(Group, self).create_dataset(name, shape, dtype, data, *args, **kwargs)
         if timestamp:
