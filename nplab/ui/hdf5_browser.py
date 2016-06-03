@@ -1,12 +1,14 @@
 """
-Describes the contents of the file
+A Qt GUI to browse the contents of an HDF5 file
+
+This uses a tree view to show the file's contents, and has a plugin-based "renderer"
+system to display the datasets.  See `nplab.ui.data_renderers` for that.
+
 """
 
-__author__ = 'alansanders'
+__author__ = 'Alan Sanders, Will Deacon, Richard Bowman'
 
-from nplab.utils.gui import *
-from PyQt4 import uic
-from PyQt4 import QtGui, QtCore #TODO: I think these should be wrapped by nplab.utils.gui? rwb
+from nplab.utils.gui import uic, QtGui, QtCore
 import matplotlib
 import numpy as np
 import h5py
@@ -58,10 +60,11 @@ class HDF5ItemViewer(QtGui.QWidget, UiTools):
     @data.setter
     def data(self, newdata):
         self._data = newdata
-        
+
         # When data changes, update the list of renderers
         renderers = suitable_renderers(self.data)
         combobox = self.renderer_combobox
+        previous_selection = combobox.currentIndex() # remember previous choice
         combobox.clear()
         for i, renderer in enumerate(renderers):
             combobox.addItem(renderer.__name__, renderer)
@@ -70,9 +73,14 @@ class HDF5ItemViewer(QtGui.QWidget, UiTools):
         # "best" one.  NB setting the current index will trigger the renderer
         # to be created in renderer_selected
         try:
-            index = renderers.index(self.renderer.__class__)
-            combobox.setCurrentIndex(index)
-            self.renderer_selected(index)
+            if previous_selection == 0:
+                raise ValueError() # if we didn't choose the last renderer, just
+                            # pick the best one.  Otherwise, try to use the same
+                            # renderer as we used before
+            else:
+                index = renderers.index(self.renderer.__class__)
+                combobox.setCurrentIndex(index)
+                self.renderer_selected(index)
         except ValueError:
             combobox.setCurrentIndex(0)
             self.renderer_selected(0)
