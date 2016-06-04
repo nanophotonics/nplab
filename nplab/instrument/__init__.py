@@ -16,8 +16,9 @@ import nplab
 from weakref import WeakSet
 import nplab.utils.log
 from nplab.utils.array_with_attrs import ArrayWithAttrs
+from nplab.utils.show_gui_mixin import ShowGUIMixin
 
-class Instrument(object):
+class Instrument(object, ShowGUIMixin):
     """Base class for all instrument-control classes.
 
     This class takes care of management of instruments, saving data, etc.
@@ -120,39 +121,3 @@ class Instrument(object):
         else:
             return data
 
-    def show_gui(self, blocking=True):
-        """Display a GUI window for the item of equipment.
-
-        You should override this method to display a window to control the
-        instrument.  If edit_traits/configure_traits methods exist, we'll fall
-        back to those as a default.
-
-        If you use blocking=False, it will return immediately - this may cause
-        issues with the Qt/Traits event loop.
-        """
-        if hasattr(self,'get_qt_ui'):
-            from nplab.utils.gui import get_qt_app, qt
-            app = get_qt_app()
-            ui = self.get_qt_ui()
-            ui.show()
-            if blocking:
-                print "Running GUI, this will block the command line until the window is closed."
-                ui.windowModality = qt.Qt.ApplicationModal
-                try:
-                    return app.exec_()
-                except:
-                    print "Could not run the Qt application: perhaps it is already running?"
-                    return
-            else:
-                return ui
-        else:
-            try:
-                if blocking:
-                    self.configure_traits()
-                else:
-                    self.edit_traits()
-            except NotImplementedError:
-                raise NotImplementedError("It looks like the show_gui \
-                          method hasn't been subclassed, there isn't a \
-                          get_qt_ui() method, and the instrument is not \
-                          using traitsui.")

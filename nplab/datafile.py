@@ -18,6 +18,7 @@ import re
 import sys
 from collections import Sequence
 import nplab.utils.version
+from nplab.utils.show_gui_mixin import ShowGUIMixin
 
 
 def attributes_from_dict(group_or_dataset, dict_of_attributes):
@@ -99,7 +100,7 @@ def wrap_h5py_item(item):
     else:
         return item  # for now, don't bother wrapping datasets
 
-class Group(h5py.Group):
+class Group(h5py.Group, ShowGUIMixin):
     """HDF5 Group, a collection of datasets and subgroups.
 
     NPLab "wraps" h5py's Group objects to provide extra functions.
@@ -242,29 +243,10 @@ class Group(h5py.Group):
         dset.resize(index+1,0)
         dset[index,...] = value
 
-    def show_gui(self, blocking=True):
-        """Display a GUI window with an interactive browser for this group.
-
-        If you use blocking=False, it will return immediately - this may cause
-        issues with the Qt/Traits event loop.
-        """
-        from nplab.utils.gui import get_qt_app, qt
-        app = get_qt_app()
-        ui = self.get_qt_ui()
-        ui.show()
-        if blocking:
-            print "Running GUI, this will block the command line until the window is closed."
-            ui.windowModality = qt.Qt.ApplicationModal
-            try:
-                return app.exec_()
-            except:
-                print "Could not run the Qt application: perhaps it is already running?"
-                return
-        else:
-            return ui
-
     def get_qt_ui(self):
         """Return a file browser widget for this group."""
+        # Sorry about the dynamic import - the alternative is always
+        # requiring Qt to access data files, and I think that's worse.
         from nplab.ui.hdf5_browser import HDF5Browser
         return HDF5Browser(self)
 
