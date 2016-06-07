@@ -41,6 +41,8 @@ class HDF5ItemViewer(QtGui.QWidget, UiTools):
         self.layout().addWidget(self.figure_widget, stretch=1)
         self.layout().setContentsMargins(0,0,0,0)
         
+        self.renderers = set()
+        
         if show_controls:
             hb = QtGui.QHBoxLayout()
             hb.addWidget(self.renderer_combobox, stretch=1)
@@ -59,6 +61,21 @@ class HDF5ItemViewer(QtGui.QWidget, UiTools):
     def data(self, newdata):
         self._data = newdata
         
+#        # Update the list of renderers only if it's a different type of data
+#        if cmp(self.renderers, suitable_renderers(self.data)):
+#            self.renderers = suitable_renderers(self.data)
+#            self.renderer_selected(0)
+##            combobox = self.renderer_combobox
+#            self.renderer_combobox.clear()
+#            for i, renderer in enumerate(self.renderers):
+#                self.renderer_combobox.addItem(renderer.__name__, renderer)
+#            self.renderer_combobox.setCurrentIndex(0)
+#        else:
+#            index = self.renderers.index(self.renderer.__class__)
+#            self.renderer_combobox.setCurrentIndex(index)
+#            self.renderer_selected(index)
+        
+        ############################
         # When data changes, update the list of renderers
         renderers = suitable_renderers(self.data)
         combobox = self.renderer_combobox
@@ -135,6 +152,7 @@ class HDF5Browser(QtGui.QWidget, UiTools):
         self.clipboard = QtGui.QApplication.clipboard()
         
         self.replace_widget(self.controlLayout, self.rendererselection, self.viewer.renderer_combobox)
+        
     def __del__(self):
         pass  # self.f.close()
 
@@ -237,11 +255,13 @@ class HDF5Browser(QtGui.QWidget, UiTools):
 
 if __name__ == '__main__':
     import sys, h5py, os, numpy as np
+    import nplab
 
     print os.getcwd()
     app = get_qt_app()
     f = h5py.File('test.h5', 'w')
     f.create_dataset('dset1', data=np.linspace(-1, 1, 100))
+    f.create_dataset('dset2', data=np.linspace(-1, 1, 100) ** 3)
     g = f.create_group('group1')
     g.create_dataset('dset2', data=np.linspace(-1, 1, 100) ** 2)
     g = g.create_group('group2')
@@ -250,3 +270,7 @@ if __name__ == '__main__':
     ui.show()
     sys.exit(app.exec_())
     f.close()
+
+#    data_file = nplab.datafile.open_file()
+#    ui = HDF5Browser(data_file)
+#    ui.show()
