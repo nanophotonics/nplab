@@ -76,6 +76,7 @@ def get_qt_app(prevent_garbage_collection=True):
     if prevent_garbage_collection:
         # Keep a reference to the application if appropriate, to stop
         # it disappearing due to garbage collection.
+        global _retained_qt_app
         _retained_qt_app = app
     return app
 
