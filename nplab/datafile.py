@@ -296,10 +296,10 @@ class DataFile(Group):
             n=0
             while "version_info_%04d" % n in self.attrs:
                 n += 1
-            try:
-                self.attrs.create("version_info_%04d" % n, nplab.utils.version.version_info_string())
-            except:
-                print "Error: could not save version information"
+            #try:
+            self.attrs.create("version_info_%04d" % n, str(nplab.utils.version.version_info_string()))
+            #except:
+            #    print "Error: could not save version information"
     def flush(self):
         self.file.flush()
 
