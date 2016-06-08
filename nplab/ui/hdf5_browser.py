@@ -30,10 +30,13 @@ class HDF5ItemViewer(QtGui.QWidget, UiTools):
     def __init__(self, 
                  item=None, 
                  parent=None, 
+                 figure_widget=None,
                  show_controls=True, 
                  show_refresh=True, 
                  renderer_combobox=None,
                  refresh_button=None,
+                 copy_button=None,
+                 default_button=None,
                  ):
         """Create a viewer widget for any dataset or datagroup object
         
@@ -53,10 +56,19 @@ class HDF5ItemViewer(QtGui.QWidget, UiTools):
             a new one.  You probably want to specify show_controls=False.
         refresh_button : QPushButton (optional)
             If specified, use the supplied button instead of creating one.
+        copy_button : QPushButton (optional)
+            If specified, use the supplied button instead of creating one.
+        default_button : QPushButton (optional)
+            If specified, use the supplied button to select the default 
+            rendererinstead of creating one.
         """
         super(HDF5ItemViewer, self).__init__(parent)
         
-        self.figure_widget = QtGui.QWidget()
+        if figure_widget is None: 
+            self.figure_widget = QtGui.QWidget()
+        else:
+            self.figure_widget = figure_widget
+            
         if renderer_combobox is None:       
             self.renderer_combobox = QtGui.QComboBox()
         else:
@@ -65,10 +77,22 @@ class HDF5ItemViewer(QtGui.QWidget, UiTools):
         
         if refresh_button is None:
             self.refresh_button = QtGui.QPushButton()
-            self.refresh_button.setText("Refresh")
+            self.refresh_button.setText("Refresh Figure")
         else:
             self.refresh_button = refresh_button
         self.refresh_button.clicked.connect(self.refresh)
+        
+        if default_button is not None:
+            self.default_button = default_button
+            self.default_button.clicked.connect(self.default_renderer)
+        
+        if copy_button is None:
+            self.copy_button = QtGui.QPushButton()
+            self.copy_button.setText("Copy Figure")
+        else:
+            self.copy_button = copy_button
+        self.copy_button.clicked.connect(self.CopyActivated)
+        self.clipboard = QtGui.QApplication.clipboard()
         
         self.setLayout(QtGui.QVBoxLayout())
         self.layout().addWidget(self.figure_widget, stretch=1)
@@ -76,11 +100,11 @@ class HDF5ItemViewer(QtGui.QWidget, UiTools):
         
         self.renderers = list()
         
-        if show_controls:
+        if show_controls: # this part may be broken
             hb = QtGui.QHBoxLayout()
             hb.addWidget(self.renderer_combobox, stretch=1)
             if show_refresh:
-                hb.addWidget(self.refresh_button, stretch=0)
+                hb.addWidget(self.refresh_button, stretch=0)            
             self.layout().addLayout(hb, stretch=0)
         
     _data = None
@@ -117,8 +141,13 @@ class HDF5ItemViewer(QtGui.QWidget, UiTools):
         except ValueError:
             combobox.setCurrentIndex(0)
             self.renderer_selected(0)
-            
+    
     _renderer = None
+    
+    def default_renderer(self):
+        self.renderer_combobox.setCurrentIndex(0)
+        self.renderer_selected(0)
+        self.refresh()
     
     @property
     def renderer(self):
@@ -144,6 +173,13 @@ class HDF5ItemViewer(QtGui.QWidget, UiTools):
     def refresh(self):
         """Re-render the data, using the current renderer (if it is still appropriate)"""
         self.data = self.data
+    
+    def CopyActivated(self):
+        """Copy an image of the currently-displayed figure."""
+        ## TO DO: move this to the HDF5 viewer
+        Pixelmap = QtGui.QPixmap.grabWidget(self.figure_widget)
+        self.clipboard.setPixmap(Pixelmap)
+        print "Figure copied to clipboard."
 
 def split_number_from_name(name):
     """Return a tuple with the name and an integer to allow sorting."""
@@ -153,40 +189,50 @@ def split_number_from_name(name):
     except:
         return (basename, -1)
 
-
-class HDF5Browser(QtGui.QWidget, UiTools):
-    """A Qt Widget for browsing an HDF5 file and graphing the data.
+class HDF5Tree(QtGui.QWidget, UiTools):
+    """Create a tree widget for any HDF5 file contents
+    
+    Arguments:
+    f : HDF5 file
+    treeWidget : QTreeWidget
+        If this is specified, use the supplied tree widget combobox instead of 
+        creating a new one.
+    refresh_button : QPushButton
+        If specified, use the supplied button instead of creating one.
     """
-
-    def __init__(self, f, parent=None):
-        super(HDF5Browser, self).__init__(parent)
-        self.f = f #TODO: don't call this f - call it data_group or something.
-        # self.setupUi(self)
-        uic.loadUi(os.path.join(os.path.dirname(__file__), 'hdf5_browser.ui'), self)
-
+    
+    def __init__(self, 
+                 f,
+                 treeWidget, 
+                 refresh_button,
+                 parent=None,
+                 ):
+        super(HDF5Tree, self).__init__(parent)
+        self.f = f 
+        
         try:
             self.root_name = self.f.filename
         except AttributeError:
             self.root_name = self.f.file.filename
         self.setWindowTitle(self.root_name)
         
-        self.viewer = HDF5ItemViewer(parent=self, 
-                                     show_controls=False, 
-                                     renderer_combobox = self.rendererselection)     
-        self.replace_widget(self.figureWidgetContainer, self.figureWidget, self.viewer)
-        
-        self.addItems(self.treeWidget.invisibleRootItem())
-        self.treeWidget.itemClicked.connect(self.on_click)
+        if treeWidget is None:
+            self.treeWidget = QtGui.QTreeWidget()
+        else:
+            self.treeWidget = treeWidget
+        self.addItems(self.treeWidget.invisibleRootItem()) # tried to make supplying the tree widget object but got an error here
         self.treeWidget.customContextMenuRequested.connect(self.context_menu)
         self.treeWidget.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection) #allow multiple items to be selected
         
-        self.refreshButton.clicked.connect(self.refresh)
-        self.CopyButton.clicked.connect(self.CopyActivated)
-        self.clipboard = QtGui.QApplication.clipboard()
-
-    def __del__(self):
-        pass  # self.f.close()
-
+        if refresh_button is None:
+            self.refresh_button = QtGui.QPushButton()
+            self.refresh_button.setText("Refresh")
+        else:
+            self.refresh_button = refresh_button
+        self.refresh_button.clicked.connect(self.refresh)
+        
+        
+    
     def addItems(self, parent):
         """Populate the tree view with the contents of the HDF5 file."""
         self._items_added = []
@@ -217,7 +263,6 @@ class HDF5Browser(QtGui.QWidget, UiTools):
             except:
                 pass # if there are no items to add, just stop.
         return item
-
         
 
     def refresh(self):
@@ -236,21 +281,7 @@ class HDF5Browser(QtGui.QWidget, UiTools):
 
         if action == actions['Open in Igor']:
             self.igorOpen()
-
-    def on_click(self, item, column):
-        """Handle clicks on items in the tree."""
-        item.setExpanded(True)
-        if len(self.treeWidget.selectedItems())>1: 
-            self.viewer.data = [treeitem.data(column, QtCore.Qt.UserRole) for treeitem in self.treeWidget.selectedItems() ]
-        else:
-            self.viewer.data = item.data(column, QtCore.Qt.UserRole)
-        
-    def CopyActivated(self):
-        """Copy an image of the currently-displayed figure."""
-        Pixelmap = QtGui.QPixmap.grabWidget(self.figureWidget)
-        self.clipboard.setPixmap(Pixelmap)
-        
-        
+    
     def igorOpen(self):
         """Open the currently-selected item in Igor Pro."""
         igorpath = '"C:\\Program Files (x86)\\WaveMetrics\\Igor Pro Folder\\Igor.exe"'
@@ -282,6 +313,54 @@ class HDF5Browser(QtGui.QWidget, UiTools):
                 np.savetxt(igortmpfile+'.txt', data, header=dataset_name)
                 subprocess.Popen( igorpath+' '+ igortmpfile+'.txt')
 
+    
+    
+    
+        
+
+
+class HDF5Browser(QtGui.QWidget, UiTools):
+    """A Qt Widget for browsing an HDF5 file and graphing the data.
+    """
+
+    def __init__(self, f, parent=None):
+        super(HDF5Browser, self).__init__(parent)
+        self.f = f #TODO: don't call this f - call it data_group or something.
+        # self.setupUi(self)
+        uic.loadUi(os.path.join(os.path.dirname(__file__), 'hdf5_browser.ui'), self)
+
+        self.tree = HDF5Tree(f,
+                             parent=self,
+                             treeWidget=self.treeWidget, 
+                             refresh_button=self.refreshTreeButton,
+                             )
+        self.tree.treeWidget.itemClicked.connect(self.on_click)
+                
+        self.viewer = HDF5ItemViewer(parent=self, 
+                                     figure_widget=self.figureWidget,
+                                     show_controls=False, 
+                                     renderer_combobox = self.rendererselection,
+                                     refresh_button=self.refreshFigureButton,
+                                     copy_button=self.CopyButton,
+                                     default_button=self.defaultButton,
+                                     )             
+        self.replace_widget(self.figureWidgetContainer, self.figureWidget, self.viewer)
+        
+        
+    def __del__(self):
+        pass  # self.f.close()
+    
+    
+    def on_click(self, item, column):
+        """Handle clicks on items in the tree."""
+        item.setExpanded(True)
+        if len(self.tree.treeWidget.selectedItems())>1: 
+            self.viewer.data = [treeitem.data(column, QtCore.Qt.UserRole) for treeitem in self.tree.treeWidget.selectedItems() ]
+        else:
+            self.viewer.data = item.data(column, QtCore.Qt.UserRole)
+
+    
+
 if __name__ == '__main__':
     import sys, h5py, os, numpy as np
     import nplab
@@ -302,6 +381,7 @@ if __name__ == '__main__':
 #    sys.exit(app.exec_())
 #    f.close()
 
-    data_file = nplab.datafile.open_file()
+    data_file = h5py.File('C:/Users/Ana Andres/Documents/Python Scripts/2016-05-17.h5', 'r')
+#    data_file = nplab.datafile.open_file()
     ui = HDF5Browser(data_file)
     ui.show()

@@ -12,6 +12,9 @@ from matplotlib.figure import Figure
 import pyqtgraph as pg
 import numpy as np
 
+from PyQt4.QtGui import * 
+#from PyQt4.QtCore import * 
+
 
 
 
@@ -64,9 +67,8 @@ def suitable_renderers(h5object, return_scores=False):
     else:
         return [r for score, r in renderers_and_scores if score >= 0]
 
+
 hdf5_info_base, hdf5_info_widget = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'hdf5_info_renderer.ui'))
-
-
 class HDF5InfoRenderer(DataRenderer, hdf5_info_base, hdf5_info_widget):
     """ A renderer returning the basic HDF5 info"""
     def __init__(self, h5object, parent=None):
@@ -76,11 +78,13 @@ class HDF5InfoRenderer(DataRenderer, hdf5_info_base, hdf5_info_widget):
 
         self.setupUi(self)
         if type(h5object)==list:
-            self.lineEdit.setText(h5object[0].name)
-            self.lineEdit2.setText(h5object[0].parent.name)
+            self.lineEdit.setText(self.h5object[0].name)
+            self.lineEdit2.setText(self.h5object[0].parent.name)
+            self.lineEdit3.setText(self.h5object[0].file.filename)
         else:
-            self.lineEdit.setText(h5object.name)
-            self.lineEdit2.setText(h5object.parent.name)
+            self.lineEdit.setText(self.h5object.name)
+            self.lineEdit2.setText(self.h5object.parent.name)
+            self.lineEdit3.setText(self.h5object.file.filename)
         
 
     @classmethod
@@ -123,9 +127,9 @@ class TextRenderer(DataRenderer, QtGui.QWidget):
     def __init__(self, h5object, parent=None):
         super(TextRenderer, self).__init__(h5object, parent)
         
-        #our layout is simple - just a single QLabel
-        self.label = QtGui.QLabel()
-        layout = QtGui.QVBoxLayout(self)
+        #our layout is simple - just a single QLineEdit
+        self.label = QtGui.QLineEdit()
+        layout = QtGui.QFormLayout(self)
         layout.addWidget(self.label)
         self.setLayout(layout)
         
@@ -141,14 +145,34 @@ class TextRenderer(DataRenderer, QtGui.QWidget):
 
 add_renderer(TextRenderer)
 
-
-class AttrsRenderer(TextRenderer):
-    """ A renderer displaying the Attributes of the HDF5 object selected"""
-    def text(self, h5object):
-        text = "Attributes:\n"
-        for key, value in h5object.attrs.iteritems():
-            text += "{0}: {1}\n".format(key, str(value))
-        return text
+hdf5_attrs_base, hdf5_attrs_widget = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'hdf5_attrs_renderer.ui'))
+class AttrsRenderer(DataRenderer, hdf5_attrs_base, hdf5_attrs_widget):
+    """ A renderer displaying a table with the Attributes of the HDF5 object selected"""
+    
+    def __init__(self, h5object, parent=None):
+        super(AttrsRenderer, self).__init__(h5object)
+        self.h5object = h5object
+        self.setupUi(self)
+        
+        self.tableWidget.setRowCount(len(self.h5object.attrs))
+        row = 0
+        for key, value in sorted(h5object.attrs.iteritems()):
+            item_key = QTableWidgetItem(key)
+            item_value = QTableWidgetItem(str(value))
+            self.tableWidget.setItem(row,0,item_key)
+            self.tableWidget.setItem(row,1,item_value)
+            row = row + 1
+        self.tableWidget.resizeColumnsToContents()
+        
+        
+# PREVIOUS ATTRIBUTES RENDERER
+#class AttrsRenderer(TextRenderer):
+#    """ A renderer displaying the Attributes of the HDF5 object selected"""
+#    def text(self, h5object):
+#        text = "Attributes:\n"
+#        for key, value in h5object.attrs.iteritems():
+#            text += "{0}: {1}\n".format(key, str(value))
+#        return text
         
     @classmethod
     def is_suitable(cls, h5object):
