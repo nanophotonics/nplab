@@ -109,6 +109,11 @@ class Group(h5py.Group, ShowGUIMixin):
     def __getitem__(self, key):
         item = super(Group, self).__getitem__(key)  # get the dataset or group
         return wrap_h5py_item(item) #wrap as a Group if necessary
+        
+    @property
+    def parent(self):
+        """Return the group to which this object belongs."""
+        return wrap_h5py_item(super(Group,self).parent)
 
     def find_unique_name(self, name):
         """Find a unique name for a subgroup or dataset in this group.
