@@ -59,7 +59,8 @@ except AttributeError:
 
 QtGui.QApplication.setGraphicsSystem("raster")
 
-def get_qt_app():
+_retained_qt_app = None # this lets us hold on to the Qt Application if needed.
+def get_qt_app(prevent_garbage_collection=True):
     """Retrieve or create the QApplication instance.
 
     If running inside Spyder, or if you've used TraitsUI, the application
@@ -72,6 +73,10 @@ def get_qt_app():
     if app is None:
         app = qtgui.QApplication([])
     assert app is not None, "Problem creating the QApplication."
+    if prevent_garbage_collection:
+        # Keep a reference to the application if appropriate, to stop
+        # it disappearing due to garbage collection.
+        _retained_qt_app = app
     return app
 
 
