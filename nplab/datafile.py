@@ -109,6 +109,11 @@ class Group(h5py.Group, ShowGUIMixin):
     def __getitem__(self, key):
         item = super(Group, self).__getitem__(key)  # get the dataset or group
         return wrap_h5py_item(item) #wrap as a Group if necessary
+        
+    @property
+    def parent(self):
+        """Return the group to which this object belongs."""
+        return wrap_h5py_item(super(Group,self).parent)
 
     def find_unique_name(self, name):
         """Find a unique name for a subgroup or dataset in this group.
@@ -291,10 +296,10 @@ class DataFile(Group):
             n=0
             while "version_info_%04d" % n in self.attrs:
                 n += 1
-            try:
-                self.attrs.create("version_info_%04d" % n, nplab.utils.version.version_info_string())
-            except:
-                print "Error: could not save version information"
+            #try:
+            self.attrs.create("version_info_%04d" % n, str(nplab.utils.version.version_info_string()))
+            #except:
+            #    print "Error: could not save version information"
     def flush(self):
         self.file.flush()
 
