@@ -51,12 +51,11 @@
       <bool>true</bool>
      </property>
      <property name="rowCount">
-      <number>2</number>
+      <number>1</number>
      </property>
      <property name="columnCount">
       <number>2</number>
      </property>
-     <row/>
      <row/>
      <column>
       <property name="text">

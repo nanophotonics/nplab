@@ -154,15 +154,20 @@ class AttrsRenderer(DataRenderer, hdf5_attrs_base, hdf5_attrs_widget):
         self.h5object = h5object
         self.setupUi(self)
         
-        self.tableWidget.setRowCount(len(self.h5object.attrs))
-        row = 0
-        for key, value in sorted(h5object.attrs.iteritems()):
-            item_key = QTableWidgetItem(key)
-            item_value = QTableWidgetItem(str(value))
-            self.tableWidget.setItem(row,0,item_key)
-            self.tableWidget.setItem(row,1,item_value)
-            row = row + 1
-        self.tableWidget.resizeColumnsToContents()
+        if type(h5object)==list:
+            item_info = QTableWidgetItem("Choose a single element to display its attributes!")
+            self.tableWidget.setItem(0,0,item_info)
+            self.tableWidget.resizeColumnsToContents()
+        else:
+            self.tableWidget.setRowCount(len(self.h5object.attrs))
+            row = 0
+            for key, value in sorted(h5object.attrs.iteritems()):
+                item_key = QTableWidgetItem(key)
+                item_value = QTableWidgetItem(str(value))
+                self.tableWidget.setItem(row,0,item_key)
+                self.tableWidget.setItem(row,1,item_value)
+                row = row + 1
+            self.tableWidget.resizeColumnsToContents()
         
         
 # PREVIOUS ATTRIBUTES RENDERER
@@ -241,15 +246,16 @@ class DataRenderer1DPG(FigureRendererPG):
             self.figureWidget.plot(x = Xdata, y = Ydata,name = h5object.name, pen =(icolour,len(self.h5object)))
             icolour = icolour + 1
             
+        labelStyle = {'font-size': '24pt'}
         try:
-            self.figureWidget.setLabel('bottom', h5object.attrs['X label'])
+            self.figureWidget.setLabel('bottom', h5object.attrs['X label'], **labelStyle)
         except:
-            self.figureWidget.setLabel('bottom', 'An X axis')
+            self.figureWidget.setLabel('bottom', 'An X axis', **labelStyle)
             
         try:
-            self.figureWidget.setLabel('left', h5object.attrs['Y label'])
+            self.figureWidget.setLabel('left', h5object.attrs['Y label'], **labelStyle)
         except:
-            self.figureWidget.setLabel('left', 'An X axis')
+            self.figureWidget.setLabel('left', 'An Y axis', **labelStyle)
 
         
    
@@ -294,15 +300,16 @@ class Scatter_plot1DPG(FigureRendererPG):
             self.figureWidget.plot(x = Xdata, y = Ydata,name = h5object.name, pen =None, symbol ='o',symbolPen = (icolour,len(self.h5object)),symbolBrush = (icolour,len(self.h5object)))
             icolour = icolour + 1
             
+        labelStyle = {'font-size': '24pt'}
         try:
-            self.figureWidget.setLabel('bottom', h5object.attrs['X label'])
+            self.figureWidget.setLabel('bottom', h5object.attrs['X label'], **labelStyle)
         except:
-            self.figureWidget.setLabel('bottom', 'An X axis')
+            self.figureWidget.setLabel('bottom', 'An X axis', **labelStyle)
             
         try:
-            self.figureWidget.setLabel('left', h5object.attrs['Y label'])
+            self.figureWidget.setLabel('left', h5object.attrs['Y label'], **labelStyle)
         except:
-            self.figureWidget.setLabel('left', 'An X axis')
+            self.figureWidget.setLabel('left', 'An Y axis', **labelStyle)
           
     @classmethod
     def is_suitable(cls, h5object):
@@ -420,7 +427,7 @@ class MultiSpectrum2D(DataRenderer, QtGui.QWidget):
         data[np.where(np.isnan(data))] = 0
 
       #  plot.plot(x = np.array(self.h5object.attrs['wavelengths']), y = np.array(h5object),name = h5object.name)
-        labelStyle = {'font-size': '14pt'}
+        labelStyle = {'font-size': '24pt'}
         vb.setLabel('left', 'Spectrum number',**labelStyle)
         vb.setLabel('bottom', 'Wavelength (nm)',**labelStyle)
 
@@ -529,10 +536,12 @@ add_renderer(DataRenderer2or3DPG)
    
 class DataRenderer1D(FigureRenderer):
     """ A renderer for 1D datasets experessing them in a line graph using
-    matplotlib. Allow this does not allow the user to interact with the
+    matplotlib. Although this does not allow the user to interact with the
     figure it is often found to be more stable.
     """
     def display_data(self):
+        matplotlib.rc('xtick', labelsize=24) 
+        matplotlib.rc('ytick', labelsize=24) 
         ax = self.fig.add_subplot(111)
         ax.plot(self.h5object)
         ax.set_aspect("auto")
@@ -640,10 +649,11 @@ class SpectrumRenderer(FigureRendererPG):
             plot.plot(x = np.array(h5object.attrs['wavelengths']), y = np.array(Data),name = h5object.name, pen =(icolour,len(self.h5object)) )
             Title = Title + " spectrum"
                 
-            labelStyle = {'font-size': '14pt'}
+            labelStyle = {'font-size': '24pt'}
             self.figureWidget.setLabel('left', 'Intensity',**labelStyle)
             self.figureWidget.setLabel('bottom', 'Wavelength (nm)',**labelStyle)
-            self.figureWidget.setTitle(Title,**labelStyle)
+            self.figureWidget.setTitle(Title,**labelStyle) # displays too small
+            
         
    
     @classmethod

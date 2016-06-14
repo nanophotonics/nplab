@@ -193,7 +193,7 @@ class HDF5Tree(QtGui.QWidget, UiTools):
     """Create a tree widget for any HDF5 file contents
     
     Arguments:
-    f : HDF5 file
+    data_file : HDF5 file
     treeWidget : QTreeWidget
         If this is specified, use the supplied tree widget combobox instead of 
         creating a new one.
@@ -202,18 +202,18 @@ class HDF5Tree(QtGui.QWidget, UiTools):
     """
     
     def __init__(self, 
-                 f,
+                 data_file,
                  treeWidget, 
                  refresh_button,
                  parent=None,
                  ):
         super(HDF5Tree, self).__init__(parent)
-        self.f = f 
+        self.data_file = data_file 
         
         try:
-            self.root_name = self.f.filename
+            self.root_name = self.data_file.filename
         except AttributeError:
-            self.root_name = self.f.file.filename
+            self.root_name = self.data_file.file.filename
         self.setWindowTitle(self.root_name)
         
         if treeWidget is None:
@@ -236,8 +236,8 @@ class HDF5Tree(QtGui.QWidget, UiTools):
     def addItems(self, parent):
         """Populate the tree view with the contents of the HDF5 file."""
         self._items_added = []
-        root = self.addToTree(parent, self.f, name=self.root_name, add_children=True)
-        self.treeWidget.expandToDepth(0) # auto-expand first level
+        root = self.addToTree(parent, self.data_file, name=self.root_name, add_children=True)
+        self.treeWidget.expandToDepth(1) # auto-expand first level
 
     def addToTree(self, parent, h5item, name=None, add_children=True):
         """Add an HDF5 item to the tree view as a child of the given item.
@@ -323,13 +323,12 @@ class HDF5Browser(QtGui.QWidget, UiTools):
     """A Qt Widget for browsing an HDF5 file and graphing the data.
     """
 
-    def __init__(self, f, parent=None):
+    def __init__(self, data_file, parent=None):
         super(HDF5Browser, self).__init__(parent)
-        self.f = f #TODO: don't call this f - call it data_group or something.
-        # self.setupUi(self)
+        self.data_file = data_file
         uic.loadUi(os.path.join(os.path.dirname(__file__), 'hdf5_browser.ui'), self)
 
-        self.tree = HDF5Tree(f,
+        self.tree = HDF5Tree(data_file,
                              parent=self,
                              treeWidget=self.treeWidget, 
                              refresh_button=self.refreshTreeButton,
@@ -348,12 +347,12 @@ class HDF5Browser(QtGui.QWidget, UiTools):
         
         
     def __del__(self):
-        pass  # self.f.close()
+        pass  # self.data_file.close()
     
     
     def on_click(self, item, column):
         """Handle clicks on items in the tree."""
-        item.setExpanded(True)
+        item.setExpanded(True) # auto expand the item upon click
         if len(self.tree.treeWidget.selectedItems())>1: 
             self.viewer.data = [treeitem.data(column, QtCore.Qt.UserRole) for treeitem in self.tree.treeWidget.selectedItems() ]
         else:
@@ -369,19 +368,21 @@ if __name__ == '__main__':
     print os.getcwd()
     app = get_qt_app()
     
-#    f = h5py.File('test.h5', 'w')
-#    f.create_dataset('dset1', data=np.linspace(-1, 1, 100))
-#    f.create_dataset('dset2', data=np.linspace(-1, 1, 100) ** 3)
-#    g = f.create_group('group1')
+#    data_file = h5py.File('test.h5', 'w')
+#    data_file.create_dataset('dset1', data=np.linspace(-1, 1, 100))
+#    data_file.create_dataset('dset2', data=np.linspace(-1, 1, 100) ** 3)
+#    g = data_file.create_group('group1')
 #    g.create_dataset('dset2', data=np.linspace(-1, 1, 100) ** 2)
 #    g = g.create_group('group2')
 #    g.create_dataset('dset3', data=np.linspace(-1, 1, 100).reshape(10, 10))
-#    ui = HDF5Browser(f)
+#    ui = HDF5Browser(data_file)
 #    ui.show()
 #    sys.exit(app.exec_())
-#    f.close()
+#    data_file.close()
 
     data_file = h5py.File('C:/Users/Ana Andres/Documents/Python Scripts/2016-05-17.h5', 'r')
 #    data_file = nplab.datafile.open_file()
     ui = HDF5Browser(data_file)
     ui.show()
+    app.exec_()
+    data_file.close()
