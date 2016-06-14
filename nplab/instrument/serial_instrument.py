@@ -55,7 +55,7 @@ class SerialInstrument(MessageBusInstrument):
         """
         Set up the serial port and so on.
         """
-        super(SerialInstrument, self).__init__()
+        MessageBusInstrument.__init__(self) # Using super() here can cause issues with multiple inheritance.
         self.open(port, False)
 
     def open(self, port=None, quiet=True):

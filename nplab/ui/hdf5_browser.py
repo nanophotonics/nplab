@@ -177,7 +177,7 @@ class HDF5ItemViewer(QtGui.QWidget, UiTools):
     def CopyActivated(self):
         """Copy an image of the currently-displayed figure."""
         ## TO DO: move this to the HDF5 viewer
-        Pixelmap = QtGui.QPixmap.grabWidget(self.figure_widget)
+        Pixelmap = QtGui.QPixmap.grabWidget(self)
         self.clipboard.setPixmap(Pixelmap)
         print "Figure copied to clipboard."
 
@@ -280,10 +280,16 @@ class HDF5Tree(QtGui.QWidget, UiTools):
         action = menu.exec_(self.treeWidget.viewport().mapToGlobal(position))
 
         if action == actions['Open in Igor']:
-            self.igorOpen()
-    
+            self.igorOpen()   
+
+#    def CopyActivated(self):
+#        """Copy an image of the currently-displayed figure."""
+#        Pixelmap = QtGui.QPixmap.grabWidget(self.viewer)
+#        self.clipboard.setPixmap(Pixelmap)
+        
+        
     def igorOpen(self):
-        """Open the currently-selected item in Igor Pro."""
+        """Open the currently-selected item in Igor Pro. If this is not working check your IGOR path!"""
         igorpath = '"C:\\Program Files (x86)\\WaveMetrics\\Igor Pro Folder\\Igor.exe"'
         igortmpfile = os.path.dirname(os.path.realpath(__file__))+'\Igor'
         igortmpfile=igortmpfile.replace("\\","\\\\")
@@ -291,8 +297,7 @@ class HDF5Tree(QtGui.QWidget, UiTools):
         open(igortmpfile, 'w').close()
         group = self.treeWidget.currentItem().text(0)
         dataset_name = self.treeWidget.currentItem().text(1)
-        dataset = self.selected_objects
-        print group
+        dataset = self.viewer.data
         print dataset
         if isinstance(dataset,h5py.Dataset):
             print dataset_name
@@ -313,10 +318,6 @@ class HDF5Tree(QtGui.QWidget, UiTools):
                 np.savetxt(igortmpfile+'.txt', data, header=dataset_name)
                 subprocess.Popen( igorpath+' '+ igortmpfile+'.txt')
 
-    
-    
-    
-        
 
 
 class HDF5Browser(QtGui.QWidget, UiTools):
@@ -353,13 +354,22 @@ class HDF5Browser(QtGui.QWidget, UiTools):
     def on_click(self, item, column):
         """Handle clicks on items in the tree."""
         item.setExpanded(True) # auto expand the item upon click
-        if len(self.tree.treeWidget.selectedItems())>1: 
-            self.viewer.data = [treeitem.data(column, QtCore.Qt.UserRole) for treeitem in self.tree.treeWidget.selectedItems() ]
+        if len(self.treeWidget.selectedItems())>1: 
+            self.viewer.data = DummyHDF5Group({treeitem.data(column, QtCore.Qt.UserRole).name : treeitem.data(column, QtCore.Qt.UserRole) \
+                                                for treeitem in self.tree.treeWidget.selectedItems() })
         else:
             self.viewer.data = item.data(column, QtCore.Qt.UserRole)
 
     
 
+class DummyHDF5Group(dict):
+     def __init__(self,dictionary, attrs ={}):
+         super(DummyHDF5Group, self).__init__()
+         self.attrs = attrs
+         for key in dictionary:
+             self[key] = dictionary[key] 
+             
+             
 if __name__ == '__main__':
     import sys, h5py, os, numpy as np
     import nplab
