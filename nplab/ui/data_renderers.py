@@ -13,6 +13,9 @@ import pyqtgraph as pg
 import numpy as np
 import nplab.datafile as df
 
+from PyQt4.QtGui import * 
+#from PyQt4.QtCore import * 
+
 
 
 
@@ -65,9 +68,8 @@ def suitable_renderers(h5object, return_scores=False):
     else:
         return [r for score, r in renderers_and_scores if score >= 0]
 
+
 hdf5_info_base, hdf5_info_widget = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'hdf5_info_renderer.ui'))
-
-
 class HDF5InfoRenderer(DataRenderer, hdf5_info_base, hdf5_info_widget):
     """ A renderer returning the basic HDF5 info"""
     def __init__(self, h5object, parent=None):
@@ -77,11 +79,13 @@ class HDF5InfoRenderer(DataRenderer, hdf5_info_base, hdf5_info_widget):
 
         self.setupUi(self)
         if type(h5object)==list:
-            self.lineEdit.setText(h5object[0].name)
-            self.lineEdit2.setText(h5object[0].parent.name)
+            self.lineEdit.setText(self.h5object[0].name)
+            self.lineEdit2.setText(self.h5object[0].parent.name)
+            self.lineEdit3.setText(self.h5object[0].file.filename)
         else:
-            self.lineEdit.setText(h5object.name)
-            self.lineEdit2.setText(h5object.parent.name)
+            self.lineEdit.setText(self.h5object.name)
+            self.lineEdit2.setText(self.h5object.parent.name)
+            self.lineEdit3.setText(self.h5object.file.filename)
         
 
     @classmethod
@@ -124,9 +128,9 @@ class TextRenderer(DataRenderer, QtGui.QWidget):
     def __init__(self, h5object, parent=None):
         super(TextRenderer, self).__init__(h5object, parent)
         
-        #our layout is simple - just a single QLabel
-        self.label = QtGui.QLabel()
-        layout = QtGui.QVBoxLayout(self)
+        #our layout is simple - just a single QLineEdit
+        self.label = QtGui.QLineEdit()
+        layout = QtGui.QFormLayout(self)
         layout.addWidget(self.label)
         self.setLayout(layout)
         
@@ -142,20 +146,45 @@ class TextRenderer(DataRenderer, QtGui.QWidget):
 
 add_renderer(TextRenderer)
 
-
-class AttrsRenderer(TextRenderer):
-    """ A renderer displaying the Attributes of the HDF5 object selected"""
-    def text(self, h5object):
-        text = "Attributes:\n"
-        for key, value in h5object.attrs.iteritems():
-            text += "{0}: {1}\n".format(key, str(value))
-        return text
+hdf5_attrs_base, hdf5_attrs_widget = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'hdf5_attrs_renderer.ui'))
+class AttrsRenderer(DataRenderer, hdf5_attrs_base, hdf5_attrs_widget):
+    """ A renderer displaying a table with the Attributes of the HDF5 object selected"""
+    
+    def __init__(self, h5object, parent=None):
+        super(AttrsRenderer, self).__init__(h5object)
+        self.h5object = h5object
+        self.setupUi(self)
+        
+        if type(h5object)==list:
+            item_info = QTableWidgetItem("Choose a single element to display its attributes!")
+            self.tableWidget.setItem(0,0,item_info)
+            self.tableWidget.resizeColumnsToContents()
+        else:
+            self.tableWidget.setRowCount(len(self.h5object.attrs))
+            row = 0
+            for key, value in sorted(h5object.attrs.iteritems()):
+                item_key = QTableWidgetItem(key)
+                item_value = QTableWidgetItem(str(value))
+                self.tableWidget.setItem(row,0,item_key)
+                self.tableWidget.setItem(row,1,item_value)
+                row = row + 1
+            self.tableWidget.resizeColumnsToContents()
+        
+        
+# PREVIOUS ATTRIBUTES RENDERER
+#class AttrsRenderer(TextRenderer):
+#    """ A renderer displaying the Attributes of the HDF5 object selected"""
+#    def text(self, h5object):
+#        text = "Attributes:\n"
+#        for key, value in h5object.attrs.iteritems():
+#            text += "{0}: {1}\n".format(key, str(value))
+#        return text
         
     @classmethod
     def is_suitable(cls, h5object):
         if isinstance(h5object,h5py.Group):
             if len(h5object.keys()) > 10:
-                return 50
+                return 5000
         return 1
 add_renderer(AttrsRenderer)
 
@@ -220,15 +249,16 @@ class DataRenderer1DPG(FigureRendererPG):
             self.figureWidget.plot(x = Xdata, y = Ydata,name = h5object.name, pen =(icolour,len(self.h5object)))
             icolour = icolour + 1
             
+        labelStyle = {'font-size': '24pt'}
         try:
-            self.figureWidget.setLabel('bottom', h5object.attrs['X label'])
+            self.figureWidget.setLabel('bottom', h5object.attrs['X label'], **labelStyle)
         except:
-            self.figureWidget.setLabel('bottom', 'An X axis')
+            self.figureWidget.setLabel('bottom', 'An X axis', **labelStyle)
             
         try:
-            self.figureWidget.setLabel('left', h5object.attrs['Y label'])
+            self.figureWidget.setLabel('left', h5object.attrs['Y label'], **labelStyle)
         except:
-            self.figureWidget.setLabel('left', 'An X axis')
+            self.figureWidget.setLabel('left', 'An Y axis', **labelStyle)
 
         
    
@@ -274,15 +304,16 @@ class Scatter_plot1DPG(FigureRendererPG):
             self.figureWidget.plot(x = Xdata, y = Ydata,name = h5object.name, pen =None, symbol ='o',symbolPen = (icolour,len(self.h5object)),symbolBrush = (icolour,len(self.h5object)))
             icolour = icolour + 1
             
+        labelStyle = {'font-size': '24pt'}
         try:
-            self.figureWidget.setLabel('bottom', h5object.attrs['X label'])
+            self.figureWidget.setLabel('bottom', h5object.attrs['X label'], **labelStyle)
         except:
-            self.figureWidget.setLabel('bottom', 'An X axis')
+            self.figureWidget.setLabel('bottom', 'An X axis', **labelStyle)
             
         try:
-            self.figureWidget.setLabel('left', h5object.attrs['Y label'])
+            self.figureWidget.setLabel('left', h5object.attrs['Y label'], **labelStyle)
         except:
-            self.figureWidget.setLabel('left', 'An X axis')
+            self.figureWidget.setLabel('left', 'An Y axis', **labelStyle)
           
     @classmethod
     def is_suitable(cls, h5object):
@@ -402,7 +433,9 @@ class MultiSpectrum2D(DataRenderer, QtGui.QWidget):
         data[np.where(np.isinf(data))] = 0
 
 
-        labelStyle = {'font-size': '14pt'}
+
+      #  plot.plot(x = np.array(self.h5object.attrs['wavelengths']), y = np.array(h5object),name = h5object.name)
+        labelStyle = {'font-size': '24pt'}
         vb.setLabel('left', 'Spectrum number',**labelStyle)
         vb.setLabel('bottom', 'Wavelength (nm)',**labelStyle)
 
@@ -511,10 +544,12 @@ add_renderer(DataRenderer2or3DPG)
    
 class DataRenderer1D(FigureRenderer):
     """ A renderer for 1D datasets experessing them in a line graph using
-    matplotlib. Allow this does not allow the user to interact with the
+    matplotlib. Although this does not allow the user to interact with the
     figure it is often found to be more stable.
     """
     def display_data(self):
+        matplotlib.rc('xtick', labelsize=24) 
+        matplotlib.rc('ytick', labelsize=24) 
         ax = self.fig.add_subplot(111)
         ax.plot(self.h5object)
         ax.set_aspect("auto")
@@ -622,10 +657,11 @@ class SpectrumRenderer(FigureRendererPG):
             plot.plot(x = np.array(h5object.attrs['wavelengths']), y = np.array(Data),name = h5object.name, pen =(icolour,len(self.h5object)) )
             Title = Title + " spectrum"
                 
-            labelStyle = {'font-size': '14pt'}
+            labelStyle = {'font-size': '24pt'}
             self.figureWidget.setLabel('left', 'Intensity',**labelStyle)
             self.figureWidget.setLabel('bottom', 'Wavelength (nm)',**labelStyle)
-            self.figureWidget.setTitle(Title,**labelStyle)
+            self.figureWidget.setTitle(Title,**labelStyle) # displays too small
+            
         
    
     @classmethod
