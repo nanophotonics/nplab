@@ -14,6 +14,7 @@ class LightSource(Instrument):
     """
     min_power = 0
     max_power = 1
+    shutter = None
     def __init__(self, shutter=None):
         assert isinstance(shutter, Shutter) or shutter == None, 'invalid shutter supplied'
         super(LightSource, self).__init__()
