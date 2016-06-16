@@ -22,6 +22,7 @@ class ILShutter(SerialInstrument, ShutterWithEmulatedRead):
         self.termination_character = "\r"
         SerialInstrument.__init__(self, port=port)
         ShutterWithEmulatedRead.__init__(self)
+        self.query("ct") #enable computer control
         
     def set_state(self, value):
         """Set the shutter to be either "Open" or "Closed" """
