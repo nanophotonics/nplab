@@ -555,7 +555,6 @@ class PreviewImageItem(pg.ImageItem):
     def mouseClickEvent(self, ev):
         """Handle a mouse click on the image."""
         if ev.button() == QtCore.Qt.LeftButton:
-            print "imageitem got a click at {0}".format(ev.pos())
             pos = np.array(ev.pos())
             if self.legacy_click_callback is not None:
                 size = np.array(self.image.shape[:2])
