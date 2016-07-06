@@ -12,7 +12,7 @@ class ProScan(serial.SerialInstrument, stage.Stage):
     port_settings = dict(baudrate=9600,
                         bytesize=serial.EIGHTBITS,
                         parity=serial.PARITY_NONE,
-                        stopbits=serial.STOPBITS_ONE,
+                        stopbits=serial.STOPBITS_TWO,
                         timeout=1, #wait at most one second for a response
                         writeTimeout=1, #similarly, fail if writing takes >1s
                         xonxoff=False, rtscts=False, dsrdtr=False,
@@ -37,10 +37,7 @@ class ProScan(serial.SerialInstrument, stage.Stage):
         if re.search("FOCUS = NONE", self.query("FOCUS",termination_line="END")) is None:
             self.zAxisPresent = False
         else:
-            if self.int_query("VERSION")>=84:
-                self.query("UPR Z %d" % 500) #set 500 microns per revolution on the Z drive (for new BX51)
-            else:
-                self.query("UPR Z %d" % 100) #set 100 microns per revolution on the Z drive (for BX51)
+            self.query("UPR Z %d" % 100) #set 100 microns per revolution on the Z drive (for BX51)
             self.query("RES Z %f" % self.resolution) #make resolution isotropic :)
         
         self.query("ENCODER 1") #turn on encoders (if present)
@@ -48,7 +45,7 @@ class ProScan(serial.SerialInstrument, stage.Stage):
         self.query("BLSH 0") #turn off backlash control
         
         self.use_si_units = use_si_units
-
+        self.axis_names = ('x', 'y', 'z')
     def move_rel(self, dx, block=True):
         """Make a relative move by dx microns/metres (see move)"""
         return self.move(dx, relative=True, block=block)
