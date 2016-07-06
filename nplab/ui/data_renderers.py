@@ -378,7 +378,7 @@ class MultiSpectrum2D(DataRenderer, QtGui.QWidget):
                 ListData = True
                 
         elif len(self.h5object.shape) == 1 and len(self.h5object.attrs['wavelengths'])<len(self.h5object) and len(self.h5object)%len(self.h5object.attrs['wavelengths']) == 0:
-            RawData = np.array(self.h5object)
+            RawData = np.array(self.h5object,dtype = float)
             Xlen = len(np.array(self.h5object.attrs['wavelengths']))
             Ylen = len(RawData)/Xlen
             data = [RawData.reshape((Ylen,Xlen))]
@@ -425,8 +425,8 @@ class MultiSpectrum2D(DataRenderer, QtGui.QWidget):
         if reference_counter == 0 and background_counter == 0:
             print "All spectrum are referenced and background subtracted"
         else:
-            print "Number of spectrum not referenced"+str(reference_counter)
-            print "Number of spectrum not background subtracted"+str(background_counter)
+            print "Number of spectrum not referenced "+str(reference_counter)
+            print "Number of spectrum not background subtracted "+str(background_counter)
         Title = Title + " spectrum"
          
         data[np.where(np.isnan(data))] = 0
@@ -441,12 +441,11 @@ class MultiSpectrum2D(DataRenderer, QtGui.QWidget):
 
         vb.setTitle(Title,**labelStyle)
         
-        
+
         img = pg.ImageItem(data)
 
         ConvertionC= self.h5object.values()[0].attrs['wavelengths'][0]
         ConvertionM = self.h5object.values()[0].attrs['wavelengths'][1] - self.h5object.values()[0].attrs['wavelengths'][0]
-        
 
 
 
@@ -464,7 +463,10 @@ class MultiSpectrum2D(DataRenderer, QtGui.QWidget):
     def is_suitable(cls, h5object):
         suitability = 0
         if isinstance(h5object,dict) == False and isinstance(h5object,h5py.Group) == False:
-            if len(h5object.shape) == 1:
+            try:
+                if len(h5object.shape) == 1 and len(h5object)/len(h5object.attrs['wavelengths']) == 1:
+                    return -1
+            except:
                 return -1
             h5object = {h5object.name : h5object}
             
@@ -483,6 +485,8 @@ class MultiSpectrum2D(DataRenderer, QtGui.QWidget):
                         suitability = suitability + len(h5object)-20
                     else:
                         return -1
+                elif (len(np.array(dataset))/len(dataset.attrs['wavelengths']))>1 and (len(np.array(dataset))%len(dataset.attrs['wavelengths'])) == 0 :           
+                    suitability = suitability + 50
                 elif len(dataset.attrs['wavelengths']) != len(np.array(dataset)):
                     print "the number of bins does not equal the number of wavelengths!"
                     return -1
