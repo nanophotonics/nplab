@@ -823,6 +823,108 @@ class HyperSpec(DataRenderer, QtGui.QWidget):
 add_renderer(HyperSpec)
 
 
+class HyperSpec_Alan(DataRenderer, QtGui.QWidget):
+    """ A Renderer similar to HyperSpec however written to match Alan's style of 
+    writting hyperspec images with the x,y and wavelengths being in different dataset within one group. 
+    Currently only capable of displaying Hyperspec images from two spectromters in two dimensions.
+    
+    If you need to do 3D grid scans feel free to update me!
+
+    """
+    def __init__(self, h5object, parent=None):
+        super(HyperSpec_Alan, self).__init__(h5object, parent)
+        pg.setConfigOption('background', 'w')
+        pg.setConfigOption('foreground', 'k')
+        self.layout = QtGui.QGridLayout()
+        self.setLayout(self.layout)
+        self.display_data()
+
+    def display_data(self):
+        # A try and except loop to determine the number of hyperspectral image avaible
+        try:
+            original_string = 'hs_image'
+            test_string = original_string
+            num_hyperspec = 1
+            Fail = False
+            while Fail == False:
+                self.h5object[test_string]
+                num_hyperspec = num_hyperspec + 1
+                test_string = original_string+str(num_hyperspec)
+        except KeyError:
+            pass
+        #Creating a list of hyperspec images to put into a the layout
+        Images = []
+        #Calculate the X,Y scales for the images
+        XConvertionM = (self.h5object['x'][-1] - self.h5object['x'][0])/len(self.h5object['x'])
+        YConvertionM = (self.h5object['y'][-1] - self.h5object['y'][0])/len(self.h5object['y'])
+        #creating an iterator for the number of hyperspectral images
+        for hyperspec_nom in range(1,num_hyperspec):
+            if hyperspec_nom == 1:
+                hyperspec_nom_str = ''
+            else:
+                hyperspec_nom_str = str(hyperspec_nom)
+                
+            #Grab the correct hyperspec data
+            data = np.transpose(np.array(self.h5object['hs_image'+hyperspec_nom_str]))
+            #Change NaNs to zeros (prevents error)
+            data[0][np.where(np.isnan(data[0]))] = 0 
+        
+            #create image item for current image                 
+            Images.append(pg.ImageView(view=pg.PlotItem()))
+            #Set image
+            Images[hyperspec_nom-1].setImage(data,xvals = np.array(self.h5object['wavelength2']),autoHistogramRange = True)
+            
+     
+            # Formating of the Image
+            Images[hyperspec_nom-1].getImageItem().scale(XConvertionM,YConvertionM)
+            Images[hyperspec_nom-1].autoRange()
+            Images[hyperspec_nom-1].autoLevels()
+            Images[hyperspec_nom-1].ui.roiBtn.hide()
+            Images[hyperspec_nom-1].ui.menuBtn.hide()
+            Images[hyperspec_nom-1].setMinimumSize(550,350)
+        
+       #Image postion within a grid, (with need updating if using mroe than 4 spectrometers)
+        positions = [[0,0],[0,1],[1,0],[1,1]]    
+        #Add Images to layout
+        for hyperspec_nom in range(num_hyperspec-1): 
+            self.layout.addWidget(Images[hyperspec_nom],positions[hyperspec_nom][0],positions[hyperspec_nom][1])
+
+        
+        self.setLayout(self.layout)
+
+   
+    @classmethod
+    def is_suitable(cls, h5object):
+        suitability = 0
+        try:
+            h5object['hs_image']
+            suitability = suitability + 10
+        except KeyError:
+            return -1
+            
+        try:
+            h5object['wavelength']
+            suitability = suitability + 10
+        except KeyError:
+            return -1
+            
+        try:
+            h5object['y']
+            suitability = suitability + 10
+        except KeyError:
+            return -1
+            
+        try:
+            h5object['x']
+            suitability = suitability + 10
+        except KeyError:
+            return -1  
+            
+        return suitability
+
+add_renderer(HyperSpec_Alan)
+
+
 class PumpProbeShifted(DataRenderer, QtGui.QWidget):
     ''' A renderer for Pump probe experiments, leaving the data un changed'''
     """ A renderer for 1D datasets experessing them in a line graph using
