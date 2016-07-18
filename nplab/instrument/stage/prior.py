@@ -25,6 +25,7 @@ class ProScan(serial.SerialInstrument, stage.Stage):
         Set up the serial port and so on.
         """
         serial.SerialInstrument.__init__(self, port=port) #this opens the port
+        stage.Stage.__init__(self) #this opens the port
         
         self.query("COMP O") #enable full-featured serial interface
         
