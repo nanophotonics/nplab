@@ -8,20 +8,12 @@ Created on Wed Jun 11 12:28:18 2014
 import nplab.utils.gui #load Qt correctly - do this BEFORE traits
 from nplab.utils.gui import QtCore, QtGui, uic
 from nplab.ui.ui_tools import UiTools
-import traits
-from traits.api import HasTraits, Property, Instance, Float, String, Button, Bool, on_trait_change, Range
-import traitsui
-from traitsui.api import View, Item, HGroup, VGroup
-from traitsui.table_column import ObjectColumn
-import chaco
-from chaco.api import ArrayPlotData, Plot
-from enable.component_editor import ComponentEditor
 import threading
 import numpy as np
-import enable
 import traceback
 import os
 import datetime
+import time
 from PIL import Image
 import warnings
 import pyqtgraph as pg
@@ -90,8 +82,9 @@ class Camera(Instrument):
     def __init__(self):
         super(Camera,self).__init__()
         self.acquisition_lock = threading.Lock()    
-        self.latest_frame_updated = threading.Event()
+        self._latest_frame_update_condition = threading.Condition()
         self._live_view = False
+        self._frame_counter = 0
     
     def __del__(self):
         self.close()
@@ -127,15 +120,24 @@ class Camera(Instrument):
         """
         if assert_live_view:
             assert self.live_view, """Can't wait for the next frame if live view is not enabled!"""
-        for i in range(discard_frames + 1): #wait for a fresh frame
-            self.latest_frame_updated.clear() #reset the flag
-            if not self.latest_frame_updated.wait(timeout): #wait for frame
+        with self._latest_frame_update_condition:
+            # We use the Condition object to block until a new frame appears
+            # However we need to check that a new frame has actually been taken
+            # so we use the frame counter.
+            # NB the current implementation may be vulnerable to dropped frames
+            # which will probably cause a timeout error.
+            # Checking for frame_counter being >= target_frame is vulnerable to
+            # overflow.
+            target_frame = self._frame_counter + 1 + discard_frames
+            expiry_time = time.time() + timeout
+            while self._frame_counter != target_frame and time.time() < timeout:
+                self.latest_frame_updated.wait(timeout) #wait for a new frame
+            if time.time() >= expiry_time:
                 raise IOError("Timed out waiting for a fresh frame from the video stream.")
-                
-        if raw:
-            return self.latest_raw_frame
-        else:
-            return self.latest_frame
+            if raw:
+                return self.latest_raw_frame
+            else:
+                return self.latest_frame
     
     def get_metadata(self):
         """Return a dictionary of camera settings."""
@@ -149,6 +151,7 @@ class Camera(Instrument):
         
     def raw_snapshot(self):
         """Take a snapshot and return it.  No filtering or conversion."""
+        raise NotImplementedError("Cameras must subclass raw_snapshot!")
         return True, np.zeros((640,480,3),dtype=np.uint8)
         
     def get_image(self):
@@ -228,8 +231,10 @@ class Camera(Instrument):
     @latest_raw_frame.setter
     def latest_raw_frame(self, frame):
         """Set the latest raw frame, and update the preview widget if any."""
-        self._latest_raw_frame = frame
-        self.latest_frame_updated.set()
+        with self._latest_frame_update_condition:
+            self._latest_raw_frame = frame
+            self._frame_counter += 1
+            self._latest_frame_update_condition.notify_all()
         
         # TODO: use the NotifiedProperty to do this with less code?
         if self._preview_widgets is not None:
@@ -313,6 +318,7 @@ class Camera(Instrument):
                 return # do nothing if it's going already.
             print "starting live view thread"
             try:
+                self._frame_counter = 0
                 self._live_view_stop_event = threading.Event()
                 self._live_view_thread = threading.Thread(target=self._live_view_function)
                 self._live_view_thread.start()

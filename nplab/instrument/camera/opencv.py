@@ -49,12 +49,13 @@ class OpenCVCamera(Camera):
             for i in range(10):
                 try:
                     ret, frame = self.cap.read()
-                    assert ret, "Failed to capture a frame"
+                    assert ret, "OpenCV's capture.read() returned False :("
                     if len(frame.shape) == 3:
                         frame = cv2.cvtColor(frame, cv2.cv.CV_BGR2RGB)
                     return ret, frame
-                except Exception:
+                except Exception as e:
                     print "Attempt number {0} failed to capture a frame from the camera!".format(i)
+                    print e
         print "Camera.raw_snapshot() has failed to capture a frame."
         if not suppress_errors:
             raise IOError("Dropped too many frames from camera :(")
