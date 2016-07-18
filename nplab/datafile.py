@@ -397,6 +397,14 @@ def set_current(datafile, **kwargs):
             print "trying with mode=r+"
             kwargs['mode'] = 'r+'  # dirty hack to work around mode=a not working
             _current_datafile = DataFile(datafile, **kwargs)
+            
+def close_current():
+    """Close the current datafile"""
+    if _current_datafile is not None:
+        try:
+            _current_datafile.close()
+        except:
+            print "Error closing the data file"
 
 def open_file():
     """Open an existing data file"""
