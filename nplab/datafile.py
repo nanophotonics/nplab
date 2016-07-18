@@ -324,8 +324,22 @@ class DataFile(Group):
 _current_datafile = None
 
 
-def current(create_if_none=True, create_if_closed=True):
-    """Return the current data file, creating one if it does not exist."""
+def current(create_if_none=True, create_if_closed=True, mode='a'):
+    """Return the current data file, creating one if it does not exist.
+
+    Arguments:
+        create_if_none : bool (optional, default True)
+            Attempt to pop up a file dialog and create a new file if necessary.
+            The default is True, i.e. do this if there's no current file.
+        create_if_closed: bool (optional, default True)
+            If the current data file is closed, create a new one.
+        mode : str (optional, default 'a')
+            The HDF5 mode to use for the file.  Sensible modes would be:
+                'a': create if it doesn't exist, or append to an existing file
+                'r': read-only
+                'w-': read-write, delete the file if it already exists
+                'r+': read-write, file must exist already.
+    """
     # TODO: if file previously used but closed don't ask to recreate but use config to open
     global _current_datafile
     if create_if_closed:  # try to access the file - if it's closed, it will fail
@@ -352,7 +366,7 @@ def current(create_if_none=True, create_if_closed=True):
                 print fname
                 if not "." in fname:
                     fname += ".h5"
-                set_current(fname, mode='a')
+                set_current(fname, mode=mode)
             #                if os.path.isfile(fname): #FIXME: dirty hack to work around mode=a not working
             #                    set_current(fname,mode='r+')
             #                else:
