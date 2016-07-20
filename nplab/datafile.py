@@ -26,10 +26,15 @@ def attributes_from_dict(group_or_dataset, dict_of_attributes):
     attrs = group_or_dataset.attrs
     for key, value in dict_of_attributes.iteritems():
         if value is not None:
-            if key in attrs.keys():
-                attrs.modify(key, value)
-            else:
-                attrs.create(key, value)
+            try:
+                attrs[key] = value
+            except TypeError:
+                print "Warning, metadata {0}='{1}' can't be saved in HDF5.  Saving with str()"
+                attrs[key] = str(value)
+#            if key in attrs.keys():
+#                attrs.modify(key, value)
+#            else:
+#                attrs.create(key, value)
     #group_or_dataset.attrs.update(dict_of_attributes)
 
 
