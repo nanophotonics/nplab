@@ -11,10 +11,17 @@ import os
 import nplab
 import nplab.datafile
 import nplab.instrument
+import numpy as np
 
 from nplab.instrument import Instrument
 
 class InstrumentA(Instrument):
+    integration_time = 42.3
+    gain = 2
+    description = "Test metadata"
+    empty_property = None
+    bad_property = object()
+    metadata_property_names = ('integration_time','gain','description','empty_property')
     def __init__(self):
         print "An instance of instrument A is being created"
         super(InstrumentA, self).__init__()
@@ -26,6 +33,7 @@ class InstrumentB(Instrument):
         print "An instance of instrument B is being created"
         super(InstrumentB, self).__init__()
 
+##################### Test the instance-tracking code #########################
 def test_get_instances_empty():
     instruments = InstrumentA.get_instances()
     assert len(instruments)==0, "Spurious instrument returned"
@@ -50,6 +58,8 @@ def test_get_instances():
 
     instruments = Instrument.get_instances()
     assert len(instruments) == 3, "Wrong number of instruments present!"
+    instruments = InstrumentA.get_instances()
+    assert len(instruments) == 2, "Got %d InstrumentAs, not 2" % len(instruments)
 
     assert InstrumentB.get_instance() == b, "Second class didn't return the right instance."
     
@@ -72,15 +82,58 @@ def test_instance_deletion_2():
     del c
     assert len(InstrumentC.get_instances()) == 0, "The instrument wasn't properly removed on deletion"
     
+############### Test the data-saving stuff, incl. metadata ####################
 
-def test_saving():
-    #test the auto-saving capabilities
+instrumentA_default_metadata = {'integration_time':42.3,'gain':2,'description':"Test metadata",'empty_property':None}
+
+def test_get_metadata():
+    a = InstrumentA()
+    
+    # test that metadata is correctly retrieved
+    md = a.get_metadata()
+    assert md == instrumentA_default_metadata, "Error getting metadata: {0}".format(md)
+    
+    md = a.get_metadata(include_default_names=False)
+    assert md == {}, "Error getting metadata (should be empty): {0}".format(md)
+    
+    md = a.get_metadata(property_names=['gain'], include_default_names=False)
+    assert md == {'gain':2}, "Error getting metadata (should be just gain): {0}".format(md)
+    
+    md = a.get_metadata(exclude=['integration_time','gain','description'])
+    assert md == {'empty_property':None}, "Error getting metadata (should be just gain): {0}".format(md)
+
+def test_metadata_bundling(capsys):
+    # check the metadata is correctly bundled with the data
+    a = InstrumentA()
+    d = a.bundle_metadata(np.zeros(100))
+    assert hasattr(d, "attrs"), "Dataset was missing attrs dictionary!"
+    for k, v in instrumentA_default_metadata.iteritems():
+        assert d.attrs[k] == v
+    assert d.attrs.keys() == instrumentA_default_metadata.keys(), "Extraneous metadata bundled? {0}".format(d.attrs.keys())
+
+
+def test_saving(capsys, tmpdir):
+    # test the auto-saving capabilities
     a = InstrumentA.get_instance() #should create/get a valid instance
-    nplab.datafile.set_current("temp.h5",mode='w') #use a temporary h5py file
+    nplab.datafile.set_current(str(tmpdir.join("temp.h5")), mode="w")
+    df = nplab.current_datafile()
     for i in range(10):
         a.create_data_group('test',attrs={'creator':'instrumentA','serial':i})
-    assert nplab.current_datafile()['InstrumentA/test_9'].attrs.get('serial')==9, "data saving didn't work as expected"
-    f = nplab.current_datafile()
-    f.close()
-    os.remove('temp.h5')
+    assert df['InstrumentA/test_9'].attrs.get('serial')==9, "data saving didn't work as expected"
+
+    # test the bundled metadata is correctly saved
+    data = a.bundle_metadata(np.zeros(100))
+    d = a.create_dataset("test_bundled_metadata", data=a.bundle_metadata(np.zeros(100)))    
+    for k, v in instrumentA_default_metadata.iteritems():
+        assert v is None or d.attrs[k] == v
+
+    out, err = capsys.readouterr() #make sure this is clear
+    d = a.create_dataset("test_bundled_metadata_bad", 
+                         data=a.bundle_metadata(np.zeros(100), 
+                                                property_names=['bad_property']))
+    assert "object" in d.attrs['bad_property'], "Fallback to str() failed for bad metadata"
+    out, err = capsys.readouterr()
+    assert "Warning, metadata bad_property" in out
+    
+    df.close()
 
