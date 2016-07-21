@@ -81,6 +81,10 @@ class ProScan(serial.SerialInstrument, stage.Stage):
         except KeyboardInterrupt:
             self.emergency_stop()
 
+    def move_axis(self, pos, axis, relative=False, **kwargs):
+        """Move along one axis"""
+        return self.move(pos, axis=axis, relative=relative, **kwargs)
+
     def get_position(self, axis=None):
         """return the current position in microns"""
         if axis is not None:
