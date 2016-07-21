@@ -83,7 +83,11 @@ class ProScan(serial.SerialInstrument, stage.Stage):
 
     def move_axis(self, pos, axis, relative=False, **kwargs):
         """Move along one axis"""
-        return self.move(pos, axis=axis, relative=relative, **kwargs)
+        # We use the built-in emulation for relative moves
+        if relative:
+            return stage.Stage.move_axis(self, pos, axis, relative=True, **kwargs)
+        else:
+            return self.move(pos, axis=axis, relative=relative, **kwargs)
 
     def get_position(self, axis=None):
         """return the current position in microns"""
