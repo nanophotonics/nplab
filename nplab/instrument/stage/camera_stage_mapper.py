@@ -30,6 +30,7 @@ class CameraStageMapper(HasTraits):
     do_autofocus = Button()
     autofocus_range = Range(0., 100., 5.)
     autofocus_step = Range(0., 10., 0.5)
+    autofocus_default_ranges = [np.arange(-5,5,0.5),np.arange(-1,1,0.2)]
     frames_to_discard = Int(1)
     settling_time = Float(0.2)
     disable_live_view = True
@@ -256,12 +257,14 @@ class CameraStageMapper(HasTraits):
         self.camera.live_view = camera_live_view
         self._action_lock.release()
         return new_position-here, positions, powers
-    def autofocus(self, ranges=[np.arange(-5,5,0.5),np.arange(-1,1,0.2)], max_steps=10):
+    def autofocus(self, ranges=None, max_steps=10):
         """move the stage to bring the sample into focus
         
         Presently, it just does one iteration for each range passed in: usually
         this would mean a coarse focus then a fine focus.
         """ #NEEDS WORK!
+        if ranges is None:
+            ranges = self.autofocus_default_ranges
         n=0
         for r in ranges:
             pos = self.autofocus_iterate(r)[0]
