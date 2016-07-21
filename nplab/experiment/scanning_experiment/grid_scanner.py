@@ -157,7 +157,7 @@ class GridScan(ScanningExperiment, TimedScan):
         self.stage.move(position/self.stage_units, axis=axis)
 
     def get_position(self, axis):
-        return self.stage.get_position(axis=axis)
+        return self.stage.get_position(axis=axis) * self.stage_units
 
     def update_drift_compensation(self):
         """Update the current drift compensation.
@@ -232,7 +232,7 @@ class GridScan(ScanningExperiment, TimedScan):
 
     def set_init_to_current_position(self):
         for i, ax in enumerate(self.axes):
-            self.init[i] = self.stage.get_position(ax) / self._unit_conversion[self.init_unit]
+            self.init[i] = self.get_position(ax) / self._unit_conversion[self.init_unit]
 
 
 @inherit_docstring(GridScan)
