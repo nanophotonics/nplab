@@ -333,6 +333,26 @@ class EchoInstrument(MessageBusInstrument):
         return self._last_write
 
 
+def wrap_with_echo_to_console(obj):
+    """Modify an object on-the-fly so all its write and readline calls are echoed to the console"""
+    import functools
+
+    obj._debug_echo = True
+    obj._original_write = obj.write
+    obj._original_readline = obj.readline
+
+    def write(self, q, *args, **kwargs):
+        print "Sent: "+str(q)
+        return self._original_write(q, *args, **kwargs)
+    obj.write = functools.partial(write, obj)
+
+    def readline(self, *args, **kwargs):
+        ret = self._original_readline(*args, **kwargs)
+        print "Recv: "+str(ret)
+        return ret
+    obj.readline = functools.partial(readline, obj)
+
+
 if __name__ == '__main__':
     class DummyInstrument(EchoInstrument):
         x = queried_property('gx', 'sx {0}', dtype='str')
