@@ -12,6 +12,7 @@ This base class
 import re
 import nplab.instrument
 from functools import partial
+import threading
 
 
 class MessageBusInstrument(nplab.instrument.Instrument):
@@ -23,7 +24,10 @@ class MessageBusInstrument(nplab.instrument.Instrument):
 
     This base class provides commonly-used mechanisms that support the use of
     serial or VISA instruments.  The SerialInstrument and VISAInstrument classes
-    both inherit from this class.
+    both inherit from this class.  Most interactions with this class involve
+    a call to the `query` method.  This writes a message and returns the reply.
+    
+    
 
     Subclassing Notes
     -----------------
@@ -35,38 +39,67 @@ class MessageBusInstrument(nplab.instrument.Instrument):
 
     It's also a very good idea to provide some way to flush the input buffer
     with `flush_input_buffer()`.
+    
+    Threading Notes
+    ---------------
+    
+    The message bus protocol includes a property, `communications_lock`.  All
+    commands that use the communications bus should be protected by this lock.
+    It's also permissible to use it to protect sequences of calls to the bus 
+    that must be atomic (e.g. a multi-part exchange of messages).  However, try
+    not to hold it too long - or odd things might happen if other threads are 
+    blocked for a long time.  The lock is reentrant so there's no issue with
+    acquiring it twice.
     """
     termination_character = "\n" #: All messages to or from the instrument end with this character.
     termination_line = None #: If multi-line responses are recieved, they must end with this string
     ignore_echo = False
 
+    _communications_lock = None
+    @property
+    def communications_lock(self):
+        """A lock object used to protect access to the communications bus"""
+        # This requires initialisation but our init method won't be called - so
+        # the property initialises it on first use.
+        if self._communications_lock is None:
+            self._communications_lock = threading.RLock()
+        return self._communications_lock
+
     def write(self,query_string):
-        """Write a string to the serial port"""
-        raise NotImplementedError("Subclasses of MessageBusInstrument must override the write method!")
+        """Write a string to the unerlying communications port"""
+        with self.communications_lock:
+            raise NotImplementedError("Subclasses of MessageBusInstrument must override the write method!")
+            
     def flush_input_buffer(self):
         """Make sure there's nothing waiting to be read.
 
         This function should be overridden to make sure nothing's lurking in
         the input buffer that could confuse a query.
         """
-        pass
+        with self.communications_lock:
+            pass
+    
     def readline(self, timeout=None):
         """Read one line from the underlying bus.  Must be overriden."""
-        raise NotImplementedError("Subclasses of MessageBusInstrument must override the readline method!")
+        with self.communications_lock:
+            raise NotImplementedError("Subclasses of MessageBusInstrument must override the readline method!")
+            
     def read_multiline(self, termination_line=None, timeout=None):
         """Read one line from the underlying bus.  Must be overriden.
 
         This should not need to be reimplemented unless there's a more efficient
         way of reading multiple lines than multiple calls to readline()."""
-        if termination_line is None:
-            termination_line = self.termination_line
-        assert isinstance(termination_line, str), "If you perform a multiline query, you must specify a termination line either through the termination_line keyword argument or the termination_line property of the NPSerialInstrument."
-        response = ""
-        last_line = "dummy"
-        while termination_line not in last_line and len(last_line) > 0: #read until we get the termination line.
-            last_line = self.readline(timeout)
-            response += last_line
-        return response
+        with self.communications_lock:
+            if termination_line is None:
+                termination_line = self.termination_line
+            assert isinstance(termination_line, str), "If you perform a multiline query, you must specify a termination line either through the termination_line keyword argument or the termination_line property of the NPSerialInstrument."
+            response = ""
+            last_line = "dummy"
+            while termination_line not in last_line and len(last_line) > 0: #read until we get the termination line.
+                last_line = self.readline(timeout)
+                response += last_line
+            return response
+            
     def query(self,queryString,multiline=False,termination_line=None,timeout=None):
         """
         Write a string to the stage controller and return its response.
@@ -74,22 +107,23 @@ class MessageBusInstrument(nplab.instrument.Instrument):
         It will block until a response is received.  The multiline and termination_line commands
         will keep reading until a termination phrase is reached.
         """
-        self.flush_input_buffer()
-        self.write(queryString)
-        if self.ignore_echo == True: # Needs Implementing for a multiline read!
-            first_line = self.readline(timeout).strip()
-            if first_line == queryString:
-                return self.readline(timeout).strip()
+        with self.communications_lock:
+            self.flush_input_buffer()
+            self.write(queryString)
+            if self.ignore_echo == True: # Needs Implementing for a multiline read!
+                first_line = self.readline(timeout).strip()
+                if first_line == queryString:
+                    return self.readline(timeout).strip()
+                else:
+                    print 'This command did not echo!!!'
+                    return first_line
+    
+            if termination_line is not None:
+                multiline = True
+            if multiline:
+                return self.read_multiline(termination_line)
             else:
-                print 'This command did not echo!!!'
-                return first_line
-
-        if termination_line is not None:
-            multiline = True
-        if multiline:
-            return self.read_multiline(termination_line)
-        else:
-            return self.readline(timeout).strip() #question: should we strip the final newline?
+                return self.readline(timeout).strip() #question: should we strip the final newline?
     def parsed_query_old(self, query_string, response_string=r"(\d+)", re_flags=0, parse_function=int, **kwargs):
         """
         Perform a query, then parse the result.
@@ -100,6 +134,7 @@ class MessageBusInstrument(nplab.instrument.Instrument):
 
         TODO: make this accept friendlier sscanf style arguments, and produce parse functions automatically
         """
+        # NB no need for the lock here - `query` is already an atomic operation.
         reply = self.query(query_string, **kwargs)
         res = re.search(response_string, reply, flags=re_flags)
         if res is None:
@@ -180,6 +215,13 @@ class MessageBusInstrument(nplab.instrument.Instrument):
 
 
 class queried_property(object):
+    """A Property interface that reads and writes from the instrument on the bus.
+    
+    This returns a property-like (i.e. a descriptor) object.  You can use it
+    in a class definition just like a property.  The property it creates will
+    interact with the instrument over the communication bus to set and retrieve
+    its value.
+    """
     def __init__(self, get_cmd=None, set_cmd=None, validate=None, valrange=None,
                  fdel=None, doc=None, dtype='float'):
         self.dtype = dtype
@@ -232,6 +274,7 @@ class queried_property(object):
 
 
 class queried_channel_property(queried_property):
+    # I'm not sure what this does or who uses it.  I assume it's Alan's? --rwb27
     def __init__(self, get_cmd=None, set_cmd=None, validate=None, valrange=None,
                  fdel=None, doc=None, dtype='float'):
         super(queried_channel_property, self).__init__(get_cmd, set_cmd, validate, valrange,
@@ -288,6 +331,26 @@ class EchoInstrument(MessageBusInstrument):
         self._last_write = msg
     def readline(self, timeout=None):
         return self._last_write
+
+
+def wrap_with_echo_to_console(obj):
+    """Modify an object on-the-fly so all its write and readline calls are echoed to the console"""
+    import functools
+
+    obj._debug_echo = True
+    obj._original_write = obj.write
+    obj._original_readline = obj.readline
+
+    def write(self, q, *args, **kwargs):
+        print "Sent: "+str(q)
+        return self._original_write(q, *args, **kwargs)
+    obj.write = functools.partial(write, obj)
+
+    def readline(self, *args, **kwargs):
+        ret = self._original_readline(*args, **kwargs)
+        print "Recv: "+str(ret)
+        return ret
+    obj.readline = functools.partial(readline, obj)
 
 
 if __name__ == '__main__':

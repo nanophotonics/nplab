@@ -59,9 +59,18 @@ class ProScan(serial.SerialInstrument, stage.Stage):
         we return immediately.  relative=True does relative motion, otherwise
         motion is absolute.
         """
-        if axis is not None:
+        querystring = "G"
+        if axis is not None and relative:
+            # single-axis emulation is fine for relative moves
             return self.move_axis(x, axis, relative=relative, block=block)
-        querystring = "GR" if relative else "G" #allow for absolute or relative moves
+        elif axis is not None and not relative:
+            # single-axis absolute move
+            assert axis.lower() in self.axis_names, ValueError("{0} is not a valid axis name.".format(axis))
+            querystring += axis.upper()
+            x = [x]
+        elif axis is None and relative:
+            # relative move
+            querystring += "R"
         if self.use_si_units: x = np.array(x) * 1e6
         for i in range(len(x)): querystring += " %d" % int(x[i]/self.resolution)
         self.query(querystring)
@@ -71,6 +80,14 @@ class ProScan(serial.SerialInstrument, stage.Stage):
                     time.sleep(0.02)
         except KeyboardInterrupt:
             self.emergency_stop()
+
+    def move_axis(self, pos, axis, relative=False, **kwargs):
+        """Move along one axis"""
+        # We use the built-in emulation for relative moves
+        if relative:
+            return stage.Stage.move_axis(self, pos, axis, relative=True, **kwargs)
+        else:
+            return self.move(pos, axis=axis, relative=relative, **kwargs)
 
     def get_position(self, axis=None):
         """return the current position in microns"""
