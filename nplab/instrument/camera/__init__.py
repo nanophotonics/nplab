@@ -130,8 +130,8 @@ class Camera(Instrument):
             # overflow.
             target_frame = self._frame_counter + 1 + discard_frames
             expiry_time = time.time() + timeout
-            while self._frame_counter != target_frame and time.time() < timeout:
-                self.latest_frame_updated.wait(timeout) #wait for a new frame
+            while self._frame_counter != target_frame and time.time() < expiry_time:
+                self._latest_frame_update_condition.wait(timeout) #wait for a new frame
             if time.time() >= expiry_time:
                 raise IOError("Timed out waiting for a fresh frame from the video stream.")
             if raw:
