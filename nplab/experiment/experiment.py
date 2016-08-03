@@ -38,6 +38,7 @@ class Experiment(Instrument):
         """Create an instance of the Experiment class"""
         super(Experiment, self).__init__()
         self._stop_event = threading.Event()
+        self.log_messages = ""
     
     def run(self, *args, **kwargs):
         """This method should be the meat of the experiment (needs overriden).
