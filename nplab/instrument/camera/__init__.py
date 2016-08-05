@@ -85,6 +85,9 @@ class Camera(Instrument):
         self._latest_frame_update_condition = threading.Condition()
         self._live_view = False
         self._frame_counter = 0
+        # Ensure camera parameters get saved in the metadata.  You may want to override this in subclasses
+        # to remove junk (e.g. if some of the parameters are meaningless)
+        self.metadata_property_names = self.metadata_property_names + tuple(self.camera_parameter_names())
     
     def __del__(self):
         self.close()
@@ -138,16 +141,6 @@ class Camera(Instrument):
                 return self.latest_raw_frame
             else:
                 return self.latest_frame
-    
-    def get_metadata(self):
-        """Return a dictionary of camera settings."""
-        ret = dict()
-        for p in self.parameters:
-            try:
-                ret[p.name]=p.value
-            except:
-                pass #if there was a problem getting metadata, ignore it.
-        return ret
         
     def raw_snapshot(self):
         """Take a snapshot and return it.  No filtering or conversion."""

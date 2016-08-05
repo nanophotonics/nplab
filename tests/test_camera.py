@@ -8,5 +8,5 @@ if __name__ == '__main__':
     cam.show_gui()
     cam.live_view = False
     cam.close()
-    nplab.current_datafile(create_if_none=False).close()
+    nplab.close_current_datafile()
 
