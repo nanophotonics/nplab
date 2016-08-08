@@ -8,6 +8,7 @@ system to display the datasets.  See `nplab.ui.data_renderers` for that.
 
 __author__ = 'Alan Sanders, Will Deacon, Richard Bowman'
 
+import nplab
 from nplab.utils.gui import uic, QtGui, QtCore
 import matplotlib
 import numpy as np
@@ -319,6 +320,159 @@ class HDF5Tree(QtGui.QWidget, UiTools):
                 subprocess.Popen( igorpath+' '+ igortmpfile+'.txt')
 
 
+class HDF5TreeItem(object):
+    """A simple class to represent items in an HDF5 tree"""
+    def __init__(self, data_file, parent, name, row):
+        """Create a new item for an HDF5 tree
+
+        data_file : HDF5 data file
+            This is the file (NB must be the top-level group) containing everything
+        parent : HDF5TreeItem
+            The parent of the current item
+        name : string
+            The name of the current item (should be parent.name plus an extra component)
+        row : int
+            The index of the current item in the parent's children.
+        """
+        self.data_file = data_file
+        self.parent = parent
+        self.name = name
+        self.row = row
+        if parent is not None:
+            assert name.startswith(parent.name)
+            assert name in data_file
+
+    @property
+    def basename(self):
+        """The last component of the item's path in the HDF5 file"""
+        return self.name.rsplit('/')[-1]
+
+    _has_children = None
+    @property
+    def has_children(self):
+        """Whether or not this item has children"""
+        if self._has_children is None:
+            self._has_children = hasattr(self.data_file[self.name], "keys")
+        return self._has_children
+
+    _children = None
+    @property
+    def children(self):
+        """Children of the current item (as HDF5TreeItems)"""
+        if self.has_children is False:
+            return []
+        if self._children is None:
+            keys = self.data_file[self.name].keys()
+            keys.sort(key=split_number_from_name)
+            self._children = [HDF5TreeItem(self.data_file, self, self.name.rstrip("/") + "/" + k, i)
+                              for i, k in enumerate(keys)]
+        return self._children
+
+    def purge_children(self):
+        """Empty the cached list of children"""
+        try:
+            for child in self.children:
+                child.purge_children() # We must delete them all the way down!
+                self._children.remove(child)
+                del child # Not sure if this is needed...
+            self._children = None
+        except:
+            pass
+
+    def __del__(self):
+        self.purge_children()
+
+def print_tree(item, prefix=""):
+    """Recursively print the HDF5 tree for debug purposes"""
+    if len(prefix) > 16:
+        return # recursion guard
+    print prefix + item.basename
+    if item.has_children:
+        for child in item.children:
+            print_tree(child, prefix + "  ")
+
+
+class HDF5ItemModel(QtCore.QAbstractItemModel):
+    """This model takes its data from an HDF5 Group for display in a tree.
+
+    It loads the file as the tree is expanded for speed - in the future it might implement sanity checks to
+    abort loading very long folders.
+    """
+    def __init__(self, data_group):
+        """Represent an HDF5 group to a QTreeView or similar.
+        :type data_group: nplab.datafile.Group
+        """
+        super(HDF5ItemModel, self).__init__()
+        self.data_group = data_group
+        self.root_item = HDF5TreeItem(self.data_group.file, None, data_group.name, 0)
+
+    def _index_to_item(self, index):
+        """Return an HDF5TreeItem for a given index"""
+        if index.isValid():
+            return index.internalPointer()
+        else:
+            return self.root_item
+
+    def index(self, row, column, parent_index):
+        """Return the index of the <row>th child of parent
+
+        :type row: int
+        :type column: int
+        :type parent: QtCore.QModelIndex
+        """
+        try:
+            parent = self._index_to_item(parent_index)
+            return self.createIndex(row, column, parent.children[row])
+        except:
+            return QtCore.QModelIndex()
+
+    def parent(self, index=None):
+        """Find the index of the parent of the item at a given index."""
+        try:
+            parent = self._index_to_item(index).parent
+            return self.createIndex(parent.row, 0, parent)
+        except:
+            # Something went wrong with finding the parent so return an invalid index
+            return QtCore.QModelIndex()
+
+    def flags(self, index):
+        """Return flags telling Qt what to do with the item"""
+        return QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled
+
+    def data(self, index, role):
+        """The data represented by this item."""
+        if role == QtCore.Qt.DisplayRole:
+            return self._index_to_item(index).basename
+        else:
+            return None
+
+    def headerData(self, section, orientation, role=None):
+        """Return the header names - an empty string here!"""
+        return [""]
+
+    def rowCount(self, index):
+        """The number of rows exposed by the model"""
+        try:
+            item = self._index_to_item(index)
+            assert item.has_children
+            return len(item.children)
+        except:
+            # if it doesn't have keys, assume there are no children.
+            return 0
+
+    def hasChildren(self, index):
+        """Whether or not this object has children"""
+        return self._index_to_item(index).has_children
+        #try:
+        #    assert hasattr(self._index_to_item(index), "keys")
+        #    return True
+        #except:
+        #    return False
+
+    def columnCount(self, index=None, *args, **kwargs):
+        """Return the number of columns"""
+        return 1
+
 
 class HDF5Browser(QtGui.QWidget, UiTools):
     """A Qt Widget for browsing an HDF5 file and graphing the data.
@@ -375,7 +529,6 @@ if __name__ == '__main__':
     import nplab
     from nplab.utils.gui import get_qt_app
 
-    print os.getcwd()
     app = get_qt_app()
     
 #    data_file = h5py.File('test.h5', 'w')
@@ -390,9 +543,17 @@ if __name__ == '__main__':
 #    sys.exit(app.exec_())
 #    data_file.close()
 
-    data_file = h5py.File('C:/Users/Ana Andres/Documents/Python Scripts/2016-05-17.h5', 'r')
+#    data_file = h5py.File('C:/Users/Ana Andres/Documents/Python Scripts/2016-05-17.h5', 'r')
 #    data_file = nplab.datafile.open_file()
-    ui = HDF5Browser(data_file)
-    ui.show()
+#    ui = HDF5Browser(data_file)
+#    ui.show()
+#    app.exec_()
+#    data_file.close()
+    datafile = nplab.current_datafile() #datafile.DataFile("/Users/rwb27/Desktop/test.h5", mode="r")
+    tree = QtGui.QTreeView()
+    model = HDF5ItemModel(datafile)
+    tree.setModel(model)
+    tree.show()
     app.exec_()
-    data_file.close()
+    #print_tree(model.root_item) (don't, it's recursive...)
+    datafile.close()
