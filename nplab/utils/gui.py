@@ -40,10 +40,16 @@ elif ui_toolkit == 'pyface':
     from pyface.qt import QtGui as qtgui
     from pyface.qt import QtCore, QtGui
 elif ui_toolkit == 'native' and os.environ['QT_API'] == 'pyqt':
-    from PyQt4 import QtCore, QtGui
-    from PyQt4 import QtCore as qt
-    from PyQt4 import QtGui as qtgui
-    from PyQt4 import uic
+    try:
+        from PyQt4 import QtCore, QtGui
+        from PyQt4 import QtCore as qt
+        from PyQt4 import QtGui as qtgui
+        from PyQt4 import uic
+    except:
+        warnings.warn("Warning: failed to load PyQt4, falling back to pyside", UserWarning)
+        from PySide import QtCore, QtGui
+        from PySide import QtCore as qt
+        from PySide import QtGui as qtgui
 else:
     raise ImportError("Invalid ui_toolkit or QT_API")
 #print QtCore, QtGui
