@@ -558,6 +558,10 @@ class JPEGRenderer(DataRenderer2or3DPG):
     def is_suitable(cls, h5object):
         if h5object.attrs['compressed_image_format'] in ['JPEG', 'PNG', ]:
             return 50
+        if len(h5object.shape)==1:
+            # Detect the JPEG header directly.  NB this is a work in progress, I don't think it works currently.
+            if h5object[:4] == np.array([255,216,255,224],dtype=np.uint8):
+                return 50
         return -1
 
 add_renderer(JPEGRenderer)
