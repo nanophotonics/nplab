@@ -519,13 +519,14 @@ class DataRenderer2or3DPG(DataRenderer, QtGui.QWidget):
 
         self.display_data()
 
-    def display_data(self):
-        data = np.array(self.h5object)
+    def display_data(self, data=None, lock_aspect=False):
+        if data is None:
+            data = np.array(self.h5object)
         data[np.where(np.isnan(data))] = 0 
         img = pg.ImageView()
         img.setImage(data)
         img.setMinimumSize(950,750)
-        img.view.setAspectLocked(False)
+        img.view.setAspectLocked(lock_aspect)
         self.layout.addWidget(img)
         self.setLayout(self.layout)
 
@@ -543,7 +544,23 @@ class DataRenderer2or3DPG(DataRenderer, QtGui.QWidget):
 
 add_renderer(DataRenderer2or3DPG)
 
- 
+
+class JPEGRenderer(DataRenderer2or3DPG):
+    def __init__(self, h5object, parent=None):
+        super(JPEGRenderer, self).__init__(h5object, parent)
+
+    def display_data(self):
+        import cv2
+        data = cv2.imdecode(np.array(self.h5object), cv2.CV_LOAD_IMAGE_UNCHANGED)
+        DataRenderer2or3DPG.display_data(self, data=data.transpose((1,0,2)), lock_aspect=True)
+
+    @classmethod
+    def is_suitable(cls, h5object):
+        if h5object.attrs['compressed_image_format'] in ['JPEG', 'PNG', ]:
+            return 50
+        return -1
+
+add_renderer(JPEGRenderer)
 
    
 class DataRenderer1D(FigureRenderer):
