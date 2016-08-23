@@ -29,13 +29,9 @@ def attributes_from_dict(group_or_dataset, dict_of_attributes):
             try:
                 attrs[key] = value
             except TypeError:
-                print "Warning, metadata {0}='{1}' can't be saved in HDF5.  Saving with str()"
+                print "Warning, metadata {0}='{1}' can't be saved in HDF5.  Saving with str()".format(key, value)
                 attrs[key] = str(value)
-#            if key in attrs.keys():
-#                attrs.modify(key, value)
-#            else:
-#                attrs.create(key, value)
-    #group_or_dataset.attrs.update(dict_of_attributes)
+    #group_or_dataset.attrs.update(dict_of_attributes) #We can't do this - we'd lose the error handling.
 
 
 def h5_item_number(group_or_dataset):

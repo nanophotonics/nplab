@@ -133,7 +133,7 @@ def test_saving(capsys, tmpdir):
                                                 property_names=['bad_property']))
     assert "object" in d.attrs['bad_property'], "Fallback to str() failed for bad metadata"
     out, err = capsys.readouterr()
-    assert "Warning, metadata bad_property" in out
+    assert "Warning, metadata bad_property" in out, "Didn't get warning about bad_property: \n{}".format(out)
     
     df.close()
 

@@ -50,7 +50,7 @@ class ShowGUIMixin:
             # nplab with dependencies on Qt.
             from nplab.utils.gui import get_qt_app, QtCore, QtGui
             app = get_qt_app()
-            if force_new_window or not isinstance(self.__gui_instance, qtgui.QWidget):
+            if force_new_window or not isinstance(self.__gui_instance, QtGui.QWidget):
                 # create the widget if it doesn't exist already, or if we've been
                 # told to make a new one
                 self.__gui_instance = self.get_qt_ui()
