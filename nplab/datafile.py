@@ -149,6 +149,18 @@ class Group(h5py.Group, ShowGUIMixin):
                  and re.match(r"_*(\d+)$", k[len(name):])]  # and end with numbers
         return sorted(items, key=h5_item_number)
 
+    def count_numbered_items(self, name):
+        """Count the number of items that would be returned by numbered_items
+        
+        If all you need to do is count how many items match a name, this is
+        a faster way to do it than len(group.numbered_items("name")).
+        """
+        n = 0
+        for k in self.keys():
+            if k.startswith(name) and re.match(r"_*(\d+)$", k[len(name):]):
+                n += 1
+                return n
+
     def create_group(self, name, attrs=None, auto_increment=True, timestamp=True):
         """Create a new group, ensuring we don't overwrite old ones.
 

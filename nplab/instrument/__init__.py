@@ -24,7 +24,6 @@ class Instrument(object, ShowGUIMixin):
     This class takes care of management of instruments, saving data, etc.
     """
     __instances = None
-#    description = String
     metadata_property_names = () #"Tuple of names of properties that should be automatically saved as HDF5 metadata
 
     def __init__(self):
