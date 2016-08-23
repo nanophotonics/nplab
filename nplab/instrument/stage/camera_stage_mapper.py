@@ -130,6 +130,18 @@ class CameraStageMapper(HasTraits):
         if self.disable_live_view:
             self.camera.live_view = camera_live_view #reenable live view if necessary
     def centre_on_feature_iterate(self, feature_image, search_size=(50,50), image_filter=lambda x: x):
+        """Measure the displacement of the sample and move to correct it.
+        
+        Arguments:
+        feature_image : numpy.ndarray
+            This is the feature that should be at the centre of the camera.  It
+            must be smaller than the camera image + search size.
+        search_size : (int, int)
+            The distance in pixels to search over.  Defaults to (50,50).
+        image_filter : function (optional)
+            If supplied, run this function on the image before cross-correlating
+            (you can use this to cross-correlate in grayscale, for example).
+        """
         try:
             self.flush_camera_and_wait()
             current_image = image_filter(self.camera.color_image()) #get the current image
