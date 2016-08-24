@@ -107,7 +107,8 @@ def show_widget(Widget, *args, **kwargs):
 def show_guis(instruments, block=True):
     """Display the Qt user interfaces of a list of instruments."""
     app = get_qt_app()
-    uis = [i.get_qt_ui() for i in instruments if hasattr(i, "get_qt_ui")]
+    uis = [i.show_gui(blocking=False) for i in instruments if hasattr(i, "get_qt_ui")]
+    # DataBrowserImprovements swapped get_qt_ui for show_gui(block=False)
     traits = [i.edit_traits() for i in instruments if hasattr(i, "edit_traits")]
     for ui in uis:
         ui.show()

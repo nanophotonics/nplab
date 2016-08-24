@@ -29,13 +29,9 @@ def attributes_from_dict(group_or_dataset, dict_of_attributes):
             try:
                 attrs[key] = value
             except TypeError:
-                print "Warning, metadata {0}='{1}' can't be saved in HDF5.  Saving with str()"
+                print "Warning, metadata {0}='{1}' can't be saved in HDF5.  Saving with str()".format(key, value)
                 attrs[key] = str(value)
-#            if key in attrs.keys():
-#                attrs.modify(key, value)
-#            else:
-#                attrs.create(key, value)
-    #group_or_dataset.attrs.update(dict_of_attributes)
+    #group_or_dataset.attrs.update(dict_of_attributes) #We can't do this - we'd lose the error handling.
 
 
 def h5_item_number(group_or_dataset):
@@ -148,6 +144,18 @@ class Group(h5py.Group, ShowGUIMixin):
                  if k.startswith(name)  # only items that start with `name`
                  and re.match(r"_*(\d+)$", k[len(name):])]  # and end with numbers
         return sorted(items, key=h5_item_number)
+
+    def count_numbered_items(self, name):
+        """Count the number of items that would be returned by numbered_items
+        
+        If all you need to do is count how many items match a name, this is
+        a faster way to do it than len(group.numbered_items("name")).
+        """
+        n = 0
+        for k in self.keys():
+            if k.startswith(name) and re.match(r"_*(\d+)$", k[len(name):]):
+                n += 1
+                return n
 
     def create_group(self, name, attrs=None, auto_increment=True, timestamp=True):
         """Create a new group, ensuring we don't overwrite old ones.
