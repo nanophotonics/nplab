@@ -16,7 +16,7 @@ class ShowGUIMixin:
     either a supplied Qt widget or using TraitsUI.
     """
     __gui_instance = None
-    def show_gui(self, blocking=True, force_new_window=False):
+    def show_gui(self, blocking=None, block=None, force_new_window=False):
         """Display a GUI window for the class.
 
         You may override this method to display a window to control the
@@ -32,8 +32,11 @@ class ShowGUIMixin:
         If you use blocking=False, it will return immediately - this allows
         you to continue using the console, assuming there's already a Qt
         application running (usually the case if you're running from 
-        Spyder).  NB you should hold on to the return value if using this
+        Spyder).  NB you may want to retain the return value if using this
         mode, as otherwise the GUI may be garbage-collected and disappear.
+        For compatibility, this function accepts either ``block`` or
+        ``blocking`` as a keyword argument - if either is not None it will
+        use that value, otherwise it defaults to ``True``.
 
         In the future, blocking=False may spawn a Qt application object in
         a background thread - but that's not currently done so we rely on
@@ -45,6 +48,10 @@ class ShowGUIMixin:
         cause issues if the retained reference to the GUI in the object is
         the only one existing - the previous window may disappear.
         """
+        if blocking is None and block is not None:
+            blocking = block # Allow the use of either argument name
+        if blocking is None:
+            blocking = True # We default to True.
         if hasattr(self,'get_qt_ui'):
             # NB this dynamic import is important to avoid saddling all of
             # nplab with dependencies on Qt.
