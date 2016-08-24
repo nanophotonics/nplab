@@ -189,7 +189,7 @@ class HDF5ItemViewer(QtGui.QWidget, UiTools):
     def CopyActivated(self):
         """Copy an image of the currently-displayed figure."""
         ## TO DO: move this to the HDF5 viewer
-        Pixelmap = QtGui.QPixmap.grabWidget(self)
+        Pixelmap = QtGui.QPixmap.grabWidget(self.figure_widget)
         self.clipboard.setPixmap(Pixelmap)
         print "Figure copied to clipboard."
 
@@ -485,6 +485,9 @@ class HDF5Browser(QtGui.QWidget, UiTools):
         splitter.addWidget(self.viewer)
         self.setLayout(QtGui.QHBoxLayout())
         self.layout().addWidget(splitter)
+
+    def sizeHint(self):
+        return QtCore.QSize(1024,768)
 
     def selection_changed(self, selected, deselected):
         """Callback function to update the displayed item when the tree selection changes."""
