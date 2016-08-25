@@ -87,8 +87,9 @@ class Camera(Instrument):
         self._frame_counter = 0
         # Ensure camera parameters get saved in the metadata.  You may want to override this in subclasses
         # to remove junk (e.g. if some of the parameters are meaningless)
-        self.metadata_property_names = self.metadata_property_names + tuple(self.camera_parameter_names())
-    
+#        self.metadata_property_names = self.metadata_property_names + tuple(self.camera_parameter_names())
+        self.metadata_property_names = tuple(self.metadata_property_names) + tuple(self.camera_parameter_names())
+
     def __del__(self):
         self.close()
 #        super(Camera,self).__del__() #apparently not...?
