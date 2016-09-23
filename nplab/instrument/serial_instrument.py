@@ -55,8 +55,8 @@ class SerialInstrument(MessageBusInstrument):
         """
         Set up the serial port and so on.
         """
-        super(SerialInstrument, self).__init__()
-        self.open(port, False)
+        MessageBusInstrument.__init__(self) # Using super() here can cause issues with multiple inheritance.
+        self.open(port, False) # Eventually this shouldn't rely on init...
 
     def open(self, port=None, quiet=True):
         """Open communications with the serial port.
@@ -64,69 +64,80 @@ class SerialInstrument(MessageBusInstrument):
         If no port is specified, it will attempt to autodetect.  If quiet=True
         then we don't warn when ports are opened multiple times.
         """
-        if hasattr(self,'ser') and self.ser.isOpen():
-            if not quiet: print "Warning: attempted to open an already-open port!"
-            return
-        if port is None: port=self.find_port()
-        assert port is not None, "We don't have a serial port to open, meaning you didn't specify a valid port and autodetection failed.  Are you sure the instrument is connected?"
-        self.ser = serial.Serial(port,**self.port_settings)
-        self.ser_io = io.TextIOWrapper(io.BufferedRWPair(self.ser, self.ser, 1),  
-                                       newline = self.termination_character,
-                                       line_buffering = True)
-        #the block above wraps the serial IO layer with a text IO layer
-        #this allows us to read/write in neat lines.  NB the buffer size must
-        #be set to 1 byte for maximum responsiveness.
-        assert self.test_communications(), "The instrument doesn't seem to be responding.  Did you specify the right port?"
+        with self.communications_lock:
+            if hasattr(self,'ser') and self.ser.isOpen():
+                if not quiet: print "Warning: attempted to open an already-open port!"
+                return
+            if port is None: port=self.find_port()
+            assert port is not None, "We don't have a serial port to open, meaning you didn't specify a valid port and autodetection failed.  Are you sure the instrument is connected?"
+            self.ser = serial.Serial(port,**self.port_settings)
+            self.ser_io = io.TextIOWrapper(io.BufferedRWPair(self.ser, self.ser, 1),  
+                                           newline = self.termination_character,
+                                           line_buffering = True)
+            #the block above wraps the serial IO layer with a text IO layer
+            #this allows us to read/write in neat lines.  NB the buffer size must
+            #be set to 1 byte for maximum responsiveness.
+            assert self.test_communications(), "The instrument doesn't seem to be responding.  Did you specify the right port?"
+    
     def close(self):
-        try:
-            self.ser.close()
-        except Exception as e:
-            print "The serial port didn't close cleanly:", e
+        """Release the serial port"""
+        with self.communications_lock:
+            try:
+                self.ser.close()
+            except Exception as e:
+                print "The serial port didn't close cleanly:", e
+                
     def __del__(self):
         self.close()
+        
     def write(self,query_string):
         """Write a string to the serial port"""
-        assert self.ser.isOpen(), "Warning: attempted to write to the serial port before it was opened.  Perhaps you need to call the 'open' method first?"
-        try:        
-            if self.ser.outWaiting()>0: self.ser.flushOutput() #ensure there's nothing waiting
-        except AttributeError:
-            if self.ser.out_waiting>0: self.ser.flushOutput() #ensure there's nothing waiting
-        self.ser.write(query_string+self.termination_character)
+        with self.communications_lock:
+            assert self.ser.isOpen(), "Warning: attempted to write to the serial port before it was opened.  Perhaps you need to call the 'open' method first?"
+            try:        
+                if self.ser.outWaiting()>0: self.ser.flushOutput() #ensure there's nothing waiting
+            except AttributeError:
+                if self.ser.out_waiting>0: self.ser.flushOutput() #ensure there's nothing waiting
+            self.ser.write(query_string+self.termination_character)
 
     def flush_input_buffer(self):
         """Make sure there's nothing waiting to be read, and clear the buffer if there is."""
-        if self.ser.inWaiting()>0: self.ser.flushInput()
+        with self.communications_lock:
+            if self.ser.inWaiting()>0: self.ser.flushInput()
     def readline(self, timeout=None):
         """Read one line from the serial port."""
-        return self.ser_io.readline().replace(self.termination_character,"\n")
+        with self.communications_lock:
+            return self.ser_io.readline().replace(self.termination_character,"\n")
     def test_communications(self):
         """Check if the device is available on the current port.  
         
         This should be overridden by subclasses.  Assume the port has been
         successfully opened and the settings are as defined by self.port_settings.
         Usually this function sends a command and checks for a known reply."""
-        return True
+        with self.communications_lock:
+            return True
     def find_port(self):
         """Iterate through the available serial ports and query them to see
         if our instrument is there."""
-        success = False
-        for port_name, _, _ in serial.tools.list_ports.comports(): #loop through serial ports, apparently 256 is the limit?!
-            try:
-                print "Trying port",port_name
-                self.open(port_name)
-                success = True
-                print "Success!"
-            except:
-                pass
-            finally:
+        with self.communications_lock:
+            success = False
+            for port_name, _, _ in serial.tools.list_ports.comports(): #loop through serial ports, apparently 256 is the limit?!
                 try:
-                    self.close()
+                    print "Trying port",port_name
+                    self.open(port_name)
+                    success = True
+                    print "Success!"
                 except:
-                    pass #we don't care if there's an error closing the port...
+                    pass
+                finally:
+                    try:
+                        self.close()
+                    except:
+                        pass #we don't care if there's an error closing the port...
+                if success:
+                    break #again, make sure this happens *after* closing the port
             if success:
-                break #again, make sure this happens *after* closing the port
-        if success:
-            return port_name
-        else:
-            return None
+                return port_name
+            else:
+                return None
     

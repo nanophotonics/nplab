@@ -21,8 +21,26 @@ import collections
 
 
 class Stage(Instrument):
+    """A class representing motion-control stages.
+    
+    This class primarily provides two things: the ability to find the position
+    of the stage (using `Stage.position` or `Stage.get_position(axis="a")`), 
+    and the ability to move the stage (see `Stage.move()`).
+    
+    Subclassing Notes
+    -----------------
+    The minimum you need to do in order to subclass this is to override the
+    `move` method and the `get_position` method.  NB you must handle the case
+    where `axis` is specified and where it is not.  For `move`, `move_axis` is
+    provided, which will help emulate single-axis moves on stages that can't 
+    make them natively.
+    
+    In the future, a class factory method might be available, that will 
+    simplify the emulation of various features.
+    """
+    axis_names = ('x', 'y', 'z')
     def __init__(self):
-        self.axis_names = ('x', 'y', 'z')
+        Instrument.__init__(self)
 
     def move(self, pos, axis=None, relative=False):
         raise NotImplementedError("You must override move() in a Stage subclass")

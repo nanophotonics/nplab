@@ -16,14 +16,14 @@ import nplab
 from weakref import WeakSet
 import nplab.utils.log
 from nplab.utils.array_with_attrs import ArrayWithAttrs
+from nplab.utils.show_gui_mixin import ShowGUIMixin
 
-class Instrument(object):
+class Instrument(object, ShowGUIMixin):
     """Base class for all instrument-control classes.
 
     This class takes care of management of instruments, saving data, etc.
     """
     __instances = None
-#    description = String
     metadata_property_names = () #"Tuple of names of properties that should be automatically saved as HDF5 metadata
 
     def __init__(self):
@@ -86,9 +86,9 @@ class Instrument(object):
         :param name: should be a noun describing what the reading is (image,
         spectrum, etc.)
 
-        Other arguments are passed to `create_dataset`.
+        Other arguments are passed to `nplab.datafile.Group.create_dataset`.
         """
-        if "%d" not in name:
+        if "%d" not in name: # is this really necessary?
             name = name + '_%d'
         df = cls.get_root_data_folder()
         dset = df.create_dataset(name, *args, **kwargs)
@@ -105,54 +105,61 @@ class Instrument(object):
         """
         nplab.utils.log.log(message, from_object=self)
 
-    def get_metadata(self):
+    def get_metadata(self, 
+                     property_names=[], 
+                     include_default_names=True,
+                     exclude=None
+                     ):
         """A dictionary of settings, properties, etc. to save along with data.
 
-        This returns the value of each property in self.metadata_property_names."""
-        return {name: getattr(self,name) for name in self.metadata_property_names}
+        This returns the value of each property specified in the arguments or
+        in `self.metadata_property_names`.
+        
+        Arguments:
+        property_names : list of strings, optional
+            A list specifying the names of properties (of this object) to be
+            retrieved and returned in the dictionary.
+        include_default_names : boolean, optional (default True)
+            If True (the default), include the default metadata along with the
+            specified names.  This means that get_metadata can be used with no
+            arguments to retrieve the default metadata.
+        exclude : list of strings, optional
+            A list of properties to exclude (primarily useful when you want to
+            remove some of the default entries).  Nothing is excluded by 
+            default.
+        """
+        # Convert everything to lists to:
+        # * ensure we don't modify the arguments (it copies list arguments)
+        # * make it all mutable so we can remove items
+        # * prevent errors when adding lists and tuples
+        keys = list(property_names)
+        if include_default_names:
+            keys += list(self.metadata_property_names)
+        if exclude is not None:
+            for p in exclude:
+                try:
+                    keys.remove(p)
+                except ValueError:
+                    pass # Don't worry if we exclude items that are not there!
+        return {name: getattr(self,name) for name in keys}
 
     metadata = property(get_metadata)
 
-    def bundle_metadata(self, data, enable=True):
-        """Add metadata to a dataset, if enable=True."""
+    def bundle_metadata(self, data, enable=True, **kwargs):
+        """Add metadata to a dataset, returning an ArrayWithAttrs.
+        
+        Arguments:
+        data : np.ndarray
+            The data with which to bundle the metadata
+        enable : boolean (optional, default to True)
+            Set this argument to False to do nothing, i.e. just return data.
+        **kwargs
+            Addditional arguments are passed to get_metadata (for example, you 
+            can specify a list of `property_names` to add to the default
+            metadata, or a list of names to exclude.
+        """
         if enable:
-            return ArrayWithAttrs(data, attrs=self.metadata)
+            return ArrayWithAttrs(data, attrs=self.get_metadata(**kwargs))
         else:
             return data
 
-    def show_gui(self, blocking=True):
-        """Display a GUI window for the item of equipment.
-
-        You should override this method to display a window to control the
-        instrument.  If edit_traits/configure_traits methods exist, we'll fall
-        back to those as a default.
-
-        If you use blocking=False, it will return immediately - this may cause
-        issues with the Qt/Traits event loop.
-        """
-        if hasattr(self,'get_qt_ui'):
-            from nplab.utils.gui import get_qt_app, qt
-            app = get_qt_app()
-            ui = self.get_qt_ui()
-            ui.show()
-            if blocking:
-                print "Running GUI, this will block the command line until the window is closed."
-                ui.windowModality = qt.Qt.ApplicationModal
-                try:
-                    return app.exec_()
-                except:
-                    print "Could not run the Qt application: perhaps it is already running?"
-                    return
-            else:
-                return ui
-        else:
-            try:
-                if blocking:
-                    self.configure_traits()
-                else:
-                    self.edit_traits()
-            except NotImplementedError:
-                raise NotImplementedError("It looks like the show_gui \
-                          method hasn't been subclassed, there isn't a \
-                          get_qt_ui() method, and the instrument is not \
-                          using traitsui.")

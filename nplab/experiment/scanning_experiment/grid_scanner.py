@@ -157,16 +157,20 @@ class GridScan(ScanningExperiment, TimedScan):
         self.stage.move(position/self.stage_units, axis=axis)
 
     def get_position(self, axis):
-        return self.stage.get_position(axis=axis)
-
-    def update_drift_compensation(self):
-        """Update the current drift compensation.
-
-        If you have a nice way of compensating for drift, you should use this
-        function to do it - it's called each time the outermost scan axis
-        updates."""
+        return self.stage.get_position(axis=axis) * self.stage_units
+    
+    def outer_loop_start(self):
+        """This function is called before the scan happens, for each value of the outermost variable (usually Z)"""
         pass
-
+    def middle_loop_start(self):
+        """This function is called before the scan happens, for each value of the second-outermost variable (usually Y)"""
+        pass
+    def outer_loop_end(self):
+        """This function is called after the scan happens, for each value of the outermost variable (usually Z)"""
+        pass
+    def middle_loop_end(self):
+        """This function is called after the scan happens, for each value of the second-outermost variable (usually Y)"""
+        pass
     def scan(self, axes, size, step, init):
         """Scans a grid, applying a function at each position."""
         self.abort_requested = False
@@ -176,7 +180,7 @@ class GridScan(ScanningExperiment, TimedScan):
         # get the indices of points along each of the scan axes for use with snaking over array
         pnts = [range(axis.size) for axis in scan_axes]
 
-        self.indices = (-1,) * len(axes)
+        self.indices = [-1,] * len(axes)
         self._index = 0
         self._step_times = np.zeros(self.grid_shape)
         self._step_times.fill(np.nan)
@@ -184,9 +188,10 @@ class GridScan(ScanningExperiment, TimedScan):
         self.acquiring.set()
         scan_start_time = time.time()
         for k in pnts[0]:  # outer most axis
+            self.indices[0] = k # Make sure indices is always up-to-date, for the drift compensation
             if self.abort_requested:
                 break
-            self.update_drift_compensation()
+            self.outer_loop_start()
             self.status = 'Scanning layer {0:d}/{1:d}'.format(k + 1, len(pnts[0]))
             self.move(scan_axes[0][k], axes[0])
             pnts[1] = pnts[1][::-1]  # reverse which way is iterated over each time
@@ -194,21 +199,26 @@ class GridScan(ScanningExperiment, TimedScan):
                 if self.abort_requested:
                     break
                 self.move(scan_axes[1][j], axes[1])
+                self.indices[1] = j
                 if len(axes) == 3:  # for 3d grid (volume) scans
+                    self.middle_loop_start()
                     pnts[2] = pnts[2][::-1]  # reverse which way is iterated over each time
                     for i in pnts[2]:
                         if self.abort_requested:
                             break
                         self.move(scan_axes[2][i], axes[2])
-                        self.indices = (k, j, i)
+                        self.indices[2] = i # These two lines are redundant.  TODO: pick one...
+                        #self.indices = (k, j, i) # keeping it as a list allows index assignment
                         self.scan_function(k, j, i)
                         self._step_times[k,j,i] = time.time()
                         self._index += 1
+                    self.middle_loop_end()
                 elif len(axes) == 2:  # for regular 2d grid scans ignore third axis i
                     self.indices = (k, j)
                     self.scan_function(k, j)
                     self._step_times[k,j] = time.time()
                     self._index += 1
+            self.outer_loop_end()
 
         self.print_scan_time(time.time() - scan_start_time)
         self.acquiring.clear()
@@ -232,7 +242,7 @@ class GridScan(ScanningExperiment, TimedScan):
 
     def set_init_to_current_position(self):
         for i, ax in enumerate(self.axes):
-            self.init[i] = self.stage.get_position(ax) / self._unit_conversion[self.init_unit]
+            self.init[i] = self.get_position(ax) / self._unit_conversion[self.init_unit]
 
 
 @inherit_docstring(GridScan)

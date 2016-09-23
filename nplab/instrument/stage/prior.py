@@ -12,7 +12,7 @@ class ProScan(serial.SerialInstrument, stage.Stage):
     port_settings = dict(baudrate=9600,
                         bytesize=serial.EIGHTBITS,
                         parity=serial.PARITY_NONE,
-                        stopbits=serial.STOPBITS_ONE,
+                        stopbits=serial.STOPBITS_TWO,
                         timeout=1, #wait at most one second for a response
                         writeTimeout=1, #similarly, fail if writing takes >1s
                         xonxoff=False, rtscts=False, dsrdtr=False,
@@ -25,6 +25,7 @@ class ProScan(serial.SerialInstrument, stage.Stage):
         Set up the serial port and so on.
         """
         serial.SerialInstrument.__init__(self, port=port) #this opens the port
+        stage.Stage.__init__(self) #this opens the port
         
         self.query("COMP O") #enable full-featured serial interface
         
@@ -37,10 +38,7 @@ class ProScan(serial.SerialInstrument, stage.Stage):
         if re.search("FOCUS = NONE", self.query("FOCUS",termination_line="END")) is None:
             self.zAxisPresent = False
         else:
-            if self.int_query("VERSION")>=84:
-                self.query("UPR Z %d" % 500) #set 500 microns per revolution on the Z drive (for new BX51)
-            else:
-                self.query("UPR Z %d" % 100) #set 100 microns per revolution on the Z drive (for BX51)
+            self.query("UPR Z %d" % 100) #set 100 microns per revolution on the Z drive (for BX51)
             self.query("RES Z %f" % self.resolution) #make resolution isotropic :)
         
         self.query("ENCODER 1") #turn on encoders (if present)
@@ -48,7 +46,7 @@ class ProScan(serial.SerialInstrument, stage.Stage):
         self.query("BLSH 0") #turn off backlash control
         
         self.use_si_units = use_si_units
-
+        self.axis_names = ('x', 'y', 'z')
     def move_rel(self, dx, block=True):
         """Make a relative move by dx microns/metres (see move)"""
         return self.move(dx, relative=True, block=block)
@@ -61,9 +59,18 @@ class ProScan(serial.SerialInstrument, stage.Stage):
         we return immediately.  relative=True does relative motion, otherwise
         motion is absolute.
         """
-        if axis is not None:
+        querystring = "G"
+        if axis is not None and relative:
+            # single-axis emulation is fine for relative moves
             return self.move_axis(x, axis, relative=relative, block=block)
-        querystring = "GR" if relative else "G" #allow for absolute or relative moves
+        elif axis is not None and not relative:
+            # single-axis absolute move
+            assert axis.lower() in self.axis_names, ValueError("{0} is not a valid axis name.".format(axis))
+            querystring += axis.upper()
+            x = [x]
+        elif axis is None and relative:
+            # relative move
+            querystring += "R"
         if self.use_si_units: x = np.array(x) * 1e6
         for i in range(len(x)): querystring += " %d" % int(x[i]/self.resolution)
         self.query(querystring)
@@ -73,6 +80,14 @@ class ProScan(serial.SerialInstrument, stage.Stage):
                     time.sleep(0.02)
         except KeyboardInterrupt:
             self.emergency_stop()
+
+    def move_axis(self, pos, axis, relative=False, **kwargs):
+        """Move along one axis"""
+        # We use the built-in emulation for relative moves
+        if relative:
+            return stage.Stage.move_axis(self, pos, axis, relative=True, **kwargs)
+        else:
+            return self.move(pos, axis=axis, relative=relative, **kwargs)
 
     def get_position(self, axis=None):
         """return the current position in microns"""

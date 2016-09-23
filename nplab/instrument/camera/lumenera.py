@@ -263,7 +263,6 @@ class LumeneraCameraControlWidget(CameraControlWidget):
     """A control widget for the Lumenera camera, with extra buttons."""
     def __init__(self, camera, auto_connect=True):
         super(LumeneraCameraControlWidget, self).__init__(camera, auto_connect=False)
-
         gb = QuickControlBox()
         gb.add_doublespinbox("exposure")
         gb.add_doublespinbox("gain")

@@ -4,6 +4,7 @@ __author__ = 'alansanders'
 from nplab.utils.gui import QtGui, QtCore, uic
 from nplab.utils.notified_property import NotifiedProperty, register_for_property_changes
 import os
+import sys
 
 def strip_suffices(name, suffices=[]):
     """strip a string from the end of a name, if it's present."""
@@ -109,7 +110,7 @@ class UiTools(object):
         
         # Connect buttons to methods with the same name
         for button in self.findChildren(QtGui.QPushButton):
-            name = strip_suffices(button.objectName(), ["_button","Button"])
+            name = strip_suffices(button.objectName(), ["_button","Button","_pushButton"])
             try:
                 # look for the named function first in this object, then in the controlled objects
                 obj = first_object_with_attr([self] + controlled_objects, name)
@@ -179,22 +180,22 @@ class QuickControlBox(QtGui.QGroupBox, UiTools):
         self.setLayout(QtGui.QFormLayout())
         self.controls = dict()
     
-    def add_doublespinbox(self, name, vmin=None, vmax=None):
+    def add_doublespinbox(self, name, vmin=-float("inf"), vmax=float("inf")):
         """Add a floating-point spin box control."""
         sb = QtGui.QDoubleSpinBox()
         self.controls[name] = sb
         sb.setObjectName(name + "_spinbox")
-        if vmin is not None: sb.setMinimum(vmin)
-        if vmax is not None: sb.setMaximum(vmax)
+        sb.setMinimum(vmin)
+        sb.setMaximum(vmax)
         self.layout().addRow(name.title(), sb)
     
-    def add_spinbox(self, name, vmin=None, vmax=None):
+    def add_spinbox(self, name, vmin=-2**31, vmax=2**31-1):
         """Add a floating-point spin box control."""
         sb = QtGui.QSpinBox()
         self.controls[name] = sb
         sb.setObjectName(name + "_spinbox")
-        if vmin is not None: sb.setMinimum(vmin)
-        if vmax is not None: sb.setMaximum(vmax)
+        sb.setMinimum(vmin)
+        sb.setMaximum(vmax)
         self.layout().addRow(name.title(), sb)
         
     def add_lineedit(self, name):
@@ -291,7 +292,7 @@ def property_change_handler(value_name,
     
 auto_connectable_controls['checkbox'] = {
     'qt_type': QtGui.QCheckBox,
-    'suffices': ["_checkbox","CheckBox"],
+    'suffices': ["_checkbox","CheckBox","_checkBox"],
     'control_change_handler': control_change_handler(lambda x: x==QtCore.Qt.Checked),
     'control_change_slot_name': 'stateChanged',
     'property_change_handler': property_change_handler("checkState", 

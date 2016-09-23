@@ -57,7 +57,7 @@ def test_long_log(tmpdir):
 
     instr = InstrumentA()
 
-    N = 10000
+    N = 1000
     for i in range(N):
         instr.do_something()
         print i

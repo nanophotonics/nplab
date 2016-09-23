@@ -4,7 +4,7 @@ of scanning experiments and adding supporting for utilising HDF5 files for data 
 """
 __author__ = 'alansanders'
 
-from nplab.experiment import ExperimentWithDataDeque
+from nplab.experiment.experiment import ExperimentWithDataDeque
 from threading import Thread
 import time
 from nplab import datafile

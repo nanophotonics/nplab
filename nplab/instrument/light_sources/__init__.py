@@ -8,18 +8,24 @@ from nplab.instrument.shutter import Shutter
 
 
 class LightSource(Instrument):
-
+    """A generic class representing light sources (including lasers)
+    
+    By default they can just have their power set and read.
+    """
+    min_power = 0
+    max_power = 1
+    shutter = None
     def __init__(self, shutter=None):
         assert isinstance(shutter, Shutter) or shutter == None, 'invalid shutter supplied'
         super(LightSource, self).__init__()
-        self.min_power = 0
-        self.max_power = 1
         self.shutter = shutter
 
     def get_power(self):
+        """Get the current power of the light source"""
         pass
 
     def set_power(self, value):
+        """Set the current power of the light source"""
         print value
 
     def _get_power(self):
