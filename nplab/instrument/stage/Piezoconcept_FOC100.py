@@ -67,5 +67,10 @@ class Piezoconcept(si.SerialInstrument):
 
     
         
-
+if __name__ == "__main__":
+    '''Basic test, should open the Z stage and print its info before closing. 
+    Obvisouly the comport has to be correct!'''
+    Z = Piezoconcept(port = "COM9")
+    print Z.INFO()
+    Z.close()
         
