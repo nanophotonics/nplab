@@ -220,6 +220,18 @@ def locate_feature_in_image(image, feature, margin=0, restrict=False):
     peak = ndimage.measurements.center_of_mass(corr)  # take the centroid (NB this is of grayscale values, not binary)
     pos = np.array(peak) + image_shift + datum_pixel(feature) # return the position of the feature's datum point.
 
+
+# Autofocus merit functions
+def af_merit_squared_laplacian(image):
+    """Return the mean squared Laplacian of an image - a sharpness metric.
+
+    The image will be converted to grayscale if its shape is MxNx3"""
+    if len(image.shape) == 3:
+        image = np.mean(image, axis=2, dtype=image.dtype)
+    assert len(image.shape) == 2, "The image is the wrong shape - must be 2D or 3D"
+    return np.sum(cv2.Laplacian(image, ddepth=cv2.CV_32F) ** 2)
+
+
 class CameraWithLocation(Instrument):
     """
     A class wrapping a camera and a stage, allowing them to work together.
