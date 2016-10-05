@@ -16,15 +16,23 @@ class AttributeDict(dict):
         
     def modify(self, name, data):
         self[name] = data
+
+    def copy_arrays(self):
+        """Replace any numpy.ndarray in the dict with a copy, to break any unintentional links."""
+        for k in self.keys():
+            if isinstance(self[k], np.ndarray):
+                self[k] = np.copy(self[k])
         
-        
-def ensure_attribute_dict(obj):
+def ensure_attribute_dict(obj, copy=False):
     """Given a mapping that may or not be an AttributeDict, return an
     AttributeDict object that either is, or copies the data of, the input."""
-    if isinstance(obj, AttributeDict):
+    if isinstance(obj, AttributeDict) and not copy:
         return obj
     else:
-        return AttributeDict(obj)
+        out = AttributeDict(obj)
+        if copy:
+            out.copy_arrays()
+        return out
         
 def ensure_attrs(obj):
     """Return an ArrayWithAttrs version of an array-like object, may be the
@@ -38,7 +46,10 @@ class ArrayWithAttrs(np.ndarray):
     """A numpy ndarray, with an AttributeDict accessible as array.attrs.
     
     This class is intended as a temporary version of an h5py dataset to allow
-    the easy passing of metadata/attributes around nplab functions."""
+    the easy passing of metadata/attributes around nplab functions.  It owes
+    a lot to the ``InfoArray`` example in `numpy` documentation on subclassing
+    `numpy.ndarray`.
+    """
     
     def __new__(cls, input_array, attrs={}):
         """Make a new ndarray, based on an existing one, with an attrs dict.
@@ -61,7 +72,9 @@ class ArrayWithAttrs(np.ndarray):
         # if we didn't create the object with __new__,  we must add the attrs
         # dictionary.  We copy this from the source object if possible (while
         # ensuring it's the right type) or create a new, empty one if not.
-        self.attrs = ensure_attribute_dict(getattr(obj, 'attrs', {}))
+        # NB we don't use ensure_attribute_dict because we want to make sure the
+        # dict object is *copied* not merely referenced.
+        self.attrs = ensure_attribute_dict(getattr(obj, 'attrs', {}), copy=True)
 
 def attribute_bundler(attrs):
     """Return a function that bundles the supplied attributes with an array."""
