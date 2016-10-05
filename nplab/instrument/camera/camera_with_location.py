@@ -9,7 +9,8 @@ and the like.  `CameraWithLocation` is a sort of meta-instrument, which wraps a 
 glue code between the two.
 
 It would be nice to make this a mixin for the camera classes, but for now I think it's cleanest to wrap rather than
-try to integrate into Camera.  This class is, however, a work-alike for Camera.
+try to integrate into Camera.  This class is, however, a work-alike for Camera; to get the full benefit of this class
+you should use its `color_image`, `gray_image` and `raw_image` methods rather than those of the underlying `Camera`.
 
 A note on coordinate systems
 ----------------------------
@@ -23,6 +24,11 @@ something within an image, the coordinate system is always relative to pixel [0,
 Similarly, the transformation matrix that moves between pixel and stage coordinates uses [0,0] as its origin, not the
 datum pixel.  However, when considering the displacement between two images, this is usually with respect to the datum
 pixels of the images - though we should generally specify this.
+
+We transform between pixel and location coordinate systems with a matrix, the `pixel_to_sample_matrix`.  Usually it
+is called ``M`` in mathematical expressions.  To convert a pixel coordinate to a location, we post-multiply the pixel
+coordinate by the matrix, i.e. ``l = p.M`` and to convert the other way we use the inverse of ``M`` so ``p = l.M``
+where the dot denotes matrix multiplication using `numpy.dot`.
 """
 
 import nplab
@@ -37,12 +43,45 @@ from scipy import ndimage
 
 class ImageWithLocation(ArrayWithAttrs):
     """An image, as a numpy array, with attributes to provide location information"""
+#    def __array_finalize__(self, obj):
+#        """Ensure that the object is a properly set-up ImageWithLocation"""
+#        ArrayWithAttrs.__array_finalize__(self, obj) # Ensure we have self.attrs
+    def __getitem__(self, item):
+        """Update the metadata when we extract a slice"""
+        try:
+            # Handle specially the case where we are extracting a 2D region of the image, i.e. the first and second
+            # indices are slices.  We test for that here - and do it in a try: except block so that if, for example,
+            # item is not indexable,
+            assert isinstance(item[0], slice), "First index was not a slice"
+            assert isinstance(item[1], slice), "Second index was not a slice"
+            start = np.array([item[i].start for i in range(2)])
+            start = np.where(start == np.array(None), 0, start) # missing start points are equivalent to zero
+            step = np.array([item[i].step for i in range(2)])
+            step = np.where(step == np.array(None), 1, step) # missing step is equivalent to step==1
+        except:
+            # If the above doesn't work, assume we're not dealing with a 2D slice and give up.
+            return super(ImageWithLocation, self).__getitem__(item) # pass it on up
+
+        out = super(ImageWithLocation, self).__getitem__(item) # retrieve the slice
+        out.datum_pixel -= start # adjust the datum pixel so it refers to the same part of the image
+        # Next, we adjust the constant part of the pixel-sample matrix so pixels stay in the same place
+        location_shift = np.dot(ensure_3d(start), self.pixel_to_sample_matrix[:3,:3])
+        out.pixel_to_sample_matrix[3,:3] += location_shift
+        if not np.all(step == 1):
+            # if we're downsampling, remember to scale datum_pixel accordingly
+            out.datum_pixel = out.datum_pixel / step
+            # Scale the pixel-to-sample matrix if we've got a non-unity step in the slice
+            # I don't understand why I can't do this with slicing, but it all goes wrong...
+            for i in range(2):
+                out.pixel_to_sample_matrix[i, :3] *= step[i]
+        return out
+
     def pixel_to_location(self, pixel):
         """Return the location in the sample of the given pixel.
 
         NB this returns a 3D location, including Z."""
         p = ensure_2d(pixel)
-        l = np.dot(np.concatenate([p[0], p[1], 0, 1]), self.pixel_to_sample_matrix)
+        l = np.dot(np.array([p[0], p[1], 0, 1]), self.pixel_to_sample_matrix)
         return l[:3]
 
     def location_to_pixel(self, location, check_bounds=False, z_tolerance=np.infty):
@@ -77,6 +116,11 @@ class ImageWithLocation(ArrayWithAttrs):
         assert len(datum) == 2, "The datum pixel didn't have length 2!"
         return datum
 
+    @datum_pixel.setter
+    def datum_pixel(self, datum):
+        assert len(datum) == 2, "The datum pixel didn't have length 2!"
+        self.attrs['datum_pixel'] = datum
+
     @property
     def datum_location(self):
         """The location in the sample of the datum pixel"""
@@ -91,7 +135,15 @@ class ImageWithLocation(ArrayWithAttrs):
         """
         M = self.attrs['pixel_to_sample_matrix']
         assert M.shape == (4, 4), "The pixel-to-sample matrix is the wrong shape!"
+        assert M.dtype.kind == "f", "The pixel-to-sample matrix is not floating point!"
         return M
+
+    @pixel_to_sample_matrix.setter
+    def pixel_to_sample_matrix(self, M):
+        M = np.asanyarray(M) #ensure it's an ndarray subclass
+        assert M.shape == (4, 4), "The pixel-to-sample matrix must be 4x4!"
+        assert M.dtype.kind == "f", "The pixel-to-sample matrix must be floating point!"
+        self.attrs['pixel_to_sample_matrix'] = M
     #TODO: make it sensibly deal with metadata on slicing
     #TODO: split the data type out of this module and put it somewhere sensible
 
@@ -204,7 +256,7 @@ class CameraWithLocation(Instrument):
         datum_displacement = np.dot(self.pixel_to_sample_displacement, ensure_3d(self.datum_pixel))
         M = np.zeros((4,4)) # NB M is never a matrix; that would create issues, as then all the vectors must be matrices
         M[0:3, 0:3] = self.pixel_to_sample_displacement # We calibrate the conversion of displacements and store it
-        M[0:3] = here - datum_displacement # Ensure that the datum pixel transforms to here.
+        M[3, 0:3] = here - datum_displacement # Ensure that the datum pixel transforms to here.
 
     @property
     def datum_location(self):
