@@ -78,18 +78,18 @@ class HDF5InfoRenderer(DataRenderer, hdf5_info_base, hdf5_info_widget):
         self.h5object = h5object
 
         self.setupUi(self)
-        if type(h5object)==list:
-            self.lineEdit.setText(self.h5object[0].name)
-            self.lineEdit2.setText(self.h5object[0].parent.name)
-            self.lineEdit3.setText(self.h5object[0].file.filename)
-        else:
-            self.lineEdit.setText(self.h5object.name)
-            self.lineEdit2.setText(self.h5object.parent.name)
-            self.lineEdit3.setText(self.h5object.file.filename)
+        self.lineEdit.setText(self.h5object.name)
+        self.lineEdit2.setText(self.h5object.parent.name)
+        self.lineEdit3.setText(self.h5object.file.filename)
         
 
     @classmethod
     def is_suitable(cls, h5object):
+        # Retrieve the things we're going to display to check that they exist (if an exception occurs, the renderer
+        # will be deemed unsuitable)
+        name = h5object.name
+        parentname = h5object.parent.name
+        filename = h5object.file.filename
         return 2
 
 add_renderer(HDF5InfoRenderer)
@@ -231,8 +231,9 @@ class DataRenderer1DPG(FigureRendererPG):
     selected region or performing transformations of the axis
     """
     def display_data(self):
-        if isinstance(self.h5object,dict) == False and isinstance(self.h5object,h5py.Group) == False:
-            self.h5object = {self.h5object.name : self.h5object}
+        if not hasattr(self.h5object, "values"):
+            # If we have only one item, treat it as a group containing that item.
+            self.h5object = {self.h5object.name: self.h5object}
         icolour = 0    
         self.figureWidget.addLegend(offset = (-1,1))
         for h5object in self.h5object.values():
@@ -260,22 +261,21 @@ class DataRenderer1DPG(FigureRendererPG):
         except:
             self.figureWidget.setLabel('left', 'An Y axis', **labelStyle)
 
-        
-   
     @classmethod
     def is_suitable(cls, h5object):
-        if isinstance(h5object,dict) == False and isinstance(h5object,h5py.Group) == False:
-            h5object = {h5object.name : h5object}
+        if not hasattr(h5object, "values"):
+            # If we have only one item, treat it as a group containing that item.
+            h5object = {h5object.name: h5object}
 
         for dataset in h5object.values():
+            # Check that all datasets selected are either 1D or Nx2 or 2xN
+            assert isinstance(dataset, h5py.Dataset) #we can only render datasets
             try:
-                assert isinstance(dataset, h5py.Dataset) #must be a dataset
-                if len(dataset.shape) == 1:
-                    return 13 # yes to 1D data
-                elif np.shape(dataset)[0] == 2 or np.shape(dataset)[1] == 2:
-                    return 14           
+                assert len(dataset.shape) == 1
             except:
-                return -1 #if the above code failed, we can't render it!
+                assert len(dataset.shape) == 2
+                assert np.any(np.array(dataset.shape) == 2)
+        return 14
             
 add_renderer(DataRenderer1DPG)
 
@@ -286,8 +286,9 @@ class Scatter_plot1DPG(FigureRendererPG):
     """
 
     def display_data(self):
-        if isinstance(self.h5object,dict) == False and isinstance(self.h5object,h5py.Group) == False:
-            self.h5object = {self.h5object.name : self.h5object}
+        if not hasattr(self.h5object, "values"):
+            # If we have only one item, treat it as a group containing that item.
+            self.h5object = {self.h5object.name: self.h5object}
         icolour = 0    
         self.figureWidget.addLegend(offset = (-1,1))
         for h5object in self.h5object.values(): 
@@ -317,20 +318,7 @@ class Scatter_plot1DPG(FigureRendererPG):
           
     @classmethod
     def is_suitable(cls, h5object):
-        if isinstance(h5object,dict) == False and isinstance(h5object,h5py.Group) == False:
-            h5object = {h5object.name : h5object}
-        for dataset in h5object.values():
-            try:
-                assert isinstance(dataset, h5py.Dataset) #must be a dataset
-                if len(dataset.shape) == 1:
-                    return 11 # yes to 1D data
-                elif len(dataset.shape)==2:
-                    if np.shape(dataset)[0] == 2 or np.shape(dataset)[1] == 2:
-                        return 12
-                    else:
-                        return -1
-            except:
-                return -1 #if the above code failed, we can't render it!
+        return DataRenderer1DPG.is_suitable(h5object) - 2
 
 add_renderer(Scatter_plot1DPG)
 
@@ -525,7 +513,7 @@ class DataRenderer2or3DPG(DataRenderer, QtGui.QWidget):
         data[np.where(np.isnan(data))] = 0 
         img = pg.ImageView()
         img.setImage(data)
-        img.setMinimumSize(950,750)
+        #img.setMinimumSize(950,750) #This seems unhelpful to me - RWB
         img.view.setAspectLocked(lock_aspect)
         self.layout.addWidget(img)
         self.setLayout(self.layout)
