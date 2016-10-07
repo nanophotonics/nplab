@@ -70,7 +70,7 @@ class CameraWithLocation(Instrument):
     @property
     def pixel_to_sample_matrix(self):
         here = self.datum_location
-        datum_displacement = np.dot(self.pixel_to_sample_displacement, ensure_3d(self.datum_pixel))
+        datum_displacement = np.dot(ensure_3d(self.datum_pixel), self.pixel_to_sample_displacement)
         M = np.zeros((4,4)) # NB M is never a matrix; that would create issues, as then all the vectors must be matrices
         M[0:3, 0:3] = self.pixel_to_sample_displacement # We calibrate the conversion of displacements and store it
         M[3, 0:3] = here - datum_displacement # Ensure that the datum pixel transforms to here.
