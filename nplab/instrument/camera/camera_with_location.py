@@ -21,6 +21,7 @@ from nplab.instrument import Instrument
 import numpy as np
 from nplab.utils.image_with_location import ImageWithLocation, ensure_3d, ensure_2d, locate_feature_in_image, datum_pixel
 from nplab.experiment import Experiment, ExperimentStopped
+from nplab.experiment.gui import ExperimentWithProgressBar
 import cv2
 import cv2.cv
 from scipy import ndimage
@@ -240,6 +241,39 @@ class CameraWithLocation(Instrument):
         return self.pixel_to_sample_displacement, location_shifts, pixel_shifts, fractional_error
 
 
-class AcquireGridOfImages(Experiment):
+class AcquireGridOfImages(ExperimentWithProgressBar):
     """Use a CameraWithLocation to acquire a grid of image tiles that can later be stitched together"""
-    def __init__(self, n_tiles=(1,1), overlap_pixels=250, ):
+    def prepare_to_run(self, camera_with_location=None, n_tiles=None, data_group=None, *args, **kwargs):
+        self.progress_maximum = n_tiles[0] * n_tiles[1]
+        self.dest = cwl.create_data_group("tiled_image_%d")  if data_group is None else data_group
+
+    def run(self, camera_with_location=None, n_tiles=(1,1), overlap_pixels = 250, autofocus_args=None):
+        """Acquire a grid of images with the specified overlap."""
+        cwl = camera_with_location
+        centre_image = cwl.color_image()
+        scan_step = np.array(centre_image.shape[:2]) - overlap_pixels
+        self.log("Starting a {} scan with a step size of {}".format(n_tiles, scan_step))
+
+        dest = self.dest
+        x_indices = np.arange(n_tiles[0]) - (n_tiles[0] - 1) / 2.0
+        y_indices = np.arange(n_tiles[1]) - (n_tiles[1] - 1) / 2.0
+        images_acquired = 0
+        try:
+            for y_index in y_indices:
+                for x_index in x_indices:
+                    # Go to the grid point
+                    cwl.move(centre_image.pixel_to_location(np.array([x_index, y_index]) * scan_step))
+                    # TODO: make autofocus update drift or something...
+                    if autofocus_args is not None:
+                        cwl.autofocus(**autofocus_args)
+                    cwl.settle()  # wait for the camera to be ready/stage to settle
+                    dest.create_dataset("tile_%d",data=cwl.color_image())
+                    dest.file.flush()
+                    images_acquired += 1 # TODO: work out why I can't just use dest.count_numbered_items("tile")
+                    self.update_progress(images_acquired)
+                x_indices = x_indices[::-1]  # reverse the X positions, so we do a snake-scan
+        except ExperimentStopped:
+            self.log("Experiment was aborted.")
+        finally:
+            self.move_to_sample_position(centre_position)  # go back to the start point
+        return dest
