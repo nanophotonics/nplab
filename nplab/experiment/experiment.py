@@ -39,7 +39,24 @@ class Experiment(Instrument):
         super(Experiment, self).__init__()
         self._stop_event = threading.Event()
         self.log_messages = ""
-    
+
+    def prepare_to_run(self, *args, **kwargs):
+        """This method is always run in the foreground thread before run()
+
+        Use this method if you might need to pop up a GUI, for example.  The
+        most common use of this would be to create a data group or to ensure
+        the current data file exists - doing that in run() could give rise
+        to nasty threading problems.  By default, it does nothing.
+
+        The arguments are passed through from start() to here, so you should
+        either use or ignore them as appropriate.  These are the same args
+        as are passed to run(), so if one of the two functions requires an
+        argument you should make sure the other won't fail if the same
+        argument is passed to it (simple rule: accept *args, **kwargs in
+        both, in addition to any arguments you might have).
+        """
+        pass
+
     def run(self, *args, **kwargs):
         """This method should be the meat of the experiment (needs overriden).
         
@@ -51,6 +68,13 @@ class Experiment(Instrument):
         results in real time.  You can also use `self.log()` to output text
         describing the experiment's progress; this may be picked up and 
         displayed graphically or in the console.
+
+        The arguments are passed through from start() to here, so you should
+        either use or ignore them as appropriate.  These are the same args
+        as are passed to run(), so if one of the two functions requires an
+        argument you should make sure the other won't fail if the same
+        argument is passed to it (simple rule: accept *args, **kwargs in
+        both, in addition to any arguments you might have).
         """
         raise NotImplementedError()
         
@@ -86,10 +110,11 @@ class Experiment(Instrument):
         self._stop_event.clear()
         self.run(*args, **kwargs)
         
-    def start(self):
+    def start(self, *args, **kwargs):
         """Start the experiment running in a background thread.  See run_in_background."""
         assert self.running == False, "Can't start the experiment when it is already running!"
-        self.run_in_background()
+        self.prepare_to_run(*args, **kwargs)
+        self.run_in_background(*args, **kwargs)
         
     def stop(self):
         """Stop the experiment running, if supported.  May take a little while."""

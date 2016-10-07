@@ -20,6 +20,7 @@ from nplab.instrument.stage import Stage
 from nplab.instrument import Instrument
 import numpy as np
 from nplab.utils.image_with_location import ImageWithLocation, ensure_3d, ensure_2d, locate_feature_in_image, datum_pixel
+from nplab.experiment import Experiment, ExperimentStopped
 import cv2
 import cv2.cv
 from scipy import ndimage
@@ -237,3 +238,8 @@ class CameraWithLocation(Instrument):
                  "Pixel shifts:\n{}\nResulting matrix:\n{}".format(fractional_error*100, location_shifts, pixel_shifts,
                                                                    self.pixel_to_sample_displacement))
         return self.pixel_to_sample_displacement, location_shifts, pixel_shifts, fractional_error
+
+
+class AcquireGridOfImages(Experiment):
+    """Use a CameraWithLocation to acquire a grid of image tiles that can later be stitched together"""
+    def __init__(self, n_tiles=(1,1), overlap_pixels=250, ):

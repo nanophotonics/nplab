@@ -4,7 +4,7 @@ Basic GUI methods for the Experiment class.
 
 """
 
-from nplab.experiment import Experiment
+from nplab.experiment import Experiment, ExperimentStopped
 from nplab.utils.gui import QtCore, QtGui
 from nplab.ui.ui_tools import UiTools, QuickControlBox
 
@@ -51,3 +51,63 @@ class LogWidget(QuickControlBox):
     def clear(self):
         """Clear the text box, and the logs of the experiment."""
         self.experiment.log_messages = ""
+
+class QProgressDialogWithDeferredUpdate(QtGui.QProgressDialog):
+    """A QProcessDialog that can have its value updated from a background thread."""
+    set_new_value = QtCore.Signal(int)
+
+    def __init__(self, *args, **kwargs):
+        QtGui.QProgressDialog.__init__(self, *args, **kwargs)
+        self.set_new_value.connect(self.setValue, type=QtCore.Qt.QueuedConnection)
+
+    def setValueLater(self, progress):
+        """Update the progress bar - but do it in a thread-safe way."""
+        self.set_new_value.emit(progress)
+
+
+class ExperimentWithProgressBar(Experiment):
+    """A class that extends an Experiment by adding a modal Qt progress bar for basic feedback.
+
+    Use it exactly like Experiment, but with a couple of extra steps:
+    * make sure you override ``prepare_to_run()`` and:
+      - set self.progress_maximum (and minimum, if desired)
+    * in your ``run()`` method, call ``self.update_progress(i)`` periodically.
+    The progress bar will disappear once you have called update_progress(n) where n is the
+    value you specified in self.progress_maximum earlier.  NB changing progress_maximum from
+    within run() has no effect currently.
+
+    If the user clicks abort on the progress bar, or stops the experiment by some other means,
+    an exception will be raised from calls to ``update_progress`` that stops the experiment.
+    """
+    progress_maximum = None
+    progress_minimum = 0
+    def prepare_to_run(self):
+        """Set up the experiment.  Must be overridden to set self.progress_maximum"""
+        raise NotImplementedError("Experiments with progress bars must set self.progress_maximum"
+                                  "in the prepare_to_run method.")
+
+    def run_in_background(self, *args, **kwargs):
+        """Run the experiment in the background.
+
+        This method wraps `Experiment.run_in_background()` and adds a progress bar.
+        """
+        if self.progress_maximum is None:
+            raise NotImplementedError("self.progress_maximum was not set - this is necessary.")
+        self._progress_bar = QProgressDialogWithDeferredUpdate(
+                                                   self.__class__.__name__,
+                                                   "Abort",
+                                                   self.progress_minimum,
+                                                   self.progress_maximum)
+        self._progress_bar.setAutoClose(True)
+        Experiment.run_in_background(self, *args, **kwargs)
+        self._progress_bar.exec_()
+
+    def update_progress(self, progress):
+        """Update the progress bar (NB should only be called from within run()"""
+        if not self.running:
+            # if run was called directly, fail gracefully
+            print "Progress: {}".format(progress)
+            return
+        self._progress_bar.setValueLater(progress)
+        if self._stop_event.is_set():
+            raise ExperimentStopped()
