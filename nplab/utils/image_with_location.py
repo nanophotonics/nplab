@@ -189,7 +189,7 @@ def datum_pixel(image):
 def ensure_3d(vector):
     """Make sure a vector has 3 elements, appending a zero if needed."""
     if len(vector) == 3:
-        return vector
+        return np.array(vector)
     elif len(vector) == 2:
         return np.array([vector[0], vector[1], 0])
     else:
@@ -199,9 +199,9 @@ def ensure_3d(vector):
 def ensure_2d(vector):
     """Make sure a vector has 3 elements, appending a zero if needed."""
     if len(vector) == 2:
-        return vector
+        return np.array(vector)
     elif len(vector) == 3:
-        return vector[:2]
+        return np.array(vector[:2])
     else:
         raise ValueError("Tried to ensure a vector was 2D, but it had neither 2 nor 3 elements!")
 
@@ -224,7 +224,8 @@ def locate_feature_in_image(image, feature, margin=0, restrict=False):
     The `image` must be larger than `feature` by a margin big enough to produce a meaningful search area.  We use the
     OpenCV `matchTemplate` method to find the feature.  The returned position is the position, relative to the corner of
     the first image, of the "datum pixel" of the feature image.  If no datum pixel is specified, we assume it's the
-    centre of the image.
+    centre of the image.  The output of this function can be passed into the pixel_to_location() method of the larger
+    image to yield the position in the sample of the feature you're looking for.
     """
     # The line below is superfluous if we keep the datum-aware code below it.
     assert image.shape[0] > feature.shape[0] and image.shape[1] > feature.shape[1], "Image must be larger than feature!"
