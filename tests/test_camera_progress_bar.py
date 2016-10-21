@@ -46,7 +46,7 @@ class OpenCVCameraWithTimelapse(nplab.instrument.camera.opencv.OpenCVCamera):
         print "starting timelapse with n:{}, dt:{}".format(n, dt)
         e = AcquireTimelapse()
         e.camera = self
-        e.start(n=n, dt=dt)
+        e.run_modally(n=n, dt=dt)
 
     def get_control_widget(self):
         "Get a Qt widget with the camera's controls (but no image display)"
@@ -85,7 +85,7 @@ class TimelapseCameraControlWidget(CameraControlWidget):
 if __name__ == '__main__':
     device = int(input("Enter the number of the camera to use: "))
     cam = OpenCVCameraWithTimelapse(device)
-    df = nplab.current_datafile()
+    df = nplab.datafile.set_temporary_current_datafile()
     cam.live_view = True
     show_guis([cam, df])
     cam.live_view = False

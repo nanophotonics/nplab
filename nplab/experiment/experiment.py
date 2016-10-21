@@ -38,6 +38,8 @@ class Experiment(Instrument):
         """Create an instance of the Experiment class"""
         super(Experiment, self).__init__()
         self._stop_event = threading.Event()
+        self._finished_event = threading.Event()
+        self._experiment_thread = None
         self.log_messages = ""
 
     def prepare_to_run(self, *args, **kwargs):
@@ -108,17 +110,21 @@ class Experiment(Instrument):
         """
         self.log_messages = ""
         self._stop_event.clear()
+        self._finished_event.clear()
         self.run(*args, **kwargs)
+        self._finished_event.set()
         
     def start(self, *args, **kwargs):
         """Start the experiment running in a background thread.  See run_in_background."""
         assert self.running == False, "Can't start the experiment when it is already running!"
         self.prepare_to_run(*args, **kwargs)
-        self.run_in_background(*args, **kwargs)
+        self._experiment_thread = self.run_in_background(*args, **kwargs)
         
-    def stop(self):
+    def stop(self, join=False):
         """Stop the experiment running, if supported.  May take a little while."""
         self._stop_event.set()
+        if join:
+            self._experiment_thread.join()
         
     @property
     def running(self):

@@ -86,11 +86,13 @@ class ExperimentWithProgressBar(Experiment):
         raise NotImplementedError("Experiments with progress bars must set self.progress_maximum"
                                   "in the prepare_to_run method.")
 
-    def run_in_background(self, *args, **kwargs):
+    def run_modally(self, *args, **kwargs):
         """Run the experiment in the background.
 
-        This method wraps `Experiment.run_in_background()` and adds a progress bar.
+        This method replaces `Experiment.start()` and is blocking; it can safely be called
+        from a Qt signal from a button.
         """
+        self.prepare_to_run(*args, **kwargs)
         if self.progress_maximum is None:
             raise NotImplementedError("self.progress_maximum was not set - this is necessary.")
         self._progress_bar = QProgressDialogWithDeferredUpdate(
@@ -99,8 +101,16 @@ class ExperimentWithProgressBar(Experiment):
                                                    self.progress_minimum,
                                                    self.progress_maximum)
         self._progress_bar.setAutoClose(True)
-        Experiment.run_in_background(self, *args, **kwargs)
-        self._progress_bar.exec_()
+        self._progress_bar.canceled.disconnect()
+        self._progress_bar.canceled.connect(self.stop_and_cancel_dialog)
+        self._experiment_thread = Experiment.run_in_background(self, *args, **kwargs)
+        print "experiment now running in background"
+        print "progress bar status:" + str(self._progress_bar.exec_())
+
+    def stop_and_cancel_dialog(self):
+        """Abort the experiment and cancel the dialog once done."""
+        self.stop(True)
+        self._progress_bar.cancel()
 
     def update_progress(self, progress):
         """Update the progress bar (NB should only be called from within run()"""
@@ -108,6 +118,9 @@ class ExperimentWithProgressBar(Experiment):
             # if run was called directly, fail gracefully
             print "Progress: {}".format(progress)
             return
-        self._progress_bar.setValueLater(progress)
+        try:
+            self._progress_bar.setValueLater(progress)
+        except AttributeError:
+            print "Error setting progress bar to {} (are you running via run_modally()?)".format(progress)
         if self._stop_event.is_set():
             raise ExperimentStopped()
