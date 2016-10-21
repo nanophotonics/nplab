@@ -399,18 +399,27 @@ def set_current(datafile, **kwargs):
     """Set the current datafile, specified by either an HDF5 file object or a filepath"""
     global _current_datafile
     if isinstance(datafile, h5py.Group):
-        _current_datafile = datafile
+        _current_datafile = DataFile(datafile)
+        return _current_datafile
     else:
         print "opening file: ", datafile
         try:
             _current_datafile = DataFile(datafile, **kwargs)  # open a new datafile
+            return _current_datafile
         except Exception as e:
             print "problem opening file:"
             print e
             print "trying with mode=r+"
             kwargs['mode'] = 'r+'  # dirty hack to work around mode=a not working
             _current_datafile = DataFile(datafile, **kwargs)
-            
+
+def set_temporary_current_datafile():
+    """Create a temporary datafile, for testing purposes."""
+    nplab.log("WARNING: using a temporary file")
+    print("WARNING: using a file in memory as the current datafile.  DATA WILL NOT BE SAVED.")
+    df = h5py.File("temporary_file.h5", driver='core', backing_store=False)
+    return set_current(df)
+
 def close_current():
     """Close the current datafile"""
     if _current_datafile is not None:
