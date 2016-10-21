@@ -16,15 +16,19 @@ NB see the note on coordinate systems in utils/image_with_location.py
 """
 import nplab
 from nplab.instrument.camera import Camera
+import nplab.instrument.camera
 from nplab.instrument.stage import Stage
 from nplab.instrument import Instrument
 import numpy as np
 from nplab.utils.image_with_location import ImageWithLocation, ensure_3d, ensure_2d, locate_feature_in_image, datum_pixel
 from nplab.experiment import Experiment, ExperimentStopped
-from nplab.experiment.gui import ExperimentWithProgressBar
+from nplab.experiment.gui import ExperimentWithProgressBar, run_function_modally
+from nplab.utils.gui import QtCore, QtGui
 import cv2
 import cv2.cv
 from scipy import ndimage
+from nplab.ui.ui_tools import QuickControlBox, UiTools
+from nplab.utils.notified_property import DumbNotifiedProperty
 
 # Autofocus merit functions
 def af_merit_squared_laplacian(image):
@@ -51,7 +55,9 @@ class CameraWithLocation(Instrument):
     datum_pixel = None # The position, in pixels in the image, of the "datum point" of the system.
     settling_time = 0.0 # How long to wait for the stage to stop vibrating.
     frames_to_discard = 1 # How many frames to discard from the camera after a move.
-
+    disable_live_view = DumbNotifiedProperty(False) # Whether to disable live view while calibrating/autofocusing/etc.
+    af_step_size = DumbNotifiedProperty(1) # The size of steps to take when autofocusing
+    af_steps = DumbNotifiedProperty(7) # The number of steps to take during autofocus
 
     def __init__(self, camera=None, stage=None):
         # If no camera or stage is supplied, attempt to retrieve them - but crash with an exception if they don't exist.
@@ -70,6 +76,7 @@ class CameraWithLocation(Instrument):
     @property
     def pixel_to_sample_matrix(self):
         here = self.datum_location
+        assert self.pixel_to_sample_displacement is not None, "The CameraWithLocation must be calibrated before use!"
         datum_displacement = np.dot(ensure_3d(self.datum_pixel), self.pixel_to_sample_displacement)
         M = np.zeros((4,4)) # NB M is never a matrix; that would create issues, as then all the vectors must be matrices
         M[0:3, 0:3] = self.pixel_to_sample_displacement # We calibrate the conversion of displacements and store it
@@ -172,7 +179,76 @@ class CameraWithLocation(Instrument):
             self.log("Error centering on feature, final move was too large.")
         return last_move < tolerance
 
-    def calibrate_xy(self, step = None, min_step = 1e-5, max_step=1000):
+    def autofocus(self, dz=None, merit_function=af_merit_squared_laplacian, method="centre_of_mass", noise_floor=0.3, update_progress=lambda p:p):
+        """Move to a range of Z positions and measure focus, then move to the best one.
+
+        Arguments:
+        dz : np.array (optional, defaults to values specified in af_step_size and af_steps
+            Z positions, relative to the current position, to move to and measure focus.
+        merit_function : function, optional
+            A function that takes an image and returns a focus score, which we maximise.
+        update_progress : function, optional
+            This will be called each time we take an image - for use with run_function_modally.
+        """
+        if dz is None:
+            dz = (np.arange(self.af_steps) - (self.af_steps - 1)/2) * self.af_step_size # Default value
+        here = self.stage.position
+        positions = []  # positions keeps track of where we sample
+        powers = []  # powers holds the value of the merit fn at each point
+        camera_live_view = self.camera.live_view
+        if self.disable_live_view:
+            self.camera.live_view = False
+        for z in dz:
+            self.stage.move(np.array([0, 0, z]) + here)
+            self.settle()
+            positions.append(self.stage.position)
+            powers.append(merit_function(self.color_image()))
+        powers = np.array(powers)
+        positions = np.array(positions)
+        z = positions[:, 2]
+        if method == "centre_of_mass":
+            threshold = powers.min() + (powers.max() - powers.min()) * noise_floor
+            weights = powers - threshold
+            weights[weights < 0] = 0.  # zero out any negative values
+            if (np.sum(weights) == 0):
+                print "Warning, something went wrong and all the autofocus scores were identical!"
+                new_position = positions[powers.argmax(), :] #Fall back on the maximum if something fails
+            else:
+                new_position = np.dot(weights, positions) / np.sum(weights)
+        elif method == "parabola":
+            coefficients = np.polyfit(z, powers, deg=2)  # fit a parabola
+            root = -coefficients[1] / (2 * coefficients[
+                0])  # p = c[0]z**" + c[1]z + c[2] which has max (or min) at 2c[0]z + c[1]=0 i.e. z=-c[1]/2c[0]
+            if z.min() < root and root < z.max():
+                new_position = [here[0], here[1], root]
+            else:
+                # The new position would have been outside the scan range - clip it to the outer points.
+                new_position = positions[powers.argmax(), :]
+        else:
+            new_position = positions[powers.argmax(), :]
+        self.stage.move(new_position)
+        self.camera.live_view = camera_live_view
+        return new_position - here, positions, powers
+
+    def quick_autofocus(self, dz, full_dz = None, trigger_full_af=True, update_progress=lambda p:p, **kwargs):
+        """Do a quick 3-step autofocus, performing a full autofocus if needed
+
+        dz is a single number - we move this far above and below the current position."""
+        shift, pos, powers = self.autofocus(np.array([-dz,0,dz]), method="parabola", update_progress=update_progress)
+        if np.abs(shift) >= dz and trigger_full_af:
+            return self.autofocus(full_dz, update_progress=update_progress, **kwargs)
+        else:
+            return shift, pos, powers
+
+    def autofocus_gui(self):
+        """Run an autofocus using default parameters, with a GUI progress bar."""
+        run_function_modally(self.autofocus, progress_maximum=self.af_steps)
+
+    def quick_autofocus_gui(self):
+        """Run an autofocus using default parameters, with a GUI progress bar."""
+        run_function_modally(self.quick_autofocus, progress_maximum=self.af_steps)
+
+    def calibrate_xy(self, step = None, min_step = 1e-5, max_step=1000, update_progress=lambda p:p):
         """Make a series of moves in X and Y to determine the XY components of the pixel-to-sample matrix.
 
         Arguments:
@@ -200,6 +276,7 @@ class CameraWithLocation(Instrument):
         target_shift = s[0]*0.1 # Aim for a shift of about 10%
 
         assert np.sum((locate_feature_in_image(images[-1], template) - self.datum_pixel)**2) < 1, "Template's not centred!"
+        update_progress(1)
 
         if step is None:
             # Next, move a small distance until we see a shift, to auto-determine the calibration distance.
@@ -215,16 +292,18 @@ class CameraWithLocation(Instrument):
                 else:
                     step *= 10**(0.5)
             step *= target_shift / shift # Scale the amount we step the stage by, to get a reasonable image shift.
+        update_progress(2)
 
         # Move the stage in a square, recording the displacement from both the stage and the camera
         pixel_shifts = []
-        for p in [[-step, -step, 0], [-step, step, 0], [step, step, 0], [step, -step, 0]]:
+        for i, p in enumerate([[-step, -step, 0], [-step, step, 0], [step, step, 0], [step, -step, 0]]):
             self.move(starting_location + np.array(p))
             self.settle()
             image = self.color_image()
             pixel_shifts.append(-locate_feature_in_image(image, template) - image.datum_pixel)
             # NB the minus sign here: we want the position of the image we just took relative to the datum point of
             # the template, not the other way around.
+            update_progress(3+i)
         # We then use least-squares to fit the XY part of the matrix relating pixels to distance
         location_shifts = np.array([ensure_2d(im.datum_location - starting_location) for im in images])
         pixel_shifts = np.array(pixel_shifts)
@@ -238,18 +317,92 @@ class CameraWithLocation(Instrument):
         self.log("Calibrated the pixel-location matrix.  Residuals were {}% of the shift.\nStage positions:\n{}\n"
                  "Pixel shifts:\n{}\nResulting matrix:\n{}".format(fractional_error*100, location_shifts, pixel_shifts,
                                                                    self.pixel_to_sample_displacement))
+        update_progress(7)
         return self.pixel_to_sample_displacement, location_shifts, pixel_shifts, fractional_error
+
+    def get_qt_ui(self):
+        """Create a QWidget that controls the camera.
+
+        Specifying control_only=True returns just the controls for the camera.
+        Otherwise, you get both the controls and a preview window.
+        """
+        return CameraWithLocationUI(self)
+
+    def get_control_widget(self):
+        """Create a QWidget to control the CameraWithLocation"""
+        return CameraWithLocationControlUI(self)
+
+class CameraWithLocationControlUI(QtGUI.QWidget):
+    """The control box for a CameraWithLocation"""
+    calibration_distance = DumbNotifiedProperty(0)
+    def __init__(self, cwl):
+        cc = QuickControlBox("Settings")
+        cc.add_doublespinbox("calibration_distance")
+        cc.add_button("calibrate_xy_gui", "Calibrate XY")
+        cc.auto_connect_by_name(self)
+        self.calibration_controls = cc
+
+        fc = QuickControlBox("Autofocus")
+        fc.add_doublespinbox("af_step_size")
+        fc.add_spinbox("af_steps")
+        fc.add_button("autofocus_gui", "Autofocus")
+        fc.add_button("quick_autofocus_gui", "Quick Autofocus")
+        fc.auto_connect_by_name(self.cwm)
+        self.focus_controls = fc
+
+        sc = 
+
+        l = QtGui.QHBoxLayout()
+        l.addWidget(cc)
+        l.addWidget(fc)
+        self.setLayout(l)
+
+    def calibrate_xy_gui(self):
+        """Run an XY calibration, with a progress bar in the foreground"""
+        run_function_modally(self.cwm.calibrate_xy,
+                             progress_maximum=7,
+                             step = None if self.calibration_distance<= 0 else float(self.calibration_distance))
+
+
+class CameraWithLocationUI(QtGui.QWidget):
+    """Generic user interface for a camera."""
+
+    def __init__(self, cwl):
+        assert isinstance(cwl, CameraWithLocation), "instrument must be a CameraWithLocation"
+        super(CameraWithLocationUI, self).__init__()
+        self.cwl = cwl
+
+        # Set up the UI
+        self.setWindowTitle(self.cwl.camera.__class__.__name__ + " (location-aware)")
+        layout = QtGui.QVBoxLayout()
+        # We use a tabbed control section below an image.
+        self.tabs = QtGui.QTabWidget()
+        self.microscope_controls = self.cwl.get_control_widget()
+        self.camera_controls = self.microscope.camera.get_control_widget()
+        self.tabs.addTab(self.microscope_controls, "Goniometer")
+        self.tabs.addTab(self.camera_controls, "Camera")
+        # The camera viewer widget is provided by the camera...
+        self.camera_preview = self.cwl.camera.get_preview_widget()
+        # The overall layout puts the image at the top and the controls below
+        l = QtGui.QVBoxLayout()
+        l.addWidget(self.camera_preview)
+        l.addWidget(self.tabs)
+        self.setLayout(l)
 
 
 class AcquireGridOfImages(ExperimentWithProgressBar):
     """Use a CameraWithLocation to acquire a grid of image tiles that can later be stitched together"""
-    def prepare_to_run(self, camera_with_location=None, n_tiles=None, data_group=None, *args, **kwargs):
-        self.progress_maximum = n_tiles[0] * n_tiles[1]
-        self.dest = cwl.create_data_group("tiled_image_%d")  if data_group is None else data_group
+    def __init__(self, camera_with_location=None, **kwargs):
+        super(AcquireGridOfImages, self).__init__(**kwargs)
+        self.cwl = camera_with_location
 
-    def run(self, camera_with_location=None, n_tiles=(1,1), overlap_pixels = 250, autofocus_args=None):
+    def prepare_to_run(self, n_tiles=None, data_group=None, *args, **kwargs):
+        self.progress_maximum = n_tiles[0] * n_tiles[1]
+        self.dest = self.cwl.create_data_group("tiled_image_%d")  if data_group is None else data_group
+
+    def run(self, n_tiles=(1,1), overlap_pixels = 250, autofocus_args=None):
         """Acquire a grid of images with the specified overlap."""
-        cwl = camera_with_location
+        cwl = self.cwl
         centre_image = cwl.color_image()
         scan_step = np.array(centre_image.shape[:2]) - overlap_pixels
         self.log("Starting a {} scan with a step size of {}".format(n_tiles, scan_step))
@@ -262,7 +415,7 @@ class AcquireGridOfImages(ExperimentWithProgressBar):
             for y_index in y_indices:
                 for x_index in x_indices:
                     # Go to the grid point
-                    cwl.move(centre_image.pixel_to_location(np.array([x_index, y_index]) * scan_step))
+                    cwl.move(centre_image.pixel_to_location(np.array([x_index, y_index]) * scan_step)[:2])
                     # TODO: make autofocus update drift or something...
                     if autofocus_args is not None:
                         cwl.autofocus(**autofocus_args)
