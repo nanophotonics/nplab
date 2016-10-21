@@ -4,7 +4,7 @@ from nplab.instrument.camera import CameraControlWidget
 from nplab.utils.gui import QtCore, QtGui, show_guis
 from nplab.utils.notified_property import DumbNotifiedProperty
 from nplab.ui.ui_tools import QuickControlBox
-from nplab.experiment.gui import ExperimentWithProgressBar
+from nplab.experiment.gui import ExperimentWithProgressBar, run_function_modally
 import time
 import threading
 
@@ -12,25 +12,22 @@ class DumbOpenCVCameraWithTimelapse(nplab.instrument.camera.opencv.OpenCVCamera)
     timelapse_n = DumbNotifiedProperty(5)
     timelapse_dt = DumbNotifiedProperty(1.0)
 
-    def take_timelapse(self, n=None, dt=None):
-        n = self.timelapse_n
-        dt = self.timelapse_dt
-        print "starting timelapse with n:{}, dt:{}".format(n, dt)
-        g = self.create_data_group("timelapse") # NB must be done outside the thread in case it needs a dialog...
-        progress_bar = QtGui.QProgressDialog("Acquiring Timelapse...", "Abort", 0, n)
-        progress_bar.setWindowModality(QtCore.Qt.WindowModal)
-        progress_bar.setAutoClose(True)
-        def timelapse_loop():
-            for i in range(n):
+    def take_timelapse_foreground(self, data_group=None, n=None, dt=None, update_progress=lambda p: p):
+        if data_group is None:
+            data_group = self.create_data_group("timelapse_%d")
+        g = data_group
+        for i in range(n):
+                update_progress(i)
                 time.sleep(dt)
                 print "acquiring image {}".format(i)
                 g.create_dataset("image_%d", data=self.color_image())
-                progress_bar.setValue(i+1)
-                if progress_bar.wasCanceled():
-                    break
-        t = threading.Thread(target=timelapse_loop)
-        t.start()
-        progress_bar.exec_()
+
+    def take_timelapse(self):
+        run_function_modally(self.take_timelapse_foreground,
+                             progress_maximum = self.timelapse_n,
+                             data_group=self.create_data_group("timelapse_%d"),
+                             n=self.timelapse_n,
+                             dt=self.timelapse_dt)
 
     def get_control_widget(self):
         "Get a Qt widget with the camera's controls (but no image display)"
@@ -47,6 +44,7 @@ class OpenCVCameraWithTimelapse(nplab.instrument.camera.opencv.OpenCVCamera):
         e = AcquireTimelapse()
         e.camera = self
         e.run_modally(n=n, dt=dt)
+        print "function has finished"
 
     def get_control_widget(self):
         "Get a Qt widget with the camera's controls (but no image display)"
@@ -84,7 +82,7 @@ class TimelapseCameraControlWidget(CameraControlWidget):
 
 if __name__ == '__main__':
     device = int(input("Enter the number of the camera to use: "))
-    cam = OpenCVCameraWithTimelapse(device)
+    cam = DumbOpenCVCameraWithTimelapse(device)
     df = nplab.datafile.set_temporary_current_datafile()
     cam.live_view = True
     show_guis([cam, df])

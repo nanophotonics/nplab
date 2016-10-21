@@ -16,6 +16,7 @@ from nplab.utils.notified_property import NotifiedProperty, DumbNotifiedProperty
 from collections import deque
 import numpy as np
 import threading
+import warnings
 
 class ExperimentStopped(Exception):
     """An exception raised to stop an experiment running in a background thread."""
@@ -33,6 +34,7 @@ class Experiment(Instrument):
     latest_data = DumbNotifiedProperty(doc="The last dataset/group we acquired")
     log_messages = DumbNotifiedProperty(doc="Log messages from the latest run")
     log_to_console = False
+    experiment_can_be_safely_aborted = False # set to true if you want to suppress warnings about ExperimentStopped
     
     def __init__(self):
         """Create an instance of the Experiment class"""
@@ -78,7 +80,7 @@ class Experiment(Instrument):
         argument is passed to it (simple rule: accept *args, **kwargs in
         both, in addition to any arguments you might have).
         """
-        raise NotImplementedError()
+        NotImplementedError("The run() method of an Experiment must be overridden!")
         
     def wait_or_stop(self, timeout, raise_exception=True):
         """Wait for the specified time in seconds.  Stop if requested.
@@ -124,8 +126,12 @@ class Experiment(Instrument):
         """Stop the experiment running, if supported.  May take a little while."""
         self._stop_event.set()
         if join:
-            self._experiment_thread.join()
-        
+            try:
+                self._experiment_thread.join()
+            except ExperimentStopped as e:
+                if not self.experiment_can_be_safely_aborted:
+                    raise e
+
     @property
     def running(self):
         """Whether the experiment is currently running in the background."""

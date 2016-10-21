@@ -81,8 +81,10 @@ class ExperimentWithProgressBar(Experiment):
     """
     progress_maximum = None
     progress_minimum = 0
-    def prepare_to_run(self):
+    def prepare_to_run(self, *args, **kwargs):
         """Set up the experiment.  Must be overridden to set self.progress_maximum"""
+        if self.progress_maximum is not None:
+            return # If progress_maximum has been set elsewhere, that's ok...
         raise NotImplementedError("Experiments with progress bars must set self.progress_maximum"
                                   "in the prepare_to_run method.")
 
@@ -103,14 +105,15 @@ class ExperimentWithProgressBar(Experiment):
         self._progress_bar.setAutoClose(True)
         self._progress_bar.canceled.disconnect()
         self._progress_bar.canceled.connect(self.stop_and_cancel_dialog)
-        self._experiment_thread = Experiment.run_in_background(self, *args, **kwargs)
-        print "experiment now running in background"
-        print "progress bar status:" + str(self._progress_bar.exec_())
+        self.run_in_background(self, *args, **kwargs)
+        self._progress_bar.exec_()
 
     def stop_and_cancel_dialog(self):
         """Abort the experiment and cancel the dialog once done."""
-        self.stop(True)
-        self._progress_bar.cancel()
+        try:
+            self.stop(True)
+        finally:
+            self._progress_bar.cancel()
 
     def update_progress(self, progress):
         """Update the progress bar (NB should only be called from within run()"""
@@ -124,3 +127,31 @@ class ExperimentWithProgressBar(Experiment):
             print "Error setting progress bar to {} (are you running via run_modally()?)".format(progress)
         if self._stop_event.is_set():
             raise ExperimentStopped()
+
+class RunFunctionWithProgressBar(ExperimentWithProgressBar):
+    """An Experiment object that simply runs a function modally"""
+    def __init__(self, target, progress_maximum=None, *args, **kwargs):
+        super(RunFunctionWithProgressBar, self).__init__(*args, **kwargs)
+        self.target = target
+        assert callable(target), ValueError("The target function is not callable!")
+        self.progress_maximum = progress_maximum
+
+    def run(self, *args, **kwargs):
+        print "running function {}".format(self.target)
+        self.target(*args, update_progress=self.update_progress, **kwargs)
+        self.update_progress(self.progress_maximum) # Ensure the progress dialog closes unless we're aborted.
+
+def run_function_modally(function, progress_maximum, *args, **kwargs):
+    """Create a temporary ExperimentWithProgressBar and run it modally.
+
+    This convenience function allows a function to be run with a nice progress bar, without the hassle
+    of setting up an Experiment object.  The function must accept a keyword argument, update_progress,
+    which is a function - it should be called periodically, with a numeric argument that starts at zero
+    and increments up to a final value of progress_maximum.  A sensible default for this argument would
+    be ``lambda p: p``, which is a function that does nothing.
+
+    Positional and keyword arguments are passed through, the only other argument needed is
+    progress_maximum, which sets the final value of progress.
+    """
+    e = RunFunctionWithProgressBar(function, progress_maximum)
+    e.run_modally(*args, **kwargs)
