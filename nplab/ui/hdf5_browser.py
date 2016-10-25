@@ -282,11 +282,12 @@ class HDF5TreeItem(object):
     def purge_children(self):
         """Empty the cached list of children"""
         try:
-            for child in self.children:
-                child.purge_children() # We must delete them all the way down!
-                self._children.remove(child)
-                del child # Not sure if this is needed...
-            self._children = None
+            if self._children is not None:
+                for child in self._children:
+                    child.purge_children() # We must delete them all the way down!
+                    self._children.remove(child)
+                    del child # Not sure if this is needed...
+                self._children = None
             self._has_children = None
         except:
             print "{} failed to purge its children".format(self.name)
@@ -321,8 +322,22 @@ class HDF5ItemModel(QtCore.QAbstractItemModel):
         :type data_group: nplab.datafile.Group
         """
         super(HDF5ItemModel, self).__init__()
+        self.root_item = None
         self.data_group = data_group
-        self.root_item = HDF5TreeItem(self.data_group.file, None, data_group.name, 0)
+        
+    _data_group = None
+    @property
+    def data_group(self):
+        """The HDF5 group object we're representing"""
+        return self._data_group
+    
+    @data_group.setter
+    def data_group(self, new_data_group):
+        """Set the data group represented by the model"""
+        if self.root_item is not None:
+            del self.root_item
+        self._data_group = new_data_group
+        self.root_item = HDF5TreeItem(new_data_group.file, None, new_data_group.name, 0)
 
     def _index_to_item(self, index):
         """Return an HDF5TreeItem for a given index"""
