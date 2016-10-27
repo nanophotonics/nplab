@@ -65,14 +65,13 @@ def suitable_renderers(h5object, return_scores=False):
     group_renderers and not the rest, which are very time consuming.
     """
     renderers_and_scores = []
-    if isinstance(h5object, h5py.Group):
-        if len(h5object.values())>100: #Creates a maximum renderer size
-            for r in group_renders:
-                try:
-                    renderers_and_scores.append((r.is_suitable(h5object), r))
-                except:
-          #          print "renderer {0} failed when checking suitability for {1}".format(r, h5object)
-                    pass # renderers that cause exceptions shouldn't be used!
+    if isinstance(h5object, h5py.Group) and len(h5object.values())>100:
+        for r in group_renders:
+            try:
+                renderers_and_scores.append((r.is_suitable(h5object), r))
+            except:
+      #          print "renderer {0} failed when checking suitability for {1}".format(r, h5object)
+                pass # renderers that cause exceptions shouldn't be used!
 
     else:    
         for r in renderers:
