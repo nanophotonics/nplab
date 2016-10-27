@@ -512,15 +512,15 @@ class HDF5Browser(QtGui.QWidget, UiTools):
         pass  # self.data_file.close()
     
     
-    def on_click(self, item, column):
-        """Handle clicks on items in the tree."""
-        item.setExpanded(True) # auto expand the item upon click
-        if len(self.treeWidget.selectedItems())>1: 
-            self.viewer.data = DummyHDF5Group({treeitem.data(column, QtCore.Qt.UserRole).name : treeitem.data(column, QtCore.Qt.UserRole) \
-                                                for treeitem in self.tree.treeWidget.selectedItems() })
-        else:
-            self.viewer.data = item.data(column, QtCore.Qt.UserRole)
-             
+#    def on_click(self, item, column):
+#        """Handle clicks on items in the tree."""
+#        item.setExpanded(True) # auto expand the item upon click
+#        if len(self.treeWidget.selectedItems())>1: 
+#            self.viewer.data = DummyHDF5Group({treeitem.data(column, QtCore.Qt.UserRole).name : treeitem.data(column, QtCore.Qt.UserRole) \
+#                                                for treeitem in self.tree.treeWidget.selectedItems() })
+#        else:
+#            self.viewer.data = item.data(column, QtCore.Qt.UserRole)
+#             
              
 if __name__ == '__main__':
     import sys, h5py, os, numpy as np

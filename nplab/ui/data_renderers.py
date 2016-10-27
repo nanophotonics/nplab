@@ -48,20 +48,39 @@ class DataRenderer(object):
 
 renderers = set()
 
+
 def add_renderer(renderer_class):
     """Add a renderer to the list of available renderers"""
     renderers.add(renderer_class)
     
+group_renders = set()
+
+def add_group_renderer(renderer_class):
+    """Add a renderer to the list of available renderers"""
+    group_renders.add(renderer_class)
+    
 def suitable_renderers(h5object, return_scores=False):
     """Find renderers that can render a given object, in order of suitability.
+    If the selected group contains more than 100 elements, consider only the
+    group_renderers and not the rest, which are very time consuming.
     """
     renderers_and_scores = []
-    for r in renderers:
-        try:
-            renderers_and_scores.append((r.is_suitable(h5object), r))
-        except:
-  #          print "renderer {0} failed when checking suitability for {1}".format(r, h5object)
-            pass # renderers that cause exceptions shouldn't be used!
+    if isinstance(h5object, h5py.Group):
+        if len(h5object.values())>100: #Creates a maximum renderer size
+            for r in group_renders:
+                try:
+                    renderers_and_scores.append((r.is_suitable(h5object), r))
+                except:
+          #          print "renderer {0} failed when checking suitability for {1}".format(r, h5object)
+                    pass # renderers that cause exceptions shouldn't be used!
+
+    else:    
+        for r in renderers:
+            try:
+                renderers_and_scores.append((r.is_suitable(h5object), r))
+            except:
+      #          print "renderer {0} failed when checking suitability for {1}".format(r, h5object)
+                pass # renderers that cause exceptions shouldn't be used!
     renderers_and_scores.sort(key=lambda (score, r): score, reverse=True)
     if return_scores:
         return [(score, r) for score, r in renderers_and_scores if score >= 0]
@@ -93,6 +112,7 @@ class HDF5InfoRenderer(DataRenderer, hdf5_info_base, hdf5_info_widget):
         return 2
 
 add_renderer(HDF5InfoRenderer)
+add_group_renderer(HDF5InfoRenderer)
 
 class ValueRenderer(DataRenderer, QtGui.QWidget):
     """A renderer returning the objects name type and shape if a dataset object"""
@@ -145,6 +165,7 @@ class TextRenderer(DataRenderer, QtGui.QWidget):
         return 1
 
 add_renderer(TextRenderer)
+add_group_renderer(TextRenderer)
 
 hdf5_attrs_base, hdf5_attrs_widget = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'hdf5_attrs_renderer.ui'))
 class AttrsRenderer(DataRenderer, hdf5_attrs_base, hdf5_attrs_widget):
@@ -187,6 +208,7 @@ class AttrsRenderer(DataRenderer, hdf5_attrs_base, hdf5_attrs_widget):
                 return 5000
         return 1
 add_renderer(AttrsRenderer)
+add_group_renderer(AttrsRenderer)
 
 class FigureRenderer(DataRenderer, QtGui.QWidget):
     """A renderer class which sets up a matplotlib figure for use 
@@ -457,7 +479,9 @@ class MultiSpectrum2D(DataRenderer, QtGui.QWidget):
             except:
                 return -1
             h5object = {h5object.name : h5object}
-            
+        if isinstance(h5object,h5py.Group):
+            return -1
+        
         for dataset in h5object.values():
             if not isinstance(dataset, h5py.Dataset):
                 return -1
@@ -485,7 +509,8 @@ class MultiSpectrum2D(DataRenderer, QtGui.QWidget):
             if 'background' in dataset.attrs.keys():
                 suitability = suitability + 10
             if 'reference' in dataset.attrs.keys():
-                suitability = suitability + 10                
+                suitability = suitability + 10
+             
         return suitability    
 
 add_renderer(MultiSpectrum2D)
