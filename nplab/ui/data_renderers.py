@@ -478,8 +478,6 @@ class MultiSpectrum2D(DataRenderer, QtGui.QWidget):
             except:
                 return -1
             h5object = {h5object.name : h5object}
-        if isinstance(h5object,h5py.Group):
-            return -1
         
         for dataset in h5object.values():
             if not isinstance(dataset, h5py.Dataset):
