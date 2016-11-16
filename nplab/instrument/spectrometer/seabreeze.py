@@ -277,34 +277,52 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
 
     def get_tec_enable(self):
         """Whether or not the thermo-electric cooler is enabled."""
-        return self._tec_enabled
+        try:
+            return self._tec_enabled
+        except OceanOpticsError as error:
+            print error
+            print 'Most likely raised due to the lack of a tec on this device'
+            
+            
 
     def set_tec_enable(self, state=True):
         """Turn the cooling system on or off."""
-        e = ctypes.c_int()
-        seabreeze.seabreeze_set_tec_enable(self.index, byref(e), c_int(state))
-        check_error(e)
-        self._tec_enabled = state
+        try:
+            e = ctypes.c_int()
+            seabreeze.seabreeze_set_tec_enable(self.index, byref(e), c_int(state))
+            check_error(e)
+            self._tec_enabled = state
+        except OceanOpticsError as error:
+            print error
+            print 'Most likely raised due to the lack of a tec on this device'
 
     enable_tec = property(get_tec_enable, set_tec_enable)
 
     def get_tec_temperature(self):
         """Current temperature."""
-        e = ctypes.c_int()
-        read_tec_temperature = seabreeze.seabreeze_read_tec_temperature
-        read_tec_temperature.restype = c_double
-        temperature = read_tec_temperature(self.index, byref(e))
-        check_error(e)
-        return temperature
+        try:
+            e = ctypes.c_int()
+            read_tec_temperature = seabreeze.seabreeze_read_tec_temperature
+            read_tec_temperature.restype = c_double
+            temperature = read_tec_temperature(self.index, byref(e))
+            check_error(e)
+            return temperature
+        except OceanOpticsError as error:
+            print error
+            print 'Most likely raised due to the lack of a tec on this device'
 
     def set_tec_temperature(self, temperature):
         """Enable the cooling system and set the temperature"""
-        if not self.enable_tec:
-            self.enable_tec = True
-        e = ctypes.c_int()
-        seabreeze.seabreeze_set_tec_temperature(self.index, byref(e), c_double(temperature))
-        seabreeze.seabreeze_set_tec_enable(self.index, byref(e), 1)
-        check_error(e)
+        try:
+            if not self.enable_tec:
+                self.enable_tec = True
+            e = ctypes.c_int()
+            seabreeze.seabreeze_set_tec_temperature(self.index, byref(e), c_double(temperature))
+            seabreeze.seabreeze_set_tec_enable(self.index, byref(e), 1)
+            check_error(e)
+        except OceanOpticsError as error:
+            print error
+            print 'Most likely raised due to the lack of a tec on this device'        
 
     tec_temperature = property(get_tec_temperature, set_tec_temperature)
 
