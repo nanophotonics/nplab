@@ -101,7 +101,7 @@ class HDF5ItemViewer(QtGui.QWidget, UiTools):
             self.copy_button = copy_button
         self.copy_button.clicked.connect(self.CopyActivated)
         self.clipboard = QtGui.QApplication.clipboard()
-        
+
         self.setLayout(QtGui.QVBoxLayout())
         self.layout().addWidget(self.figure_widget, stretch=1)
         self.layout().setContentsMargins(0,0,0,0)
@@ -451,6 +451,7 @@ class HDF5ItemModel(QtCore.QAbstractItemModel):
             actions[operation] = menu.addAction(operation)
         action = menu.exec_(treeview.viewport().mapToGlobal(position))
 
+
         if action == actions['Refresh tree']:
             self.refresh_tree()
 
@@ -472,13 +473,14 @@ class HDF5TreeWidget(QtGui.QTreeView):
         self.model.set_up_treeview(self)
         self.sizePolicy().setHorizontalStretch(0)
 
+
     def selected_h5item(self):
         """Return the current selection as an HDF5 item."""
         return self.model.selected_h5item_from_view(self)
 
     def __del__(self):
         del self.model # is this needed?  I'm never sure...
-
+    
 
 class HDF5Browser(QtGui.QWidget, UiTools):
     """A Qt Widget for browsing an HDF5 file and graphing the data.
@@ -495,8 +497,19 @@ class HDF5Browser(QtGui.QWidget, UiTools):
         self.viewer = HDF5ItemViewer(parent=self, 
                                      show_controls=True,
                                      )
+        self.refresh_tree_button = QtGui.QPushButton() #Create a refresh button
+        self.refresh_tree_button.setText("Refresh Tree")
+        
+        #adding the refresh button
+        self.treelayoutwidget = QtGui.QWidget()     #construct a widget which can then contain the refresh button and the tree
+        self.treelayoutwidget.setLayout(QtGui.QVBoxLayout())
+        self.treelayoutwidget.layout().addWidget(self.treeWidget)
+        self.treelayoutwidget.layout().addWidget(self.refresh_tree_button) 
+        
+        self.refresh_tree_button.clicked.connect(self.treeWidget.model.refresh_tree)
+
         splitter = QtGui.QSplitter()
-        splitter.addWidget(self.treeWidget)
+        splitter.addWidget(self.treelayoutwidget)       #Add newly constructed widget (treeview and button) to the splitter
         splitter.addWidget(self.viewer)
         self.setLayout(QtGui.QHBoxLayout())
         self.layout().addWidget(splitter)
@@ -529,17 +542,17 @@ if __name__ == '__main__':
 
     app = get_qt_app()
     
-#    data_file = h5py.File('test.h5', 'w')
-#    data_file.create_dataset('dset1', data=np.linspace(-1, 1, 100))
-#    data_file.create_dataset('dset2', data=np.linspace(-1, 1, 100) ** 3)
-#    g = data_file.create_group('group1')
-#    g.create_dataset('dset2', data=np.linspace(-1, 1, 100) ** 2)
-#    g = g.create_group('group2')
-#    g.create_dataset('dset3', data=np.linspace(-1, 1, 100).reshape(10, 10))
-#    ui = HDF5Browser(data_file)
-#    ui.show()
-#    sys.exit(app.exec_())
-#    data_file.close()
+    data_file = h5py.File('test.h5', 'w')
+    data_file.create_dataset('dset1', data=np.linspace(-1, 1, 100))
+    data_file.create_dataset('dset2', data=np.linspace(-1, 1, 100) ** 3)
+    g = data_file.create_group('group1')
+    g.create_dataset('dset2', data=np.linspace(-1, 1, 100) ** 2)
+    g = g.create_group('group2')
+    g.create_dataset('dset3', data=np.linspace(-1, 1, 100).reshape(10, 10))
+    ui = HDF5Browser(data_file)
+    ui.show()
+    sys.exit(app.exec_())
+    data_file.close()
 
 #    data_file = h5py.File('C:/Users/Ana Andres/Documents/Python Scripts/2016-05-17.h5', 'r')
 #    data_file = nplab.datafile.open_file()
@@ -547,12 +560,13 @@ if __name__ == '__main__':
 #    ui.show()
 #    app.exec_()
 #    data_file.close()
-    datafile = nplab.current_datafile() #datafile.DataFile("/Users/rwb27/Desktop/test.h5", mode="r")
+#    datafile = nplab.current_datafile() #datafile.DataFile("/Users/rwb27/Desktop/test.h5", mode="r")
+ #   datafle.create_dataset()
 #    tree = QtGui.QTreeView()
 #    model = HDF5ItemModel(datafile)
 #    model.set_up_treeview(tree)
 #    tree.show()
 #    app.exec_()
     #print_tree(model.root_item) (don't, it's recursive...)
-    datafile.show_gui()
-    datafile.close()
+  #  datafile.show_gui()
+  #  datafile.close()

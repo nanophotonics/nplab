@@ -18,6 +18,7 @@ import re
 import sys
 from collections import Sequence
 import nplab.utils.version
+import numpy as np
 from nplab.utils.show_gui_mixin import ShowGUIMixin
 
 
@@ -92,6 +93,15 @@ def get_file(destination='local', rel_path='Desktop/Data',
     if set_current:
         f.make_current()
     return f
+    
+
+def transpose_datafile(data_set):
+    ''' A function that opens a datafile, transposes and resaves'''
+    parent = data_set.parent
+    transposed_datafile = np.copy(data_set[...].T)
+    file_name = data_set.name.split('/')[-1]
+    del parent[file_name]
+    parent.create_dataset(file_name,data = transposed_datafile)
 
 def wrap_h5py_item(item):
     """Wrap an h5py object: groups are returned as Group objects, datasets are unchanged."""
