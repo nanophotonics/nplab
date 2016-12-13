@@ -454,7 +454,7 @@ class MultiSpectrum2D(DataRenderer, QtGui.QWidget):
         img = pg.ImageItem(data)
 
         ConvertionC= self.h5object.values()[0].attrs['wavelengths'][0]
-        ConvertionM = self.h5object.values()[0].attrs['wavelengths'][1] - self.h5object.values()[0].attrs['wavelengths'][0]
+        ConvertionM = (self.h5object.values()[0].attrs['wavelengths'][-1] - self.h5object.values()[0].attrs['wavelengths'][0])/len(self.h5object.values()[0].attrs['wavelengths'])
 
 
 
@@ -490,7 +490,7 @@ class MultiSpectrum2D(DataRenderer, QtGui.QWidget):
       
             if 'wavelengths' in dataset.attrs.keys():
                 if len(dataset.shape) == 2:
-                    if len(np.array(dataset)[:,0])<20:
+                    if len(np.array(dataset)[:,0])<100:
                         suitability = suitability + len(h5object)-20
                     else:
                         return -1

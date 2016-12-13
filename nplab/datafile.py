@@ -396,8 +396,9 @@ def current(create_if_none=True, create_if_closed=True, mode='a'):
             #                    set_current(fname,mode='w-') #create the datafile
             else:
                 print "Cancelled by the user."
-        except:
+        except Exception as e:
             print "File dialog went wrong :("
+            print e
 
     if _current_datafile is not None:
         return _current_datafile  # if there is a file (or we created one) return it
