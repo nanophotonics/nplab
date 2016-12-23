@@ -39,12 +39,17 @@ elif ui_toolkit == 'pyface':
     from pyface.qt import QtCore as qt
     from pyface.qt import QtGui as qtgui
     from pyface.qt import QtCore, QtGui
-elif ui_toolkit == 'native' and os.environ['QT_API'] == 'pyqt':
+elif ui_toolkit == 'native':
     try:
-        from PyQt4 import QtCore, QtGui
-        from PyQt4 import QtCore as qt
-        from PyQt4 import QtGui as qtgui
-        from PyQt4 import uic
+ #       from PyQt4 import QtCore, QtGui
+ #       from PyQt4 import QtCore as qt
+ #       from PyQt4 import QtGui as qtgui
+  #      from PyQt4 import uic
+      from qtpy import QtCore,QtGui
+      from qtpy import QtCore as qt
+      from qtpy import QtGui as qtgui
+      from qtpy import QtWidgets
+      from qtpy import uic
     except:
         warnings.warn("Warning: failed to load PyQt4, falling back to pyside", UserWarning)
         from PySide import QtCore, QtGui
@@ -63,7 +68,7 @@ except AttributeError:
     QtCore.Signal = QtCore.pyqtSignal
     QtCore.Slot = QtCore.pyqtSlot
 
-QtGui.QApplication.setGraphicsSystem("raster")
+#QtGui.QApplication.setGraphicsSystem("raster")
 
 _retained_qt_app = None # this lets us hold on to the Qt Application if needed.
 def get_qt_app(prevent_garbage_collection=True):
@@ -75,9 +80,9 @@ def get_qt_app(prevent_garbage_collection=True):
     you can do anything.  This function takes care of it - it should always
     return a valid QApplication, unless something goes wrong!
     """
-    app = qtgui.QApplication.instance()
+    app = QtWidgets.QApplication.instance()
     if app is None:
-        app = qtgui.QApplication([])
+        app = QtWidgets.QApplication([])
     assert app is not None, "Problem creating the QApplication."
     if prevent_garbage_collection:
         # Keep a reference to the application if appropriate, to stop
