@@ -340,7 +340,7 @@ class GridScanQt(GridScan, QtCore.QObject):
 #base, widget = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'gridscanner.ui'), from_imports=False)
 
 #class GridScannerUI(UiTools, base, widget):
-class GridScanUI(QtGui.QWidget, UiTools):
+class GridScanUI(QtWidgets.QWidget, UiTools):
     def __init__(self, grid_scanner):
         assert isinstance(grid_scanner, GridScanQt), "A valid GridScannerQT subclass must be supplied"
         super(GridScanUI, self).__init__()

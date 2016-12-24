@@ -55,7 +55,7 @@ class ShowGUIMixin:
         if hasattr(self,'get_qt_ui'):
             # NB this dynamic import is important to avoid saddling all of
             # nplab with dependencies on Qt.
-            from nplab.utils.gui import get_qt_app, QtCore, QtGui, QtWidgets
+            from nplab.utils.gui import QtWidgets, QtCore, QtGui, QtWidgets, get_qt_app
             app = get_qt_app()
             if force_new_window or not isinstance(self.__gui_instance, QtWidgets.QWidget):
                 # create the widget if it doesn't exist already, or if we've been

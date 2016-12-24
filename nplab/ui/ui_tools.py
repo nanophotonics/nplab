@@ -1,7 +1,7 @@
 __author__ = 'alansanders'
 
 
-from nplab.utils.gui import QtGui, QtCore, QtWidgets, uic
+from nplab.utils.gui import QtWidgets, QtCore, QtGui, QtWidgets, uic
 from nplab.utils.notified_property import NotifiedProperty, register_for_property_changes
 import os
 import sys

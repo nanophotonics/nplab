@@ -9,7 +9,7 @@ system to display the datasets.  See `nplab.ui.data_renderers` for that.
 __author__ = 'Alan Sanders, Will Deacon, Richard Bowman'
 
 import nplab
-from nplab.utils.gui import uic, QtGui, QtCore, QtWidgets
+from nplab.utils.gui import QtWidgets, QtCore, QtGui, QtWidgets, uic
 import matplotlib
 import numpy as np
 import h5py

@@ -278,7 +278,7 @@ class Pixis256EQt(Pixis256E, QtCore.QObject):
         return image
 
 
-class Pixis256EUI(QtGui.QWidget, UiTools):
+class Pixis256EUI(QtWidgets.QWidget, UiTools):
     def __init__(self, pixis):
         if not isinstance(pixis, Pixis256EQt):
             raise TypeError('pixis is not an instance of Pixis256EQt')

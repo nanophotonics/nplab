@@ -275,7 +275,7 @@ class HyperspectralScan(GridScanQt, ScanningExperimentHDF5):
     #     print "Image position:", self.image_plots[0].mapFromScene(pos)
 
 
-class HyperspectralScanUI(QtGui.QWidget, UiTools):
+class HyperspectralScanUI(QtWidgets.QWidget, UiTools):
     def __init__(self, grid_scanner, parent=None):
         assert isinstance(grid_scanner, HyperspectralScan), \
             'scanner must be an instance of HyperspectralScan'

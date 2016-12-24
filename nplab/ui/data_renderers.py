@@ -1,7 +1,7 @@
 __author__ = 'alansanders, Will Deacon'
 
 import h5py
-from nplab.utils.gui import QtGui, uic, get_qt_app, QtWidgets
+from nplab.utils.gui import QtWidgets, QtGui, QtWidgets, get_qt_app, uic
 from nplab.utils.array_with_attrs import ArrayWithAttrs
 import os
 import matplotlib
@@ -13,7 +13,7 @@ import pyqtgraph as pg
 import numpy as np
 import nplab.datafile as df
 
-#from PyQt4.QtGui import * 
+#from nplab.utils.gui import QtWidgets
 #from PyQt4.QtCore import * 
 
 

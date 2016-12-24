@@ -6,7 +6,7 @@ Created on Wed Jun 11 12:28:18 2014
 """
 
 import nplab.utils.gui #load Qt correctly - do this BEFORE traits
-from nplab.utils.gui import QtCore, QtGui, uic
+from nplab.utils.gui import QtWidgets, QtCore, QtGui, uic
 from nplab.ui.ui_tools import UiTools
 import threading
 import numpy as np
@@ -413,7 +413,7 @@ class CameraUI(QtGui.QWidget):
         layout.setSpacing(5)
         self.setLayout(layout)
         
-class CameraControlWidget(QtGui.QWidget, UiTools):
+class CameraControlWidget(QtWidgets.QWidget, UiTools):
     """Controls for a camera (these are the really generic ones)"""
     def __init__(self, camera, auto_connect=True):
         assert isinstance(camera, Camera), "instrument must be a Camera"
@@ -433,7 +433,7 @@ class CameraControlWidget(QtGui.QWidget, UiTools):
         
     def save_jpeg(self):
         cur_img = self.camera.color_image()
-        fname = QtGui.QFileDialog.getSaveFileName(
+        fname = QtWidgets.QFileDialog.getSaveFileName(
                                 caption = "Select JPEG filename",
                                 directory = os.path.join(os.getcwd(),datetime.date.today().strftime("%Y-%m-%d.jpg")),
                                 filter = "Images (*.jpg *.jpeg)",
@@ -526,7 +526,7 @@ class CameraParametersTableModel(QtCore.QAbstractTableModel):
         else:
             return QtCore.Qt.ItemIsEnabled
     
-class CameraParametersWidget(QtGui.QWidget, UiTools):
+class CameraParametersWidget(QtWidgets.QWidget, UiTools):
     """An editable table that controls a camera's acquisition parameters."""
     def __init__(self, camera, *args, **kwargs):
         super(CameraParametersWidget, self).__init__(*args, **kwargs)

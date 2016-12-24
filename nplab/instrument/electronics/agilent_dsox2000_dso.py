@@ -167,7 +167,7 @@ class AgilentDSO(VisaInstrument):
         return AgilentDsoUI(self)
 
 
-class AgilentDsoUI(QtGui.QWidget, UiTools):
+class AgilentDsoUI(QtWidgets.QWidget, UiTools):
     def __init__(self, dso, parent=None):
         if not isinstance(dso, AgilentDSO):
             raise ValueError('dso must be an instance of DSO')

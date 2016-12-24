@@ -42,7 +42,7 @@ class LightSource(Instrument):
         return LightSourceUI(self)
 
 
-class LightSourceUI(QtGui.QWidget, UiTools):
+class LightSourceUI(QtWidgets.QWidget, UiTools):
     def __init__(self, light_source, parent=None):
         assert isinstance(light_source, LightSource), 'instrument must be a LightSource'
         self.light_source = light_source

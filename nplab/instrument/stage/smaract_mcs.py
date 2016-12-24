@@ -543,7 +543,7 @@ class SmaractScanStageUI(StageUI):
             self.positions[i].setText(p)
 
 
-class SmaractMCSUI(QtGui.QWidget, UiTools):
+class SmaractMCSUI(QtWidgets.QWidget, UiTools):
     def __init__(self, mcs, parent=None):
         assert isinstance(mcs, SmaractMCS), "system must be a Smaract MCS"
         super(SmaractMCSUI, self).__init__()

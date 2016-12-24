@@ -132,7 +132,7 @@ class LinearScanQt(LinearScan, QtCore.QObject):
         self.status_updated.emit('')
 
 
-class LinearScanUI(QtGui.QWidget, UiTools):
+class LinearScanUI(QtWidgets.QWidget, UiTools):
     def __init__(self, linear_scanner):
         assert isinstance(linear_scanner, LinearScanQt), "A valid LinearScanQt subclass must be supplied"
         super(LinearScanUI, self).__init__()

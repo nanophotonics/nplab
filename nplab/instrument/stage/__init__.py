@@ -116,7 +116,7 @@ class Stage(Instrument):
     # TODO: stored dictionary of 'bookmarked' locations for fast travel
 
 
-class StageUI(QtGui.QWidget, UiTools):
+class StageUI(QtWidgets.QWidget, UiTools):
     update_ui = QtCore.pyqtSignal([int], [str])
 
     def __init__(self, stage, parent=None, stage_step_min=1e-9, stage_step_max=1e-3, default_step=1e-6):

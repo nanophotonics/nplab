@@ -5,7 +5,7 @@ Basic GUI methods for the Experiment class.
 """
 
 from nplab.experiment import Experiment
-from nplab.utils.gui import QtCore, QtGui
+from nplab.utils.gui import QtWidgets, QtCore, QtGui
 from nplab.ui.ui_tools import UiTools, QuickControlBox
 
 class ExperimentGuiMixin(object):
