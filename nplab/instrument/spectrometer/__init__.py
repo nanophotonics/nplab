@@ -281,7 +281,6 @@ class Spectrometers(Instrument):
 
 
 
-
 class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
     
     def __init__(self, spectrometer, ui_file =os.path.join(os.path.dirname(__file__),'spectrometer_controls.ui'),  parent=None):
@@ -289,7 +288,7 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
         super(SpectrometerControlUI, self).__init__()
         uic.loadUi(ui_file, self)
         self.spectrometer = spectrometer
-
+        
         self.integration_time.setValidator(QtGui.QDoubleValidator())
         self.integration_time.textChanged.connect(self.check_state)
         self.integration_time.textChanged.connect(self.update_param)
@@ -367,8 +366,8 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
 
 
 class DisplayThread(QtCore.QThread):
-    spectrum_ready = QtCore.pyqtSignal(np.ndarray)
-    spectra_ready = QtCore.pyqtSignal(list)
+    spectrum_ready = QtCore.Signal(np.ndarray)
+    spectra_ready = QtCore.Signal(list)
 
     def __init__(self, parent):
         super(DisplayThread, self).__init__()
@@ -396,21 +395,23 @@ class DisplayThread(QtCore.QThread):
         self.finished.emit()
 
 
-class SpectrometerDisplayUI(UiTools, display_base, display_widget):
+class SpectrometerDisplayUI(QtWidgets.QWidget,UiTools):
     def __init__(self, spectrometer, parent=None):
         assert isinstance(spectrometer, Spectrometer) or isinstance(spectrometer, Spectrometers),\
             "instrument must be a Spectrometer or an instance of Spectrometers"
         super(SpectrometerDisplayUI, self).__init__()
+        uic.loadUi(os.path.join(os.path.dirname(__file__),'spectrometer_view.ui'), self)
         if isinstance(spectrometer, Spectrometers) and spectrometer.num_spectrometers == 1:
             spectrometer = spectrometer.spectrometers[0]
         if isinstance(spectrometer,Spectrometer):
             spectrometer.num_spectrometers = 1
         self.spectrometer = spectrometer
         print self.spectrometer
-        self.setupUi(self)
 
         pg.setConfigOption('background', 'w')
         pg.setConfigOption('foreground', 'k')
+        self.plotbox = QtWidgets.QGroupBox()
+        self.plotbox.setLayout(QtWidgets.QGridLayout())
         self.plotlayout = self.plotbox.layout()          
         self.plots =[]
 
@@ -502,6 +503,7 @@ class SpectrometerDisplayUI(UiTools, display_base, display_widget):
 
 
 
+class SpectrometerUI(QtWidgets.QWidget):
     """
     Joins together the control and display UIs into a single spectrometer UI.
     """
@@ -516,12 +518,21 @@ class SpectrometerDisplayUI(UiTools, display_base, display_widget):
         self.setWindowTitle(self.spectrometer.__class__.__name__)
         self.controls = self.spectrometer.get_qt_ui(control_only=True)
         self.display = SpectrometerDisplayUI(self.spectrometer)
+        layout = QtWidgets.QVBoxLayout()
+    #    controls_layout = QtWidgets.QVBoxLayout()
+    #    controls_layout.addWidget(self.controls)
+    #    controls_layout.setContentsMargins(0,0,0,0)
+    #    controls_group = QtWidgets.QGroupBox()
+    #    controls_group.setTitle('Spectrometer')
+    #    controls_group.setLayout(controls_layout)
+        layout.addWidget(self.controls)
         layout.addWidget(self.display)
         layout.setContentsMargins(5,5,5,5)
         layout.setSpacing(5)
         self.setLayout(layout)
 
 
+class SpectrometersUI(QtWidgets.QWidget):
     def __init__(self, spectrometers):
         assert isinstance(spectrometers, Spectrometers), "instrument must be an instance of Spectrometers"
         super(SpectrometersUI, self).__init__()
@@ -576,3 +587,16 @@ class DummySpectrometer(Spectrometer):
 if __name__ == '__main__':
     import sys
     from nplab.utils.gui import get_qt_app
+#    s1 = DummySpectrometer()
+#    s2 = DummySpectrometer()
+#    s3 = DummySpectrometer()
+#    s4 = DummySpectrometer()
+#    spectrometers = Spectrometers([s1, s2,s3,s4])
+#    for spectrometer in spectrometers.spectrometers:
+#        spectrometer.integration_time = 100
+#    import timeit
+##    print '{0:.2f} ms'.format(1000*timeit.Timer(spectrometers.read_spectra).timeit(number=10)/10)
+##    app = get_qt_app()
+##    ui = SpectrometersUI(spectrometers)
+##    ui.show()
+#  #  sys.exit(app.exec_())
