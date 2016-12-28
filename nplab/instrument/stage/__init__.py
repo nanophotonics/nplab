@@ -117,7 +117,7 @@ class Stage(Instrument):
 
 
 class StageUI(QtWidgets.QWidget, UiTools):
-    update_ui = QtCore.pyqtSignal([int], [str])
+    update_ui = QtCore.Signal([int], [str])
 
     def __init__(self, stage, parent=None, stage_step_min=1e-9, stage_step_max=1e-3, default_step=1e-6):
         assert isinstance(stage, Stage), "instrument must be a Stage"
@@ -239,9 +239,9 @@ class StageUI(QtWidgets.QWidget, UiTools):
         # print self.sender(), index, value
         self.step_size[index] = self.step_size_values[value]
 
-    @QtCore.pyqtSlot(int)
+    @QtCore.Slot(int)
     # @QtCore.pyqtSlot('QString')
-    @QtCore.pyqtSlot(str)
+    @QtCore.Slot(str)
     def update_positions(self, axis=None):
         if axis is None:
             for axis in self.stage.axis_names:
