@@ -1,7 +1,7 @@
 __author__ = 'alansanders, Will Deacon'
 
 import h5py
-from nplab.utils.gui import QtWidgets, QtGui, QtWidgets, get_qt_app, uic
+from nplab.utils.gui import QtGui, QtWidgets, get_qt_app, uic
 from nplab.utils.array_with_attrs import ArrayWithAttrs
 import os
 import matplotlib

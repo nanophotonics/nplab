@@ -9,7 +9,7 @@ system to display the datasets.  See `nplab.ui.data_renderers` for that.
 __author__ = 'Alan Sanders, Will Deacon, Richard Bowman'
 
 import nplab
-from nplab.utils.gui import QtWidgets, QtCore, QtGui, QtWidgets, uic
+from nplab.utils.gui import QtCore, QtGui, QtWidgets, uic
 import matplotlib
 import numpy as np
 import h5py
@@ -562,7 +562,7 @@ if __name__ == '__main__':
 #    data_file.close()
 #    datafile = nplab.current_datafile() #datafile.DataFile("/Users/rwb27/Desktop/test.h5", mode="r")
  #   datafle.create_dataset()
-#    tree = QtGui.QTreeView()
+#    tree = QtWidgets.QTreeView()
 #    model = HDF5ItemModel(datafile)
 #    model.set_up_treeview(tree)
 #    tree.show()

@@ -6,7 +6,7 @@ Created on Wed Jun 11 12:28:18 2014
 """
 
 import nplab.utils.gui #load Qt correctly - do this BEFORE traits
-from nplab.utils.gui import QtWidgets, QtCore, QtGui, uic
+from nplab.utils.gui import QtCore, QtGui, QtWidgets, uic
 from nplab.ui.ui_tools import UiTools
 import threading
 import numpy as np
@@ -392,7 +392,7 @@ class Camera(Instrument):
             
         
         
-class CameraUI(QtGui.QWidget):
+class CameraUI(QtWidgets.QWidget):
     """Generic user interface for a camera."""
     def __init__(self, camera):
         assert isinstance(camera, Camera), "instrument must be a Camera"
@@ -402,7 +402,7 @@ class CameraUI(QtGui.QWidget):
         
         # Set up the UI        
         self.setWindowTitle(self.camera.__class__.__name__)
-        layout = QtGui.QVBoxLayout()
+        layout = QtWidgets.QVBoxLayout()
         # The image display goes at the top of the window
         self.preview_widget = self.camera.get_preview_widget()
         layout.addWidget(self.preview_widget)
@@ -532,13 +532,13 @@ class CameraParametersWidget(QtWidgets.QWidget, UiTools):
         super(CameraParametersWidget, self).__init__(*args, **kwargs)
         self.camera = camera
         self.table_model = CameraParametersTableModel(camera)
-        self.table_view = QtGui.QTableView()
+        self.table_view = QtWidgets.QTableView()
         self.table_view.setModel(self.table_model)
         self.table_view.setCornerButtonEnabled(False)
         self.table_view.resizeColumnsToContents()
         self.table_view.horizontalHeader().setStretchLastSection(True)
         
-        layout = QtGui.QVBoxLayout(self)
+        layout = QtWidgets.QVBoxLayout(self)
         layout.addWidget(self.table_view)
         self.setLayout(layout)
 

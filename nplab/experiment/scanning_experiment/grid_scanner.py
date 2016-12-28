@@ -352,7 +352,7 @@ class GridScanUI(QtWidgets.QWidget, UiTools):
 
         self.setWindowTitle(self.grid_scanner.__class__.__name__)
 
-        self.num_axes.setValidator(QtGui.QIntValidator())
+        self.num_axes.setValidator(QtWidgets.QIntValidator())
         self.num_axes.textChanged.connect(self.check_state)
         self.num_axes.returnPressed.connect(self.renew_axes_ui)
 
@@ -362,7 +362,7 @@ class GridScanUI(QtWidgets.QWidget, UiTools):
         for widget, list, param in zip([self.axes_view, self.axes_names_view, self.size_view, self.step_view, self.init_view],
                                        [self.grid_scanner.axes, self.grid_scanner.axes_names, self.grid_scanner.size, self.grid_scanner.step, self.grid_scanner.init],
                                        ['axes', 'axes_names', 'size', 'step', 'init']):
-            model = QtGui.QStringListModel([str(x) for x in list])
+            model = QtWidgets.QStringListModel([str(x) for x in list])
             dtype = str if param in ['axes', 'axes_names'] else float
             convert = False if param in ['axes', 'axes_names'] else True
             model.dataChanged.connect(partial(self.set_param, param, dtype=dtype, convert=convert))

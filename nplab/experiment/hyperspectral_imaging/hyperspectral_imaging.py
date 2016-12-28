@@ -308,7 +308,7 @@ class HyperspectralScanUI(QtWidgets.QWidget, UiTools):
         self.stage_select.activated[str].connect(self.select_stage)
 
     def init_view_wavelength_controls(self):
-        self.view_wavelength.setValidator(QtGui.QIntValidator())
+        self.view_wavelength.setValidator(QtWidgets.QIntValidator())
         # self.view_wavelength.textChanged.connect(self.check_state)
         self.view_wavelength.returnPressed.connect(self.on_view_wavelength_change)
 
@@ -322,7 +322,7 @@ class HyperspectralScanUI(QtWidgets.QWidget, UiTools):
         self.wavelength_range.setValue(self.grid_scanner.view_wavelength)
 
     def init_view_select(self):
-        self.view_layer.setValidator(QtGui.QIntValidator())
+        self.view_layer.setValidator(QtWidgets.QIntValidator())
         self.view_layer.textChanged.connect(
             self.on_view_layer_change)  # (partial(setattr, self.grid_scanner, 'view_layer'))
         self.grid_scanner.view_layer_updated.connect(self.on_gs_view_layer_change)

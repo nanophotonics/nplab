@@ -1,7 +1,7 @@
 __author__ = 'alansanders'
 
 from nplab.instrument import Instrument
-from nplab.utils.gui import QtWidgets, QtCore, QtGui, get_qt_app, uic
+from nplab.utils.gui import QtCore, QtGui, QtWidgets, get_qt_app, uic
 from nplab.ui.ui_tools import UiTools, QuickControlBox
 import os
 import time

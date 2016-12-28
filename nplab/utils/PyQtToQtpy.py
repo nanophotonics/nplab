@@ -34,7 +34,7 @@ def Convert_Pyqt_to_qtpy(path,avoid_files = None):
     file_locations = [os.path.join(dirpath, f)
     for dirpath, dirnames, files in os.walk(path)
         for f in fnmatch.filter(files, '*.py')]
-    
+
     
     
     for filename in file_locations:
@@ -59,19 +59,22 @@ def Convert_Pyqt_to_qtpy(path,avoid_files = None):
                 
         for line in fileinput.input(filename, inplace=True):
             if ('import' in line) and ('QtGui' in line):
-                nplab_import_line = 'from nplab.utils.gui import QtWidgets'
-                
+                if 'QtWidgets' in line:
+                    nplab_import_line = 'from nplab.utils.gui import '
+                else:
+                    nplab_import_line = 'from nplab.utils.gui import QtWidgets, '
                 for attribute in dir(nplab.utils.gui): 
                     if attribute in line.replace(',',' ').split('\n')[0].split(' '):               
-                        nplab_import_line = nplab_import_line + ', '+attribute
+                        nplab_import_line = nplab_import_line +attribute+', '
                         
-                nplab_import_line = nplab_import_line + '\n'
+                nplab_import_line = nplab_import_line[:-2] + '\n'
                 sys.stdout.write(line.split('import')[0].split('from')[0]+nplab_import_line) # added line split on import and from to correct for white space for indented imports
                 continue
             for command in line.split(' '):
                 if 'QtGui' in command:
+                    
                     if len(command.split('.'))>1:
-                        func = command.split('.')[(command.split('.')=='QtGui')+1].split(' ')[0].split(',')[0]
+                        func = command.split('QtGui.')[1].split(' ')[0].split(',')[0].split(')')[0].split('(')[0]
                     else:
                         continue
                     if hasattr(QtGui,func):

@@ -35,7 +35,7 @@ from ctypes import byref, c_int, c_ulong, c_double
 import numpy as np
 import threading
 from nplab.instrument import Instrument
-from nplab.utils.gui import QtWidgets, QtCore, QtGui, uic
+from nplab.utils.gui import QtCore, QtGui, QtWidgets, uic
 from nplab.instrument.spectrometer import Spectrometer, Spectrometers, SpectrometerControlUI, SpectrometerDisplayUI, SpectrometerUI
 import traitsui
 import os

@@ -2,7 +2,7 @@ __author__ = 'alansanders'
 
 import numpy as np
 import numpy.ma as ma
-from nplab.utils.gui import QtWidgets,QtGui,QtCore,uic,get_qt_app
+from nplab.utils.gui import QtCore, QtGui, QtWidgets, get_qt_app, uic
 
 
 
@@ -541,8 +541,8 @@ class SpectrometersUI(QtWidgets.QWidget):
 
     def _init_ui(self):
         self.setWindowTitle('Spectrometers')
-        self.controls_layout = QtGui.QHBoxLayout()
-        controls_group = QtGui.QGroupBox()
+        self.controls_layout = QtWidgets.QHBoxLayout()
+        controls_group = QtWidgets.QGroupBox()
         controls_group.setTitle('Spectrometers')
         controls_group.setLayout(self.controls_layout)
         self.controls = []
@@ -551,7 +551,7 @@ class SpectrometersUI(QtWidgets.QWidget):
             self.controls_layout.addWidget(control)
             self.controls.append(control)
         self.display = SpectrometerDisplayUI(self.spectrometers)
-        layout = QtGui.QVBoxLayout()
+        layout = QtWidgets.QVBoxLayout()
         layout.addWidget(controls_group)
         layout.addWidget(self.display)
         self.setLayout(layout)

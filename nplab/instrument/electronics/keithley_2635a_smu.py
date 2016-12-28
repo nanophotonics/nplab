@@ -152,7 +152,7 @@ class Keithley2635A(VisaInstrument):
         return SmuUI(self)
 
 
-class SmuUI(QtGui.QWidget):
+class SmuUI(QtWidgets.QWidget):
     def __init__(self, smu, parent=None):
         super(SmuUI, self).__init__()
         self.smu = smu
