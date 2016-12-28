@@ -89,7 +89,7 @@ def suitable_renderers(h5object, return_scores=False):
 #hdf5_info_base,
 #hdf5_info_widget = uic.loadUi(os.path.join(os.path.dirname(__file__), 'hdf5_info_renderer.ui'))
 #Had to change load Ui Type to Load Ui
-class HDF5InfoRenderer(DataRenderer):
+class HDF5InfoRenderer(DataRenderer, QtWidgets.QWidget):
     """ A renderer returning the basic HDF5 info"""
     def __init__(self, h5object, parent=None):
         super(HDF5InfoRenderer, self).__init__(h5object, parent)
@@ -97,7 +97,7 @@ class HDF5InfoRenderer(DataRenderer):
         self.parent = parent
         self.h5object = h5object
 
-        self.setupUi(self)
+
         self.lineEdit.setText(self.h5object.name)
         self.lineEdit2.setText(self.h5object.parent.name)
         self.lineEdit3.setText(self.h5object.file.filename)
@@ -170,7 +170,7 @@ add_group_renderer(TextRenderer)
 
 #hdf5_attrs_base, hdf5_attrs_widget = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'hdf5_attrs_renderer.ui'))
 #, hdf5_attrs_base, hdf5_attrs_widget
-class AttrsRenderer(DataRenderer):
+class AttrsRenderer(DataRenderer, QtWidgets.QWidget):
     """ A renderer displaying a table with the Attributes of the HDF5 object selected"""
     
     def __init__(self, h5object, parent=None):
@@ -178,18 +178,17 @@ class AttrsRenderer(DataRenderer):
         uic.loadUi(os.path.join(os.path.join(os.path.dirname(__file__), 'hdf5_attrs_renderer.ui')),self)
         
         self.h5object = h5object
-        self.setupUi(self)
         
         if type(h5object)==list:
-            item_info = QTableWidgetItem("Choose a single element to display its attributes!")
+            item_info = QtWidgets.QTableWidgetItem("Choose a single element to display its attributes!")
             self.tableWidget.setItem(0,0,item_info)
             self.tableWidget.resizeColumnsToContents()
         else:
             self.tableWidget.setRowCount(len(self.h5object.attrs))
             row = 0
             for key, value in sorted(h5object.attrs.iteritems()):
-                item_key = QTableWidgetItem(key)
-                item_value = QTableWidgetItem(str(value))
+                item_key = QtWidgets.QTableWidgetItem(key)
+                item_value = QtWidgets.QTableWidgetItem(str(value))
                 self.tableWidget.setItem(row,0,item_key)
                 self.tableWidget.setItem(row,1,item_value)
                 row = row + 1

@@ -2,25 +2,22 @@ __author__ = 'alansanders'
 
 import numpy as np
 import numpy.ma as ma
-from nplab.utils.gui import *
-from PyQt4 import uic
-import matplotlib
-matplotlib.use('Qt4Agg')
-from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.figure import Figure
+from nplab.utils.gui import QtWidgets,QtGui,QtCore,uic,get_qt_app
+
+
+
 from nplab.ui.ui_tools import UiTools
 import h5py
 from multiprocessing.pool import ThreadPool
-from threading import Thread
+
 import time
-import h5py
+
 import os
 import inspect
 import datetime
 from nplab.instrument import Instrument
 import warnings
 import pyqtgraph as pg
-
 
 class Spectrometer(Instrument):
 
@@ -283,16 +280,15 @@ class Spectrometers(Instrument):
     metadata = property(get_metadata)
 
 
-controls_base, controls_widget = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'spectrometer_controls.ui'))
-display_base, display_widget = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'spectrometer_view.ui'))
 
 
-class SpectrometerControlUI(UiTools, controls_base, controls_widget):
-    def __init__(self, spectrometer, parent=None):
+class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
+    
+    def __init__(self, spectrometer, ui_file =os.path.join(os.path.dirname(__file__),'spectrometer_controls.ui'),  parent=None):
         assert isinstance(spectrometer, Spectrometer), "instrument must be a Spectrometer"
         super(SpectrometerControlUI, self).__init__()
+        uic.loadUi(ui_file, self)
         self.spectrometer = spectrometer
-        self.setupUi(self)
 
         self.integration_time.setValidator(QtGui.QDoubleValidator())
         self.integration_time.textChanged.connect(self.check_state)
@@ -415,8 +411,6 @@ class SpectrometerDisplayUI(UiTools, display_base, display_widget):
 
         pg.setConfigOption('background', 'w')
         pg.setConfigOption('foreground', 'k')
-        self.plotbox = QtGui.QGroupBox()
-        self.plotbox.setLayout(QtGui.QGridLayout())
         self.plotlayout = self.plotbox.layout()          
         self.plots =[]
 
@@ -508,7 +502,6 @@ class SpectrometerDisplayUI(UiTools, display_base, display_widget):
 
 
 
-class SpectrometerUI(QtGui.QWidget):
     """
     Joins together the control and display UIs into a single spectrometer UI.
     """
@@ -523,21 +516,12 @@ class SpectrometerUI(QtGui.QWidget):
         self.setWindowTitle(self.spectrometer.__class__.__name__)
         self.controls = self.spectrometer.get_qt_ui(control_only=True)
         self.display = SpectrometerDisplayUI(self.spectrometer)
-        layout = QtGui.QVBoxLayout()
-        controls_layout = QtGui.QVBoxLayout()
-        controls_layout.addWidget(self.controls)
-        controls_layout.setContentsMargins(0,0,0,0)
-        controls_group = QtGui.QGroupBox()
-        controls_group.setTitle('Spectrometer')
-        controls_group.setLayout(controls_layout)
-        layout.addWidget(controls_group)
         layout.addWidget(self.display)
         layout.setContentsMargins(5,5,5,5)
         layout.setSpacing(5)
         self.setLayout(layout)
 
 
-class SpectrometersUI(QtGui.QWidget):
     def __init__(self, spectrometers):
         assert isinstance(spectrometers, Spectrometers), "instrument must be an instance of Spectrometers"
         super(SpectrometersUI, self).__init__()
@@ -592,16 +576,3 @@ class DummySpectrometer(Spectrometer):
 if __name__ == '__main__':
     import sys
     from nplab.utils.gui import get_qt_app
-    s1 = DummySpectrometer()
-    s2 = DummySpectrometer()
-    s3 = DummySpectrometer()
-    s4 = DummySpectrometer()
-    spectrometers = Spectrometers([s1, s2,s3,s4])
-    for spectrometer in spectrometers.spectrometers:
-        spectrometer.integration_time = 100
-    import timeit
-    print '{0:.2f} ms'.format(1000*timeit.Timer(spectrometers.read_spectra).timeit(number=10)/10)
-    app = get_qt_app()
-    ui = SpectrometersUI(spectrometers)
-    ui.show()
-    sys.exit(app.exec_())
