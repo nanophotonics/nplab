@@ -36,6 +36,7 @@ def Convert_Pyqt_to_qtpy(path,avoid_files = None):
         for f in fnmatch.filter(files, '*.py')]
     
     
+    
     for filename in file_locations:
         found_bad_file = False
         for avoid_file in avoid_files:
@@ -44,7 +45,18 @@ def Convert_Pyqt_to_qtpy(path,avoid_files = None):
                 continue
         if found_bad_file == True:
             continue
-    
+        i=0
+        for line in fileinput.input(filename):
+            i+=1
+        if i == 1:
+            f = open(filename,mode = 'r')
+            text = f.read()
+            f.close()
+            text = text.replace('\r','\n')
+            f = open(filename,mode='w')
+            f.write(text)
+            f.close()
+                
         for line in fileinput.input(filename, inplace=True):
             if ('import' in line) and ('QtGui' in line):
                 nplab_import_line = 'from nplab.utils.gui import QtWidgets'
