@@ -263,7 +263,7 @@ class Pixis256E(CCD):
 class Pixis256EQt(Pixis256E, QtCore.QObject):
     """Pixis256E subclass with Qt signals for GUI interaction."""
 
-    image_taken = QtCore.pyqtSignal(np.ndarray)
+    image_taken = QtCore.Signal(np.ndarray)
 
     @inherit_docstring(Pixis256E.__init__)
     def __init__(self):

@@ -94,9 +94,9 @@ class LinearScanQt(LinearScan, QtCore.QObject):
     A GridScanner subclass containing additional or redefined functions related to GUI operation.
     """
 
-    total_points_updated = QtCore.pyqtSignal(int)
-    status_updated = QtCore.pyqtSignal(str)
-    timing_updated = QtCore.pyqtSignal(str)
+    total_points_updated = QtCore.Signal(int)
+    status_updated = QtCore.Signal(str)
+    timing_updated = QtCore.Signal(str)
 
     def __init__(self, start=None, stop=None, step=None):
         LinearScan.__init__(self, start, stop, step)

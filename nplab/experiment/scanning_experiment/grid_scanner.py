@@ -251,15 +251,15 @@ class GridScanQt(GridScan, QtCore.QObject):
     A GridScanner subclass containing additional or redefined functions related to GUI operation.
     """
 
-    axes_updated = QtCore.pyqtSignal(list)
-    axes_names_updated = QtCore.pyqtSignal(list)
-    size_updated = QtCore.pyqtSignal(np.ndarray)
-    step_updated = QtCore.pyqtSignal(np.ndarray)
-    init_updated = QtCore.pyqtSignal(np.ndarray)
-    grid_shape_updated = QtCore.pyqtSignal(tuple)
-    total_points_updated = QtCore.pyqtSignal(int)
-    status_updated = QtCore.pyqtSignal(str)
-    timing_updated = QtCore.pyqtSignal(str)
+    axes_updated = QtCore.Signal(list)
+    axes_names_updated = QtCore.Signal(list)
+    size_updated = QtCore.Signal(np.ndarray)
+    step_updated = QtCore.Signal(np.ndarray)
+    init_updated = QtCore.Signal(np.ndarray)
+    grid_shape_updated = QtCore.Signal(tuple)
+    total_points_updated = QtCore.Signal(int)
+    status_updated = QtCore.Signal(str)
+    timing_updated = QtCore.Signal(str)
 
     def __init__(self):
         GridScan.__init__(self)

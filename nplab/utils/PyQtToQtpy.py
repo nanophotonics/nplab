@@ -86,6 +86,22 @@ def Convert_Pyqt_to_qtpy(path,avoid_files = None):
                             continue
                       #      print func,'Could not be found in qtpy. From file ',filename
                        #     print func
+                if 'QtCore' in command:
+                    
+                    if len(command.split('.'))>1:
+                        try:
+                            func = command.split('QtCore.')[1].split(' ')[0].split(',')[0].split(')')[0].split('(')[0]
+                        except IndexError: 
+                            continue
+                    else:
+                        continue
+                    if func == 'pyqtSignal':
+                        line = line.replace('pyqtSignal','Signal')
+                        continue
+
+                      #      print func,'Could not be found in qtpy. From file ',filename
+                       #     print func
+                            
             sys.stdout.write(line)
             
         fileinput.close()

@@ -569,7 +569,7 @@ class PreviewImageItem(pg.ImageItem):
 
 class CameraPreviewWidget(pg.GraphicsView):
     """A Qt Widget to display the live feed from a camera."""
-    update_data_signal = QtCore.pyqtSignal(np.ndarray)
+    update_data_signal = QtCore.Signal(np.ndarray)
     
     def __init__(self):
         super(CameraPreviewWidget, self).__init__()

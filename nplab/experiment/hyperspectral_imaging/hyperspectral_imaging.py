@@ -31,7 +31,7 @@ pg.setConfigOption('foreground', 'k')
 
 
 class HyperspectralScan(GridScanQt, ScanningExperimentHDF5):
-    view_layer_updated = QtCore.pyqtSignal(int)
+    view_layer_updated = QtCore.Signal(int)
 
     def __init__(self):
         GridScanQt.__init__(self)
