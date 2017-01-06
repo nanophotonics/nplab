@@ -7,7 +7,7 @@ __author__ = 'alansanders'
 from nplab.instrument.visa_instrument import VisaInstrument, queried_property
 import numpy as np
 from nplab.utils.gui import *
-from PyQt4 import uic
+from nplab.utils.gui import uic
 
 
 class Keithley2635A(VisaInstrument):

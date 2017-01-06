@@ -6,7 +6,7 @@ from nplab.instrument import Instrument
 from nplab.instrument.stage import Stage, StageUI
 import os
 from nplab.utils.gui import *
-from PyQt4 import uic
+from nplab.utils.gui import uic
 from nplab.ui.ui_tools import UiTools
 from nplab.utils.formatting import engineering_format
 

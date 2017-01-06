@@ -11,7 +11,7 @@ from nplab.instrument import Instrument
 import time
 import threading
 from nplab.utils.gui import *
-from PyQt4 import uic
+from nplab.utils.gui import uic
 from nplab.ui.ui_tools import UiTools
 import nplab.ui
 import inspect

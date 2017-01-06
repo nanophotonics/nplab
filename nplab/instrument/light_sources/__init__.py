@@ -2,7 +2,7 @@ __author__ = 'alansanders'
 
 from nplab.instrument import Instrument
 from nplab.utils.gui import *
-from PyQt4 import uic
+from nplab.utils.gui import uic
 from nplab.ui.ui_tools import UiTools
 from nplab.instrument.shutter import Shutter
 

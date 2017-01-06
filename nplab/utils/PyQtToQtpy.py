@@ -9,6 +9,7 @@ import fileinput
 import sys
 import os
 import fnmatch
+import re
 
 
 from qtpy import QtGui,QtWidgets
@@ -58,21 +59,26 @@ def Convert_Pyqt_to_qtpy(path,avoid_files = None):
             f.close()
                 
         for line in fileinput.input(filename, inplace=True):
-            if ('import' in line) and ('QtGui' in line):
-                if 'QtWidgets' in line:
-                    nplab_import_line = 'from nplab.utils.gui import '
-                else:
+            if ('import ' in line) and (('QtCore' in line) or ('QtGui' in line) or ('uic' in line)):
+                if '*' in line:
+                    nplab_import_line = line.replace('PyQt4','nplab.utils.gui')
+                if ('QtWidgets' not in line) and ('QtGui' in line):
                     nplab_import_line = 'from nplab.utils.gui import QtWidgets, '
+                else:
+                    nplab_import_line = 'from nplab.utils.gui import '                    
                 for attribute in dir(nplab.utils.gui): 
                     if attribute in line.replace(',',' ').split('\n')[0].split(' '):               
                         nplab_import_line = nplab_import_line +attribute+', '
-                        
-                nplab_import_line = nplab_import_line[:-2] + '\n'
-                sys.stdout.write(line.split('import')[0].split('from')[0]+nplab_import_line) # added line split on import and from to correct for white space for indented imports
-                continue
+                if nplab_import_line == 'from nplab.utils.gui import ':
+                    sys.stdout.write(line) 
+                    continue
+                else:
+                    nplab_import_line = nplab_import_line[:-2] + '\n'
+                    sys.stdout.write(line.split('import')[0].split('from')[0]+nplab_import_line) # added line split on import and from to correct for white space for indented imports
+                    continue
             for command in line.split(' '):
                 if 'QtGui.' in command:
-                    func = re.search(r"QtGui\.([0-9a-zA-Z_]+)", a).group(1)
+                    func = re.search(r"QtGui\.([0-9a-zA-Z_]+)", command).group(1)
                     if hasattr(QtGui,func):
                         continue
                     else:
@@ -84,7 +90,7 @@ def Convert_Pyqt_to_qtpy(path,avoid_files = None):
                 if 'QtCore.' in command:
                     
                     try:
-                        func = re.search(r"QtCore\.([0-9a-zA-Z_]+)", a).group(1)
+                        func = re.search(r"QtCore\.([0-9a-zA-Z_]+)", command).group(1)
                     except IndexError: 
                         continue
                     if func == 'pyqtSignal':

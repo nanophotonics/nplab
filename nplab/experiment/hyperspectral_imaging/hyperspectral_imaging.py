@@ -6,7 +6,7 @@ from nplab.instrument.spectrometer import Spectrometer, Spectrometers
 from nplab.instrument.light_sources import LightSource
 from nplab.instrument.shutter import Shutter
 from nplab.utils.gui import *
-from PyQt4 import uic
+from nplab.utils.gui import uic
 from nplab.ui.ui_tools import UiTools
 import numpy as np
 import matplotlib
