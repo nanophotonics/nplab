@@ -24,20 +24,14 @@ for name in API_NAMES:
 if ui_toolkit == 'native' and os.environ['QT_API'] == 'pyside':
     try:
         from PySide import QtCore, QtGui
-        from PySide import QtCore as qt
-        from PySide import QtGui as qtgui
     except:
         warnings.warn("Warning: falling back to PyQt4", UserWarning)
         ui_toolkit = 'pyqt'
         from PyQt4 import QtCore, QtGui
-        from PyQt4 import QtCore as qt
-        from PyQt4 import QtGui as qtgui
         from PyQt4 import uic
 elif ui_toolkit == 'pyface':
     from traits.etsconfig.api import ETSConfig
     ETSConfig.toolkit = 'qt4'
-    from pyface.qt import QtCore as qt
-    from pyface.qt import QtGui as qtgui
     from pyface.qt import QtCore, QtGui
 elif ui_toolkit == 'native':
     try:
@@ -46,15 +40,11 @@ elif ui_toolkit == 'native':
  #       from PyQt4 import QtGui as qtgui
   #      from PyQt4 import uic
       from qtpy import QtCore,QtGui
-      from qtpy import QtCore as qt
-      from qtpy import QtGui as qtgui
       from qtpy import QtWidgets
       from qtpy import uic
     except:
         warnings.warn("Warning: failed to load PyQt4, falling back to pyside", UserWarning)
         from PySide import QtCore, QtGui
-        from PySide import QtCore as qt
-        from PySide import QtGui as qtgui
 else:
     raise ImportError("Invalid ui_toolkit or QT_API")
 #print QtCore, QtGui
