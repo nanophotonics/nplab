@@ -31,7 +31,7 @@ def Convert_Pyqt_to_qtpy(path,avoid_files = None):
         avoid_files = ['PyQtToQtpy.py','utils\\gui.py']
         
         
-    file_locations = [os.path.join(dirpath, f)
+    file_locations = [os.path.join(dirpath, f) #Create a list of file paths from the top level path
     for dirpath, dirnames, files in os.walk(path)
         for f in fnmatch.filter(files, '*.py')]
 
@@ -39,7 +39,7 @@ def Convert_Pyqt_to_qtpy(path,avoid_files = None):
     
     for filename in file_locations:
         found_bad_file = False
-        for avoid_file in avoid_files:
+        for avoid_file in avoid_files: # skip requested files
             if avoid_file in filename:
                 found_bad_file = True
                 continue
@@ -71,12 +71,8 @@ def Convert_Pyqt_to_qtpy(path,avoid_files = None):
                 sys.stdout.write(line.split('import')[0].split('from')[0]+nplab_import_line) # added line split on import and from to correct for white space for indented imports
                 continue
             for command in line.split(' '):
-                if 'QtGui' in command:
-                    
-                    if len(command.split('.'))>1:
-                        func = command.split('QtGui.')[1].split(' ')[0].split(',')[0].split(')')[0].split('(')[0].split('.')[0]
-                    else:
-                        continue
+                if 'QtGui.' in command:
+                    func = re.search(r"QtGui\.([0-9a-zA-Z_]+)", a).group(1)
                     if hasattr(QtGui,func):
                         continue
                     else:
@@ -84,23 +80,16 @@ def Convert_Pyqt_to_qtpy(path,avoid_files = None):
                             line = line.replace("QtGui", "QtWidgets")
                         else:
                             continue
-                      #      print func,'Could not be found in qtpy. From file ',filename
-                       #     print func
-                if 'QtCore' in command:
+
+                if 'QtCore.' in command:
                     
-                    if len(command.split('.'))>1:
-                        try:
-                            func = command.split('QtCore.')[1].split(' ')[0].split(',')[0].split(')')[0].split('(')[0].split('.')[0]
-                        except IndexError: 
-                            continue
-                    else:
+                    try:
+                        func = re.search(r"QtCore\.([0-9a-zA-Z_]+)", a).group(1)
+                    except IndexError: 
                         continue
                     if func == 'pyqtSignal':
                         line = line.replace('pyqtSignal','Signal')
                         continue
-
-                      #      print func,'Could not be found in qtpy. From file ',filename
-                       #     print func
                             
             sys.stdout.write(line)
             
