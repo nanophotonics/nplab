@@ -74,7 +74,7 @@ def Convert_Pyqt_to_qtpy(path,avoid_files = None):
                 if 'QtGui' in command:
                     
                     if len(command.split('.'))>1:
-                        func = command.split('QtGui.')[1].split(' ')[0].split(',')[0].split(')')[0].split('(')[0]
+                        func = command.split('QtGui.')[1].split(' ')[0].split(',')[0].split(')')[0].split('(')[0].split('.')[0]
                     else:
                         continue
                     if hasattr(QtGui,func):
@@ -90,7 +90,7 @@ def Convert_Pyqt_to_qtpy(path,avoid_files = None):
                     
                     if len(command.split('.'))>1:
                         try:
-                            func = command.split('QtCore.')[1].split(' ')[0].split(',')[0].split(')')[0].split('(')[0]
+                            func = command.split('QtCore.')[1].split(' ')[0].split(',')[0].split(')')[0].split('(')[0].split('.')[0]
                         except IndexError: 
                             continue
                     else:
