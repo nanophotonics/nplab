@@ -7,7 +7,7 @@
 #
 # WARNING! All changes made in this file will be lost!
 
-from PyQt4 import QtCore
+from nplab.utils.gui import QtCore
 
 qt_resource_data = "\
 \x00\x00\x33\x94\

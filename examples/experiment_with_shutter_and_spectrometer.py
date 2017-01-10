@@ -17,7 +17,7 @@ from nplab.experiment import Experiment, ExperimentStopped
 from nplab.utils.notified_property import DumbNotifiedProperty
 from nplab.ui.ui_tools import QuickControlBox
 from nplab.utils.gui import show_guis
-from nplab.utils.gui import QtCore, QtGui, uic, get_qt_app
+from nplab.utils.gui import QtWidgets, QtCore, QtGui, get_qt_app, uic
 from nplab.ui.ui_tools import UiTools
 
 class DumbIrradiationExperiment(Experiment):
@@ -59,7 +59,7 @@ class DumbIrradiationExperiment(Experiment):
         gb.auto_connect_by_name(self)
         return gb
 
-class DumbIrradiationExperiment_Gui(QtGui.QMainWindow, UiTools):
+class DumbIrradiationExperiment_Gui(QtWidgets.QMainWindow, UiTools):
     """
     Import and editing of Pump probe gui including the replacement of widgets and formating of buttons
     """

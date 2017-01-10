@@ -251,15 +251,15 @@ class GridScanQt(GridScan, QtCore.QObject):
     A GridScanner subclass containing additional or redefined functions related to GUI operation.
     """
 
-    axes_updated = QtCore.pyqtSignal(list)
-    axes_names_updated = QtCore.pyqtSignal(list)
-    size_updated = QtCore.pyqtSignal(np.ndarray)
-    step_updated = QtCore.pyqtSignal(np.ndarray)
-    init_updated = QtCore.pyqtSignal(np.ndarray)
-    grid_shape_updated = QtCore.pyqtSignal(tuple)
-    total_points_updated = QtCore.pyqtSignal(int)
-    status_updated = QtCore.pyqtSignal(str)
-    timing_updated = QtCore.pyqtSignal(str)
+    axes_updated = QtCore.Signal(list)
+    axes_names_updated = QtCore.Signal(list)
+    size_updated = QtCore.Signal(np.ndarray)
+    step_updated = QtCore.Signal(np.ndarray)
+    init_updated = QtCore.Signal(np.ndarray)
+    grid_shape_updated = QtCore.Signal(tuple)
+    total_points_updated = QtCore.Signal(int)
+    status_updated = QtCore.Signal(str)
+    timing_updated = QtCore.Signal(str)
 
     def __init__(self):
         GridScan.__init__(self)
@@ -340,7 +340,7 @@ class GridScanQt(GridScan, QtCore.QObject):
 #base, widget = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'gridscanner.ui'), from_imports=False)
 
 #class GridScannerUI(UiTools, base, widget):
-class GridScanUI(QtGui.QWidget, UiTools):
+class GridScanUI(QtWidgets.QWidget, UiTools):
     def __init__(self, grid_scanner):
         assert isinstance(grid_scanner, GridScanQt), "A valid GridScannerQT subclass must be supplied"
         super(GridScanUI, self).__init__()
@@ -352,7 +352,7 @@ class GridScanUI(QtGui.QWidget, UiTools):
 
         self.setWindowTitle(self.grid_scanner.__class__.__name__)
 
-        self.num_axes.setValidator(QtGui.QIntValidator())
+        self.num_axes.setValidator(QtWidgets.QIntValidator())
         self.num_axes.textChanged.connect(self.check_state)
         self.num_axes.returnPressed.connect(self.renew_axes_ui)
 
@@ -362,7 +362,7 @@ class GridScanUI(QtGui.QWidget, UiTools):
         for widget, list, param in zip([self.axes_view, self.axes_names_view, self.size_view, self.step_view, self.init_view],
                                        [self.grid_scanner.axes, self.grid_scanner.axes_names, self.grid_scanner.size, self.grid_scanner.step, self.grid_scanner.init],
                                        ['axes', 'axes_names', 'size', 'step', 'init']):
-            model = QtGui.QStringListModel([str(x) for x in list])
+            model = QtWidgets.QStringListModel([str(x) for x in list])
             dtype = str if param in ['axes', 'axes_names'] else float
             convert = False if param in ['axes', 'axes_names'] else True
             model.dataChanged.connect(partial(self.set_param, param, dtype=dtype, convert=convert))

@@ -376,12 +376,13 @@ def current(create_if_none=True, create_if_closed=True, mode='a'):
         try:  # we try to pop up a Qt file dialog
             import nplab.utils.gui
             from nplab.utils.gui import qtgui
+            from nplab.utils.gui import QtWidgets
             app = nplab.utils.gui.get_qt_app()  # ensure Qt is running
-            fname = qtgui.QFileDialog.getSaveFileName(
+            fname = QtWidgets.QFileDialog.getSaveFileName(
                 caption="Select Data File",
                 directory=os.path.join(os.getcwd(), datetime.date.today().strftime("%Y-%m-%d.h5")),
                 filter="HDF5 Data (*.h5 *.hdf5)",
-                options=qtgui.QFileDialog.DontConfirmOverwrite,
+                options=QtWidgets.QFileDialog.DontConfirmOverwrite,
             )
             if not isinstance(fname, basestring):
                 fname = fname[0]  # work around version-dependent Qt behaviour :(

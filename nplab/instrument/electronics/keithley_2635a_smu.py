@@ -7,7 +7,7 @@ __author__ = 'alansanders'
 from nplab.instrument.visa_instrument import VisaInstrument, queried_property
 import numpy as np
 from nplab.utils.gui import *
-from PyQt4 import uic
+from nplab.utils.gui import uic
 
 
 class Keithley2635A(VisaInstrument):
@@ -152,7 +152,7 @@ class Keithley2635A(VisaInstrument):
         return SmuUI(self)
 
 
-class SmuUI(QtGui.QWidget):
+class SmuUI(QtWidgets.QWidget):
     def __init__(self, smu, parent=None):
         super(SmuUI, self).__init__()
         self.smu = smu

@@ -263,7 +263,7 @@ class Pixis256E(CCD):
 class Pixis256EQt(Pixis256E, QtCore.QObject):
     """Pixis256E subclass with Qt signals for GUI interaction."""
 
-    image_taken = QtCore.pyqtSignal(np.ndarray)
+    image_taken = QtCore.Signal(np.ndarray)
 
     @inherit_docstring(Pixis256E.__init__)
     def __init__(self):
@@ -278,13 +278,13 @@ class Pixis256EQt(Pixis256E, QtCore.QObject):
         return image
 
 
-class Pixis256EUI(QtGui.QWidget, UiTools):
+class Pixis256EUI(QtWidgets.QWidget, UiTools):
     def __init__(self, pixis):
         if not isinstance(pixis, Pixis256EQt):
             raise TypeError('pixis is not an instance of Pixis256EQt')
         self.pixis = pixis
 
-        self.exposure.setValidator(QtGui.QIntValidator())
+        self.exposure.setValidator(QtWidgets.QIntValidator())
         self.exposure.textChanged.connect(self.check_state)
         self.exposure.textChanged.connect(self.on_text_change)
         self.mode.activated.connect(self.on_activated)

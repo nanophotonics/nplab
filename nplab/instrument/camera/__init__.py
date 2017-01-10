@@ -6,7 +6,7 @@ Created on Wed Jun 11 12:28:18 2014
 """
 
 import nplab.utils.gui #load Qt correctly - do this BEFORE traits
-from nplab.utils.gui import QtCore, QtGui, uic
+from nplab.utils.gui import QtCore, QtGui, QtWidgets, uic
 from nplab.ui.ui_tools import UiTools
 import threading
 import numpy as np
@@ -392,7 +392,7 @@ class Camera(Instrument):
             
         
         
-class CameraUI(QtGui.QWidget):
+class CameraUI(QtWidgets.QWidget):
     """Generic user interface for a camera."""
     def __init__(self, camera):
         assert isinstance(camera, Camera), "instrument must be a Camera"
@@ -402,7 +402,7 @@ class CameraUI(QtGui.QWidget):
         
         # Set up the UI        
         self.setWindowTitle(self.camera.__class__.__name__)
-        layout = QtGui.QVBoxLayout()
+        layout = QtWidgets.QVBoxLayout()
         # The image display goes at the top of the window
         self.preview_widget = self.camera.get_preview_widget()
         layout.addWidget(self.preview_widget)
@@ -413,7 +413,7 @@ class CameraUI(QtGui.QWidget):
         layout.setSpacing(5)
         self.setLayout(layout)
         
-class CameraControlWidget(QtGui.QWidget, UiTools):
+class CameraControlWidget(QtWidgets.QWidget, UiTools):
     """Controls for a camera (these are the really generic ones)"""
     def __init__(self, camera, auto_connect=True):
         assert isinstance(camera, Camera), "instrument must be a Camera"
@@ -433,7 +433,7 @@ class CameraControlWidget(QtGui.QWidget, UiTools):
         
     def save_jpeg(self):
         cur_img = self.camera.color_image()
-        fname = QtGui.QFileDialog.getSaveFileName(
+        fname = QtWidgets.QFileDialog.getSaveFileName(
                                 caption = "Select JPEG filename",
                                 directory = os.path.join(os.getcwd(),datetime.date.today().strftime("%Y-%m-%d.jpg")),
                                 filter = "Images (*.jpg *.jpeg)",
@@ -526,19 +526,19 @@ class CameraParametersTableModel(QtCore.QAbstractTableModel):
         else:
             return QtCore.Qt.ItemIsEnabled
     
-class CameraParametersWidget(QtGui.QWidget, UiTools):
+class CameraParametersWidget(QtWidgets.QWidget, UiTools):
     """An editable table that controls a camera's acquisition parameters."""
     def __init__(self, camera, *args, **kwargs):
         super(CameraParametersWidget, self).__init__(*args, **kwargs)
         self.camera = camera
         self.table_model = CameraParametersTableModel(camera)
-        self.table_view = QtGui.QTableView()
+        self.table_view = QtWidgets.QTableView()
         self.table_view.setModel(self.table_model)
         self.table_view.setCornerButtonEnabled(False)
         self.table_view.resizeColumnsToContents()
         self.table_view.horizontalHeader().setStretchLastSection(True)
         
-        layout = QtGui.QVBoxLayout(self)
+        layout = QtWidgets.QVBoxLayout(self)
         layout.addWidget(self.table_view)
         self.setLayout(layout)
 
@@ -569,7 +569,7 @@ class PreviewImageItem(pg.ImageItem):
 
 class CameraPreviewWidget(pg.GraphicsView):
     """A Qt Widget to display the live feed from a camera."""
-    update_data_signal = QtCore.pyqtSignal(np.ndarray)
+    update_data_signal = QtCore.Signal(np.ndarray)
     
     def __init__(self):
         super(CameraPreviewWidget, self).__init__()

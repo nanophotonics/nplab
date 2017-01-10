@@ -1,7 +1,7 @@
 __author__ = 'alansanders, Will Deacon'
 
 import h5py
-from nplab.utils.gui import QtGui, uic, get_qt_app
+from nplab.utils.gui import QtGui, QtWidgets, get_qt_app, uic
 from nplab.utils.array_with_attrs import ArrayWithAttrs
 import os
 import matplotlib
@@ -13,7 +13,7 @@ import pyqtgraph as pg
 import numpy as np
 import nplab.datafile as df
 
-from PyQt4.QtGui import * 
+#from nplab.utils.gui import QtWidgets
 #from PyQt4.QtCore import * 
 
 
@@ -86,16 +86,18 @@ def suitable_renderers(h5object, return_scores=False):
     else:
         return [r for score, r in renderers_and_scores if score >= 0]
 
-
-hdf5_info_base, hdf5_info_widget = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'hdf5_info_renderer.ui'))
-class HDF5InfoRenderer(DataRenderer, hdf5_info_base, hdf5_info_widget):
+#hdf5_info_base,
+#hdf5_info_widget = uic.loadUi(os.path.join(os.path.dirname(__file__), 'hdf5_info_renderer.ui'))
+#Had to change load Ui Type to Load Ui
+class HDF5InfoRenderer(DataRenderer, QtWidgets.QWidget):
     """ A renderer returning the basic HDF5 info"""
     def __init__(self, h5object, parent=None):
         super(HDF5InfoRenderer, self).__init__(h5object, parent)
+        uic.loadUi(os.path.join(os.path.dirname(__file__), 'hdf5_info_renderer.ui'),self)
         self.parent = parent
         self.h5object = h5object
 
-        self.setupUi(self)
+
         self.lineEdit.setText(self.h5object.name)
         self.lineEdit2.setText(self.h5object.parent.name)
         self.lineEdit3.setText(self.h5object.file.filename)
@@ -113,14 +115,14 @@ class HDF5InfoRenderer(DataRenderer, hdf5_info_base, hdf5_info_widget):
 add_renderer(HDF5InfoRenderer)
 add_group_renderer(HDF5InfoRenderer)
 
-class ValueRenderer(DataRenderer, QtGui.QWidget):
+class ValueRenderer(DataRenderer, QtWidgets.QWidget):
     """A renderer returning the objects name type and shape if a dataset object"""
     def __init__(self, h5object, parent=None):
         super(ValueRenderer, self).__init__(h5object, parent)
         
         #our layout is simple - just a single QLabel
-        self.label = QtGui.QLabel()
-        layout = QtGui.QVBoxLayout(self)
+        self.label = QtWidgets.QLabel()
+        layout = QtWidgets.QVBoxLayout(self)
         layout.addWidget(self.label)
         self.setLayout(layout)
         
@@ -142,14 +144,14 @@ class ValueRenderer(DataRenderer, QtGui.QWidget):
 
 add_renderer(ValueRenderer)
 
-class TextRenderer(DataRenderer, QtGui.QWidget):
+class TextRenderer(DataRenderer, QtWidgets.QWidget):
     """A renderer returning the objects name type and shape if a dataset object"""
     def __init__(self, h5object, parent=None):
         super(TextRenderer, self).__init__(h5object, parent)
         
         #our layout is simple - just a single QLineEdit
-        self.label = QtGui.QLineEdit()
-        layout = QtGui.QFormLayout(self)
+        self.label = QtWidgets.QLineEdit()
+        layout = QtWidgets.QFormLayout(self)
         layout.addWidget(self.label)
         self.setLayout(layout)
         
@@ -166,25 +168,27 @@ class TextRenderer(DataRenderer, QtGui.QWidget):
 add_renderer(TextRenderer)
 add_group_renderer(TextRenderer)
 
-hdf5_attrs_base, hdf5_attrs_widget = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'hdf5_attrs_renderer.ui'))
-class AttrsRenderer(DataRenderer, hdf5_attrs_base, hdf5_attrs_widget):
+#hdf5_attrs_base, hdf5_attrs_widget = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'hdf5_attrs_renderer.ui'))
+#, hdf5_attrs_base, hdf5_attrs_widget
+class AttrsRenderer(DataRenderer, QtWidgets.QWidget):
     """ A renderer displaying a table with the Attributes of the HDF5 object selected"""
     
     def __init__(self, h5object, parent=None):
         super(AttrsRenderer, self).__init__(h5object)
+        uic.loadUi(os.path.join(os.path.join(os.path.dirname(__file__), 'hdf5_attrs_renderer.ui')),self)
+        
         self.h5object = h5object
-        self.setupUi(self)
         
         if type(h5object)==list:
-            item_info = QTableWidgetItem("Choose a single element to display its attributes!")
+            item_info = QtWidgets.QTableWidgetItem("Choose a single element to display its attributes!")
             self.tableWidget.setItem(0,0,item_info)
             self.tableWidget.resizeColumnsToContents()
         else:
             self.tableWidget.setRowCount(len(self.h5object.attrs))
             row = 0
             for key, value in sorted(h5object.attrs.iteritems()):
-                item_key = QTableWidgetItem(key)
-                item_value = QTableWidgetItem(str(value))
+                item_key = QtWidgets.QTableWidgetItem(key)
+                item_value = QtWidgets.QTableWidgetItem(str(value))
                 self.tableWidget.setItem(row,0,item_key)
                 self.tableWidget.setItem(row,1,item_value)
                 row = row + 1
@@ -209,7 +213,7 @@ class AttrsRenderer(DataRenderer, hdf5_attrs_base, hdf5_attrs_widget):
 add_renderer(AttrsRenderer)
 add_group_renderer(AttrsRenderer)
 
-class FigureRenderer(DataRenderer, QtGui.QWidget):
+class FigureRenderer(DataRenderer, QtWidgets.QWidget):
     """A renderer class which sets up a matplotlib figure for use 
     in more complicated renderers
     """
@@ -217,7 +221,7 @@ class FigureRenderer(DataRenderer, QtGui.QWidget):
         super(FigureRenderer, self).__init__(h5object, parent)
         self.fig = Figure()
 
-        layout = QtGui.QVBoxLayout(self)
+        layout = QtWidgets.QVBoxLayout(self)
         self.figureWidget = FigureCanvas(self.fig)
         layout.addWidget(self.figureWidget)
         self.setLayout(layout)
@@ -227,7 +231,7 @@ class FigureRenderer(DataRenderer, QtGui.QWidget):
     def display_data(self):
         self.fig.canvas.draw()
 
-class FigureRendererPG(DataRenderer, QtGui.QWidget):
+class FigureRendererPG(DataRenderer, QtWidgets.QWidget):
     """A renderer class which sets up a pyqtgraph for use 
     in more complicated renderers
     """
@@ -236,7 +240,7 @@ class FigureRendererPG(DataRenderer, QtGui.QWidget):
         pg.setConfigOption('background', 'w')
         pg.setConfigOption('foreground', 'k')
         self.figureWidget =  pg.PlotWidget(name='Plot1') 
-        self.layout = QtGui.QVBoxLayout(self)
+        self.layout = QtWidgets.QVBoxLayout(self)
         self.layout.addWidget(self.figureWidget)
         self.setLayout(self.layout)
 
@@ -343,7 +347,7 @@ class Scatter_plot1DPG(FigureRendererPG):
 
 add_renderer(Scatter_plot1DPG)
 
-class MultiSpectrum2D(DataRenderer, QtGui.QWidget):
+class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
     """ A renderer for large spectral datasets experessing them in a colour map using
     pyqt graph. Allowing the user to interact with the graph i.e. zooming into 
     selected region and changing the colour scheme through the use of a histogramLUT 
@@ -363,7 +367,7 @@ class MultiSpectrum2D(DataRenderer, QtGui.QWidget):
         super(MultiSpectrum2D, self).__init__(h5object, parent)
         pg.setConfigOption('background', 'w')
         pg.setConfigOption('foreground', 'k')
-        self.layout = QtGui.QGridLayout()
+        self.layout = QtWidgets.QGridLayout()
         self.setLayout(self.layout)
         self.layout.setSpacing(0)
 
@@ -512,7 +516,7 @@ class MultiSpectrum2D(DataRenderer, QtGui.QWidget):
 
 add_renderer(MultiSpectrum2D)
 
-class DataRenderer2or3DPG(DataRenderer, QtGui.QWidget):
+class DataRenderer2or3DPG(DataRenderer, QtWidgets.QWidget):
     """ A renderer for 2D datasets images experessing them in a colour map using
     pyqt graph. Allowing the user to interact with the graph i.e. zooming into 
     selected region and changing the colour scheme through the use of a histogramLUT 
@@ -523,7 +527,7 @@ class DataRenderer2or3DPG(DataRenderer, QtGui.QWidget):
         super(DataRenderer2or3DPG, self).__init__(h5object, parent)
         pg.setConfigOption('background', 'w')
         pg.setConfigOption('foreground', 'k')
-        self.layout = QtGui.QVBoxLayout()
+        self.layout = QtWidgets.QVBoxLayout()
         self.setLayout(self.layout)
         
 
@@ -736,7 +740,7 @@ class SpectrumRenderer(FigureRendererPG):
 add_renderer(SpectrumRenderer)    
 
 
-class HyperSpec(DataRenderer, QtGui.QWidget):
+class HyperSpec(DataRenderer, QtWidgets.QWidget):
     """ A renderer for large hyper spectral datasets experessing them in a colour map using
     pyqt graph. Allowing the user to interact with the graph i.e. zooming into 
     selected region and changing the colour scheme through the use of a histogramLUT 
@@ -750,7 +754,7 @@ class HyperSpec(DataRenderer, QtGui.QWidget):
         super(HyperSpec, self).__init__(h5object, parent)
         pg.setConfigOption('background', 'w')
         pg.setConfigOption('foreground', 'k')
-        self.layout = QtGui.QGridLayout()
+        self.layout = QtWidgets.QGridLayout()
         self.setLayout(self.layout)
         self.display_data()
 
@@ -854,7 +858,7 @@ class HyperSpec(DataRenderer, QtGui.QWidget):
 add_renderer(HyperSpec)
 
 
-class HyperSpec_Alan(DataRenderer, QtGui.QWidget):
+class HyperSpec_Alan(DataRenderer, QtWidgets.QWidget):
     """ A Renderer similar to HyperSpec however written to match Alan's style of 
     writting hyperspec images with the x,y and wavelengths being in different dataset within one group. 
     Currently only capable of displaying Hyperspec images from two spectromters in two dimensions.
@@ -866,7 +870,7 @@ class HyperSpec_Alan(DataRenderer, QtGui.QWidget):
         super(HyperSpec_Alan, self).__init__(h5object, parent)
         pg.setConfigOption('background', 'w')
         pg.setConfigOption('foreground', 'k')
-        self.layout = QtGui.QGridLayout()
+        self.layout = QtWidgets.QGridLayout()
         self.setLayout(self.layout)
         self.display_data()
 
@@ -956,7 +960,7 @@ class HyperSpec_Alan(DataRenderer, QtGui.QWidget):
 add_renderer(HyperSpec_Alan)
 
 
-class PumpProbeShifted(DataRenderer, QtGui.QWidget):
+class PumpProbeShifted(DataRenderer, QtWidgets.QWidget):
     ''' A renderer for Pump probe experiments, leaving the data un changed'''
     """ A renderer for 1D datasets experessing them in a line graph using
     pyqt graph. Allowing the user to interact with the graph i.e. zooming into 
@@ -966,7 +970,7 @@ class PumpProbeShifted(DataRenderer, QtGui.QWidget):
         super(PumpProbeShifted, self).__init__(h5object, parent)
         pg.setConfigOption('background', 'w')
         pg.setConfigOption('foreground', 'k')
-        self.layout = QtGui.QGridLayout()
+        self.layout = QtWidgets.QGridLayout()
         self.setLayout(self.layout)
         self.display_data()
         
@@ -1044,7 +1048,7 @@ class PumpProbeShifted(DataRenderer, QtGui.QWidget):
             
             
 add_renderer(PumpProbeShifted)
-class PumpProbeRaw(DataRenderer, QtGui.QWidget):
+class PumpProbeRaw(DataRenderer, QtWidgets.QWidget):
     ''' A renderer for Pump probe experiments, leaving the data un changed'''
     """ A renderer for 1D datasets experessing them in a line graph using
     pyqt graph. Allowing the user to interact with the graph i.e. zooming into 
@@ -1054,7 +1058,7 @@ class PumpProbeRaw(DataRenderer, QtGui.QWidget):
         super(PumpProbeRaw, self).__init__(h5object, parent)
         pg.setConfigOption('background', 'w')
         pg.setConfigOption('foreground', 'k')
-        self.layout = QtGui.QGridLayout()
+        self.layout = QtWidgets.QGridLayout()
         self.setLayout(self.layout)
         self.display_data()
         
@@ -1128,7 +1132,7 @@ class PumpProbeRaw(DataRenderer, QtGui.QWidget):
 add_renderer(PumpProbeRaw)
     
 
-class PumpProbeRawXOnly(DataRenderer, QtGui.QWidget):
+class PumpProbeRawXOnly(DataRenderer, QtWidgets.QWidget):
     ''' A renderer for Pump probe experiments, leaving the data un changed'''
     """ A renderer for 1D datasets experessing them in a line graph using
     pyqt graph. Allowing the user to interact with the graph i.e. zooming into 
@@ -1138,7 +1142,7 @@ class PumpProbeRawXOnly(DataRenderer, QtGui.QWidget):
         super(PumpProbeRawXOnly, self).__init__(h5object, parent)
         pg.setConfigOption('background', 'w')
         pg.setConfigOption('foreground', 'k')
-        self.layout = QtGui.QGridLayout()
+        self.layout = QtWidgets.QGridLayout()
         self.setLayout(self.layout)
         self.display_data()
         
@@ -1212,7 +1216,7 @@ class PumpProbeRawXOnly(DataRenderer, QtGui.QWidget):
 
 add_renderer(PumpProbeRawXOnly)
         
-class PumpProbeX_loops(DataRenderer, QtGui.QWidget):
+class PumpProbeX_loops(DataRenderer, QtWidgets.QWidget):
     ''' A renderer for Pump probe experiments, leaving the data un changed'''
     """ A renderer for 1D datasets experessing them in a line graph using
     pyqt graph. Allowing the user to interact with the graph i.e. zooming into 
@@ -1222,7 +1226,7 @@ class PumpProbeX_loops(DataRenderer, QtGui.QWidget):
         super(PumpProbeX_loops, self).__init__(h5object, parent)
         pg.setConfigOption('background', 'w')
         pg.setConfigOption('foreground', 'k')
-        self.layout = QtGui.QGridLayout()
+        self.layout = QtWidgets.QGridLayout()
         self.setLayout(self.layout)
         self.display_data()
         

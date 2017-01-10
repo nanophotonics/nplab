@@ -9,7 +9,7 @@ system to display the datasets.  See `nplab.ui.data_renderers` for that.
 __author__ = 'Alan Sanders, Will Deacon, Richard Bowman'
 
 import nplab
-from nplab.utils.gui import uic, QtGui, QtCore
+from nplab.utils.gui import QtCore, QtGui, QtWidgets, uic
 import matplotlib
 import numpy as np
 import h5py
@@ -28,7 +28,7 @@ import os
 
 # base, widget = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'hdf5_browser.ui'))
 
-class HDF5ItemViewer(QtGui.QWidget, UiTools):
+class HDF5ItemViewer(QtWidgets.QWidget, UiTools):
     """A Qt Widget for visualising one HDF5 element (group or dataset)."""
     def __init__(self, 
                  item=None, 
@@ -70,46 +70,46 @@ class HDF5ItemViewer(QtGui.QWidget, UiTools):
         super(HDF5ItemViewer, self).__init__(parent)
         
         if figure_widget is None: 
-            self.figure_widget = QtGui.QWidget()
+            self.figure_widget = QtWidgets.QWidget()
         else:
             self.figure_widget = figure_widget
             
         if renderer_combobox is None:       
-            self.renderer_combobox = QtGui.QComboBox()
+            self.renderer_combobox = QtWidgets.QComboBox()
         else:
             self.renderer_combobox = renderer_combobox
         self.renderer_combobox.activated[int].connect(self.renderer_selected)        
         
         if refresh_button is None:
-            self.refresh_button = QtGui.QPushButton()
+            self.refresh_button = QtWidgets.QPushButton()
             self.refresh_button.setText("Refresh Figure")
         else:
             self.refresh_button = refresh_button
         self.refresh_button.clicked.connect(self.refresh)
         
         if default_button is None:
-            self.default_button = QtGui.QPushButton()
+            self.default_button = QtWidgets.QPushButton()
             self.default_button.setText("Default Renderer")
         else:
             self.default_button = default_button
         self.default_button.clicked.connect(self.default_renderer)
         
         if copy_button is None:
-            self.copy_button = QtGui.QPushButton()
+            self.copy_button = QtWidgets.QPushButton()
             self.copy_button.setText("Copy Figure")
         else:
             self.copy_button = copy_button
         self.copy_button.clicked.connect(self.CopyActivated)
-        self.clipboard = QtGui.QApplication.clipboard()
+        self.clipboard = QtWidgets.QApplication.clipboard()
 
-        self.setLayout(QtGui.QVBoxLayout())
+        self.setLayout(QtWidgets.QVBoxLayout())
         self.layout().addWidget(self.figure_widget, stretch=1)
         self.layout().setContentsMargins(0,0,0,0)
         
         self.renderers = list()
         
         if show_controls: # this part may be broken
-            hb = QtGui.QHBoxLayout()
+            hb = QtWidgets.QHBoxLayout()
             hb.addWidget(self.renderer_combobox, stretch=1)
             if show_refresh:
                 hb.addWidget(self.refresh_button, stretch=0)
@@ -180,7 +180,7 @@ class HDF5ItemViewer(QtGui.QWidget, UiTools):
             self.renderer = RendererClass(self.data, self)
         except TypeError:
             # If the box is empty (e.g. it's just been cleared) use a blank widget
-            self.renderer = QtGui.QWidget()
+            self.renderer = QtWidgets.QWidget()
         
     def refresh(self):
         """Re-render the data, using the current renderer (if it is still appropriate)"""
@@ -440,11 +440,11 @@ class HDF5ItemModel(QtCore.QAbstractItemModel):
         treeview.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         treeview.customContextMenuRequested.connect(functools.partial(self.context_menu, treeview))
         # Allow multiple objects to be selected
-        treeview.setSelectionMode(QtGui.QAbstractItemView.ExtendedSelection)
+        treeview.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
 
     def context_menu(self, treeview, position):
         """Generate a right-click menu for the items"""
-        menu = QtGui.QMenu()
+        menu = QtWidgets.QMenu()
         actions = {}
 
         for operation in ['Refresh tree']:
@@ -456,7 +456,7 @@ class HDF5ItemModel(QtCore.QAbstractItemModel):
             self.refresh_tree()
 
 
-class HDF5TreeWidget(QtGui.QTreeView):
+class HDF5TreeWidget(QtWidgets.QTreeView):
     """A TreeView for looking at an HDF5 tree"""
     def __init__(self, datafile, **kwargs):
         """Create a TreeView widget that views the contents of an HDF5 tree.
@@ -467,7 +467,7 @@ class HDF5TreeWidget(QtGui.QTreeView):
 
         Additional keyword arguments are passed to the QTreeView constructor.
         You may want to include parent, for example."""
-        QtGui.QTreeView.__init__(self, **kwargs)
+        QtWidgets.QTreeView.__init__(self, **kwargs)
 
         self.model = HDF5ItemModel(datafile)
         self.model.set_up_treeview(self)
@@ -482,7 +482,7 @@ class HDF5TreeWidget(QtGui.QTreeView):
         del self.model # is this needed?  I'm never sure...
     
 
-class HDF5Browser(QtGui.QWidget, UiTools):
+class HDF5Browser(QtWidgets.QWidget, UiTools):
     """A Qt Widget for browsing an HDF5 file and graphing the data.
     """
 
@@ -497,21 +497,21 @@ class HDF5Browser(QtGui.QWidget, UiTools):
         self.viewer = HDF5ItemViewer(parent=self, 
                                      show_controls=True,
                                      )
-        self.refresh_tree_button = QtGui.QPushButton() #Create a refresh button
+        self.refresh_tree_button = QtWidgets.QPushButton() #Create a refresh button
         self.refresh_tree_button.setText("Refresh Tree")
         
         #adding the refresh button
-        self.treelayoutwidget = QtGui.QWidget()     #construct a widget which can then contain the refresh button and the tree
-        self.treelayoutwidget.setLayout(QtGui.QVBoxLayout())
+        self.treelayoutwidget = QtWidgets.QWidget()     #construct a widget which can then contain the refresh button and the tree
+        self.treelayoutwidget.setLayout(QtWidgets.QVBoxLayout())
         self.treelayoutwidget.layout().addWidget(self.treeWidget)
         self.treelayoutwidget.layout().addWidget(self.refresh_tree_button) 
         
         self.refresh_tree_button.clicked.connect(self.treeWidget.model.refresh_tree)
 
-        splitter = QtGui.QSplitter()
+        splitter = QtWidgets.QSplitter()
         splitter.addWidget(self.treelayoutwidget)       #Add newly constructed widget (treeview and button) to the splitter
         splitter.addWidget(self.viewer)
-        self.setLayout(QtGui.QHBoxLayout())
+        self.setLayout(QtWidgets.QHBoxLayout())
         self.layout().addWidget(splitter)
 
     def sizeHint(self):
@@ -562,7 +562,7 @@ if __name__ == '__main__':
 #    data_file.close()
 #    datafile = nplab.current_datafile() #datafile.DataFile("/Users/rwb27/Desktop/test.h5", mode="r")
  #   datafle.create_dataset()
-#    tree = QtGui.QTreeView()
+#    tree = QtWidgets.QTreeView()
 #    model = HDF5ItemModel(datafile)
 #    model.set_up_treeview(tree)
 #    tree.show()
