@@ -344,7 +344,7 @@ class DataFile(Group):
         """ Returns the path of the datafolder the current datafile is in"""
         return os.path.dirname(self.file.filename)
 
-def HDF5_filename_dialog(action="save", caption="Select Data File", exception_if_none=True):
+def HDF5_filename_dialog(action="save", caption="Select Data File"):
     """Pop up a file dialogue to get an HDF5 file name
 
     action : string (optional)
@@ -353,38 +353,32 @@ def HDF5_filename_dialog(action="save", caption="Select Data File", exception_if
         The title of the window.
     """
     assert action=="save" or action=="open", "The specified action must be 'save' or 'open'"
-    try:  # we try to pop up a Qt file dialog
-        # NB the GUI stuff is imported here to avoid accidentally loading it when datafile is loaded.
-        import nplab.utils.gui
-        from nplab.utils.gui import QtGui
-        from nplab.utils.gui import QtWidgets
-        app = nplab.utils.gui.get_qt_app()  # ensure Qt is running
-        dialog_function = QtWidgets.QFileDialog.getSaveFileName if action=="save" else \
-            QtWidgets.QFileDialog.getOpenFileName
-        fname = dialog_function(
-            caption=caption,
-            directory=os.path.join(os.getcwd(), datetime.date.today().strftime("%Y-%m-%d.h5")),
-            filter="HDF5 Data (*.h5 *.hdf5)",
-            options=QtWidgets.QFileDialog.DontConfirmOverwrite,
-        )
-        if not isinstance(fname, basestring):
-            fname = fname[0]  # work around version-dependent Qt behaviour :(
-        if len(fname) > 0:
-            print
-            fname
-            if not "." in fname:
-                fname += ".h5"
-            return fname
-        else:
-            print "Cancelled by the user."
-            if exception_if_none:
-                raise ValueError("The file dialogue was cancelled by the user - no file to return :(")
-            return None
-    except Exception as e:
-        print "File dialog went wrong :("
-        print e
+    # NB the GUI stuff is imported here to avoid accidentally loading it when datafile is loaded.
+    import nplab.utils.gui
+    from nplab.utils.gui import QtGui
+    from nplab.utils.gui import QtWidgets
+    app = nplab.utils.gui.get_qt_app()  # ensure Qt is running
+    dialog_function = QtWidgets.QFileDialog.getSaveFileName if action=="save" else \
+        QtWidgets.QFileDialog.getOpenFileName
+    fname = dialog_function(
+        caption=caption,
+        directory=os.path.join(os.getcwd(), datetime.date.today().strftime("%Y-%m-%d.h5")),
+        filter="HDF5 Data (*.h5 *.hdf5)",
+        options=QtWidgets.QFileDialog.DontConfirmOverwrite,
+    )
+    if not isinstance(fname, basestring):
+        fname = fname[0]  # work around version-dependent Qt behaviour :(
+    if len(fname) > 0:
+        print
+        fname
+        if not "." in fname:
+            fname += ".h5"
+        return fname
+    else:
+        print "Cancelled by the user."
         if exception_if_none:
-            raise e
+            raise ValueError("The file dialogue was cancelled by the user - no file to return :(")
+        return None
 
 def datafile_dialog(action="save", caption="Select Data File", mode='a', **kwargs):
     """Display a file dialog, and return a DataFile object.
@@ -426,29 +420,10 @@ def current(create_if_none=True, create_if_closed=True, mode='a'):
     if _current_datafile is None and create_if_none:
         print "No current data file, attempting to create..."
         try:  # we try to pop up a Qt file dialog
-            import nplab.utils.gui
-            from nplab.utils.gui import QtGui
-            from nplab.utils.gui import QtWidgets
-            app = nplab.utils.gui.get_qt_app()  # ensure Qt is running
-            fname = QtWidgets.QFileDialog.getSaveFileName(
-                caption="Select Data File",
-                directory=os.path.join(os.getcwd(), datetime.date.today().strftime("%Y-%m-%d.h5")),
-                filter="HDF5 Data (*.h5 *.hdf5)",
-                options=QtWidgets.QFileDialog.DontConfirmOverwrite,
-            )
-            if not isinstance(fname, basestring):
-                fname = fname[0]  # work around version-dependent Qt behaviour :(
-            if len(fname) > 0:
-                print fname
-                if not "." in fname:
-                    fname += ".h5"
-                set_current(fname, mode=mode)
-            #                if os.path.isfile(fname): #FIXME: dirty hack to work around mode=a not working
-            #                    set_current(fname,mode='r+')
-            #                else:
-            #                    set_current(fname,mode='w-') #create the datafile
-            else:
-                print "Cancelled by the user."
+            df = datafile_dialog(action="save", mode=mode)
+            set_current(df)
+        except ValueError:
+            print "current datafile is None, probably because the user cancelled :("
         except Exception as e:
             print "File dialog went wrong :("
             print e
@@ -487,24 +462,13 @@ def open_file(mode='a'):
     """Open an existing data file"""
     global _current_datafile
     try:  # we try to pop up a Qt file dialog
-        import nplab.utils.gui
-        from nplab.utils.gui import QtGui
-        app = nplab.utils.gui.get_qt_app()  # ensure Qt is running
-        fname = QtGui.QFileDialog.getOpenFileName(
-            caption="Select Existing Data File",
-            directory=os.path.join(os.getcwd()),
-            filter="HDF5 Data (*.h5 *.hdf5)",
-#            options=qtgui.QFileDialog.DontConfirmOverwrite,
-        )
-        if not isinstance(fname, basestring):
-            fname = fname[0]  # work around version-dependent Qt behaviour :(
-        if len(fname) > 0:
-            print fname
-            set_current(fname, mode=mode)
-        else:
-            print "Cancelled by the user."
-    except:
-            print "File dialog went wrong :("
+        df = datafile_dialog(action="open", mode=mode)
+        set_current(df)
+    except ValueError:
+        print
+        "current datafile is None, probably because the user cancelled :("
+    except Exception as e:
+        print "File dialog went wrong :("
 
     return _current_datafile  # if there is a file return it
 
