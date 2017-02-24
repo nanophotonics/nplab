@@ -344,8 +344,60 @@ class DataFile(Group):
         """ Returns the path of the datafolder the current datafile is in"""
         return os.path.dirname(self.file.filename)
 
-_current_datafile = None
+def HDF5_filename_dialog(action="save", caption="Select Data File", exception_if_none=True):
+    """Pop up a file dialogue to get an HDF5 file name
 
+    action : string (optional)
+        This should be either "save" or "open", and sets the text of the button in the dialogue.
+    caption : string (optional)
+        The title of the window.
+    """
+    assert action=="save" or action=="open", "The specified action must be 'save' or 'open'"
+    try:  # we try to pop up a Qt file dialog
+        # NB the GUI stuff is imported here to avoid accidentally loading it when datafile is loaded.
+        import nplab.utils.gui
+        from nplab.utils.gui import QtGui
+        from nplab.utils.gui import QtWidgets
+        app = nplab.utils.gui.get_qt_app()  # ensure Qt is running
+        dialog_function = QtWidgets.QFileDialog.getSaveFileName if action=="save" else \
+            QtWidgets.QFileDialog.getOpenFileName
+        fname = dialog_function(
+            caption=caption,
+            directory=os.path.join(os.getcwd(), datetime.date.today().strftime("%Y-%m-%d.h5")),
+            filter="HDF5 Data (*.h5 *.hdf5)",
+            options=QtWidgets.QFileDialog.DontConfirmOverwrite,
+        )
+        if not isinstance(fname, basestring):
+            fname = fname[0]  # work around version-dependent Qt behaviour :(
+        if len(fname) > 0:
+            print
+            fname
+            if not "." in fname:
+                fname += ".h5"
+            return fname
+        else:
+            print "Cancelled by the user."
+            if exception_if_none:
+                raise ValueError("The file dialogue was cancelled by the user - no file to return :(")
+            return None
+    except Exception as e:
+        print "File dialog went wrong :("
+        print e
+        if exception_if_none:
+            raise e
+
+def datafile_dialog(action="save", caption="Select Data File", mode='a', **kwargs):
+    """Display a file dialog, and return a DataFile object.
+
+    action should be 'save' or 'open', and mode sets the loaded file's mode.
+    An exception is raised if there is no file (e.g. if the user cancels)
+
+    Additional keyword args passed to DataFile constructor.
+    """
+    fname = HDF5_filename_dialog(action=action, caption=caption)
+    return DataFile(fname, mode=mode, **kwargs)
+
+_current_datafile = None
 
 def current(create_if_none=True, create_if_closed=True, mode='a'):
     """Return the current data file, creating one if it does not exist.
