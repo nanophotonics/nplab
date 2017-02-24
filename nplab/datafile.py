@@ -431,7 +431,7 @@ def close_current():
         except:
             print "Error closing the data file"
 
-def open_file():
+def open_file(mode='a'):
     """Open an existing data file"""
     global _current_datafile
     try:  # we try to pop up a Qt file dialog
@@ -448,7 +448,7 @@ def open_file():
             fname = fname[0]  # work around version-dependent Qt behaviour :(
         if len(fname) > 0:
             print fname
-            set_current(fname, mode='a')
+            set_current(fname, mode=mode)
         else:
             print "Cancelled by the user."
     except:
