@@ -193,17 +193,17 @@ class Group(h5py.Group, ShowGUIMixin):
         """Return a subgroup, creating it if it does not exist."""
         return Group(super(Group, self).require_group(name).id)  # wrap the returned group
 
-    def create_dataset(self, name, auto_increment=True, shape=None, dtype=None,
-                       data=None, attrs=None, timestamp=True, *args, **kwargs):
+    def create_dataset(self, name, shape=None, dtype=None,
+                       data=None, attrs=None, auto_increment=True, timestamp=True, *args, **kwargs):
         """Create a new dataset, optionally with an auto-incrementing name.
 
         :param name: the name of the new dataset
-        :param auto_increment: if True (default), add a number to the dataset name to
-            ensure it's unique.  To force the addition of a number, append %d to the dataset name.
         :param shape: a tuple describing the dimensions of the data (only needed if data is not specified)
         :param dtype: data type to be saved (if not specifying data)
         :param data: a numpy array or equivalent, to be saved - this specifies dtype and shape.
         :param attrs: a dictionary of metadata to be saved with the data
+        :param auto_increment: if True (default), add a number to the dataset name to
+            ensure it's unique.  To force the addition of a number, append %d to the dataset name.
         :param timestamp: if True (default), we save a "creation_timestamp" attribute with the current time.
 
         Further arguments are passed to h5py.Group.create_dataset.
@@ -221,7 +221,7 @@ class Group(h5py.Group, ShowGUIMixin):
 
     create_dataset.__doc__ += '\n\n'+h5py.Group.create_dataset.__doc__
 
-    def require_dataset(self, name, auto_increment=True, shape=None, dtype=None, data=None, attrs=None, timestamp=True,
+    def require_dataset(self, name, shape=None, dtype=None, data=None, attrs=None, auto_increment=True, timestamp=True,
                         *args, **kwargs):
         """Require a new dataset, optionally with an auto-incrementing name."""
         if name not in self:
@@ -231,13 +231,13 @@ class Group(h5py.Group, ShowGUIMixin):
             dset = self[name]
         return dset
 
-    def create_resizable_dataset(self, name, shape=(0,), maxshape=(None,), auto_increment=True, dtype=None, attrs=None, timestamp=True,
+    def create_resizable_dataset(self, name, shape=(0,), maxshape=(None,), dtype=None, auto_increment=True, attrs=None, timestamp=True,
                                  *args, **kwargs):
         """See create_dataset documentation"""
         return self.create_dataset(name, auto_increment, shape, dtype, attrs, timestamp,
                                    maxshape=maxshape, chunks=True, *args, **kwargs)
 
-    def require_resizable_dataset(self, name, shape=(0,), maxshape=(None,), auto_increment=True, dtype=None, attrs=None, timestamp=True,
+    def require_resizable_dataset(self, name, shape=(0,), maxshape=(None,), dtype=None, auto_increment=True, attrs=None, timestamp=True,
                                   *args, **kwargs):
         """Create a resizeable dataset, or return the dataset if it exists."""
         if name not in self:
