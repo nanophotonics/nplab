@@ -5,18 +5,12 @@ Created on Mon Mar 20 20:43:17 2017
 @author: Will
 """
 
-import serial
 import struct
-
-
-
-import nplab.instrument.serial_instrument as serial
-import nplab.instrument.stage as stage
-import re
-import numpy as np
-import time
 from collections import deque
 
+import serial
+
+import nplab.instrument.serial_instrument as serial
 
 class APT_VCP(serial.SerialInstrument):
     """
@@ -38,17 +32,18 @@ class APT_VCP(serial.SerialInstrument):
     channel_number_to_identity = {1 : 0x01, 2 : 0x02, 3 : 0x04, 4 : 0x08 } # Sets up the channel numbers to values
     state_conversion = {True : 0x01, False : 0x02} # Sets up the conversion from True and False values to 1's and 2's (godknows why they havnt used 0 and 1)
     reverse_state_conversion = {0x01 : True, 0x02 : False}
-    serial_num_to_device_types = {20 : ['Legacy Single channel stepper driver','BSC001'],
-                                25 : ['Legacy single channel mini stepper driver','BMS001'],
-                                30 : ['Legacy dual channel stepper driver','BSC002'],
-                                35 : ['Legacy dual channel mini stepper driver','BMS002'],
-                                40 : ['Single channel stepper driver','BSC101'],
-                                60 : ['OptoSTDriver(mini stepper driver)', 'OST001'],
-                                63 : ['OptoDCDriver (mini DC servo driver)','ODC001'],
-                                70 : ['Three channel card slot stepper driver', 'BSC103'],
-                                80 : ['Stepper Driver T-Cube','TST001'],
-                                73 : ['Brushless DC motherboard','BBD102/BBD103'],
-                                94 : ['Brushless DC motor card','BBD102/BBD103']}
+    serial_num_to_device_types = {0: ['Filter flipper', 'MFF002'],
+                                  20: ['Legacy Single channel stepper driver', 'BSC001'],
+                                  25: ['Legacy single channel mini stepper driver', 'BMS001'],
+                                  30: ['Legacy dual channel stepper driver', 'BSC002'],
+                                  35: ['Legacy dual channel mini stepper driver', 'BMS002'],
+                                  40: ['Single channel stepper driver', 'BSC101'],
+                                  60: ['OptoSTDriver(mini stepper driver)', 'OST001'],
+                                  63: ['OptoDCDriver (mini DC servo driver)', 'ODC001'],
+                                  70: ['Three channel card slot stepper driver', 'BSC103'],
+                                  80: ['Stepper Driver T-Cube', 'TST001'],
+                                  73: ['Brushless DC motherboard', 'BBD102/BBD103'],
+                                  94: ['Brushless DC motor card', 'BBD102/BBD103']}
     command_log = deque(maxlen = 20) #stores commands sent to the device
     def __init__(self, port=None,source =0x01,destination = None,verbosity = True, use_si_units = False):
         """
@@ -62,7 +57,13 @@ class APT_VCP(serial.SerialInstrument):
             self.destination = destination
         self.verbosity = verbosity
         self.verbose(self.get_hardware_info())
-        
+
+    @staticmethod
+    def unpack_binary_mask(value, size=13):
+        lst = [bool(value & (1 << size - i - 1)) for i in xrange(size)]
+        lst.reverse()
+        return lst
+
     def read(self):
         '''Overwrite the read command with a fixed length read, check 
             for aditional data stream and error codes'''
@@ -150,7 +151,7 @@ class APT_VCP(serial.SerialInstrument):
     def enable_updates(self,enable_state, update_rate = 10):
         '''Enable or disable hardware updates '''
         if enable_state==True:
-            self.write(0x0011,param1 = update_rate)
+            self.write(0x0011, param1=update_rate)
         if enable_state==False:
             self.write(0x0012)
 
@@ -158,7 +159,7 @@ class APT_VCP(serial.SerialInstrument):
         '''Manually get a status update '''
         message_dict = self.query(0x0005)
         serialnum, model, hwtype, swversion, notes, hwversion, modstate, nchans = struct.unpack('<I8sHI48s12xHHH', message_dict['data'])
-        hardware_dict = {'serial_number':serialnum, 'model' :model, 'hardware_type': hwtype, 
+        hardware_dict = {'serial_number':serialnum, 'model' :model, 'hardware_type': hwtype,
                        'software_version' : swversion, 'notes':notes,'hardware_version' : hwversion, 
                        'modstate' : modstate, 'number_of_channels' : nchans}
         self.serial_number = serialnum
