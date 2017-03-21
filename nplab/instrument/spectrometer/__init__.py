@@ -4,9 +4,11 @@ import numpy as np
 import numpy.ma as ma
 from nplab.utils.gui import QtCore, QtGui, QtWidgets, get_qt_app, uic
 
-
+from collections import deque
 
 from nplab.ui.ui_tools import UiTools
+from nplab.datafile import DataFile
+from nplab.utils.notified_property import NotifiedProperty, DumbNotifiedProperty, register_for_property_changes
 import h5py
 from multiprocessing.pool import ThreadPool
 
@@ -18,11 +20,17 @@ import datetime
 from nplab.instrument import Instrument
 import warnings
 import pyqtgraph as pg
+from weakref import WeakSet
+
 
 class Spectrometer(Instrument):
 
     metadata_property_names = ('model_name', 'serial_number', 'integration_time',
-                               'reference', 'background', 'wavelengths')
+                               'reference', 'background', 'wavelengths',
+                               'background_int', 'reference_int','variable_int_enabled',
+                               'background_gradient','background_constant')
+   
+    variable_int_enabled = DumbNotifiedProperty(True)
 
     def __init__(self):
         super(Spectrometer, self).__init__()
@@ -31,8 +39,15 @@ class Spectrometer(Instrument):
         self._wavelengths = None
         self.reference = None
         self.background = None
+        self.background_constant =None
+        self.background_gradient = None
+        self.background_int = None
+        self.reference_int = None
+      #  self.variable_int_enabled = DumbNotifiedProperty(False)
         self.latest_raw_spectrum = None
         self.latest_spectrum = None
+        self.averaging_enabled = False
+        self.spectra_deque = deque(maxlen = 5)
         self._config_file = None
 
     def __del__(self):
@@ -46,13 +61,13 @@ class Spectrometer(Instrument):
         if self._config_file is None:
             f = inspect.getfile(self.__class__)
             d = os.path.dirname(f)
-            self._config_file = h5py.File(os.path.join(d, 'config.h5'))
+            self._config_file = DataFile(h5py.File(os.path.join(d, 'config.h5')))
             self._config_file.attrs['date'] = datetime.datetime.now().strftime("%H:%M %d/%m/%y")
         return self._config_file
 
     config_file = property(open_config_file)
 
-    def update_config(self, name, data):
+    def update_config(self, name, data, attrs= None):
         """Update the configuration file for this spectrometer.
         
         A file is created in the nplab directory that holds configuration
@@ -60,7 +75,7 @@ class Spectrometer(Instrument):
         function allows values to be stored in that file."""
         f = self.config_file
         if name not in f:
-            f.create_dataset(name, data=data)
+            f.create_dataset(name, data=data ,attrs = attrs)
         else:
             dset = f[name]
             dset[:] = data
@@ -112,18 +127,35 @@ class Spectrometer(Instrument):
         return self.bundle_metadata(self.latest_raw_spectrum, enable=bundle_metadata)
 
     def read_background(self):
-        """Acquire a new spectrum and use it as a background measurement."""
-        self.background = self.read_spectrum()
+        """Acquire a new spectrum and use it as a background measurement.
+        This background should be less than 50% of the spectrometer saturation"""
+
+        background_1 = self.read_spectrum()
+        self.integration_time = 2.0*self.integration_time
+        background_2 = self.read_spectrum()
+        self.integration_time = self.integration_time/2.0
+        self.background_gradient = (background_2-background_1)/self.integration_time
+        self.background_constant = background_1-(self.integration_time*self.background_gradient)
+        self.background = background_1
+        self.background_int = self.integration_time
+        self.update_config('background_gradient', self.background_gradient)
+        self.update_config('background_constant', self.background_constant)
         self.update_config('background', self.background)
+        self.update_config('background_int', self.background_int)
 
     def clear_background(self):
         """Clear the current background reading."""
         self.background = None
+        self.background_gradient = None
+        self.background_constant = None
+        self.background_int = None
 
     def read_reference(self):
         """Acquire a new spectrum and use it as a reference."""
-        self.reference = self.read_spectrum()
+        self.reference = self.read_spectrum() 
+        self.reference_int = self.integration_time
         self.update_config('reference', self.reference)
+        self.update_config('reference_int',self.reference_int)
 
     def clear_reference(self):
         """Clear the current reference spectrum"""
@@ -145,11 +177,20 @@ class Spectrometer(Instrument):
         if self.background is not None:
             if self.reference is not None:
                 old_error_settings = np.seterr(all='ignore')
-                new_spectrum = (spectrum - self.background)/(self.reference - self.background)
+           #     new_spectrum = (spectrum - (self.background-np.min(self.background))*self.integration_time/self.background_int+np.min(self.background))/(((self.reference-np.min(self.background))*self.integration_time/self.reference_int - (self.background-np.min(self.background))*self.integration_time/self.background_int)+np.min(self.background))
+                if self.variable_int_enabled == True:
+                    new_spectrum = ((spectrum-(self.background_constant+self.background_gradient*self.integration_time))
+                                    /((self.reference-(self.background_constant+self.background_gradient*self.reference_int))*self.integration_time/self.reference_int))
+                else:
+                    new_spectrum = (spectrum-self.background)/(self.reference-self.background)
                 np.seterr(**old_error_settings)
                 new_spectrum[np.isinf(new_spectrum)] = np.NaN #if the reference is nearly 0, we get infinities - just make them all NaNs.
             else:
-                new_spectrum = spectrum - self.background
+                if self.variable_int_enabled == True:
+                    new_spectrum = spectrum-(self.background_constant+self.background_gradient*self.integration_time)
+                else:
+                    new_spectrum = spectrum-self.background
+                
         else:
             new_spectrum = spectrum
         return new_spectrum
@@ -159,7 +200,10 @@ class Spectrometer(Instrument):
         
         NB if saving data to file, it's best to save raw spectra along with metadata - this is a
         convenience method for display purposes."""
-        spectrum = self.read_spectrum()
+        if self.averaging_enabled == True:
+            spectrum = np.average(self.read_averaged_spectrum(fresh = True),axis=0)
+        else:
+            spectrum = self.read_spectrum()
         self.latest_spectrum = self.process_spectrum(spectrum)
         return self.latest_spectrum
 
@@ -178,17 +222,20 @@ class Spectrometer(Instrument):
             return ma.array(spectrum, mask=mask)
         else:
             return spectrum
-
+    _preview_widgets = WeakSet()
     def get_qt_ui(self, control_only=False,display_only = False):
         """Create a Qt interface for the spectrometer"""
         if control_only:
-            return SpectrometerControlUI(self)
+            
+            newwidget = SpectrometerControlUI(self)
+            self._preview_widgets.add(newwidget)
+            return newwidget
         elif display_only:
             return SpectrometerDisplayUI(self)
         else:
             return SpectrometerUI(self)
 
-    def save_spectrum(self, spectrum=None, attrs={}):
+    def save_spectrum(self, spectrum=None, attrs={}, new_deque = False):
         """Save a spectrum to the current datafile, creating if necessary.
         
         If no spectrum is passed in, a new spectrum is taken.  The convention
@@ -196,17 +243,33 @@ class Spectrometer(Instrument):
         later processing.
         
         The attrs dictionary allows extra metadata to be saved in the HDF5 file."""
-        spectrum = self.read_spectrum() if spectrum is None else spectrum
+        if self.averaging_enabled == True:
+            spectrum = self.read_averaged_spectrum(new_deque = new_deque)
+        else:
+            spectrum = self.read_spectrum() if spectrum is None else spectrum
         metadata = self.metadata
         metadata.update(attrs) #allow extra metadata to be passed in
         self.create_dataset("spectrum", data=spectrum, attrs=metadata) 
         #save data in the default place (see nplab.instrument.Instrument)
-
+    def read_averaged_spectrum(self,new_deque = False,fresh = False):
+            if fresh == True:
+                self.spectra_deque.append(self.read_spectrum())
+            if new_deque == True:
+                self.spectra_deque.clear()
+            while len(self.spectra_deque) < self.spectra_deque.maxlen:
+                self.spectra_deque.append(self.read_spectrum())
+            return self.spectra_deque
+        
     def save_reference_to_file(self):
         pass
 
     def load_reference_from_file(self):
         pass
+    
+#    def read_averaged_spectrum(self):
+ #       averaged_data = []
+  #      for spectrum_num in range(self.number_averages):
+            
 
 
 class Spectrometers(Instrument):
@@ -301,6 +364,21 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
 
         self.background_subtracted.stateChanged.connect(self.state_changed)
         self.referenced.stateChanged.connect(self.state_changed)
+        
+        register_for_property_changes(self.spectrometer,'variable_int_enabled',self.variable_int_state_change)
+#        if self.spectrometer.variable_int_enabled:
+#                self.background_subtracted.blockSignals(True)
+#                self.background_subtracted.setCheckState(QtCore.Qt.Checked)
+#                self.background_subtracted.blockSignals(False)
+        self.Variable_int.stateChanged.connect(self.state_changed)
+        
+#                if self.spectrometer.variable_int_enabled:
+#                self.background_subtracted.blockSignals(True)
+#                self.background_subtracted.setCheckState(QtCore.Qt.Checked)
+#                self.background_subtracted.blockSignals(False)
+        self.average_checkBox.stateChanged.connect(self.state_changed)
+        
+
 
         self.id_string.setText('{0} {1}'.format(self.spectrometer.model_name, self.spectrometer.serial_number))
         self.id_string.resize(self.id_string.sizeHint())
@@ -321,7 +399,7 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
             self.spectrometer.read_background()
             self.background_subtracted.blockSignals(True)
             self.background_subtracted.setCheckState(QtCore.Qt.Checked)
-            self.background_subtracted.blockSignals(False)
+            self.background_subtracted.blockSignals(False)            
         elif sender is self.clear_background_button:
             self.spectrometer.clear_background()
             self.background_subtracted.blockSignals(True)
@@ -339,7 +417,14 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
             self.referenced.blockSignals(False)
         elif sender is self.load_state_button:
             if 'background' in self.spectrometer.config_file:
-                self.spectrometer.background = self.spectrometer.config_file['background'][:]
+                self.spectrometer.background = self.spectrometer.config_file['background'][:] #load the background
+                if 'background_constant' in self.spectrometer.config_file:
+                    self.spectrometer.background_constant = self.spectrometer.config_file['background_constant'][:]
+                if 'background_gradient' in self.spectrometer.config_file:
+                    self.spectrometer.background_gradient = self.spectrometer.config_file['background_gradient'][:]
+                if 'background_int' in self.spectrometer.config_file:
+                    self.spectrometer.background_int = self.spectrometer.config_file['background_constant'][...]
+                    
                 self.background_subtracted.blockSignals(True)
                 self.background_subtracted.setCheckState(QtCore.Qt.Checked)
                 self.background_subtracted.blockSignals(False)
@@ -347,11 +432,14 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
                 print 'background not found in config file'
             if 'reference' in self.spectrometer.config_file:
                 self.spectrometer.reference = self.spectrometer.config_file['reference'][:]
+                if 'reference_int' in self.spectrometer.config_file:
+                    self.spectrometer.reference_int = self.spectrometer.config_file['reference_int'][...]
                 self.referenced.blockSignals(True)
                 self.referenced.setCheckState(QtCore.Qt.Checked)
                 self.referenced.blockSignals(False)
             else:
                 print 'reference not found in config file'
+                
 
     def state_changed(self, state):
         sender = self.sender()
@@ -363,6 +451,18 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
             self.spectrometer.read_reference()
         elif sender is self.referenced and state == QtCore.Qt.Unchecked:
             self.spectrometer.clear_reference()
+            
+        elif sender is self.Variable_int:
+            self.spectrometer.variable_int_enabled = not self.spectrometer.variable_int_enabled
+            
+        elif sender is self.average_checkBox:
+            self.spectrometer.averaging_enabled = not self.spectrometer.averaging_enabled
+        
+    def variable_int_state_change(self):
+        if self.spectrometer.variable_int_enabled == True:
+            self.Variable_int.setCheckState(QtCore.Qt.Checked)
+        if self.spectrometer.variable_int_enabled == False:
+            self.Variable_int.setCheckState(QtCore.Qt.Unchecked)
 
 
 class DisplayThread(QtCore.QThread):
@@ -396,11 +496,11 @@ class DisplayThread(QtCore.QThread):
 
 
 class SpectrometerDisplayUI(QtWidgets.QWidget,UiTools):
-    def __init__(self, spectrometer, parent=None):
+    def __init__(self, spectrometer,ui_file = os.path.join(os.path.dirname(__file__),'spectrometer_view.ui'), parent=None):
         assert isinstance(spectrometer, Spectrometer) or isinstance(spectrometer, Spectrometers),\
             "instrument must be a Spectrometer or an instance of Spectrometers"
         super(SpectrometerDisplayUI, self).__init__()
-        uic.loadUi(os.path.join(os.path.dirname(__file__),'spectrometer_view.ui'), self)
+        uic.loadUi(ui_file, self)
         if isinstance(spectrometer, Spectrometers) and spectrometer.num_spectrometers == 1:
             spectrometer = spectrometer.spectrometers[0]
         if isinstance(spectrometer,Spectrometer):
@@ -580,14 +680,15 @@ class DummySpectrometer(Spectrometer):
     def read_spectrum(self, bundle_metadata=False):
         from time import sleep
         sleep(self.integration_time/1000.)
-        return self.bundle_metadata(np.array([np.random.random() for wl in self.wavelengths]),
+        return self.bundle_metadata(np.array([np.random.random() for wl in self.wavelengths])*self.integration_time/1000.0,
                                     enable=bundle_metadata)
 
 
 if __name__ == '__main__':
     import sys
     from nplab.utils.gui import get_qt_app
-#    s1 = DummySpectrometer()
+    s1 = DummySpectrometer()
+    s1.show_gui(blocking = False)
 #    s2 = DummySpectrometer()
 #    s3 = DummySpectrometer()
 #    s4 = DummySpectrometer()

@@ -21,9 +21,18 @@
   </property>
   <layout class="QVBoxLayout" name="layout">
    <property name="spacing">
-    <number>-1</number>
+    <number>4</number>
    </property>
-   <property name="margin">
+   <property name="leftMargin">
+    <number>5</number>
+   </property>
+   <property name="topMargin">
+    <number>5</number>
+   </property>
+   <property name="rightMargin">
+    <number>5</number>
+   </property>
+   <property name="bottomMargin">
     <number>5</number>
    </property>
    <item>
@@ -82,10 +91,10 @@
            <enum>QFormLayout::FieldsStayAtSizeHint</enum>
           </property>
           <property name="horizontalSpacing">
-           <number>-1</number>
+           <number>4</number>
           </property>
           <property name="verticalSpacing">
-           <number>-1</number>
+           <number>4</number>
           </property>
           <item row="0" column="0">
            <widget class="QLabel" name="integration_time_label">
@@ -130,7 +139,7 @@
       <item>
        <layout class="QGridLayout" name="referencing">
         <property name="horizontalSpacing">
-         <number>-1</number>
+         <number>4</number>
         </property>
         <property name="verticalSpacing">
          <number>0</number>
@@ -232,6 +241,31 @@
            <string>Load State</string>
           </property>
          </widget>
+        </item>
+        <item row="3" column="1">
+         <widget class="QCheckBox" name="Variable_int">
+          <property name="text">
+           <string>Variable int</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="3">
+         <layout class="QHBoxLayout" name="averaging_horizontalLayout">
+          <item>
+           <widget class="QCheckBox" name="average_checkBox">
+            <property name="text">
+             <string>Averaging</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSpinBox" name="averaging_spinBox">
+            <property name="minimum">
+             <number>1</number>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </item>
        </layout>
       </item>

@@ -375,7 +375,7 @@ def current(create_if_none=True, create_if_closed=True, mode='a'):
         print "No current data file, attempting to create..."
         try:  # we try to pop up a Qt file dialog
             import nplab.utils.gui
-            from nplab.utils.gui import qtgui
+            from nplab.utils.gui import QtGui
             from nplab.utils.gui import QtWidgets
             app = nplab.utils.gui.get_qt_app()  # ensure Qt is running
             fname = QtWidgets.QFileDialog.getSaveFileName(
@@ -436,9 +436,9 @@ def open_file():
     global _current_datafile
     try:  # we try to pop up a Qt file dialog
         import nplab.utils.gui
-        from nplab.utils.gui import qtgui
+        from nplab.utils.gui import QtGui
         app = nplab.utils.gui.get_qt_app()  # ensure Qt is running
-        fname = qtgui.QFileDialog.getOpenFileName(
+        fname = QtGui.QFileDialog.getOpenFileName(
             caption="Select Existing Data File",
             directory=os.path.join(os.getcwd()),
             filter="HDF5 Data (*.h5 *.hdf5)",
