@@ -13,11 +13,11 @@ import time
 from collections import deque
 import re
 
-import nplab.instrument.serial_instrument as serial
+import nplab.instrument.serial_instrument as serial_instrument
 import nplab.instrument.stage as stage
 
 
-def detect_APT_VCP_devices(self):
+def detect_APT_VCP_devices():
     """Function to tell you what devices are connected to what comports """
     possible_destinations = [0x50,0x11,0x21,0x22,0x23,0x24,0x25,0x26,0x27,0x28,0x29,0x2A]
     device_dict = dict()
@@ -38,7 +38,7 @@ def detect_APT_VCP_devices(self):
 
     
 
-class APT_VCP(serial.SerialInstrument):
+class APT_VCP(serial_instrument.SerialInstrument):
     """
     This class handles all the basic communication with APT virtual com ports
     """
@@ -74,7 +74,7 @@ class APT_VCP(serial.SerialInstrument):
         """
         Set up the serial port, setting source and destinations, verbosity and hardware info.
         """
-        serial.SerialInstrument.__init__(self, port=port) #this opens the port
+        serial_instrument.SerialInstrument.__init__(self, port=port) #this opens the port
         self.source = source
         if destination == None:
             print 'destination has not been set!'
