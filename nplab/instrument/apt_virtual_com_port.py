@@ -20,7 +20,7 @@ from collections import deque
 
 class APT_VCP(serial.SerialInstrument):
     """
-    This class handles the Prior stage.
+    This class handles all the basic communication with APT virtual com ports
     """
     port_settings = dict(baudrate = 115200,
                           bytesize=8,
@@ -52,7 +52,7 @@ class APT_VCP(serial.SerialInstrument):
     command_log = deque(maxlen = 20) #stores commands sent to the device
     def __init__(self, port=None,source =0x01,destination = None,verbosity = True, use_si_units = False):
         """
-        Set up the serial port and so on.
+        Set up the serial port, setting source and destinations, verbosity and hardware info.
         """
         serial.SerialInstrument.__init__(self, port=port) #this opens the port
         self.source = source
