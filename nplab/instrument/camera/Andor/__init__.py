@@ -1,15 +1,16 @@
-import nplab.utils.gui
+# import nplab.utils.gui
 from nplab.utils.gui import QtWidgets, QtCore, uic
 from nplab.instrument.camera import Camera
 from nplab.utils.thread_utils import background_action, locked_action
 
 import os
 import platform
-import sys
 import time
 from ctypes import *
 import numpy as np
-from PIL import Image
+import logging
+import pyqtgraph
+from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 
 
 class AndorCapabilities(Structure):
@@ -90,8 +91,7 @@ class AndorBase:
             Image=dict(Set=dict(cmdName='SetImage', Inputs=(c_int,) * 6), value=None),
             NAccum=dict(Set=dict(cmdName='SetNumberAccumulations', Inputs=(c_int,)), value=1),
             NKin=dict(Set=dict(cmdName='SetNumberKinetics', Inputs=(c_int,)), value=1),
-            FastKinetics=dict(Set=dict(cmdName='SetFastKineticsEx', Inputs=(c_int, c_int, c_float,) + (c_int,) * 4),
-                              value=None),
+            FastKinetics=dict(Set=dict(cmdName='SetFastKineticsEx', Inputs=(c_int, c_int, c_float,) + (c_int,) * 4)),
             EMGain=dict(Set=dict(cmdName='SetEMCCDGain', Inputs=(c_int,)),
                         Get=dict(cmdName='GetEMCCDGain', Outputs=(c_int,)), value=None),
             EMAdvancedGain=dict(Set=dict(cmdName='SetEMAdvanced', Inputs=(c_int,)), value=None),
@@ -556,17 +556,12 @@ class AndorBase:
 class Andor(Camera, AndorBase):
     metadata_property_names = ('Exposure', 'AcquisitionMode', 'TriggerMode')
 
-    # def get_metadata(self, name):
-    #     return self.GetParameter(name)
-    #
-    # def set_metadata(self, name, value):
-    #     return self.SetParameter(name, value)
-
     def __init__(self, **kwargs):
-        # Camera.__init__(self)
         AndorBase.__init__(self)
         Camera.__init__(self)
-        # super(Andor, self).__init__()
+
+        logging.basicConfig()
+        self._logger = logging.getLogger('Andor')
 
         # self.wvl_to_pxl = kwargs['wvl_to_pxl']
         # self.magnification = kwargs['magnification']
@@ -576,9 +571,7 @@ class Andor(Camera, AndorBase):
         self.BGImage = None
         self.SubtractBG = None
 
-        # self.acquiring = False
         self.isAborted = False
-        # self.pause = False
 
     '''Used functions'''
 
@@ -598,7 +591,7 @@ class Andor(Camera, AndorBase):
             else:
                 self.CurImage = np.reshape(self.imageArray, (num_of_images,) + image_shape)
 
-            return self.CurImage[0], 1
+            # return self.CurImage[0], 1
         except Exception as e:
             self._logger.warn("Couldn't Capture because %s" % e)
 
@@ -625,38 +618,6 @@ class Andor(Camera, AndorBase):
 
     '''Not-used functions'''
 
-    # def SaveAsBmp(self, path):
-    #     im = Image.new("RGB", (self.parameters['DetectorShape'][0], self.parameters['DetectorShape'][1]), "white")
-    #     pix = im.load()
-    #
-    #     for i in range(len(self.imageArray)):
-    #         (row, col) = divmod(i, self.parameters['DetectorShape'][0])
-    #         picvalue = int(round(self.imageArray[i] * 255.0 / 65535))
-    #         pix[col, row] = (picvalue, picvalue, picvalue)
-    #
-    #     im.save(path, "BMP")
-    #
-    # def SaveAsTxt(self, path):
-    #     file = open(path, 'w')
-    #
-    #     for line in self.imageArray:
-    #         file.write("%g\n" % line)
-    #
-    #     file.close()
-    #
-    # def SaveAsBmpNormalised(self, path):
-    #     im = Image.new("RGB", (self.parameters['DetectorShape'][0], self.parameters['DetectorShape'][1]), "white")
-    #     pix = im.load()
-    #
-    #     maxIntensity = max(self.imageArray)
-    #
-    #     for i in range(len(self.imageArray)):
-    #         (row, col) = divmod(i, self.parameters['DetectorShape'][0])
-    #         picvalue = int(round(self.imageArray[i] * 255.0 / maxIntensity))
-    #         pix[col, row] = (picvalue, picvalue, picvalue)
-    #
-    #     im.save(path, "BMP")
-    #
     # def SaveAsFITS(self, filename, type):
     #     error = self.dll.SaveAsFITS(filename, type)
     #     self.verbose(ERROR_CODE[error], sys._getframe().f_code.co_name)
@@ -745,6 +706,8 @@ class AndorUI(QtWidgets.QWidget):
     def AcquisitionModeChanged(self):
         available_modes = ['Single', 'Accumulate', 'Kinetic', 'Fast Kinetic']
         currentMode = self.comboBoxAcqMode.currentText()
+        if currentMode == 'Fast Kinetic':
+            self.NumRowsChanged()
         self.Andor.SetParameter('AcquisitionMode', available_modes.index(currentMode) + 1)
 
     def ReadModeChanged(self):
@@ -812,7 +775,6 @@ class AndorUI(QtWidgets.QWidget):
         gain = self.spinBoxEMGain.value()
         self.Andor.SetParameter('EMGain', gain)
 
-    # @locked_action
     def IsolatedCrop(self):
         if self.DisplayWidget is None:
             return
@@ -835,7 +797,6 @@ class AndorUI(QtWidgets.QWidget):
                 self.Andor.SetParameter('IsolatedCropMode', 0, maxy, minx, current_binning, current_binning)
                 self.Andor.SetImage()
 
-    # @locked_action
     def ROI(self):
         if self.DisplayWidget is None:
             return
@@ -900,29 +861,30 @@ class AndorUI(QtWidgets.QWidget):
 
     def updateImage(self):
         if self.DisplayWidget is None:
-            from Experiments import maingui
-            self.DisplayWidget = maingui.DisplayWidget()
+            self.DisplayWidget = DisplayWidget()
         if self.DisplayWidget.isHidden():
             self.DisplayWidget.show()
 
+        offset = ((self.Andor.parameters['DetectorShape']['value'][0] - self.Andor.parameters['Image']['value'][3]),
+                  self.Andor.parameters['Image']['value'][4] - 1)
+        if self.Andor.parameters['IsolatedCropMode']['value'][0]:
+            scale = self.Andor.parameters['IsolatedCropMode']['value'][-2:]
+        else:
+            scale = self.Andor.parameters['Image']['value'][:2]
+
         if len(self.Andor.CurImage.shape) == 2:
-            self.DisplayWidget.splitter.setSizes([0, 1])
             if self.Andor.CurImage.shape[0] > self.DisplayWidget._max_num_line_plots:
-                self.Andor._logger.warn('Trying to display too many lines')
-                number = self.DisplayWidget._max_num_line_plots
+                self.DisplayWidget.splitter.setSizes([1, 0])
+                self.DisplayWidget.ImageDisplay.setImage(self.Andor.CurImage.transpose(), pos=offset, autoRange=False,
+                                                         scale=scale)
             else:
-                number = self.Andor.CurImage.shape[0]
-            for ii in range(number):
-                self.DisplayWidget.plot[ii].setData(self.Andor.CurImage[ii])
+                self.DisplayWidget.splitter.setSizes([0, 1])
+                for ii in range(self.Andor.CurImage.shape[0]):
+                    self.DisplayWidget.plot[ii].setData(self.Andor.CurImage[ii])
         else:
             self.DisplayWidget.splitter.setSizes([1, 0])
             image = np.transpose(self.Andor.CurImage, (0, 2, 1))
-            offset = ((self.Andor.parameters['DetectorShape']['value'][0] - self.Andor.parameters['Image']['value'][3]),
-                      self.Andor.parameters['Image']['value'][4] - 1)
-            if self.Andor.parameters['IsolatedCropMode']['value'][0]:
-                scale = self.Andor.parameters['IsolatedCropMode']['value'][-2:]
-            else:
-                scale = self.Andor.parameters['Image']['value'][:2]
+
             if image.shape[0] == 1:
                 image = image[0]
                 self.DisplayWidget.ImageDisplay.setImage(image,
@@ -935,6 +897,85 @@ class AndorUI(QtWidgets.QWidget):
                                                          scale=scale)
         self.emit(self.ImageUpdated, 'Andor')
 
+class DisplayWidget(QtWidgets.QWidget):
+    _max_num_line_plots = 4
+
+    def __init__(self):
+        QtWidgets.QWidget.__init__(self)
+
+        uic.loadUi(os.path.join(os.path.dirname(__file__), 'CameraDefaultDisplay.ui'), self)
+
+        self.ImageDisplay.getHistogramWidget().gradient.restoreState(Gradients.values()[1])
+        self.plot = ()
+        for ii in range(self._max_num_line_plots):
+            self.plot += (self.LineDisplay.plot(pen=pyqtgraph.intColor(ii, self._max_num_line_plots)),)
+        # self.plot1 = self.LineDisplay.plot(pen='y')
+        # self.plot2 = self.LineDisplay.plot(pen='g')
+        # self.plot3 = self.LineDisplay.plot(pen='b')
+        # self.plot4 = self.LineDisplay.plot(pen='w')
+
+        self.CrossHair1 = Crosshair('r')
+        self.CrossHair2 = Crosshair('g')
+        self.ImageDisplay.getView().addItem(self.CrossHair1)
+        self.ImageDisplay.getView().addItem(self.CrossHair2)
+
+        self.LineDisplay.showGrid(x=True, y=True)
+
+        self.connect(self.CrossHair1, self.CrossHair1.CrossHairMoved, self.mouseMoved)
+        self.connect(self.CrossHair2, self.CrossHair2.CrossHairMoved, self.mouseMoved)
+
+        self.unit = 'pxl'
+        self.splitter.setSizes([1, 0])
+
+    def pxl_to_unit(self, pxl):
+        return pxl
+
+    def mouseMoved(self):
+        x1 = self.CrossHair1.pos()[0]
+        y1 = self.CrossHair1.pos()[1]
+        x2 = self.CrossHair2.pos()[0]
+        y2 = self.CrossHair2.pos()[1]
+
+        xu1, yu1 = self.pxl_to_unit((x1, y1))
+        xu2, yu2 = self.pxl_to_unit((x2, y2))
+
+        self.labelCrossHairPositions.setText(
+            "<span style='color: red'>Pixel: [%i,%i]px Unit: (%g, %g)%s</span>, " \
+            "<span style='color: green'> Pixel: [%i,%i]px Unit: (%g, %g)%s</span>, " \
+            "Delta pixel: [%i,%i]px Delta Unit: (%g, %g)%s"
+            % (x1, y1, xu1, yu1, self.unit, x2, y2, xu2, yu2, self.unit, abs(x1-x2), abs(y1-y2), abs(xu1-xu2), abs(yu1-yu2), self.unit))
+
+class Crosshair(pyqtgraph.GraphicsObject):
+    def __init__(self, color):
+        super(Crosshair, self).__init__()
+        self.color = color
+        self.CrossHairMoved = QtCore.SIGNAL('CrossHairMoved')
+        self.Released = QtCore.SIGNAL('CrossHairReleased')
+
+    def paint(self, p, *args):
+        p.setPen(pyqtgraph.mkPen(self.color))
+        p.drawLine(-2, 0, 2, 0)
+        p.drawLine(0, -2, 0, 2)
+
+    def boundingRect(self):
+        return QtCore.QRectF(-2, -2, 4, 4)
+
+    def mouseDragEvent(self, ev):
+        ev.accept()
+        if ev.isStart():
+            self.startPos = self.pos()
+        elif ev.isFinish():
+            self.setPos(*map(int, self.pos()))
+        else:
+            self.setPos(self.startPos + ev.pos() - ev.buttonDownPos())
+
+        self.emit(self.CrossHairMoved)
+
+    # def mouseReleaseEvent(self, ev):
+    #     print 'CrossHair released'
+    #     ev.accept()
+    #     self.setPos(map(int, self.pos()))
+    #     self.emit(self.Released)
 
 class CaptureThread(QtCore.QThread):
     def __init__(self, andor, live=False):
@@ -971,7 +1012,7 @@ class CaptureThread(QtCore.QThread):
             for ii in range(1, self.Andor.parameters['NKin']['value']):
                 if self.Andor.isAborted:
                     break
-                self.Andor.Capture()
+                self.Andor.raw_snapshot()
                 final_array[ii] = self.Andor.CurImage[0]
             self.Andor.CurImage = final_array
 
@@ -1055,7 +1096,8 @@ ERROR_CODE = {
 def test_all():
     import matplotlib.pyplot as plt
     andor = Andor() #wvl_to_pxl=32.5 / 1600, magnification=30, pxl_size=16)
-    print andor
+    # andor._logger.setLevel('DEBUG')
+
     andor.show_gui(True)
     # params = andor.GetAllParameters()
     # andor.SetAllParameters(params)
