@@ -6,17 +6,37 @@ Created on Mon Mar 20 20:43:17 2017
 """
 
 import serial
+import serial.tools.list_ports as list_ports
 import struct
-
-
-
-import nplab.instrument.serial_instrument as serial
-import nplab.instrument.stage as stage
-import re
 import numpy as np
 import time
 from collections import deque
+import re
 
+import nplab.instrument.serial_instrument as serial
+import nplab.instrument.stage as stage
+
+
+def detect_APT_VCP_devices(self):
+    """Function to tell you what devices are connected to what comports """
+    possible_destinations = [0x50,0x11,0x21,0x22,0x23,0x24,0x25,0x26,0x27,0x28,0x29,0x2A]
+    device_dict = dict()
+    for port_name, _, _ in list_ports.comports(): #loop through serial ports, apparently 256 is the limit?!
+            
+            print "Trying port",port_name
+            try:
+                for destination in possible_destinations:
+                    try:
+                        test_device = APT_VCP(port_name,destination = destination)
+                        device_dict[port_name: {'destination':destination ,'Serial Number' : test_device.serial_number, 'Model' : test_device.model}]
+                        break
+                    except struct.error:
+                        pass
+            except serial.serialutil.SerialException:
+                pass
+    return device_dict
+
+    
 
 class APT_VCP(serial.SerialInstrument):
     """
