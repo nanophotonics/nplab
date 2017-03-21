@@ -1,20 +1,37 @@
 from nplab.instrument.Flipper import Flipper
 import struct
 import numpy as np
+import time
+from nplab.utils.thread_utils import locked_action, background_action
 
 class ThorlabsMFF(Flipper):
     def __init__(self, port):
         Flipper.__init__(self, port)
 
+    @background_action
+    @locked_action
     def set_state(self, value):
         if value:
             self.write(0x046A, param1=0x01, param2=0x01)
+            time.sleep(0.1)
+            t0 = time.time()
+            while self.get_status() != 1:
+                time.sleep(0.1)
+                if time.time() - t0 > self.port_settings['timeout']:
+                    raise RuntimeError('Timed out while waiting for position change')
         else:
             self.write(0x046A, param1=0x01, param2=0x02)
+            time.sleep(0.1)
+            t0 = time.time()
+            while self.get_status() != 0:
+                time.sleep(0.1)
+                if time.time() - t0 > self.port_settings['timeout']:
+                    raise RuntimeError('Timed out while waiting for position change')
 
     def get_status(self):
         self.write(0x0429, param1=0x01)
-        msg = self.read()['data']
+        read = self.read()
+        msg = read['data']
         unpacked = self.unpack_binary_mask(struct.unpack('<HI', msg)[1])
         if np.sum(unpacked) != 1:
             return 'Fuck'
@@ -35,12 +52,13 @@ if __name__ == '__main__':
     flipper.get_status()
     # print flipper.model
     flipper.set_state(0)
-    time.sleep(10)
-    print flipper.get_status()
     time.sleep(2)
-    flipper.set_state(1)
-    time.sleep(10)
     print flipper.get_status()
+    #time.sleep(2)
+    flipper.set_state(1)
+    time.sleep(2)
+    print flipper.get_status()
+
     # print flipper.state
     # flipper.state = 0
     # print flipper.state
