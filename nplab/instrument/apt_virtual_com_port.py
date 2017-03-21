@@ -5,14 +5,39 @@ Created on Mon Mar 20 20:43:17 2017
 @author: Will
 """
 
-import struct
-from collections import deque
-
 import serial
+import serial.tools.list_ports as list_ports
+import struct
+import numpy as np
+import time
+from collections import deque
+import re
 
-import nplab.instrument.serial_instrument as serial
+import nplab.instrument.serial_instrument as serial_instrument
+import nplab.instrument.stage as stage
 
-class APT_VCP(serial.SerialInstrument):
+
+def detect_APT_VCP_devices():
+    """Function to tell you what devices are connected to what comports """
+    possible_destinations = [0x50,0x11,0x21,0x22,0x23,0x24,0x25,0x26,0x27,0x28,0x29,0x2A]
+    device_dict = dict()
+    for port_name, _, _ in list_ports.comports(): #loop through serial ports, apparently 256 is the limit?!
+            
+            print "Trying port",port_name
+            try:
+                for destination in possible_destinations:
+                    try:
+                        test_device = APT_VCP(port_name,destination = destination)
+                        device_dict[port_name: {'destination':destination ,'Serial Number' : test_device.serial_number, 'Model' : test_device.model}]
+                        break
+                    except struct.error:
+                        pass
+            except serial.serialutil.SerialException:
+                pass
+    return device_dict
+
+
+class APT_VCP(serial_instrument.SerialInstrument):
     """
     This class handles all the basic communication with APT virtual com ports
     """
@@ -49,7 +74,7 @@ class APT_VCP(serial.SerialInstrument):
         """
         Set up the serial port, setting source and destinations, verbosity and hardware info.
         """
-        serial.SerialInstrument.__init__(self, port=port) #this opens the port
+        serial_instrument.SerialInstrument.__init__(self, port=port) #this opens the port
         self.source = source
         if destination == None:
             print 'destination has not been set!'
