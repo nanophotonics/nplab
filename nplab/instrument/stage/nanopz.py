@@ -59,5 +59,5 @@ class NanoPZ(si.SerialInstrument,Stage):
     
         
 if __name__ == '__main__':
-    teststage = NanoPZ(port = "COM8")
+    teststage = NanoPZ(port = "COM25")
         
