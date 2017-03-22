@@ -28,7 +28,9 @@ def detect_APT_VCP_devices():
                 for destination in possible_destinations:
                     try:
                         test_device = APT_VCP(port_name,destination = destination)
-                        device_dict[port_name: {'destination':destination ,'Serial Number' : test_device.serial_number, 'Model' : test_device.model}]
+                        device_dict[port_name: {'destination':destination ,
+                                                'Serial Number' : test_device.serial_number,
+                                                'Model' : test_device.model}]
                         break
                     except struct.error:
                         pass
@@ -133,20 +135,26 @@ class APT_VCP(serial_instrument.SerialInstrument):
                                     'source' : source}
             return returned_message
         
-    def write(self,message_id,param1 = 0x00,param2 = 0x00):
+    def write(self,message_id,param1 = 0x00,param2 = 0x00,data = None):
         """Overwrite the serial write command to combine message_id,
             two possible paramters (set to 0 if not given)
             with the source and destinations """
-        formated_message=bytearray(struct.pack('<HBBBB', message_id, param1, param2, 
-                                               self.destination, self.source))
+        if data == None:
+            formated_message=bytearray(struct.pack('<HBBBB', message_id, param1, param2, 
+                                                   self.destination, self.source))
+        else:
+            param1= len(data)
+            formated_message=bytearray(struct.pack('<HBBBB', message_id, param1, param2, 
+                                                   self.destination|0x80, self.source))
+            formated_message+=data
         self.ser.write(formated_message)
     
-    def query(self,message_id,param1 = 0x00,param2 = 0x00):
+    def query(self,message_id,param1 = 0x00,param2 = 0x00,data = None):
         """Oveawrite the query command to allow the correct passing of 
             message_ids and paramaters """
         with self.communications_lock:
             self.flush_input_buffer()
-            self.write(message_id,param1,param2)
+            self.write(message_id,param1,param2,data = data)
             return self.read()#question: should we strip the final newline?
             
     def verbose(self,message):
