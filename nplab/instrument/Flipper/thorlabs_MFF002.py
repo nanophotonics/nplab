@@ -4,11 +4,12 @@ import numpy as np
 import time
 from nplab.utils.thread_utils import locked_action, background_action
 
+
 class ThorlabsMFF(Flipper):
     def __init__(self, port):
         Flipper.__init__(self, port)
 
-    @background_action
+    # @background_action    # background_actions do not work well with properties
     @locked_action
     def set_state(self, value):
         if value:
@@ -45,6 +46,7 @@ class ThorlabsMFF(Flipper):
 
 if __name__ == '__main__':
     import sys
+
     # from nplab.utils.gui import *
     # app = get_qt_app()
     flipper = ThorlabsMFF('COM19')

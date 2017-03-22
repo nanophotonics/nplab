@@ -9,10 +9,50 @@ import struct
 import numpy as np
 from nplab.instrument.apt_virtual_com_port import APT_VCP
 from nplab.instrument.stage import Stage
+from nplab.utils.notified_property import NotifiedProperty, DumbNotifiedProperty, register_for_property_changes
 import types
 import time
 
-DC_status_motors = ['BBD102/BBD103', 'TDC001']
+DC_status_motors = {'BBD102/BBD103': [], 'TDC001': []}
+
+
+# MGMSG_MOT_SET_PMDSTAGEAXISPARAMS
+
+class APT_parameter(NotifiedProperty):
+    """A quick way of creating a property that alters a camera parameter.
+
+    The majority of cameras have some sort of mechanism for setting parameters
+    like gain, integration time, etc. etc. that involves calling an API
+    function that takes the property name as an argument.  This is a way
+    of nicely wrapping up the boilerplate code so that these properties map
+    onto properties of the camera object.
+
+    NB the property will be read immediately after it's written, to ensure
+    that the value we send to any listening controls/indicators is correct
+    (otherwise we'd send them the value that was requested, even if it was
+    not valid).  This behaviour can be disabled by setting read_back to False
+    in the constructor.
+    """
+
+    def __init__(self, parameter_name, doc=None, read_back=True):
+        """Create a property that reads and writes the given parameter.
+
+        This internally uses the `get_camera_parameter` and
+        `set_camera_parameter` methods, so make sure you override them.
+        """
+        if doc is None:
+            doc = "Adjust the camera parameter '{0}'".format(parameter_name)
+        super(APT_parameter, self).__init__(fget=self.fget,
+                                            fset=self.fset,
+                                            doc=doc,
+                                            read_back=read_back)
+        self.parameter_name = parameter_name
+
+    def fget(self, obj):
+        return obj.get_APT_parameter(self.parameter_name)
+
+    def fset(self, obj, value):
+        obj.set_APT_parameter(self.parameter_name, value)
 
 
 class APT_VCP_motor(APT_VCP, Stage):
@@ -73,6 +113,8 @@ class APT_VCP_motor(APT_VCP, Stage):
                                     0x00000400: 'homed (homing has been completed)',
                                     0x00001000: 'interlock state (1 = enabled)'}
 
+            # delattr(self, 'get_qt_ui')
+
     '''MOVEMENT'''
 
     def home(self):
@@ -88,6 +130,9 @@ class APT_VCP_motor(APT_VCP, Stage):
         else:
             self.write(0x0453, data=data)
             # TODO: wait until move completed (0x0464)
+
+    def is_moving(self, axes=None):
+        raise NotImplemented
 
     '''PARAMETERS'''
 
@@ -395,10 +440,12 @@ class APT_VCP_motor(APT_VCP, Stage):
     def make_all_parameters(self):
         # TODO: add all the documentation for each of these parameters
         self.make_parameter(dict(name='velocity_params', set=0x0413, get=0x0414, structure='HLLL',
-                                 param_names=['channel_num', ['min_velocity','velocity'], ['acceleration','acceleration'], ['max_velocity','velocity']]))
+                                 param_names=['channel_num', ['min_velocity', 'velocity'],
+                                              ['acceleration', 'acceleration'], ['max_velocity', 'velocity']]))
         self.make_parameter(dict(name='jog_params', set=0x0416, get=0x0417, structure='HHLLLLH',
-                                 param_names=['channel_num', ['jog_step_size','distance'], ['jog_min_velocity','velocity'], ['jog_acceleration','acceleration'],
-                                              ['jog_max_velocity','velocity'], 'jog_stop_mode']))
+                                 param_names=['channel_num', ['jog_step_size', 'distance'],
+                                              ['jog_min_velocity', 'velocity'], ['jog_acceleration', 'acceleration'],
+                                              ['jog_max_velocity', 'velocity'], 'jog_stop_mode']))
         self.make_parameter(dict(name='gen_move_params', set=0x043C, get=0x043B, structure='HL',
                                  param_names=['channel_num', 'backlash']))
         self.make_parameter(dict(name='power_params', set=0x0426, get=0x0427, structure='HHH',
@@ -414,19 +461,26 @@ class APT_VCP_motor(APT_VCP, Stage):
         # self.make_parameter(dict(name=, set=, get=, structure=, param_names=['channel_num']))
         # self.make_parameter(dict(name=, set=, get=, structure=, param_names=['channel_num']))
 
+        # def get_qt_ui(self):
+        #     raise NotImplementedError
+
 
 if __name__ == '__main__':
     # microscope_stage = APT_VCP_motor(port='COM12', source=0x01, destination=0x21)
 
-    tdc_cube = APT_VCP_motor(port='COM20', source=0x01, destination=0x50)
+    tdc_cube = APT_VCP_motor(port='COM21', source=0x00, destination=0x50)
+    tdc_cube2 = APT_VCP_motor(port='COM20', source=0x01, destination=0x50)
+    # tdc_cube.home()
+    # delattr(tdc_cube, 'get_qt_ui')
     # print tdc_cube.channel_number_to_identity['1']
     # tdc_cube.get_status_update()
     # print 'Status: ', tdc_cube.status
     # print 'Position: ', tdc_cube.get_position()
 
-    tdc_cube.make_all_parameters()
-    print tdc_cube.get_velocity_params()
-    print tdc_cube.velocity_params
+    # tdc_cube.make_all_parameters()
+    # print tdc_cube.get_velocity_params()
+    # print tdc_cube.velocity_params
+    # tdc_cube.show_gui()
     # print tdc_cube.get_gen_move_params()
     # print tdc_cube.get_haha()
 
