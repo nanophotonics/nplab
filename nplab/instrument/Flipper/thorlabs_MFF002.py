@@ -15,7 +15,7 @@ class ThorlabsMFF(Flipper):
             self.write(0x046A, param1=0x01, param2=0x01)
             time.sleep(0.1)
             t0 = time.time()
-            while self.get_status() != 1:
+            while self.get_state() != 1:
                 time.sleep(0.1)
                 if time.time() - t0 > self.port_settings['timeout']:
                     raise RuntimeError('Timed out while waiting for position change')
@@ -23,12 +23,12 @@ class ThorlabsMFF(Flipper):
             self.write(0x046A, param1=0x01, param2=0x02)
             time.sleep(0.1)
             t0 = time.time()
-            while self.get_status() != 0:
+            while self.get_state() != 0:
                 time.sleep(0.1)
                 if time.time() - t0 > self.port_settings['timeout']:
                     raise RuntimeError('Timed out while waiting for position change')
 
-    def get_status(self):
+    def get_state(self):
         self.write(0x0429, param1=0x01)
         read = self.read()
         msg = read['data']
@@ -45,25 +45,25 @@ class ThorlabsMFF(Flipper):
 
 if __name__ == '__main__':
     import sys
-    import time
-#    from nplab.utils.gui import *
-#    app = get_qt_app()
+    # from nplab.utils.gui import *
+    # app = get_qt_app()
     flipper = ThorlabsMFF('COM19')
-    flipper.get_status()
+    print flipper.state
+    # flipper.get_status()
     # print flipper.model
-    flipper.set_state(0)
-    time.sleep(2)
-    print flipper.get_status()
-    #time.sleep(2)
-    flipper.set_state(1)
-    time.sleep(2)
-    print flipper.get_status()
+    # flipper.set_state(0)
+    # time.sleep(2)
+    # print flipper.get_status()
+    # #time.sleep(2)
+    # flipper.set_state(1)
+    # time.sleep(2)
+    # print flipper.get_status()
 
     # print flipper.state
     # flipper.state = 0
     # print flipper.state
     # print flipper._last_set_state
-#    ui = shutter.get_qt_ui()
-#    ui.show()
-#    sys.exit(app.exec_())
-#     shutter.show_gui()
+    # ui = flipper.get_qt_ui()
+    # ui.show()
+    # sys.exit(app.exec_())
+    flipper.show_gui()

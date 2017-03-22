@@ -1,5 +1,3 @@
-__author__ = 'alansanders'
-
 from nplab.instrument import Instrument
 from nplab.instrument.apt_virtual_com_port import APT_VCP
 from nplab.utils.gui import QtCore, QtGui, QtWidgets, get_qt_app, uic
@@ -11,18 +9,10 @@ import contextlib
 
 
 class Flipper(APT_VCP):
-    """A generic instrument class for optical flippers.
-    
-    An optical flipper can be "Open" (allowing light to pass) or "Closed" (not
-    allowing light through).  This generic class provides a GUI and some
-    convenience methods.  You can set and (usually) check the state of the
-    flipper using the property `flipper.state` which is a string that's either
-    "Open" or "Closed".  If you need a boolean answer, use `flipper.is_open()`
-    or `flipper.is_closed`.  There's also `expose()` that opens for a number
-    of seconds, and `toggle()` that changes state.
+    """A generic instrument class for flippers.
     
     # Subclassing Notes
-    The minimum required subclassing effort is overriding `set_state` to open
+    The minimum required subclassing effort is overriding `set_state` and `get_state` to open
     and close the flipper.  Overriding get_state allows you to read back the
     state of the flipper.  If you want to emulate that (i.e. keep track of
     the state of the flipper in software) subclass `flipperWithEmulatedRead`
@@ -39,7 +29,7 @@ class Flipper(APT_VCP):
         The default behaviour will emulate a toggle command if none exists.
         """
         try:
-            if self.is_closed():
+            if self.state:
                 self.state = 0
             else:
                 self.state = 1
@@ -62,17 +52,9 @@ class Flipper(APT_VCP):
         
     def _set_state_proxy(self, state):
         self.set_state(state)
-        self._last_set_state = state.title() # Remember what state we're in
+        self._last_set_state = state # Remember what state we're in
         
     state = property(_get_state_proxy, _set_state_proxy)
-    
-    def is_open(self):
-        """Return `True` if the flipper is open."""
-        return self.state.title() == 1
-        
-    def is_closed(self):
-        """Return `True` if the flipper is closed."""
-        return self.state.title() == 0
 
     def get_qt_ui(self):
         """Return a graphical interface for the flipper."""
@@ -81,7 +63,7 @@ class Flipper(APT_VCP):
 
 class flipperUI(QtWidgets.QWidget, UiTools):
     def __init__(self, flipper, parent=None):
-        assert isinstance(flipper, flipper), 'instrument must be a flipper'
+        assert isinstance(flipper, Flipper), 'instrument must be a flipper'
         self.flipper = flipper
         super(flipperUI, self).__init__(parent)
         uic.loadUi(os.path.join(os.path.dirname(__file__), 'flipper.ui'), self)

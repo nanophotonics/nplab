@@ -33,6 +33,8 @@ class APT_VCP_motor(APT_VCP, Stage):
     #                     0x00000400 : 'homed (homing has been completed)',
     #                     0x00001000 : 'interlock state (1 = enabled)' }
 
+    # TODO: the homed function and the move_completed function (I do not understand how they work)
+
     def __init__(self, port=None, source=0x01, destination=None, verbosity=True, use_si_units=False):
         """
         Set up the serial port, setting source and destinations, verbosity and hardware info.
@@ -75,7 +77,7 @@ class APT_VCP_motor(APT_VCP, Stage):
 
     def home(self):
         self.write(0x0443)
-        # TODO: check if homed self.query(0x0444), currently not working
+        # TODO: wait until home completed (0x0444)
 
     def move(self, pos, axis=None, relative=False):
         if axis is None:
@@ -85,32 +87,33 @@ class APT_VCP_motor(APT_VCP, Stage):
             self.write(0x0448, data=data)
         else:
             self.write(0x0453, data=data)
+            # TODO: wait until move completed (0x0464)
 
     '''PARAMETERS'''
 
-    def convert_to_SI_position(position):
-        '''This is motor and controller specific and therefore need to be subclassed '''
-        raise NotImplementedError
-
-    def convert_to_APT_position(position):
-        '''This is motor and controller specific and therefore need to be subclassed '''
-        raise NotImplementedError
-
-    def convert_to_SI_velocity(velocity):
-        '''This is motor and controller specific and therefore need to be subclassed '''
-        raise NotImplementedError
-
-    def convert_to_APT_velocity(velocity):
-        '''This is motor and controller specific and therefore need to be subclassed '''
-        raise NotImplementedError
-
-    def convert_to_SI_acceleration(acceleration):
-        '''This is motor and controller specific and therefore need to be subclassed '''
-        raise NotImplementedError
-
-    def convert_to_APT_acceleration(acceleration):
-        '''This is motor and controller specific and therefore need to be subclassed '''
-        raise NotImplementedError
+    # def convert_to_SI_position(position):
+    #     '''This is motor and controller specific and therefore need to be subclassed '''
+    #     raise NotImplementedError
+    #
+    # def convert_to_APT_position(position):
+    #     '''This is motor and controller specific and therefore need to be subclassed '''
+    #     raise NotImplementedError
+    #
+    # def convert_to_SI_velocity(velocity):
+    #     '''This is motor and controller specific and therefore need to be subclassed '''
+    #     raise NotImplementedError
+    #
+    # def convert_to_APT_velocity(velocity):
+    #     '''This is motor and controller specific and therefore need to be subclassed '''
+    #     raise NotImplementedError
+    #
+    # def convert_to_SI_acceleration(acceleration):
+    #     '''This is motor and controller specific and therefore need to be subclassed '''
+    #     raise NotImplementedError
+    #
+    # def convert_to_APT_acceleration(acceleration):
+    #     '''This is motor and controller specific and therefore need to be subclassed '''
+    #     raise NotImplementedError
 
     def get_status_update(self, channel_number=1):
         if self.model[1] in DC_status_motors:
@@ -195,79 +198,79 @@ class APT_VCP_motor(APT_VCP, Stage):
 
     encoder_counts = property(get_encoder_counts, set_encoder_counts)
 
-    def get_velocity_params(self, channel_number=1):
-        """Trapezoidal velocity parameters for the specified
-        motor channel. For DC servo controllers, the velocity is set in
-        encoder counts/sec and acceleration is set in encoder
-        counts/sec/sec.For stepper motor controllers the velocity 
-        is set in microsteps/sec and acceleration is set in microsteps/sec/sec.
-        However, we have handled the conversions therefore SI are used.
-        Args:
-            velocity_params(dict) containing:
-                channel_num (int)       :   the channel number
-                min_velocity(float)     :   Minimum velocity in SI units
-                acceleration(float)     :   acceleration in SI units
-                max_velocity(float)     :   maximum velocity in SI units
-            """
-        returned_message = self.query(0x0414, param1=self.channel_number_to_identity[channel_number])
-        data = returned_message['data']
-        channel_id, min_vel, acceleration, maximum_vel = struct.unpack('<HLLL', data)
-        velocity_parms = {'channel_num': channel_number, 'min_velocity': self.convert_to_SI_velocity(min_vel),
-                          'acceleration': self.convert_to_SI_acceleration(acceleration),
-                          'max_velocity': self.convert_to_SI_velocity(maximum_vel)}
-        return velocity_parms
-
-    def set_velocity_params(self, velocity_params, channel_number=1):
-
-        data = struct.pack('<HLLL',
-                           self.channel_number_to_identity[velocity_params['channel_num']],
-                           self.convert_to_APT_velocity(velocity_params['min_velocity']),
-                           self.convert_to_APT_acceleration(velocity_params['acceleration']),
-                           self.convert_to_APT_velocity(velocity_params['max_velocity']),
-                           )
-        self.write(0x0413, data=data)
-
-    velocity_params = property(get_velocity_params,
-                               set_velocity_params)  # not sure how this will work with channel inputs may only work when channel = 1
-
-    def get_jog_params(self, channel_number=1):
-        """Used to set the velocity jog parameters for the specified motor
-            channel, For DC servo controllers, values set in encoder counts.
-            For stepper motor controllers the values is set in microsteps. However,
-            here we have converted them to SI units
-        Args:
-            jog_param(dict) contains
-                channel_num (int)       :   channel number
-                jog_mode (int)          :   jog mode 1 for cont 2 for single step
-                jog_step_size (float)   :   jog step size converted to SI
-                jog_min_velocity(float) :   minimum velocity converted to SI
-                jog_max_velovity(float) :   maximum velocity converted to SI
-                jog_stop_mode(int)      :   1 for immediate 2 for profiled stop
-        
-        """
-        returned_message = self.query(0x0417, param1=self.channel_number_to_identity[channel_number])
-        data = returned_message['data']
-        data = struct.unpack('<HHLLLLH', data)
-        jog_params = {'channel_num': data[0], 'jog_mode': data[1],
-                      'jog_step_size': self.convert_to_SI_position(data[2]),
-                      'jog_min_velocity': self.convert_to_SI_velocity(data[3]),
-                      'jog_acceleration': self.convert_to_SI_acceleration(data[4]),
-                      'jog_max_velocity': self.convert_to_SI_velocity(data[5]),
-                      'jog_stop_mode': data[6]}
-        return jog_params
-
-    def set_jog_params(self, jog_params, channel_number=1):
-        data = struct.pack('<HHLLLLH',
-                           self.channel_number_to_identity[jog_params['channel_num']],
-                           jog_params['jog_mode'],
-                           self.convert_to_APT_position(jog_params['jog_step_size']),
-                           self.convert_to_APT_velocity(jog_params['jog_min_velocity']),
-                           self.convert_to_APT_acceleration(jog_params['jog_acceleration']),
-                           self.convert_to_APT_velocity(jog_params['jog_max_velocity']),
-                           jog_params['jog_stop_mode'])
-        self.write(0x0416, data=data)
-
-    jog_params = property(get_jog_params, set_jog_params)
+    # def get_velocity_params(self, channel_number=1):
+    #     """Trapezoidal velocity parameters for the specified
+    #     motor channel. For DC servo controllers, the velocity is set in
+    #     encoder counts/sec and acceleration is set in encoder
+    #     counts/sec/sec.For stepper motor controllers the velocity
+    #     is set in microsteps/sec and acceleration is set in microsteps/sec/sec.
+    #     However, we have handled the conversions therefore SI are used.
+    #     Args:
+    #         velocity_params(dict) containing:
+    #             channel_num (int)       :   the channel number
+    #             min_velocity(float)     :   Minimum velocity in SI units
+    #             acceleration(float)     :   acceleration in SI units
+    #             max_velocity(float)     :   maximum velocity in SI units
+    #         """
+    #     returned_message = self.query(0x0414, param1=self.channel_number_to_identity[channel_number])
+    #     data = returned_message['data']
+    #     channel_id, min_vel, acceleration, maximum_vel = struct.unpack('<HLLL', data)
+    #     velocity_parms = {'channel_num': channel_number, 'min_velocity': self.convert_to_SI_velocity(min_vel),
+    #                       'acceleration': self.convert_to_SI_acceleration(acceleration),
+    #                       'max_velocity': self.convert_to_SI_velocity(maximum_vel)}
+    #     return velocity_parms
+    #
+    # def set_velocity_params(self, velocity_params, channel_number=1):
+    #
+    #     data = struct.pack('<HLLL',
+    #                        self.channel_number_to_identity[velocity_params['channel_num']],
+    #                        self.convert_to_APT_velocity(velocity_params['min_velocity']),
+    #                        self.convert_to_APT_acceleration(velocity_params['acceleration']),
+    #                        self.convert_to_APT_velocity(velocity_params['max_velocity']),
+    #                        )
+    #     self.write(0x0413, data=data)
+    #
+    # velocity_params = property(get_velocity_params,
+    #                            set_velocity_params)  # not sure how this will work with channel inputs may only work when channel = 1
+    #
+    # def get_jog_params(self, channel_number=1):
+    #     """Used to set the velocity jog parameters for the specified motor
+    #         channel, For DC servo controllers, values set in encoder counts.
+    #         For stepper motor controllers the values is set in microsteps. However,
+    #         here we have converted them to SI units
+    #     Args:
+    #         jog_param(dict) contains
+    #             channel_num (int)       :   channel number
+    #             jog_mode (int)          :   jog mode 1 for cont 2 for single step
+    #             jog_step_size (float)   :   jog step size converted to SI
+    #             jog_min_velocity(float) :   minimum velocity converted to SI
+    #             jog_max_velovity(float) :   maximum velocity converted to SI
+    #             jog_stop_mode(int)      :   1 for immediate 2 for profiled stop
+    #
+    #     """
+    #     returned_message = self.query(0x0417, param1=self.channel_number_to_identity[channel_number])
+    #     data = returned_message['data']
+    #     data = struct.unpack('<HHLLLLH', data)
+    #     jog_params = {'channel_num': data[0], 'jog_mode': data[1],
+    #                   'jog_step_size': self.convert_to_SI_position(data[2]),
+    #                   'jog_min_velocity': self.convert_to_SI_velocity(data[3]),
+    #                   'jog_acceleration': self.convert_to_SI_acceleration(data[4]),
+    #                   'jog_max_velocity': self.convert_to_SI_velocity(data[5]),
+    #                   'jog_stop_mode': data[6]}
+    #     return jog_params
+    #
+    # def set_jog_params(self, jog_params, channel_number=1):
+    #     data = struct.pack('<HHLLLLH',
+    #                        self.channel_number_to_identity[jog_params['channel_num']],
+    #                        jog_params['jog_mode'],
+    #                        self.convert_to_APT_position(jog_params['jog_step_size']),
+    #                        self.convert_to_APT_velocity(jog_params['jog_min_velocity']),
+    #                        self.convert_to_APT_acceleration(jog_params['jog_acceleration']),
+    #                        self.convert_to_APT_velocity(jog_params['jog_max_velocity']),
+    #                        jog_params['jog_stop_mode'])
+    #     self.write(0x0416, data=data)
+    #
+    # jog_params = property(get_jog_params, set_jog_params)
 
     # def get_power_params(self, channel_number=1):
     #     """
@@ -338,6 +341,9 @@ class APT_VCP_motor(APT_VCP, Stage):
     #     self.write(0x043C, data=data)
     #
     # gen_move_params = property(get_gen_move_params, set_gen_move_params)
+    def convert(self, value, from_, to_):
+        print 'Not doing anything from ', from_, ' to ', to_
+        return value
 
     def make_parameter(self, param_dict):
         """
@@ -354,27 +360,33 @@ class APT_VCP_motor(APT_VCP, Stage):
 
         """
 
-        def getter(self, channel_number=1):
-            returned_message = self.query(param_dict['get'], param1=self.channel_number_to_identity[channel_number])
+        def getter(selfie, channel_number=1):
+            returned_message = selfie.query(param_dict['get'], param1=selfie.channel_number_to_identity[channel_number])
             data = returned_message['data']
             data = struct.unpack('<' + param_dict['structure'], data)
             params = {}
             index = 0
             for name in param_dict['param_names']:
-                params[name] = data[index]
+                if type(name) == str:
+                    params[name] = data[index]
+                elif type(name) == list:
+                    params[name[0]] = selfie.convert(data[index], 'counts', name[1])
                 index += 1
             return params
 
-        def setter(self, params, channel_number=None):
+        def setter(selfie, params, channel_number=None):
             if channel_number is None:
                 channel_number = params['channel_num']
             unstructured_data = ['<' + param_dict['structure'],
-                                 self.channel_number_to_identity[channel_number]]
-            for param in param_dict['param_names']:
-                if param != 'channel_num':
-                    unstructured_data += [params[param]]
+                                 selfie.channel_number_to_identity[channel_number]]
+            for name in param_dict['param_names']:
+                if name != 'channel_num':
+                    if type(name) == str:
+                        unstructured_data += [params[name]]
+                    elif type(name) == list:
+                        unstructured_data += [selfie.convert(params[name[0]], name[1], 'counts')]
             data = struct.pack(*unstructured_data)
-            self.write(param_dict['set'], data=data)
+            selfie.write(param_dict['set'], data=data)
 
         setattr(self, 'get_' + param_dict['name'], types.MethodType(getter, self))
         setattr(self, 'set_' + param_dict['name'], types.MethodType(setter, self))
@@ -382,6 +394,11 @@ class APT_VCP_motor(APT_VCP, Stage):
 
     def make_all_parameters(self):
         # TODO: add all the documentation for each of these parameters
+        self.make_parameter(dict(name='velocity_params', set=0x0413, get=0x0414, structure='HLLL',
+                                 param_names=['channel_num', ['min_velocity','velocity'], ['acceleration','acceleration'], ['max_velocity','velocity']]))
+        self.make_parameter(dict(name='jog_params', set=0x0416, get=0x0417, structure='HHLLLLH',
+                                 param_names=['channel_num', ['jog_step_size','distance'], ['jog_min_velocity','velocity'], ['jog_acceleration','acceleration'],
+                                              ['jog_max_velocity','velocity'], 'jog_stop_mode']))
         self.make_parameter(dict(name='gen_move_params', set=0x043C, get=0x043B, structure='HL',
                                  param_names=['channel_num', 'backlash']))
         self.make_parameter(dict(name='power_params', set=0x0426, get=0x0427, structure='HHH',
@@ -407,11 +424,13 @@ if __name__ == '__main__':
     # print 'Status: ', tdc_cube.status
     # print 'Position: ', tdc_cube.get_position()
 
-    # tdc_cube.make_all_parameters()
+    tdc_cube.make_all_parameters()
+    print tdc_cube.get_velocity_params()
+    print tdc_cube.velocity_params
     # print tdc_cube.get_gen_move_params()
     # print tdc_cube.get_haha()
 
     # tdc_cube.home()
 
-    tdc_cube.move(100000)
+    # tdc_cube.move(0)
     # time.sleep(10)
