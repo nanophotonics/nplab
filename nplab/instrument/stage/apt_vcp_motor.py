@@ -171,7 +171,7 @@ class APT_VCP_motor(APT_VCP, Stage):
     def update_status(self, returned_message):
         '''This  command should update device properties from the update message
             however this has to be defined for every device as the status update format
-            and commands vary, 
+            and commands vary,
             please implement me
             Args:
                 The returned message from a status update request           (dict)
@@ -192,17 +192,17 @@ class APT_VCP_motor(APT_VCP, Stage):
         self.write(0x0492)
 
     def init_no_flash_programming(self):
-        """ This message must be sent on startup to tell the controller 
+        """ This message must be sent on startup to tell the controller
         the source and destination address - The manual says this MUST be
         sent as part of the intialisation process
-        
+
         Labled as: MGMSG_HW_NO_FLASH_PROGRAMMING
         """
         self.write(0x0018)
 
     def get_position(self, channel_number=1):
         '''Sets/Gets the live position count in the controller
-            generally this should not be used to set the position 
+            generally this should not be used to set the position
             instead the controller should determine its own position
             by performing a homing manoeuvre
             Args:
@@ -225,7 +225,7 @@ class APT_VCP_motor(APT_VCP, Stage):
 
     def get_encoder_counts(self, channel_number=1):
         '''Sets/Gets the live encoder count in the controller
-            generally this should not be used to set the encoder value 
+            generally this should not be used to set the encoder value
             instead the controller should determine its own position by
             performing a homing manoeuvre
             Args:

@@ -63,7 +63,6 @@ class APT_VCP(serial_instrument.SerialInstrument):
                         False: 0x02}  # Sets up the conversion from True and False values to 1's and 2's (godknows why they havnt used 0 and 1)
     reverse_state_conversion = {0x01: True, 0x02: False}
     serial_num_to_device_types = {0: ['Filter flipper', 'MFF002'],
-                                  21: ['DC Driver T-Cube', 'TDC001'],
                                   20: ['Legacy Single channel stepper driver', 'BSC001'],
                                   25: ['Legacy single channel mini stepper driver', 'BMS001'],
                                   30: ['Legacy dual channel stepper driver', 'BSC002'],
@@ -203,8 +202,10 @@ class APT_VCP(serial_instrument.SerialInstrument):
         message_dict = self.query(0x0005)
         serialnum, model, hwtype, swversion, notes, hwversion, modstate, nchans = struct.unpack('<I8sHI48s12xHHH',
                                                                                                 message_dict['data'])
+        if hwversion == 1:
+            serialnum = int(hex(serialnum)[2:-1])
 
-        hardware_dict = {'serial_number': (serialnum), 'model': model.replace('\x00', ''), 'hardware_type': hwtype,
+        hardware_dict = {'serial_number': serialnum, 'model': model.replace('\x00', ''), 'hardware_type': hwtype,
                          'software_version': swversion, 'notes': notes.replace('\x00', ''),
                          'hardware_version': hwversion,
                          'modstate': modstate, 'number_of_channels': nchans}
