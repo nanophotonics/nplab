@@ -17,6 +17,9 @@ from weakref import WeakSet
 import nplab.utils.log
 from nplab.utils.array_with_attrs import ArrayWithAttrs
 from nplab.utils.show_gui_mixin import ShowGUIMixin
+import logging
+from nplab.utils.log import create_logger
+LOGGER = create_logger('Instrument')
 
 class Instrument(object, ShowGUIMixin):
     """Base class for all instrument-control classes.
@@ -30,6 +33,7 @@ class Instrument(object, ShowGUIMixin):
         """Create an instrument object."""
         super(Instrument, self).__init__()
         Instrument.instances_set().add(self) #keep track of instances (should this be in __new__?)
+        self._logger = logging.getLogger('Instrument.' + str(type(self)))
 
     @classmethod
     def instances_set(cls):

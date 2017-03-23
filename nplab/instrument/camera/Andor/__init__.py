@@ -1130,6 +1130,11 @@ def test_all():
     import matplotlib.pyplot as plt
     andor = Andor() #wvl_to_pxl=32.5 / 1600, magnification=30, pxl_size=16)
     # andor._logger.setLevel('DEBUG')
+    andor._logger.setLevel('DEBUG')
+    andor._logger.debug('Hah')
+    andor._logger.info('Hah')
+    andor._logger.warn('Hah')
+    andor._logger.error('Hah')
 
     andor.show_gui(True)
     # params = andor.GetAllParameters()
