@@ -134,7 +134,6 @@ class APT_VCP(serial_instrument.SerialInstrument):
                 self.read()
 
         else:
-            print self.source, dest
             if self.source | 0x80 == dest:
                 data = self.ser.read(length)
                 returned_message = {'message': msgid, 'length': length,
