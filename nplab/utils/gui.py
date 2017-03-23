@@ -42,8 +42,9 @@ elif ui_toolkit == 'native':
       from qtpy import QtCore,QtGui
       from qtpy import QtWidgets
       from qtpy import uic
-    except:
+    except Exception as e:
         warnings.warn("Warning: failed to load qtpy, are you sure qtpy is installed?, falling back to pyside", UserWarning)
+        print e
         from PySide import QtCore, QtGui
 else:
     raise ImportError("Invalid ui_toolkit or QT_API")
