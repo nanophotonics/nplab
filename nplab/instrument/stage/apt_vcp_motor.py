@@ -115,11 +115,24 @@ class APT_VCP_motor(APT_VCP, Stage):
 
             # delattr(self, 'get_qt_ui')
 
+        self.make_all_parameters()
+
     '''MOVEMENT'''
+
+    def _waitForReply(self, msgCode, replysize):
+        self.write(msgCode)
+        reply = self.ser.read(replysize)
+        t0 = time.time()
+        while len(reply) == replysize:
+            reply = self.ser.read(replysize)
+            time.sleep(0.1)
+            if time.time() - t0 > 30:
+                return False
+        return True
 
     def home(self):
         self.write(0x0443)
-        # TODO: wait until home completed (0x0444)
+        self._waitForReply(0x0444, 6)
 
     def move(self, pos, axis=None, relative=False):
         if axis is None:
@@ -129,10 +142,8 @@ class APT_VCP_motor(APT_VCP, Stage):
             self.write(0x0448, data=data)
         else:
             self.write(0x0453, data=data)
-            # TODO: wait until move completed (0x0464)
 
-    def is_moving(self, axes=None):
-        raise NotImplemented
+        self._waitForReply(0x0464, 20)
 
     '''PARAMETERS'''
 
@@ -165,11 +176,10 @@ class APT_VCP_motor(APT_VCP, Stage):
             returned_message = self.query(0x0490, param1=self.channel_number_to_identity[channel_number])
         else:
             returned_message = self.query(0x0480, param1=self.channel_number_to_identity[channel_number])
-        self.update_status(returned_message['data'])
-        # channel,position,EncCount,status_bits =  struct.unpack(returned_message, '<ILLH')
+        return self.update_status(returned_message['data'])
 
     def update_status(self, returned_message):
-        '''This  command should update device properties from the update message
+        '''This command should update device properties from the update message
             however this has to be defined for every device as the status update format
             and commands vary,
             please implement me
@@ -180,12 +190,12 @@ class APT_VCP_motor(APT_VCP, Stage):
             channel, position, velocity, Reserved, status_bits = struct.unpack('<HLHHI', returned_message)
             # self.position = position
             # self.velocity = velocity / self.velocity_scaling_factor
-            self.status = self.status_bit_mask[np.where(self.unpack_binary_mask(status_bits))]
         else:
             channel, position, EncCount, status_bits = struct.unpack(returned_message, '<ILLH')
             self.position = position  #
             self.EncCount = EncCount
-            self.status = self.status_bit_mask.values()[self.upack_binary_mask(status_bits) == True]
+        self.status = self.status_bit_mask[np.where(self._bit_mask_array(status_bits, self.status_bit_mask[:, 0]))]
+        return self.status
 
     def staying_alive(self):
         """Keeps the motor controller from thinking the Pc has crashed """
@@ -200,48 +210,48 @@ class APT_VCP_motor(APT_VCP, Stage):
         """
         self.write(0x0018)
 
-    def get_position(self, channel_number=1):
-        '''Sets/Gets the live position count in the controller
-            generally this should not be used to set the position
-            instead the controller should determine its own position
-            by performing a homing manoeuvre
-            Args:
-                postion:    (float) this is the real position value
-                            which is then converted to APT units within the setter
-                channel_number:     (int) This defaults to 1
-        '''
-        returned_message = self.query(0x0411, param1=self.channel_number_to_identity[channel_number])
-        data = returned_message['data']
-        channel_id, position = struct.unpack('<HL', data)
-        # position = self.convert_to_SI_position(position)
-        return position
+    # def get_position(self, channel_number=1):
+    #     '''Sets/Gets the live position count in the controller
+    #         generally this should not be used to set the position
+    #         instead the controller should determine its own position
+    #         by performing a homing manoeuvre
+    #         Args:
+    #             postion:    (float) this is the real position value
+    #                         which is then converted to APT units within the setter
+    #             channel_number:     (int) This defaults to 1
+    #     '''
+    #     returned_message = self.query(0x0411, param1=self.channel_number_to_identity[channel_number])
+    #     data = returned_message['data']
+    #     channel_id, position = struct.unpack('<HL', data)
+    #     # position = self.convert_to_SI_position(position)
+    #     return position
+    #
+    # def set_position(self, position, channel_number=1):
+    #     position = self.convert_to_APT_position(position)
+    #     data = bytearray(struct.pack('<HL', self.channel_number_to_identity[channel_number], position))
+    #     self.write(0x0410, data=data)
+    #
+    # position = property(get_position, set_position)
 
-    def set_position(self, position, channel_number=1):
-        position = self.convert_to_APT_position(position)
-        data = bytearray(struct.pack('<HL', self.channel_number_to_identity[channel_number], position))
-        self.write(0x0410, data=data)
-
-    position = property(get_position, set_position)
-
-    def get_encoder_counts(self, channel_number=1):
-        '''Sets/Gets the live encoder count in the controller
-            generally this should not be used to set the encoder value
-            instead the controller should determine its own position by
-            performing a homing manoeuvre
-            Args:
-                encoder_counts:    (int) this is the encoder counts
-                channel_number:     (int) This defaults to 1
-        '''
-        returned_message = self.query(0x040A, param1=self.channel_number_to_identity[channel_number])
-        data = returned_message['data']
-        channel_id, encoder_counts = struct.unpack('<HL', data)
-        return encoder_counts
-
-    def set_encoder_counts(self, encoder_counts, channel_number=1):
-        data = bytearray(struct.pack('<HL', self.channel_number_to_identity[channel_number], encoder_counts))
-        self.write(0x0409, data=data)
-
-    encoder_counts = property(get_encoder_counts, set_encoder_counts)
+    # def get_encoder_counts(self, channel_number=1):
+    #     '''Sets/Gets the live encoder count in the controller
+    #         generally this should not be used to set the encoder value
+    #         instead the controller should determine its own position by
+    #         performing a homing manoeuvre
+    #         Args:
+    #             encoder_counts:    (int) this is the encoder counts
+    #             channel_number:     (int) This defaults to 1
+    #     '''
+    #     returned_message = self.query(0x040A, param1=self.channel_number_to_identity[channel_number])
+    #     data = returned_message['data']
+    #     channel_id, encoder_counts = struct.unpack('<HL', data)
+    #     return encoder_counts
+    #
+    # def set_encoder_counts(self, encoder_counts, channel_number=1):
+    #     data = bytearray(struct.pack('<HL', self.channel_number_to_identity[channel_number], encoder_counts))
+    #     self.write(0x0409, data=data)
+    #
+    # encoder_counts = property(get_encoder_counts, set_encoder_counts)
 
     # def get_velocity_params(self, channel_number=1):
     #     """Trapezoidal velocity parameters for the specified
@@ -435,10 +445,15 @@ class APT_VCP_motor(APT_VCP, Stage):
 
         setattr(self, 'get_' + param_dict['name'], types.MethodType(getter, self))
         setattr(self, 'set_' + param_dict['name'], types.MethodType(setter, self))
-        setattr(self, param_dict['name'], property('get_' + param_dict['name'], 'set_' + param_dict['name']))
+        try:
+            setattr(self, param_dict['name'], property('get_' + param_dict['name'], 'set_' + param_dict['name']))
+        except AttributeError:
+            print param_dict['name'], ' already exists'
 
     def make_all_parameters(self):
         # TODO: add all the documentation for each of these parameters
+        self.make_parameter(dict(name='encoder_counts', set=0x0409, get=0x040A, structure='HL', param_names=['channel_num', 'encoder_counts']))
+        self.make_parameter(dict(name='position', set=0x0410, get=0x0411, structure='HL', param_names=['channel_num', ['position','distance']]))
         self.make_parameter(dict(name='velocity_params', set=0x0413, get=0x0414, structure='HLLL',
                                  param_names=['channel_num', ['min_velocity', 'velocity'],
                                               ['acceleration', 'acceleration'], ['max_velocity', 'velocity']]))
@@ -456,7 +471,6 @@ class APT_VCP_motor(APT_VCP, Stage):
                                  param_names=['channel_num', 'abs_dist']))
         self.make_parameter(dict(name='home_params', set=0x0441, get=0x0442, structure='HHHLL',
                                  param_names=['channel_num', 'direction', 'limit_switch', 'velocity', 'offset']))
-        # self.make_parameter(dict(name=, set=, get=, structure=, param_names=['channel_num']))
         # self.make_parameter(dict(name=, set=, get=, structure=, param_names=['channel_num']))
         # self.make_parameter(dict(name=, set=, get=, structure=, param_names=['channel_num']))
         # self.make_parameter(dict(name=, set=, get=, structure=, param_names=['channel_num']))

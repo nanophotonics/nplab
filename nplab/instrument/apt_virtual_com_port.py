@@ -96,6 +96,13 @@ class APT_VCP(serial_instrument.SerialInstrument):
         lst.reverse()
         return lst
 
+    @staticmethod
+    def _bit_mask_array(value, bit_mask):
+        final_mask = []
+        for mask in bit_mask:
+            final_mask += [bool(value & int(mask))]
+        return final_mask
+
     def read(self):
         '''Overwrite the read command with a fixed length read, check 
             for aditional data stream and error codes'''
@@ -210,7 +217,7 @@ class APT_VCP(serial_instrument.SerialInstrument):
                          'hardware_version': hwversion,
                          'modstate': modstate, 'number_of_channels': nchans}
         self.serial_number = serialnum
-        self.model = self.serial_num_to_device_types[0]  # int(str(serialnum)[0:2])]
+        self.model = self.serial_num_to_device_types[int(str(serialnum)[0:2])]
         self.number_of_channels = nchans
         return hardware_dict
 
