@@ -142,3 +142,5 @@ if __file__ == "__main__":
             for c in message+"\n":
                 time.sleep(0.1)
                 print(c),
+
+
