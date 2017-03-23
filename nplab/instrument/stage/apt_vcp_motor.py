@@ -2,7 +2,7 @@
 """
 Created on Tue Mar 21 17:04:11 2017
 
-@author: Will
+@author: Will, Yago
 """
 import serial
 import struct
@@ -15,8 +15,6 @@ import time
 
 DC_status_motors = {'BBD102/BBD103': [], 'TDC001': []}
 
-
-# MGMSG_MOT_SET_PMDSTAGEAXISPARAMS
 
 class APT_parameter(NotifiedProperty):
     """A quick way of creating a property that alters a camera parameter.
@@ -60,21 +58,7 @@ class APT_VCP_motor(APT_VCP, Stage):
     This class handles all the basic communication with APT virtual com ports
     """
 
-    # status_bit_mask = {0x00000001 : 'forward (CW) hardware limit switch is active',
-    #                     0x00000002 : 'reverse (CCW) hardware limit switch is active',
-    #                     0x00000004 : 'forward (CW) software limit switch is active',
-    #                     0x00000008 : 'reverse (CCW) software limit switch is active',
-    #                     0x00000010 : 'in motion, moving forward (CW)',
-    #                     0x00000020 : 'in motion, moving reverse (CCW)',
-    #                     0x00000040 : 'in motion, jogging forward (CW)',
-    #                     0x00000080 : 'in motion, jogging reverse (CCW)',
-    #                     0x00000100 : 'motor connected',
-    #                     0x00000200 : 'in motion, homing',
-    #                     0x00000400 : 'homed (homing has been completed)',
-    #                     0x00001000 : 'interlock state (1 = enabled)' }
-
-    # TODO: the homed function and the move_completed function (I do not understand how they work)
-
+    axis_names = ('x')
     def __init__(self, port=None, source=0x01, destination=None, verbosity=True, use_si_units=False):
         """
         Set up the serial port, setting source and destinations, verbosity and hardware info.
@@ -210,28 +194,28 @@ class APT_VCP_motor(APT_VCP, Stage):
         """
         self.write(0x0018)
 
-    # def get_position(self, channel_number=1):
-    #     '''Sets/Gets the live position count in the controller
-    #         generally this should not be used to set the position
-    #         instead the controller should determine its own position
-    #         by performing a homing manoeuvre
-    #         Args:
-    #             postion:    (float) this is the real position value
-    #                         which is then converted to APT units within the setter
-    #             channel_number:     (int) This defaults to 1
-    #     '''
-    #     returned_message = self.query(0x0411, param1=self.channel_number_to_identity[channel_number])
-    #     data = returned_message['data']
-    #     channel_id, position = struct.unpack('<HL', data)
-    #     # position = self.convert_to_SI_position(position)
-    #     return position
-    #
-    # def set_position(self, position, channel_number=1):
-    #     position = self.convert_to_APT_position(position)
-    #     data = bytearray(struct.pack('<HL', self.channel_number_to_identity[channel_number], position))
-    #     self.write(0x0410, data=data)
-    #
-    # position = property(get_position, set_position)
+    def get_position(self, channel_number=1):
+        '''Sets/Gets the live position count in the controller
+            generally this should not be used to set the position
+            instead the controller should determine its own position
+            by performing a homing manoeuvre
+            Args:
+                postion:    (float) this is the real position value
+                            which is then converted to APT units within the setter
+                channel_number:     (int) This defaults to 1
+        '''
+        returned_message = self.query(0x0411, param1=self.channel_number_to_identity[channel_number])
+        data = returned_message['data']
+        channel_id, position = struct.unpack('<HL', data)
+        # position = self.convert_to_SI_position(position)
+        return [position]
+
+    def set_position(self, position, channel_number=1):
+        position = self.convert_to_APT_position(position)
+        data = bytearray(struct.pack('<HL', self.channel_number_to_identity[channel_number], position))
+        self.write(0x0410, data=data)
+
+    position = property(get_position, set_position)
 
     # def get_encoder_counts(self, channel_number=1):
     #     '''Sets/Gets the live encoder count in the controller
@@ -401,7 +385,25 @@ class APT_VCP_motor(APT_VCP, Stage):
         return value
 
     def make_parameter(self, param_dict):
-        """
+        """Makes a parameter dictionary and sets it as a property
+
+        All parameters in the Thorlabs APT basically require the same command structure, so this function wraps any
+        parameter creation to simplify the code. It takes a dictionary containing the name of the parameter you want to
+        make, which will be used to create a property attribute by that name and a getter and a setter. The dictionary
+        should also containg the getter and setter command codes, and the structure of the data that is passed in the
+        getter and setter. Finally the dictionary should contain the names of each of the sub_parameters given by the
+        setter and getter, whose values can be converted into normal units by overwriting the self.convert() function
+
+        Examples:
+            Make self.velocity_params property, together with a self.get_velocity_params and self.set_velocity_params
+            functions. self.velocity_params will be a dictionary, containing 'channel_num', 'min_velocity',
+            'acceleration' and 'max_velocity'. The velocities will be converted into velocity through the convert
+            function and the acceleration will be converted into acceleration.
+
+                >>> self.make_parameter(dict(name='velocity_params', set=0x0413, get=0x0414, structure='HLLL',
+                >>>                     param_names=['channel_num', ['min_velocity', 'velocity'],
+                >>>                                 ['acceleration', 'acceleration'], ['max_velocity', 'velocity']]))
+
 
         Args:
             param_dict:
@@ -453,7 +455,7 @@ class APT_VCP_motor(APT_VCP, Stage):
     def make_all_parameters(self):
         # TODO: add all the documentation for each of these parameters
         self.make_parameter(dict(name='encoder_counts', set=0x0409, get=0x040A, structure='HL', param_names=['channel_num', 'encoder_counts']))
-        self.make_parameter(dict(name='position', set=0x0410, get=0x0411, structure='HL', param_names=['channel_num', ['position','distance']]))
+        # self.make_parameter(dict(name='position', set=0x0410, get=0x0411, structure='HL', param_names=['channel_num', ['position','distance']]))
         self.make_parameter(dict(name='velocity_params', set=0x0413, get=0x0414, structure='HLLL',
                                  param_names=['channel_num', ['min_velocity', 'velocity'],
                                               ['acceleration', 'acceleration'], ['max_velocity', 'velocity']]))
@@ -472,11 +474,6 @@ class APT_VCP_motor(APT_VCP, Stage):
         self.make_parameter(dict(name='home_params', set=0x0441, get=0x0442, structure='HHHLL',
                                  param_names=['channel_num', 'direction', 'limit_switch', 'velocity', 'offset']))
         # self.make_parameter(dict(name=, set=, get=, structure=, param_names=['channel_num']))
-        # self.make_parameter(dict(name=, set=, get=, structure=, param_names=['channel_num']))
-        # self.make_parameter(dict(name=, set=, get=, structure=, param_names=['channel_num']))
-
-        # def get_qt_ui(self):
-        #     raise NotImplementedError
 
 
 if __name__ == '__main__':
@@ -484,6 +481,9 @@ if __name__ == '__main__':
 
     tdc_cube = APT_VCP_motor(port='COM21', source=0x00, destination=0x50)
     tdc_cube2 = APT_VCP_motor(port='COM20', source=0x01, destination=0x50)
+
+    tdc_cube.show_gui()
+    # print tdc_cube.position
     # tdc_cube.home()
     # delattr(tdc_cube, 'get_qt_ui')
     # print tdc_cube.channel_number_to_identity['1']
