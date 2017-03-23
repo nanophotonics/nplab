@@ -50,7 +50,7 @@ if __name__ == '__main__':
     # from nplab.utils.gui import *
     # app = get_qt_app()
     flipper = ThorlabsMFF('COM19')
-    print flipper.state
+
     # flipper.get_status()
     # print flipper.model
     # flipper.set_state(0)
