@@ -8,7 +8,6 @@ import platform
 import time
 from ctypes import *
 import numpy as np
-import logging
 import pyqtgraph
 from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 
@@ -559,9 +558,6 @@ class Andor(Camera, AndorBase):
     def __init__(self, **kwargs):
         AndorBase.__init__(self)
         Camera.__init__(self)
-
-        logging.basicConfig()
-        self._logger = logging.getLogger('Andor')
 
         # self.wvl_to_pxl = kwargs['wvl_to_pxl']
         # self.magnification = kwargs['magnification']
@@ -1130,7 +1126,7 @@ def test_all():
     import matplotlib.pyplot as plt
     andor = Andor() #wvl_to_pxl=32.5 / 1600, magnification=30, pxl_size=16)
     # andor._logger.setLevel('DEBUG')
-    andor._logger.setLevel('DEBUG')
+    # andor._logger.setLevel('DEBUG')
     andor._logger.debug('Hah')
     andor._logger.info('Hah')
     andor._logger.warn('Hah')

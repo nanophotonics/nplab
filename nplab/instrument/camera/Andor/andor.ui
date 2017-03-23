@@ -374,19 +374,6 @@
         </property>
        </widget>
       </item>
-      <item>
-       <widget class="QCheckBox" name="checkBoxAutoExp">
-        <property name="maximumSize">
-         <size>
-          <width>50</width>
-          <height>16777215</height>
-         </size>
-        </property>
-        <property name="text">
-         <string>Auto</string>
-        </property>
-       </widget>
-      </item>
      </layout>
     </widget>
    </item>
