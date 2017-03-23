@@ -59,7 +59,7 @@ class APT_VCP_motor(APT_VCP, Stage):
     """
 
     axis_names = ('x')
-    def __init__(self, port=None, source=0x01, destination=None, verbosity=True, use_si_units=False):
+    def __init__(self, port=None, source=0x01, destination=None, verbosity=True, use_si_units=False, **kwargs):
         """
         Set up the serial port, setting source and destinations, verbosity and hardware info.
         """

@@ -1,6 +1,6 @@
 # import nplab.utils.gui
 from nplab.utils.gui import QtWidgets, QtCore, uic
-from nplab.instrument.camera import Camera
+from nplab.instrument.camera import Camera, CameraParameter
 from nplab.utils.thread_utils import background_action, locked_action
 
 import os
@@ -553,6 +553,9 @@ class AndorBase:
 
 
 class Andor(Camera, AndorBase):
+    Exposure = CameraParameter('Exposure', "The exposure time in s")
+    AcquisitionMode = CameraParameter('AcquisitionMode')
+    TriggerMode = CameraParameter('TriggerMode')
     metadata_property_names = ('Exposure', 'AcquisitionMode', 'TriggerMode')
 
     def __init__(self, **kwargs):
@@ -592,7 +595,7 @@ class Andor(Camera, AndorBase):
             self._logger.warn("Couldn't Capture because %s" % e)
 
     def get_camera_parameter(self, parameter_name):
-        self.GetParameter(parameter_name)
+        return self.GetParameter(parameter_name)
     def set_camera_parameter(self, parameter_name, parameter_value):
         self.SetParameter(parameter_name, parameter_value)
 
