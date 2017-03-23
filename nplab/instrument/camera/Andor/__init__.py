@@ -652,6 +652,7 @@ class AndorUI(QtWidgets.QWidget):
         self.spinBoxNumFrames.valueChanged.connect(self.NumFramesChanged)
         self.spinBoxNumAccum.valueChanged.connect(self.NumAccumChanged)
         self.spinBoxNumRows.valueChanged.connect(self.NumRowsChanged)
+        self.spinBoxCenterRow.valueChanged.connect(self.NumRowsChanged)
         self.checkBoxROI.stateChanged.connect(self.ROI)
         self.checkBoxCrop.stateChanged.connect(self.IsolatedCrop)
         self.checkBoxCooler.stateChanged.connect(self.Cooler)
@@ -683,9 +684,13 @@ class AndorUI(QtWidgets.QWidget):
     def updateGUI(self):
         trig_modes = {0: 0, 1: 1, 6: 2}
         self.comboBoxAcqMode.setCurrentIndex(self.Andor.parameters['AcquisitionMode']['value'] - 1)
+        self.AcquisitionModeChanged()
         self.comboBoxReadMode.setCurrentIndex(self.Andor.parameters['ReadMode']['value'])
+        self.ReadModeChanged()
         self.comboBoxTrigMode.setCurrentIndex(trig_modes[self.Andor.parameters['TriggerMode']['value']])
+        self.TrigChanged()
         self.comboBoxBinning.setCurrentIndex(np.log2(self.Andor.parameters['Image']['value'][0]))
+        self.BinningChanged()
         self.spinBoxNumFrames.setValue(self.Andor.parameters['NKin']['value'])
 
         self.Andor.GetParameter('AcquisitionTimings')
@@ -706,14 +711,38 @@ class AndorUI(QtWidgets.QWidget):
     def AcquisitionModeChanged(self):
         available_modes = ['Single', 'Accumulate', 'Kinetic', 'Fast Kinetic']
         currentMode = self.comboBoxAcqMode.currentText()
-        if currentMode == 'Fast Kinetic':
-            self.NumRowsChanged()
         self.Andor.SetParameter('AcquisitionMode', available_modes.index(currentMode) + 1)
+
+        if currentMode == 'Fast Kinetic':
+            self.spinBoxNumRows.show()
+            self.labelNumRows.show()
+        elif self.comboBoxReadMode.currentText() != 'Single track':
+            self.spinBoxNumRows.hide()
+            self.labelNumRows.hide()
+        if currentMode == 'Accumulate':
+            self.spinBoxNumAccum.show()
+            self.labelNumAccum.show()
+        else:
+            self.spinBoxNumAccum.hide()
+            self.labelNumAccum.hide()
 
     def ReadModeChanged(self):
         available_modes = ['FVB', 'Multi-track', 'Random track', 'Single track', 'Image']
         currentMode = self.comboBoxReadMode.currentText()
         self.Andor.SetParameter('ReadMode', available_modes.index(currentMode))
+        if currentMode == 'Single track':
+            self.spinBoxNumRows.show()
+            self.labelNumRows.show()
+            self.spinBoxCenterRow.show()
+            self.labelCenterRow.show()
+        elif self.comboBoxAcqMode.currentText() != 'Fast Kinetic':
+            self.spinBoxNumRows.hide()
+            self.labelNumRows.hide()
+            self.spinBoxCenterRow.hide()
+            self.labelCenterRow.hide()
+        else:
+            self.spinBoxCenterRow.hide()
+            self.labelCenterRow.hide()
 
     def TrigChanged(self):
         available_modes = {'Internal': 0, 'External': 1, 'ExternalStart': 6}
@@ -753,7 +782,11 @@ class AndorUI(QtWidgets.QWidget):
         if self.Andor.parameters['AcquisitionMode']['value'] == 4:
             self.Andor.SetFastKinetics(num_rows)
         elif self.Andor.parameters['ReadMode']['value'] == 3:
-            self.Andor.SetParameter('SingleTrack', self.Andor.parameters['DetectorShape']['value'][1] / 2, num_rows)
+            center_row = self.spinBoxCenterRow.value()
+            if center_row - num_rows < 0:
+                self.Andor._logger.info('Too many rows provided for Single Track mode. Using %g rows instead' %center_row)
+                num_rows = center_row
+            self.Andor.SetParameter('SingleTrack', center_row, num_rows)
         else:
             self.Andor._logger.info('Changing the rows only works in Fast Kinetic or in Single Track mode')
 
