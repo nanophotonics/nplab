@@ -72,7 +72,7 @@ class APT_VCP(serial_instrument.SerialInstrument):
                                   63: ['OptoDCDriver (mini DC servo driver)', 'ODC001'],
                                   70: ['Three channel card slot stepper driver', 'BSC103'],
                                   80: ['Stepper Driver T-Cube', 'TST001'],
-                                  83: ['DC Driver T-Cube', 'TDC001'],
+                                  # 83: ['DC Driver T-Cube', 'TDC001'],
                                   73: ['Brushless DC motherboard', 'BBD102/BBD103'],
                                   94: ['Brushless DC motor card', 'BBD102/BBD103']}
     command_log = deque(maxlen=20)  # stores commands sent to the device
@@ -218,7 +218,7 @@ class APT_VCP(serial_instrument.SerialInstrument):
         message_dict = self.query(0x0005)
         serialnum, model, hwtype, swversion, notes, hwversion, modstate, nchans = struct.unpack('<I8sHI48s12xHHH',
                                                                                                 message_dict['data'])
-        if hwversion == 1:
+        if len(str(serialnum)) != 8:
             serialnum = int(hex(serialnum)[2:-1])
 
         hardware_dict = {'serial_number': serialnum, 'model': model.replace('\x00', ''), 'hardware_type': hwtype,
@@ -226,7 +226,11 @@ class APT_VCP(serial_instrument.SerialInstrument):
                          'hardware_version': hwversion,
                          'modstate': modstate, 'number_of_channels': nchans}
         self.serial_number = serialnum
-        self.model = self.serial_num_to_device_types[int(str(serialnum)[0:2])]
+        try:
+            self.model = self.serial_num_to_device_types[int(str(serialnum)[0:2])]
+        except KeyError:
+            self.model = ['Dummy', 'Serial number not recognised in the serial_num_to_device_types']
+            self._logger.warn('Serial number not recognised. Model set to Dummy')
         self.number_of_channels = nchans
         return hardware_dict
 
