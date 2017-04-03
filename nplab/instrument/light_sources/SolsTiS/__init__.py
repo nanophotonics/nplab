@@ -29,6 +29,8 @@ MAX_MESSAGE_HISTORY = 10
 
 
 class SolsTiSParseFail(Exception):
+    updateGUI = QtCore.SIGNAL()
+
     def __init__(self, dicc):
         exceptionstring = ERROR_CODE[dicc['message']['parameters']['protocol_error'][0]] + \
                           '\n at transmission: ' + str(dicc['message']['transmission_id'][0])
@@ -37,7 +39,7 @@ class SolsTiSParseFail(Exception):
 
 
 class SolsTiS(Instrument):
-    metadata = {'laser_status'}
+    metadata_property_names = ('laser_status', )
 
     def __init__(self, address, **kwargs):
         """
@@ -96,7 +98,7 @@ class SolsTiS(Instrument):
 
         self.read_message()
 
-        if self.verbosity and 'status' in self.message_in_history[-1]['message']['parameters'].keys():
+        if 'status' in self.message_in_history[-1]['message']['parameters'].keys():
             status = self.message_in_history[-1]['message']['parameters']['status']
 
             if isinstance(status, basestring):
