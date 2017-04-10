@@ -1125,55 +1125,6 @@ ERROR_CODE = {
 }
 
 
-def test_all():
-    import matplotlib.pyplot as plt
-    andor = Andor() #wvl_to_pxl=32.5 / 1600, magnification=30, pxl_size=16)
-    # andor._logger.setLevel('DEBUG')
-    # andor._logger.setLevel('DEBUG')
-    andor._logger.debug('Hah')
-    andor._logger.info('Hah')
-    andor._logger.warn('Hah')
-    andor._logger.error('Hah')
-
-    andor.show_gui(True)
-    # params = andor.GetAllParameters()
-    # andor.SetAllParameters(params)
-    print 'Done'
-
-    # data = []
-    # andor.StartAcquisition()
-    # andor.GetAcquiredData(data)
-    #
-    # # print data
-    # print type(data)
-    # print type(andor.CurImage)
-    # print andor.CurImage[0:10]
-    #
-    # plt.imshow(andor.CurImage)
-    # plt.show()
-
-
-def test_GUI():
-    from gui import QtWidgets
-    import sys
-
-    andor = Andor(verbosity=True, idn='AndorDebug', wvl_to_pxl=32.5 / 1600, magnification=30, pxl_size=16)
-
-    app = QtWidgets.QApplication(sys.argv)
-    app.aboutToQuit.connect(app.deleteLater)
-
-    # # send the experiment instance to the main dialog
-    dialog = AndorUI(andor)
-    dialog.show()
-
-    try:
-        from IPython.lib.guisupport import start_event_loop_qt4
-        start_event_loop_qt4(app)
-    except ImportError:
-        app.exec_()
-
-    sys.exit(app.exec_())
-
-
 if __name__ == '__main__':
-    test_all()
+    andor = Andor() #wvl_to_pxl=32.5 / 1600, magnification=30, pxl_size=16)
+    andor.show_gui(True)

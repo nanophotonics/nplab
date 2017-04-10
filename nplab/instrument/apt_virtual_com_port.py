@@ -72,12 +72,12 @@ class APT_VCP(serial_instrument.SerialInstrument):
                                   63: ['OptoDCDriver (mini DC servo driver)', 'ODC001'],
                                   70: ['Three channel card slot stepper driver', 'BSC103'],
                                   80: ['Stepper Driver T-Cube', 'TST001'],
-                                  # 83: ['DC Driver T-Cube', 'TDC001'],
+                                  83: ['DC Driver T-Cube', 'TDC001'],
                                   73: ['Brushless DC motherboard', 'BBD102/BBD103'],
                                   94: ['Brushless DC motor card', 'BBD102/BBD103']}
     command_log = deque(maxlen=20)  # stores commands sent to the device
 
-    def __init__(self, port=None, source=0x01, destination=None, verbosity=False, use_si_units=False):
+    def __init__(self, port=None, source=0x01, destination=None, use_si_units=False):
         """
         Set up the serial port, setting source and destinations, verbosity and hardware info.
         """
@@ -87,8 +87,7 @@ class APT_VCP(serial_instrument.SerialInstrument):
             print 'destination has not been set!'
         else:
             self.destination = destination
-        self.verbosity = verbosity
-        self.verbose(self.get_hardware_info())
+        self._logger.debug(self.get_hardware_info())
 
     @staticmethod
     def unpack_binary_mask(value, size=13):
@@ -115,14 +114,14 @@ class APT_VCP(serial_instrument.SerialInstrument):
                 returned_message = {'message': msgid, 'param1': param1,
                                     'param2': param2, 'dest': dest,
                                     'source': source}
-                self.verbose(returned_message)
+                self._logger.debug(returned_message)
                 self.read()
             elif msgid == self.surprise_message_codes['MGMSG_HW_RICHRESPONSE']:
                 data = self.ser.read(length)
                 returned_message = {'message': msgid, 'length': length,
                                     'dest': dest, 'source': source,
                                     'data': data}
-                self.verbose(returned_message)
+                self._logger.debug(returned_message)
                 self.read()
             elif (msgid == self.surprise_message_codes['Status update id']
                   and self.command_log[-1] == self.surprise_message_codes['Status update id']):
@@ -179,10 +178,6 @@ class APT_VCP(serial_instrument.SerialInstrument):
             time.sleep(0.1)
             return self.read()  # question: should we strip the final newline?
 
-    def verbose(self, message):
-        if self.verbosity == True:
-            print message
-
     # Listing General control message, not all of these can be used with every piece of equipment
     def identify(self):
         """ Instruct hardware unit to identify itself by flashing its LED"""
@@ -218,7 +213,8 @@ class APT_VCP(serial_instrument.SerialInstrument):
         message_dict = self.query(0x0005)
         serialnum, model, hwtype, swversion, notes, hwversion, modstate, nchans = struct.unpack('<I8sHI48s12xHHH',
                                                                                                 message_dict['data'])
-        if len(str(serialnum)) != 8:
+
+        if serialnum != 0 and len(str(serialnum)) != 8:
             serialnum = int(hex(serialnum)[2:-1])
 
         hardware_dict = {'serial_number': serialnum, 'model': model.replace('\x00', ''), 'hardware_type': hwtype,
@@ -226,6 +222,7 @@ class APT_VCP(serial_instrument.SerialInstrument):
                          'hardware_version': hwversion,
                          'modstate': modstate, 'number_of_channels': nchans}
         self.serial_number = serialnum
+
         try:
             self.model = self.serial_num_to_device_types[int(str(serialnum)[0:2])]
         except KeyError:

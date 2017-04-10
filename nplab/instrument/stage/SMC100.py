@@ -242,30 +242,32 @@ class SMC100(SerialInstrument, Stage):
         The state encountered is returned.
         """
         starttime = time.time()
-        done = False
+        done = [False]*len(self.axis_names)
         self._logger.debug('waiting for states %s' % (str(targetstates)))
-        while not done:
-            waittime = time.time() - starttime
-            if waittime > MAX_WAIT_TIME_SEC:
-                raise SMC100WaitTimedOutException()
+        while not all(done):
+            for axes in range(len(self.axis_names)):
+                waittime = time.time() - starttime
+                if waittime > MAX_WAIT_TIME_SEC:
+                    raise SMC100WaitTimedOutException()
 
-            try:
-                state = self.get_status()[1]
-                if state in targetstates:
-                    self._logger.debug('in state %s' % (state))
-                    return state
-                elif not ignore_disabled_states:
-                    disabledstates = [
-                        STATE_DISABLE_FROM_READY,
-                        STATE_DISABLE_FROM_JOGGING,
-                        STATE_DISABLE_FROM_MOVING]
-                    if state in disabledstates:
-                        raise SMC100DisabledStateException(state)
+                try:
+                    state = self.get_status()[axes][1]
+                    if state in targetstates:
+                        self._logger.debug('in state %s' % (state))
+                        done[axes] = True
+                        # return state
+                    elif not ignore_disabled_states:
+                        disabledstates = [
+                            STATE_DISABLE_FROM_READY,
+                            STATE_DISABLE_FROM_JOGGING,
+                            STATE_DISABLE_FROM_MOVING]
+                        if state in disabledstates:
+                            raise SMC100DisabledStateException(state)
 
-            except SMC100ReadTimeOutException:
-                self._logger.info('Read timed out, retrying in 1 second')
-                time.sleep(1)
-                continue
+                except SMC100ReadTimeOutException:
+                    self._logger.info('Read timed out, retrying in 1 second')
+                    time.sleep(1)
+                    continue
 
     def reset_and_configure(self):
         """
@@ -318,9 +320,9 @@ class SMC100(SerialInstrument, Stage):
             # wait for the controller to be ready
             st = self._wait_states((STATE_READY_FROM_HOMING, STATE_READY_FROM_MOVING))
             if st == STATE_READY_FROM_MOVING:
-                self.move(0, **kwargs)
+                self.move([0]*len(self.axis_names), **kwargs)
         else:
-            self.move(0, **kwargs)
+            self.move([0]*len(self.axis_names), **kwargs)
 
     def stop(self):
         self._send_cmd('ST')
@@ -344,15 +346,17 @@ class SMC100(SerialInstrument, Stage):
     def move(self, pos, axis=None, relative=False, waitStop=True):
         if axis is None:
             axis = self.axis_names
+        if not hasattr(pos, '__iter__'):
+            pos = [pos]
         if relative:
             index = 0
             for ax in axis:
-                self._send_cmd('PR', axis=ax, argument=pos[index])
+                self._send_cmd('PR', axes=ax, argument=pos[index])
                 index += 1
         else:
             index = 0
             for ax in axis:
-                self._send_cmd('PA', axis=ax, argument=pos[index])
+                self._send_cmd('PA', axes=ax, argument=pos[index])
                 index += 1
 
         if waitStop:
@@ -362,26 +366,26 @@ class SMC100(SerialInstrument, Stage):
             # is included.
             self._wait_states((STATE_READY_FROM_MOVING, STATE_READY_FROM_HOMING))
 
-    def move_abs_homed_mm(self, position_mm, **kwargs):
+    def move_referenced(self, position_mm, **kwargs):
         '''
         Moves to an absolute position referenced from the software home
         :param position_mm: position from the software home
         :return:
         '''
 
-        final_pos = self.software_home + position_mm
+        final_pos = map(lambda x, y: x+y, self.software_home, position_mm)
 
-        self.move_absolute_mm(final_pos, **kwargs)
+        self.move(final_pos, **kwargs)
 
     def set_software_home(self):
         '''
         Sets a software home, so that we can easily go back to similar sample positions
         :return:
         '''
-        self.software_home = float(self.get_position_mm())
+        self.software_home = self.get_position()
 
     def go_software_home(self):
-        self.move_abs_homed_mm(0)
+        self.move_referenced([0]*len(self.axis_names))
 
     def set_velocity(self, velocity):
         self._send_cmd('VA_Set', velocity)

@@ -29,7 +29,7 @@ MAX_MESSAGE_HISTORY = 10
 
 
 class SolsTiSParseFail(Exception):
-    updateGUI = QtCore.SIGNAL()
+    # updateGUI = QtCore.SIGNAL()
 
     def __init__(self, dicc):
         exceptionstring = ERROR_CODE[dicc['message']['parameters']['protocol_error'][0]] + \

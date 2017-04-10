@@ -58,12 +58,12 @@ class APT_VCP_motor(APT_VCP, Stage):
     This class handles all the basic communication with APT virtual com ports
     """
 
-    axis_names = ('x')
-    def __init__(self, port=None, source=0x01, destination=None, verbosity=True, use_si_units=False, **kwargs):
+    axis_names = ('x', )
+    def __init__(self, port=None, source=0x01, destination=None, use_si_units=False, **kwargs):
         """
-        Set up the serial port, setting source and destinations, verbosity and hardware info.
+        Set up the serial port, setting source and destinations, and hardware info.
         """
-        APT_VCP.__init__(self, port=port, source=source, destination=destination, verbosity=verbosity,
+        APT_VCP.__init__(self, port=port, source=source, destination=destination,
                          use_si_units=use_si_units)  # this opens the port
         Stage.__init__(self)
         if self.model[1] in DC_status_motors:
@@ -114,9 +114,17 @@ class APT_VCP_motor(APT_VCP, Stage):
                 return False
         return True
 
+    def _waitFinishMove(self):
+        status = self.get_status_update()
+
+        while any(map(lambda x: 'in motion' in x[1], status)):
+            time.sleep(0.1)
+            status = self.get_status_update()
+
     def home(self):
         self.write(0x0443)
         self._waitForReply(0x0444, 6)
+        self._waitFinishMove()
 
     def move(self, pos, axis=None, relative=False):
         if axis is None:
@@ -128,6 +136,7 @@ class APT_VCP_motor(APT_VCP, Stage):
             self.write(0x0453, data=data)
 
         self._waitForReply(0x0464, 20)
+        self._waitFinishMove()
 
     '''PARAMETERS'''
 
@@ -211,7 +220,7 @@ class APT_VCP_motor(APT_VCP, Stage):
         return [position]
 
     def set_position(self, position, channel_number=1):
-        position = self.convert_to_APT_position(position)
+        # position = self.convert_to_APT_position(position)
         data = bytearray(struct.pack('<HL', self.channel_number_to_identity[channel_number], position))
         self.write(0x0410, data=data)
 
@@ -455,7 +464,7 @@ class APT_VCP_motor(APT_VCP, Stage):
     def make_all_parameters(self):
         # TODO: add all the documentation for each of these parameters
         self.make_parameter(dict(name='encoder_counts', set=0x0409, get=0x040A, structure='HL', param_names=['channel_num', 'encoder_counts']))
-        # self.make_parameter(dict(name='position', set=0x0410, get=0x0411, structure='HL', param_names=['channel_num', ['position','distance']]))
+        # self.make_parameter(dict(name='position', set=0x0410, get=0x0411, structure='HL', param_names=['channel_num', ['position', 'distance']]))
         self.make_parameter(dict(name='velocity_params', set=0x0413, get=0x0414, structure='HLLL',
                                  param_names=['channel_num', ['min_velocity', 'velocity'],
                                               ['acceleration', 'acceleration'], ['max_velocity', 'velocity']]))

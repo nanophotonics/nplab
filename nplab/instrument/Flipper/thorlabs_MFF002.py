@@ -1,4 +1,4 @@
-from nplab.instrument.Flipper import Flipper
+from nplab.instrument.flipper import Flipper
 import struct
 import numpy as np
 import time
@@ -6,7 +6,7 @@ from nplab.utils.thread_utils import locked_action, background_action
 
 
 class ThorlabsMFF(Flipper):
-    def __init__(self, port):
+    def __init__(self, port, **kwargs):
         Flipper.__init__(self, port)
 
     # @background_action    # background_actions do not work well with properties
