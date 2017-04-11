@@ -321,7 +321,7 @@ auto_connectable_controls['spinbox'] = {
     }
 auto_connectable_controls['doublespinbox'] = {
     'qt_type': QtWidgets.QDoubleSpinBox,
-    'suffices': ["_spinbox","SpinBox","_spin","_doublespinbox","DoubleSpinBox"],
+    'suffices': ["_spinbox","SpinBox","_spin","_doublespinbox","DoubleSpinBox","_doubleSpinBox"],
     'control_change_handler': control_change_handler(),
     'control_change_slot_name': 'valueChanged',
     'property_change_handler': property_change_handler("value", float),
