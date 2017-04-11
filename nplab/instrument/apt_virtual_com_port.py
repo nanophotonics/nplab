@@ -77,7 +77,7 @@ class APT_VCP(serial_instrument.SerialInstrument):
                                   94: ['Brushless DC motor card', 'BBD102/BBD103']}
     command_log = deque(maxlen=20)  # stores commands sent to the device
 
-    def __init__(self, port=None, source=0x01, destination=None, use_si_units=False):
+    def __init__(self, port=None, source=0x01, destination=None, use_si_units=False, stay_alive = False):
         """
         Set up the serial port, setting source and destinations, verbosity and hardware info.
         """
@@ -85,8 +85,11 @@ class APT_VCP(serial_instrument.SerialInstrument):
         self.source = source
         if destination == None:
             print 'destination has not been set!'
+        elif type(destination) != dict:
+            self.destination = {'1': destination}
         else:
             self.destination = destination
+        self.stay_alive = stay_alive
         self._logger.debug(self.get_hardware_info())
 
     @staticmethod
@@ -155,62 +158,80 @@ class APT_VCP(serial_instrument.SerialInstrument):
                                     'source': source}
             return returned_message
 
-    def write(self, message_id, param1=0x00, param2=0x00, data=None):
+    def write(self, message_id, param1=0x00, param2=0x00, data=None, destination_id = None):
         """Overwrite the serial write command to combine message_id,
             two possible paramters (set to 0 if not given)
             with the source and destinations """
+        if destination_id == None:
+            destination = self.destination.values()[0]
+        else:
+            destination = self.destination[destination_id]
         if data == None:
-            formated_message = bytearray(struct.pack('<HBBBB', message_id, param1, param2,
-                                                     self.destination, self.source))
+            formated_message = bytearray(struct.pack('<HBBBB', message_id, param1, param2,destination, self.source))
         else:
             param1 = len(data)
             formated_message = bytearray(struct.pack('<HBBBB', message_id, param1, param2,
-                                                     self.destination | 0x80, self.source))
+                                                     destination | 0x80, self.source))
             formated_message += data
+        
+        if (len(self.command_log) == self.command_log.maxlen 
+            and 0x0492 not in self.command_log
+            and self.stay_alive == True):
+            self.command_log.append(0x0492)
+            self.staying_alive()
+        self.command_log.append(message_id)
         self.ser.write(formated_message)
 
-    def query(self, message_id, param1=0x00, param2=0x00, data=None):
+    def query(self, message_id, param1=0x00, param2=0x00, data=None,destination_id = None,blocking = False):
         """Oveawrite the query command to allow the correct passing of 
             message_ids and paramaters """
         with self.communications_lock:
             self.flush_input_buffer()
-            self.write(message_id, param1, param2, data=data)
+            self.write(message_id, param1, param2, data=data,destination_id=destination_id)
             time.sleep(0.1)
-            return self.read()  # question: should we strip the final newline?
+            if blocking == True:
+                reply = self._waitForReply()
+                if reply[0] == True:
+                    return reply[1]
+                if reply[0] == False:
+                    self._logger.error('No reply recieved for message '+str(message_id))
+                    return reply[1]
+            elif blocking == False:
+                return self.read()  # question: should we strip the final newline?
 
     # Listing General control message, not all of these can be used with every piece of equipment
     def identify(self):
         """ Instruct hardware unit to identify itself by flashing its LED"""
         self.write(0x0223)
 
-    def set_channel_state(self, channel_number, new_state):
+    def set_channel_state(self, channel_number, new_state,destination_id = None):
         """ Enable or disable a channel"""
         channel_identity = self.channel_number_to_identity[channel_number]
         new_state = self.state_conversion[new_state]
-        self.write(message=0x0210, param_1=channel_identity, param_2=new_state)
+        self.write(message=0x0210, param_1=channel_identity, param_2=new_state,destination_id = destination_id)
 
-    def get_channel_state(self, channel_number):
+    def get_channel_state(self, channel_number,destination_id = None):
         """Get the current state of a channel """
         message_dict = self.query(0x0211, param1=self.channel_number_to_identity[
-            channel_number])  # Get the entire message dictionary
+            channel_number],destination_id = destination_id)  # Get the entire message dictionary
         current_state = self.reverse_state_conversion[
             message_dict['param2']]  # pull out the current state parameter and convert it to a True/False value
         return current_state
 
-    def disconnect(self):
+    def disconnect(self,destination_id = None):
         """Disconnect the controller from the usb bus"""
-        self.write(0x002)
+        self.write(0x002,destination_id)
 
-    def enable_updates(self, enable_state, update_rate=10):
+    def enable_updates(self, enable_state, update_rate=10,destination_id = None):
         '''Enable or disable hardware updates '''
         if enable_state == True:
-            self.write(0x0011, param1=update_rate)
+            self.write(0x0011, param1=update_rate,destination_id = destination_id)
         if enable_state == False:
-            self.write(0x0012)
+            self.write(0x0012,destination_id)
 
-    def get_hardware_info(self):
+    def get_hardware_info(self,destination_id = None):
         '''Manually get a status update '''
-        message_dict = self.query(0x0005)
+        message_dict = self.query(0x0005,destination_id = destination_id)
         serialnum, model, hwtype, swversion, notes, hwversion, modstate, nchans = struct.unpack('<I8sHI48s12xHHH',
                                                                                                 message_dict['data'])
 
@@ -245,8 +266,30 @@ class APT_VCP(serial_instrument.SerialInstrument):
                 The returned message from a status update request           (dict)
             '''
         raise NotImplementedError
-
-
+    def staying_alive(self,destination_id= None):
+        """Keeps the motor controller from thinking the Pc has crashed """
+        if destination_id==None:
+            destination_id = self.destination.keys()
+        else:
+            if not hasattr(destination_id, '__iter__'):
+                destination_id = tuple(destination_id)
+        for dest in destination_id:
+            print dest
+            self.write(0x0492, destination_id = dest)
+        print destination_id,dest
+        
+    def _waitForReply(self):
+        reply = ''
+        t0 = time.time()
+        while len(reply) == 0:
+            try:
+                reply = self.read()
+            except struct.error:
+                reply = ''
+            time.sleep(0.1)
+            if time.time() - t0 > 30:
+                return False,''
+        return True, reply
 if __name__ == '__main__':
     # microscope_stage = APT_VCP(port = 'COM12',source = 0x01,destination = 0x21)
 

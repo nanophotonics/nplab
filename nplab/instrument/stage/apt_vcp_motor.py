@@ -59,12 +59,12 @@ class APT_VCP_motor(APT_VCP, Stage):
     """
 
     axis_names = ('x', )
-    def __init__(self, port=None, source=0x01, destination=None, use_si_units=False, **kwargs):
+    def __init__(self, port=None, source=0x01, destination=None, use_si_units=False, stay_alive = False, **kwargs):
         """
         Set up the serial port, setting source and destinations, and hardware info.
         """
         APT_VCP.__init__(self, port=port, source=source, destination=destination,
-                         use_si_units=use_si_units)  # this opens the port
+                         use_si_units=use_si_units, stay_alive=stay_alive)  # this opens the port
         Stage.__init__(self)
         if self.model[1] in DC_status_motors:
             # Set the bit mask for DC controllers
@@ -98,45 +98,69 @@ class APT_VCP_motor(APT_VCP, Stage):
                                     0x00001000: 'interlock state (1 = enabled)'}
 
             # delattr(self, 'get_qt_ui')
-
+        if type(destination) != dict and len(self.destination)==1:
+            self.destination = {'x' : destination}
+        else:
+            self.axis_names = tuple(destination.keys())
+            self.destination = destination
         self.make_all_parameters()
 
     '''MOVEMENT'''
 
-    def _waitForReply(self, msgCode, replysize):
-        self.write(msgCode)
-        reply = self.ser.read(replysize)
-        t0 = time.time()
-        while len(reply) == replysize:
-            reply = self.ser.read(replysize)
-            time.sleep(0.1)
-            if time.time() - t0 > 30:
-                return False
-        return True
+#    def _waitForReply(self, msgCode, replysize):
+#        self.write(msgCode)
+#        reply = self.ser.read(replysize)
+#        t0 = time.time()
+#        while len(reply) == replysize:
+#            reply = self.ser.read(replysize)
+#            time.sleep(0.1)
+#            if time.time() - t0 > 30:
+#                return False
+#        return True
 
-    def _waitFinishMove(self):
-        status = self.get_status_update()
-
-        while any(map(lambda x: 'in motion' in x[1], status)):
-            time.sleep(0.1)
-            status = self.get_status_update()
-
-    def home(self):
-        self.write(0x0443)
-        self._waitForReply(0x0444, 6)
-        self._waitFinishMove()
-
-    def move(self, pos, axis=None, relative=False):
-        if axis is None:
-            axis = 1
-        data = bytearray(struct.pack('<HL', self.channel_number_to_identity[axis], pos))
-        if relative:
-            self.write(0x0448, data=data)
+    def _waitFinishMove(self,axis = None):
+        if axis == None:
+            destination_ids = self.destination.keys()
         else:
-            self.write(0x0453, data=data)
+            destination_ids = [axis]
+        for dest in destination_ids:
+            status = self.get_status_update(axis = dest)
+            while any(map(lambda x: 'in motion' in x[1], status)):
+                time.sleep(0.1)
+                status = self.get_status_update(axis = dest)
+          #      print status
 
-        self._waitForReply(0x0464, 20)
-        self._waitFinishMove()
+    def home(self,axis = None):
+        if axis == None:
+            destination_ids = self.axis_names
+        else:
+            destination_ids = tuple(axis)
+        for dest in destination_ids:
+            self.write(0x0443,destination_id = dest)
+    #        self._waitForReply(0x0444, 6)
+            self._waitFinishMove()
+
+    def move(self, pos, axis=None, relative=False,channel_number = None):
+        if channel_number is None:
+            channel_number = 1
+        if not hasattr(pos, '__iter__'):
+            pos = [pos]
+        if axis is None:
+            if len(pos)==len(self.axis_names):
+                axes = self.axis_names
+            else:
+                self._logger.warn('What axis shall I move?')
+        else:
+            axes = tuple(axis)
+        axis_number = 0
+        for axis in axes:
+            data = bytearray(struct.pack('<HL', self.channel_number_to_identity[channel_number], pos[axis_number]))
+            if relative:
+                self.write(0x0448, data=data,destination_id=axis)
+            else:
+                self.write(0x0453, data=data,destination_id=axis)
+            self._waitFinishMove()
+            axis_number += 1
 
     '''PARAMETERS'''
 
@@ -164,11 +188,11 @@ class APT_VCP_motor(APT_VCP, Stage):
     #     '''This is motor and controller specific and therefore need to be subclassed '''
     #     raise NotImplementedError
 
-    def get_status_update(self, channel_number=1):
+    def get_status_update(self, channel_number=1,axis = None):
         if self.model[1] in DC_status_motors:
-            returned_message = self.query(0x0490, param1=self.channel_number_to_identity[channel_number])
+            returned_message = self.query(0x0490, param1=self.channel_number_to_identity[channel_number],destination_id = axis)
         else:
-            returned_message = self.query(0x0480, param1=self.channel_number_to_identity[channel_number])
+            returned_message = self.query(0x0480, param1=self.channel_number_to_identity[channel_number],destination_id = axis)
         return self.update_status(returned_message['data'])
 
     def update_status(self, returned_message):
@@ -190,9 +214,6 @@ class APT_VCP_motor(APT_VCP, Stage):
         self.status = self.status_bit_mask[np.where(self._bit_mask_array(status_bits, self.status_bit_mask[:, 0]))]
         return self.status
 
-    def staying_alive(self):
-        """Keeps the motor controller from thinking the Pc has crashed """
-        self.write(0x0492)
 
     def init_no_flash_programming(self):
         """ This message must be sent on startup to tell the controller
@@ -203,7 +224,7 @@ class APT_VCP_motor(APT_VCP, Stage):
         """
         self.write(0x0018)
 
-    def get_position(self, channel_number=1):
+    def get_position(self, axis = None,channel_number=1):
         '''Sets/Gets the live position count in the controller
             generally this should not be used to set the position
             instead the controller should determine its own position
@@ -213,16 +234,23 @@ class APT_VCP_motor(APT_VCP, Stage):
                             which is then converted to APT units within the setter
                 channel_number:     (int) This defaults to 1
         '''
-        returned_message = self.query(0x0411, param1=self.channel_number_to_identity[channel_number])
-        data = returned_message['data']
-        channel_id, position = struct.unpack('<HL', data)
+        if axis is None:
+            return [self.get_position(axis) for axis in self.axis_names]
+        else:
+            if axis not in self.axis_names:
+                raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
+                
+            returned_message = self.query(0x0411, param1=self.channel_number_to_identity[channel_number],
+                                          destination_id = axis)
+            data = returned_message['data']
+            channel_id, position = struct.unpack('<HL', data)
         # position = self.convert_to_SI_position(position)
-        return [position]
+            return position
 
-    def set_position(self, position, channel_number=1):
+    def set_position(self, position, channel_number=1,axis = None):
         # position = self.convert_to_APT_position(position)
         data = bytearray(struct.pack('<HL', self.channel_number_to_identity[channel_number], position))
-        self.write(0x0410, data=data)
+        self.write(0x0410, data=data,destination_id = axis)
 
     position = property(get_position, set_position)
 
@@ -393,7 +421,7 @@ class APT_VCP_motor(APT_VCP, Stage):
         print 'Not doing anything from ', from_, ' to ', to_
         return value
 
-    def make_parameter(self, param_dict):
+    def make_parameter(self, param_dict, destination_id = None):
         """Makes a parameter dictionary and sets it as a property
 
         All parameters in the Thorlabs APT basically require the same command structure, so this function wraps any
@@ -427,7 +455,7 @@ class APT_VCP_motor(APT_VCP, Stage):
         """
 
         def getter(selfie, channel_number=1):
-            returned_message = selfie.query(param_dict['get'], param1=selfie.channel_number_to_identity[channel_number])
+            returned_message = selfie.query(param_dict['get'], param1=selfie.channel_number_to_identity[channel_number],destination_id = destination_id)
             data = returned_message['data']
             data = struct.unpack('<' + param_dict['structure'], data)
             params = {}
@@ -452,7 +480,7 @@ class APT_VCP_motor(APT_VCP, Stage):
                     elif type(name) == list:
                         unstructured_data += [selfie.convert(params[name[0]], name[1], 'counts')]
             data = struct.pack(*unstructured_data)
-            selfie.write(param_dict['set'], data=data)
+            selfie.write(param_dict['set'], data=data, destination_id=destination_id )
 
         setattr(self, 'get_' + param_dict['name'], types.MethodType(getter, self))
         setattr(self, 'set_' + param_dict['name'], types.MethodType(setter, self))
@@ -463,25 +491,26 @@ class APT_VCP_motor(APT_VCP, Stage):
 
     def make_all_parameters(self):
         # TODO: add all the documentation for each of these parameters
-        self.make_parameter(dict(name='encoder_counts', set=0x0409, get=0x040A, structure='HL', param_names=['channel_num', 'encoder_counts']))
-        # self.make_parameter(dict(name='position', set=0x0410, get=0x0411, structure='HL', param_names=['channel_num', ['position', 'distance']]))
-        self.make_parameter(dict(name='velocity_params', set=0x0413, get=0x0414, structure='HLLL',
-                                 param_names=['channel_num', ['min_velocity', 'velocity'],
-                                              ['acceleration', 'acceleration'], ['max_velocity', 'velocity']]))
-        self.make_parameter(dict(name='jog_params', set=0x0416, get=0x0417, structure='HHLLLLH',
-                                 param_names=['channel_num', ['jog_step_size', 'distance'],
-                                              ['jog_min_velocity', 'velocity'], ['jog_acceleration', 'acceleration'],
-                                              ['jog_max_velocity', 'velocity'], 'jog_stop_mode']))
-        self.make_parameter(dict(name='gen_move_params', set=0x043C, get=0x043B, structure='HL',
-                                 param_names=['channel_num', 'backlash']))
-        self.make_parameter(dict(name='power_params', set=0x0426, get=0x0427, structure='HHH',
-                                 param_names=['channel_num', 'RestPower', 'MovePower']))
-        self.make_parameter(dict(name='move_rel_params', set=0x0446, get=0x0447, structure='HL',
-                                 param_names=['channel_num', 'rel_dist']))
-        self.make_parameter(dict(name='move_abs_params', set=0x0451, get=0x0452, structure='HL',
-                                 param_names=['channel_num', 'abs_dist']))
-        self.make_parameter(dict(name='home_params', set=0x0441, get=0x0442, structure='HHHLL',
-                                 param_names=['channel_num', 'direction', 'limit_switch', 'velocity', 'offset']))
+        for axis in self.destination:
+            self.make_parameter(dict(name=axis+'_encoder_counts', set=0x0409, get=0x040A, structure='HL', param_names=['channel_num', 'encoder_counts']),destination_id=axis)
+            # self.make_parameter(dict(name='position', set=0x0410, get=0x0411, structure='HL', param_names=['channel_num', ['position', 'distance']]))
+            self.make_parameter(dict(name=axis+'_velocity_params', set=0x0413, get=0x0414, structure='HLLL',
+                                     param_names=['channel_num', ['min_velocity', 'velocity'],
+                                                  ['acceleration', 'acceleration'], ['max_velocity', 'velocity']]),destination_id=axis)
+            self.make_parameter(dict(name=axis+'_jog_params', set=0x0416, get=0x0417, structure='HHLLLLH',
+                                     param_names=['channel_num', ['jog_step_size', 'distance'],
+                                                  ['jog_min_velocity', 'velocity'], ['jog_acceleration', 'acceleration'],
+                                                  ['jog_max_velocity', 'velocity'], 'jog_stop_mode']),destination_id=axis)
+            self.make_parameter(dict(name=axis+'_gen_move_params', set=0x043C, get=0x043B, structure='HL',
+                                     param_names=['channel_num', 'backlash']),destination_id = axis)
+            self.make_parameter(dict(name=axis+'_power_params', set=0x0426, get=0x0427, structure='HHH',
+                                     param_names=['channel_num', 'RestPower', 'MovePower']),destination_id = axis)
+            self.make_parameter(dict(name=axis+'_move_rel_params', set=0x0446, get=0x0447, structure='HL',
+                                     param_names=['channel_num', 'rel_dist']),destination_id = axis)
+            self.make_parameter(dict(name=axis+'_move_abs_params', set=0x0451, get=0x0452, structure='HL',
+                                     param_names=['channel_num', 'abs_dist']),destination_id = axis)
+            self.make_parameter(dict(name=axis+'_home_params', set=0x0441, get=0x0442, structure='HHHLL',
+                                     param_names=['channel_num', 'direction', 'limit_switch', 'velocity', 'offset']),destination_id=axis)
         # self.make_parameter(dict(name=, set=, get=, structure=, param_names=['channel_num']))
 
 
