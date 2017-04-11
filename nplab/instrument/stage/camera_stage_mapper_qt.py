@@ -15,6 +15,8 @@ import time, threading
 import pyqtgraph as pg
 from nplab.utils.gui import QtCore, QtGui, QtWidgets
 from nplab.ui.ui_tools import UiTools
+import cv2
+from scipy import ndimage
 
 
 class CameraStageMapper(Instrument):
@@ -52,9 +54,16 @@ class CameraStageMapper(Instrument):
         super(CameraStageMapper, self).__init__()
         self.camera = camera
         self.stage = stage
+        self.autofocus_range = 5.0
+        self.autofocus_step = 0.5
+        self.autofocus_default_ranges = [np.arange(-5,5,0.5),np.arange(-1,1,0.2)]
         self.camera_to_sample = np.identity(2)
         self.camera_centre = (0.5,0.5)
+        self.calibration_distance = 7
+        self.settling_time = 0.2
+        self.frames_to_discard = 1
         self.camera.set_legacy_click_callback(self.move_to_camera_point)
+        self.disable_live_view = True
         self._action_lock = threading.Lock() #prevent us from doing two things involving motion at once!
     
     ############ Coordinate Conversion ##################
@@ -177,15 +186,15 @@ class CameraStageMapper(Instrument):
             raise e
 
 ########## Calibration ###############
-    @on_trait_change("do_calibration")
     def calibrate_in_background(self):
         threading.Thread(target=self.calibrate).start()
     def calibrate(self, dx=None):
         """Move the stage in a square and set the transformation matrix."""
         with self._action_lock:
-            if dx is None: dx=self.calibration_distance #use a sensible default
+            if dx is None or dx is False: dx=self.calibration_distance #use a sensible default
             here = self.camera_centre_position()
             pos = [np.array([i,j,0]) for i in [-dx,dx] for j in [-dx,dx]]
+            print pos, dx
             camera_pos = []
             self.camera.update_latest_frame() # make sure we've got a fresh image
             initial_image = self.camera.gray_image()
@@ -299,7 +308,7 @@ class CameraStageMapper(Instrument):
 #        return np.sum((img - cv2.blur(img,(21,21))).astype(np.single)**2)
         return np.sum(cv2.Laplacian(cv2.cvtColor(img,cv2.COLOR_BGR2GRAY), ddepth=cv2.CV_32F)**2)
 
-    @on_trait_change("do_autofocus")
+
     def autofocus_in_background(self):
         def work():
             self.autofocus_iterate(np.arange(-self.autofocus_range/2, self.autofocus_range/2, self.autofocus_step))
@@ -350,7 +359,7 @@ class CameraStageMapper(Instrument):
         Presently, it just does one iteration for each range passed in: usually
         this would mean a coarse focus then a fine focus.
         """ #NEEDS WORK!
-        if ranges is None:
+        if ranges is None or ranges is False:
             ranges = self.autofocus_default_ranges
         n=0
         for r in ranges:
@@ -358,14 +367,16 @@ class CameraStageMapper(Instrument):
             print "moving Z by %.3f" % pos[2]
             n+=1
         print "Autofocus: performed %d iterations" % n
-
+    
+    def get_qt_ui(self):
+        return CameraStageMapperControlWidget(self)
 class CameraStageMapperControlWidget(QtWidgets.QWidget, UiTools):
     """Controls for the Camera stage mapper"""
     def __init__(self, camerastagemapper):
         super(CameraStageMapperControlWidget, self).__init__()
         self.camerastagemapper = camerastagemapper
         self.load_ui_from_file(__file__,"camerastagemapper.ui")
-        self.auto_connect_by_name(controlled_object=self.camerastagemapper, verbose=False)
+        self.auto_connect_by_name(controlled_object=self.camerastagemapper, verbose=True)
         
 #if __name__ == '__main__':
     #WARNING this is old, probably broken, code.
