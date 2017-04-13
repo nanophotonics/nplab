@@ -193,7 +193,10 @@ class CameraStageMapper(Instrument):
         with self._action_lock:
             if dx is None or dx is False: dx=self.calibration_distance #use a sensible default
             here = self.camera_centre_position()
-            pos = [np.array([i,j,0]) for i in [-dx,dx] for j in [-dx,dx]]
+            if len(self.stage.axis_names)==2:
+                pos = [np.array([i,j]) for i in [-dx,dx] for j in [-dx,dx]]
+            elif len(self.stage.axis_names)==3:
+                pos = [np.array([i,j,0]) for i in [-dx,dx] for j in [-dx,dx]]
             print pos, dx
             camera_pos = []
             self.camera.update_latest_frame() # make sure we've got a fresh image
