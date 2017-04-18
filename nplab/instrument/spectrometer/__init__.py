@@ -190,6 +190,14 @@ class Spectrometer(Instrument):
             return SpectrometerDisplayUI(self)
         else:
             return SpectrometerUI(self)
+            
+    def get_control_widget(self):
+        """Convenience function """
+        return self.get_qt_ui(control_only=True)
+        
+    def get_preview_widget(self):
+        """Convenience function """
+        return self.get_qt_ui(display_only=True)
 
     def save_spectrum(self, spectrum=None, attrs={}):
         """Save a spectrum to the current datafile, creating if necessary.
