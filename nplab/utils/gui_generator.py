@@ -13,6 +13,7 @@ from nplab.utils.gui import QtWidgets, QtGui, uic, QtCore
 from nplab.utils.terminal import ipython
 from nplab.ui.ui_tools import UiTools
 import nplab.datafile as df
+from nplab.utils.log import create_logger, ColoredFormatter
 #from Experiments import settings
 #from Experiments.exper_utils import GeneralScan
 #from Experiments.exper_utils.h5browser import H5Browser
@@ -23,7 +24,7 @@ pyqtgraph.setConfigOption('leftButtonPan', False)
 # TODO: Make GeneralScan GUI
 
 import logging
-LOGGER = logging.getLogger('Experiment.GUI')
+LOGGER = create_logger('GeneratedGUI')
 
 class GuiGenerator(QtWidgets.QMainWindow,UiTools):
     def __init__(self, instrument_dict, parent=None, dock_settings_path = None, scripts_path = None):
@@ -168,6 +169,11 @@ class GuiGenerator(QtWidgets.QMainWindow,UiTools):
         self.actionSaveExperiment.triggered.connect(self.menuSaveExperiment)
         self.actionSaveSettings.triggered.connect(self.menuSaveSettings)
         self.actionRecallSettings.triggered.connect(self.menuLoadSettings)
+        # For some reason the following does not work if put in a loop
+        actions = self.menuVerbose.actions()
+        actions[0].triggered.connect(lambda: self.VerboseChanged(actions[0]))
+        actions[1].triggered.connect(lambda: self.VerboseChanged(actions[1]))
+        actions[2].triggered.connect(lambda: self.VerboseChanged(actions[2]))
     def toggle_browser(self):
         self.actions['Views']['HDF5'].toggle()
         self._toggleView('HDF5')
@@ -178,7 +184,7 @@ class GuiGenerator(QtWidgets.QMainWindow,UiTools):
         else:
             self.setStyleSheet('')
     def menuSaveSettings(self):
-        dock_state = self.dockWidgetArea.saveState()
+        dock_state = self.dockWidgetArea.sav1eState()
         np.save(self.dock_settings_path+'dock_settings',dock_state)
         
     def menuLoadSettings(self):
@@ -212,6 +218,12 @@ class GuiGenerator(QtWidgets.QMainWindow,UiTools):
             self.terminalWindow = terminal.ipython()
             self.terminalWindow.push({'gui': self, 'exper': self.instr_dict})
             self.terminalWindow.push(self.instr_dict)
+            formatter = ColoredFormatter('[%(name)s] - %(levelname)s: %(message)s - %(asctime)s ', '%H:%M')
+            handle = logging.StreamHandler(self.terminalWindow.kernel.stdout)
+            handle.setFormatter(formatter)
+            self._logger.addHandler(handle)
+            instr_logger = logging.getLogger('Instrument')
+            instr_logger.addHandler(handle)
 
             self.allDocks['Terminal'] = pyqtgraph.dockarea.Dock('Terminal')
             self.allWidgets['Terminal'] = self.terminalWindow.control
@@ -259,14 +271,17 @@ class GuiGenerator(QtWidgets.QMainWindow,UiTools):
         self.terminalWindow.run_script(scriptname)
 
     def VerboseChanged(self, action):
+        instr_logger = logging.getLogger('Instrument')
         if action.isChecked():
-            self.experiment._logger.setLevel(action.text().upper())
+            self._logger.setLevel(action.text().upper())
+            instr_logger.setLevel(action.text().upper())
             for action2 in self.menuVerbose.actions():
                 if action2.text() != action.text():
                     action2.setChecked(False)
         else:
             self.menuVerbose.actions()[1].setChecked(True)
-            self.experiment._logger.setLevel('INFO')
+            instr_logger.setLevel('INFO')
+            self._logger.setLevel('INFO')
 
     def closeEvent(self, event):
         quit_msg = "Are you sure you want to exit the program?"

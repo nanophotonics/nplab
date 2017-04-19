@@ -11,6 +11,7 @@ class ipython:
         self.kernel_manager.start_kernel()
         self.kernel = self.kernel_manager.kernel
         sys.stdout = self.kernel.stdout
+        sys.stderr = self.kernel.stderr
           
        
         self.kernel.gui = 'qt4'
