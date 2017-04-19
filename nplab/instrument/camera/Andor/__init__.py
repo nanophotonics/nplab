@@ -600,7 +600,20 @@ class Andor(Camera, AndorBase):
         self.SetParameter(parameter_name, parameter_value)
 
     def get_qt_ui(self):
-        return AndorUI(self)
+        if not hasattr(self, 'ui'):
+            self.ui = AndorUI(self)
+        elif not isinstance(self.ui, AndorUI):
+            self.ui = AndorUI(self)
+        return self.ui
+    
+    def get_control_widget(self):
+        return self.get_qt_ui()
+    
+    def get_preview_widget(self):
+        ui = self.get_qt_ui()
+        if ui.DisplayWidget is None:
+            ui.DisplayWidget = DisplayWidget
+        return self.ui.DisplayWidget
     #
     # def getRelevantParameters(self):
     #     relevant_parameters = ['AcquisitionMode', 'ReadMode', 'Image', 'Exposure', 'NKin']
@@ -624,10 +637,11 @@ class Andor(Camera, AndorBase):
 
 
 class AndorUI(QtWidgets.QWidget):
+    ImageUpdated = QtCore.Signal()
     def __init__(self, andor):
         assert isinstance(andor, Andor), "instrument must be an Andor"
         super(AndorUI, self).__init__()
-        self.ImageUpdated = QtCore.SIGNAL('AndorImageUpdated')
+#        self.ImageUpdated = QtCore.SIGNAL('AndorImageUpdated')
         self.captureThread = None
         self.Andor = andor
         self.DisplayWidget = None
@@ -761,7 +775,7 @@ class AndorUI(QtWidgets.QWidget):
             params = list(self.Andor.parameters['IsolatedCropMode']['value'])
             params[3] = current_binning
             params[4] = current_binning
-            print 'BinningChanged: ', params
+            self.Andor._logger.debug('BinningChanged: %s' %str(params))
             self.Andor.SetImage(*params)
         else:
             self.Andor.SetImage(current_binning, current_binning, *self.Andor.parameters['Image']['value'][2:])
@@ -868,7 +882,8 @@ class AndorUI(QtWidgets.QWidget):
             if not self.captureThread.isFinished():
                 return
         self.captureThread = CaptureThread(self.Andor)
-        self.connect(self.captureThread, self.captureThread.updateImage, self.updateImage)
+#        self.connect(self.captureThread, self.captureThread.updateImage, self.updateImage)
+        self.captureThread.updateImage.connect(self.updateImage)
         # self.captureThread.finished.connect(self.updateImage)
         self.captureThread.start()
 
@@ -880,7 +895,8 @@ class AndorUI(QtWidgets.QWidget):
             if not self.captureThread.isFinished():
                 return
         self.captureThread = CaptureThread(self.Andor, live=True)
-        self.connect(self.captureThread, self.captureThread.updateImage, self.updateImage)
+#        self.connect(self.captureThread, self.captureThread.updateImage, self.updateImage)
+        self.captureThread.updateImage.connect(self.updateImage)
         # self.captureThread.finished.connect(self.updateImage)
         self.captureThread.start()
 
@@ -927,7 +943,8 @@ class AndorUI(QtWidgets.QWidget):
                                                                                          image.shape[0]),
                                                          pos=offset, autoRange=False,
                                                          scale=scale)
-        self.emit(self.ImageUpdated, 'Andor')
+#        self.emit(self.ImageUpdated, 'Andor')
+        self.ImageUpdated.emit()
 
 class DisplayWidget(QtWidgets.QWidget):
     _max_num_line_plots = 4
@@ -953,8 +970,10 @@ class DisplayWidget(QtWidgets.QWidget):
 
         self.LineDisplay.showGrid(x=True, y=True)
 
-        self.connect(self.CrossHair1, self.CrossHair1.CrossHairMoved, self.mouseMoved)
-        self.connect(self.CrossHair2, self.CrossHair2.CrossHairMoved, self.mouseMoved)
+#        self.connect(self.CrossHair1, self.CrossHair1.CrossHairMoved, self.mouseMoved)
+#        self.connect(self.CrossHair2, self.CrossHair2.CrossHairMoved, self.mouseMoved)
+        self.CrossHair1.CrossHairMoved.connect(self.mouseMoved)
+        self.CrossHair2.CrossHairMoved.connect(self.mouseMoved)
 
         self.unit = 'pxl'
         self.splitter.setSizes([1, 0])
@@ -978,11 +997,13 @@ class DisplayWidget(QtWidgets.QWidget):
             % (x1, y1, xu1, yu1, self.unit, x2, y2, xu2, yu2, self.unit, abs(x1-x2), abs(y1-y2), abs(xu1-xu2), abs(yu1-yu2), self.unit))
 
 class Crosshair(pyqtgraph.GraphicsObject):
+    CrossHairMoved = QtCore.Signal()
+    Released = QtCore.Signal()
     def __init__(self, color):
         super(Crosshair, self).__init__()
         self.color = color
-        self.CrossHairMoved = QtCore.SIGNAL('CrossHairMoved')
-        self.Released = QtCore.SIGNAL('CrossHairReleased')
+#        self.CrossHairMoved = QtCore.SIGNAL('CrossHairMoved')
+#        self.Released = QtCore.SIGNAL('CrossHairReleased')
 
     def paint(self, p, *args):
         p.setPen(pyqtgraph.mkPen(self.color))
@@ -1001,7 +1022,8 @@ class Crosshair(pyqtgraph.GraphicsObject):
         else:
             self.setPos(self.startPos + ev.pos() - ev.buttonDownPos())
 
-        self.emit(self.CrossHairMoved)
+#        self.emit(self.CrossHairMoved)
+        self.CrossHairMoved.emit()
 
     # def mouseReleaseEvent(self, ev):
     #     print 'CrossHair released'
@@ -1010,9 +1032,10 @@ class Crosshair(pyqtgraph.GraphicsObject):
     #     self.emit(self.Released)
 
 class CaptureThread(QtCore.QThread):
+    updateImage = QtCore.Signal()
     def __init__(self, andor, live=False):
         QtCore.QThread.__init__(self, parent=None)
-        self.updateImage = QtCore.SIGNAL("UpdateImage")
+#        self.updateImage = QtCore.SIGNAL("UpdateImage")
         self.Andor = andor
         self.live = live
 
@@ -1048,7 +1071,8 @@ class CaptureThread(QtCore.QThread):
                 final_array[ii] = self.Andor.CurImage[0]
             self.Andor.CurImage = final_array
 
-        self.emit(self.updateImage)
+        self.updateImage.emit()
+#        self.emit(self.updateImage)
 
 
 class WaitThread(QtCore.QThread):

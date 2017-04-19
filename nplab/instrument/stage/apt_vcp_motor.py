@@ -145,6 +145,8 @@ class APT_VCP_motor(APT_VCP, Stage):
             channel_number = 1
         if not hasattr(pos, '__iter__'):
             pos = [pos]
+        elif type(pos)==tuple:
+            pos = list(pos)
         if axis is None:
             if len(pos)==len(self.axis_names):
                 axes = self.axis_names
@@ -154,11 +156,20 @@ class APT_VCP_motor(APT_VCP, Stage):
             axes = tuple(axis)
         axis_number = 0
         for axis in axes:
-            data = bytearray(struct.pack('<HL', self.channel_number_to_identity[channel_number], pos[axis_number]))
+      #      pos_in_counts = int(np.round(self.convert(pos[axis_number],'position','counts'),decimals = 0))
+        #    data = bytearray(struct.pack('<HL', self.channel_number_to_identity[channel_number], pos_in_counts))
             if relative:
-                self.write(0x0448, data=data,destination_id=axis)
-            else:
-                self.write(0x0453, data=data,destination_id=axis)
+                pos[axis_number] = self.position[axis_number]+pos[axis_number]
+                
+       #         data = bytearray(struct.pack('<HL', self.channel_number_to_identity[channel_number], pos_in_counts))
+      #          self.write(0x0448, data=data,destination_id=axis)
+ #           else:
+ #               new_pos = 
+      #          data = bytearray(struct.pack('<HL', self.channel_number_to_identity[channel_number], pos_in_counts))
+    #            self.write(0x0453, data=data,destination_id=axis)
+            pos_in_counts = int(np.round(self.convert(pos[axis_number],'position','counts'),decimals = 0))
+            data = bytearray(struct.pack('<HL', self.channel_number_to_identity[channel_number], pos_in_counts))
+            self.write(0x0453, data=data,destination_id=axis)
             self._waitFinishMove()
             axis_number += 1
 
@@ -208,9 +219,9 @@ class APT_VCP_motor(APT_VCP, Stage):
             # self.position = position
             # self.velocity = velocity / self.velocity_scaling_factor
         else:
-            channel, position, EncCount, status_bits = struct.unpack(returned_message, '<ILLH')
-            self.position = position  #
-            self.EncCount = EncCount
+            channel, position, EncCnt, status_bits = struct.unpack(returned_message, '<ILLH')
+   #         self.position = position  #
+   #         self.EncCnt = EncCnt
         self.status = self.status_bit_mask[np.where(self._bit_mask_array(status_bits, self.status_bit_mask[:, 0]))]
         return self.status
 
@@ -235,7 +246,7 @@ class APT_VCP_motor(APT_VCP, Stage):
                 channel_number:     (int) This defaults to 1
         '''
         if axis is None:
-            return [self.get_position(axis) for axis in self.axis_names]
+            return np.array(([self.get_position(axis) for axis in self.axis_names]))
         else:
             if axis not in self.axis_names:
                 raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
@@ -245,7 +256,7 @@ class APT_VCP_motor(APT_VCP, Stage):
             data = returned_message['data']
             channel_id, position = struct.unpack('<HL', data)
         # position = self.convert_to_SI_position(position)
-            return position
+            return self.convert(position,'counts','position')
 
     def set_position(self, position, channel_number=1,axis = None):
         # position = self.convert_to_APT_position(position)
@@ -514,6 +525,185 @@ class APT_VCP_motor(APT_VCP, Stage):
         # self.make_parameter(dict(name=, set=, get=, structure=, param_names=['channel_num']))
 
 
+class DC_APT(APT_VCP_motor):
+    #The different EncCnt (calibrations) for the different stage types
+    DC_stages_EncCnt = {'MTS':34304.0,
+             'PRM':1919.64*1E3,
+             'Z8':34304.0,
+             'Z6':24600,
+             'DDSM100':2000,
+             'DDS':20000,
+             'MLS' : 20000
+             }
+    def __init__(self,  port=None, source=0x01, destination=None,use_si_units=True, stay_alive=True, stage_type = None):
+        """
+        Pass all of the correct arguments to APT_VCP_motor for the DC stages and create converters.
+        """
+        APT_VCP_motor.__init__(self, port=port, source=source, destination=destination,
+                         use_si_units=True, stay_alive=stay_alive)  # this opens the port
+        #Setup up conversion factors
+        if self.model[1] == 'BBD102/BBD103': #Once the TBD001 controller is added it needs to be added here
+            self.t_constant = 102.4E-6
+        elif self.model[1] == 'TDC001':
+            self.t_constant = 2048.0/(6.0E6)
+        else:
+            self.t_constant = None
+        
+        if stage_type != None:
+            try:
+                self.EncCnt = float(self.DC_stages_EncCnt[stage_type])
+            except KeyError:
+                self.EncCnt = None
+                self._logger.warn('The stage type suggested is not listed and therefore a calibration cannot be set')
+        else:
+            self.EncCnt = None
+                
+            
+    def convert(self, value, from_, to_):
+        if None in (self.EncCnt,self.t_constant):
+            self._logger.warn('Conversion impossible: one of the constants has not been implemented')
+            return value
+        if from_ == 'counts':
+            return self.counts_to[to_](self,value)
+        elif to_ == 'counts':
+            return self.si_to[from_](self,value)
+        else:
+            self._logger.warn(('Converting %s to %s is not possible!, returning raw value'%(from_, to_))) 
+            return value
+
+    def counts_to_pos(self,counts):
+        return counts/self.EncCnt*1E3
+    def pos_to_counts(self,pos):
+        return pos*self.EncCnt/1E3
+    
+    def counts_to_vel(self,counts):
+        return counts/(self.EncCnt*self.t_constant*65536)*1E3
+    def vel_to_counts(self,vel):
+        return vel*65536*self.t_constant*self.EncCnt/1E3
+        
+    def counts_to_acc(self,counts):
+        return counts/(self.EncCnt*self.t_constant**2*65536)*1E3
+    def acc_to_counts(self,acc):
+        return self.EncCnt*self.t_constant**2*65536*acc/1E3
+        
+    counts_to = {'position' : counts_to_pos,
+                 'velocity' : counts_to_vel,
+                 'acceleration' : counts_to_acc}
+    si_to = {'position' : pos_to_counts,
+             'velocity' : vel_to_counts,
+             'acceleration' : acc_to_counts}
+    
+class Stepper_APT_std(APT_VCP_motor):
+    #The different EncCnt (calibrations) for the different stage types is microstep/mm
+    stepper_stages_EncCnt = {'DRV001':51200,
+             'DRV013':25600,
+             'DRV014':25600,
+             'NRT':25600,
+             'LTS':25600,
+             'DRV':20480,
+             'FW' : 71,
+             'NR' : 4693,
+             }
+    def __init__(self,  port=None, source=0x01, destination=None,use_si_units=True, stay_alive=True, stage_type = None):
+        """
+        Pass all of the correct arguments to APT_VCP_motor for the standard stepper controllers
+        stages and create converters.
+        """
+        APT_VCP_motor.__init__(self, port=port, source=source, destination=destination,
+                         use_si_units=True, stay_alive=stay_alive)  # this opens the port
+        #Setup up conversion factors
+        
+        if stage_type != None:
+            try:
+                self.EncCnt = float(self.stepper_stages_EncCnt[stage_type])
+            except KeyError:
+                self.EncCnt = None
+                self._logger.warn('The stage type suggested is not listed and therefore a calibration cannot be set')
+        else:
+            self.EncCnt = None
+                
+            
+    def convert(self, value, from_, to_):
+        if self.EncCnt==None:
+            self._logger.warn('Conversion impossible: one of the constants has not been implemented')
+            return value
+        if from_ == 'counts':
+            return self.counts_to_si(value)
+        elif to_ == 'counts':
+            return self.si_to_counts(value)
+        else:
+            self._logger.warn(('Converting %s to %s is not possible!, returning raw value'%(from_, to_))) 
+            return value
+
+    def counts_to_si(self,counts):
+        return counts/self.EncCnt*1E3
+    def si_to_counts(self,pos):
+        return pos*self.EncCnt/1E3
+    
+class Stepper_APT_trinamics(APT_VCP_motor):
+    #The different EncCnt (calibrations) for the different stage types is microstep/mm
+    stepper_stages_EncCnt = {'DRV001':819200,
+             'DRV013':409600,
+             'DRV014':409600,
+             'NRT':409600,
+             'LTS':409600,
+             'MLJ':409600,
+             'DRV':327680,
+             'FW' : 1138,
+             'NR' : 75091,
+             }
+    def __init__(self,  port=None, source=0x01, destination=None,use_si_units=True, stay_alive=True, stage_type = None):
+        """
+        Pass all of the correct arguments to APT_VCP_motor for the Trinamics stepper controllers
+        stages and create converters.
+        """
+        APT_VCP_motor.__init__(self, port=port, source=source, destination=destination,
+                         use_si_units=True, stay_alive=stay_alive)  # this opens the port
+        #Setup up conversion factors
+        if stage_type!= None:
+            try:
+                self.EncCnt = float(self.stepper_stages_EncCnt[stage_type])
+            except KeyError:
+                self.EncCnt = None
+                self._logger.warn('The stage type suggested is not listed and therefore a calibration cannot be set')
+        else:
+            self.EncCnt = None
+                
+            
+    def convert(self, value, from_, to_):
+        if None in (self.EncCnt,self.t_constant):
+            self._logger.warn('Conversion impossible: one of the constants has not been implemented')
+            return value
+        if from_ == 'counts':
+            return self.counts_to[to_](self,value)
+        elif to_ == 'counts':
+            return self.si_to[from_](self,value)
+        else:
+            self._logger.warn(('Converting %s to %s is not possible!, returning raw value'%(from_, to_))) 
+            return value
+
+    def counts_to_pos(self,counts):
+        return counts/self.EncCnt*1E3
+    def pos_to_counts(self,pos):
+        return pos*self.EncCnt/1E3
+    
+    def counts_to_vel(self,counts):
+        return counts/(self.EncCnt*53.68)*1E3
+    def vel_to_counts(self,vel):
+        return vel*53.68*self.EncCnt/1E3
+        
+    def counts_to_acc(self,counts):
+        return counts/(self.EncCnt/90.9)*1E3
+    def acc_to_counts(self,acc):
+        return self.EncCnt/90.9*acc/1E3
+        
+    counts_to = {'position' : counts_to_pos,
+                 'velocity' : counts_to_vel,
+                 'acceleration' : counts_to_acc}
+    si_to = {'position' : pos_to_counts,
+             'velocity' : vel_to_counts,
+             'acceleration' : acc_to_counts}
+    
 if __name__ == '__main__':
     # microscope_stage = APT_VCP_motor(port='COM12', source=0x01, destination=0x21)
 

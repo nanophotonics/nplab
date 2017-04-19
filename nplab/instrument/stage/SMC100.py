@@ -100,6 +100,7 @@ class SMC100(SerialInstrument, Stage):
         Stage.__init__(self)
         # self._logger.debug('Connecting to SMC100 on %s' % (port))
 
+        self.software_home = None
         self._last_sendcmd_time = 0
         self._smcID = list(smcID)
         self.axis_names = ()

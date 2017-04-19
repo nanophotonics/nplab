@@ -84,7 +84,7 @@ class APT_VCP(serial_instrument.SerialInstrument):
         serial_instrument.SerialInstrument.__init__(self, port=port)  # this opens the port
         self.source = source
         if destination == None:
-            print 'destination has not been set!'
+            self._logger.error('destination has not been set!')
         elif type(destination) != dict:
             self.destination = {'1': destination}
         else:

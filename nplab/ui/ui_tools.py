@@ -110,7 +110,7 @@ class UiTools(object):
         
         # Connect buttons to methods with the same name
         for button in self.findChildren(QtWidgets.QPushButton):
-            name = strip_suffices(button.objectName(), ["_button","Button","_pushButton"])
+            name = strip_suffices(button.objectName(), ["_button","_pushButton","Button"])
             try:
                 # look for the named function first in this object, then in the controlled objects
                 obj = first_object_with_attr([self] + controlled_objects, name)
@@ -321,7 +321,7 @@ auto_connectable_controls['spinbox'] = {
     }
 auto_connectable_controls['doublespinbox'] = {
     'qt_type': QtWidgets.QDoubleSpinBox,
-    'suffices': ["_spinbox","SpinBox","_spin","_doublespinbox","DoubleSpinBox"],
+    'suffices': ["_doubleSpinBox","_spinbox","SpinBox","_spin","_doublespinbox","DoubleSpinBox"],
     'control_change_handler': control_change_handler(),
     'control_change_slot_name': 'valueChanged',
     'property_change_handler': property_change_handler("value", float),
