@@ -600,14 +600,19 @@ class Andor(Camera, AndorBase):
         self.SetParameter(parameter_name, parameter_value)
 
     def get_qt_ui(self):
-        return AndorUI(self)
-    
-    def get_control_widget(self):
-        self.ui = AndorUI(self)
+        if not hasattr(self, 'ui'):
+            self.ui = AndorUI(self)
+        elif not isinstance(self.ui, AndorUI):
+            self.ui = AndorUI(self)
         return self.ui
     
+    def get_control_widget(self):
+        return self.get_qt_ui()
+    
     def get_preview_widget(self):
-        self.ui.DisplayWidget = DisplayWidget()
+        ui = self.get_qt_ui()
+        if ui.DisplayWidget is None:
+            ui.DisplayWidget = DisplayWidget
         return self.ui.DisplayWidget
     #
     # def getRelevantParameters(self):
@@ -770,7 +775,7 @@ class AndorUI(QtWidgets.QWidget):
             params = list(self.Andor.parameters['IsolatedCropMode']['value'])
             params[3] = current_binning
             params[4] = current_binning
-            print 'BinningChanged: ', params
+            self.Andor._logger.debug('BinningChanged: %s' %str(params))
             self.Andor.SetImage(*params)
         else:
             self.Andor.SetImage(current_binning, current_binning, *self.Andor.parameters['Image']['value'][2:])

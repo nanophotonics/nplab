@@ -528,7 +528,7 @@ class APT_VCP_motor(APT_VCP, Stage):
 class DC_APT(APT_VCP_motor):
     #The different EncCnt (calibrations) for the different stage types
     DC_stages_EncCnt = {'MTS':34304.0,
-             'PRM':1919.64,
+             'PRM':1919.64*1E3,
              'Z8':34304.0,
              'Z6':24600,
              'DDSM100':2000,
