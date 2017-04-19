@@ -72,7 +72,10 @@ class GuiGenerator(QtWidgets.QMainWindow,UiTools):
 
 #        self._tabifyAll()
         self._setupSignals()
-        self.dock_settings_path = dock_settings_path
+        if dock_settings_path is not None:
+            self.dock_settings_path = dock_settings_path+'\\'
+        else:
+            self.dock_settings_path = None
         self.menuLoadSettings()
         self.showMaximized()
         
@@ -176,15 +179,16 @@ class GuiGenerator(QtWidgets.QMainWindow,UiTools):
             self.setStyleSheet('')
     def menuSaveSettings(self):
         dock_state = self.dockWidgetArea.saveState()
-        np.save(self.dock_settings_path+'\\dock_settings',dock_state)
+        np.save(self.dock_settings_path+'dock_settings',dock_state)
         
     def menuLoadSettings(self):
         try:
-            loaded_state = np.load(self.dock_settings_path+'\\dock_settings.npy')
+            loaded_state = np.load(self.dock_settings_path+'dock_settings.npy')
             loaded_state=loaded_state[()]
             self.dockWidgetArea.restoreState(loaded_state)
-        except IOError:
-            self._logger.warn('The dock_settings file does not exist!')
+        except:
+            self._logger.warn(
+            'The dock_settings file does not exist! or it is for the wrong docks!')
 
     def menuNewExperiment(self):
         dock_state = self.dockWidgetArea.saveState()

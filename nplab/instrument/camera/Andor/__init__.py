@@ -601,6 +601,14 @@ class Andor(Camera, AndorBase):
 
     def get_qt_ui(self):
         return AndorUI(self)
+    
+    def get_control_widget(self):
+        self.ui = AndorUI(self)
+        return self.ui
+    
+    def get_preview_widget(self):
+        self.ui.DisplayWidget = DisplayWidget()
+        return self.ui.DisplayWidget
     #
     # def getRelevantParameters(self):
     #     relevant_parameters = ['AcquisitionMode', 'ReadMode', 'Image', 'Exposure', 'NKin']

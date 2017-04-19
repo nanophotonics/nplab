@@ -3,13 +3,16 @@ from qtconsole.inprocess import QtInProcessKernelManager
 # from IPython.qt.console.rich_ipython_widget import RichIPythonWidget
 # from IPython.qt.inprocess import QtInProcessKernelManager
 from nplab.utils.gui import QtCore
-
+import sys
 
 class ipython:
     def __init__(self):
         self.kernel_manager = QtInProcessKernelManager()
         self.kernel_manager.start_kernel()
         self.kernel = self.kernel_manager.kernel
+        sys.stdout = self.kernel.stdout
+          
+       
         self.kernel.gui = 'qt4'
 
         self.kernel_client = self.kernel_manager.client()
