@@ -1,0 +1,692 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>528</width>
+    <height>466</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
+  <property name="windowTitle">
+   <string>Microcavities CP</string>
+  </property>
+  <property name="windowIcon">
+   <iconset>
+    <normaloff>icons/red_light.png</normaloff>icons/red_light.png</iconset>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+   <layout class="QVBoxLayout" name="verticalLayout"/>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>528</width>
+     <height>17</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <widget class="QMenu" name="menuVerbose">
+     <property name="title">
+      <string>Verbose</string>
+     </property>
+     <addaction name="actionWarn"/>
+     <addaction name="actionInfo"/>
+     <addaction name="actionDebug"/>
+    </widget>
+    <addaction name="menuVerbose"/>
+    <addaction name="actionSaveSettings"/>
+    <addaction name="actionRecallSettings"/>
+    <addaction name="actionCloseExperiment"/>
+    <addaction name="actionExit"/>
+   </widget>
+   <widget class="QMenu" name="menuView">
+    <property name="title">
+     <string>View</string>
+    </property>
+    <addaction name="actionNightMode"/>
+    <addaction name="separator"/>
+    <addaction name="separator"/>
+   </widget>
+   <widget class="QMenu" name="menuFunctions">
+    <property name="title">
+     <string>Functions</string>
+    </property>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuView"/>
+   <addaction name="menuFunctions"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <widget class="QToolBar" name="toolBar">
+   <property name="windowTitle">
+    <string>toolBar</string>
+   </property>
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+   <addaction name="actionShowBrowser"/>
+   <addaction name="separator"/>
+   <addaction name="actionNewExperiment"/>
+   <addaction name="actionNewFolder"/>
+   <addaction name="actionSaveExperiment"/>
+   <addaction name="separator"/>
+   <addaction name="actionTerminal"/>
+   <addaction name="separator"/>
+  </widget>
+  <widget class="QDockWidget" name="dockWidgetAllInstruments">
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+   <property name="features">
+    <set>QDockWidget::NoDockWidgetFeatures</set>
+   </property>
+   <property name="windowTitle">
+    <string notr="true"/>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>4</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents_2">
+    <property name="sizePolicy">
+     <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+      <horstretch>0</horstretch>
+      <verstretch>0</verstretch>
+     </sizepolicy>
+    </property>
+   </widget>
+  </widget>
+  <action name="actionOn">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/dot.png</normaloff>icons/dot.png</iconset>
+   </property>
+   <property name="text">
+    <string>On</string>
+   </property>
+  </action>
+  <action name="actionOff">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/dot.png</normaloff>icons/dot.png</iconset>
+   </property>
+   <property name="text">
+    <string>Off</string>
+   </property>
+  </action>
+  <action name="actionShutdown">
+   <property name="text">
+    <string>Shutdown</string>
+   </property>
+  </action>
+  <action name="action2x2">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/dot.png</normaloff>icons/dot.png</iconset>
+   </property>
+   <property name="text">
+    <string>2x2</string>
+   </property>
+  </action>
+  <action name="action4x4">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/dot.png</normaloff>icons/dot.png</iconset>
+   </property>
+   <property name="text">
+    <string>4x4</string>
+   </property>
+  </action>
+  <action name="actionNewFolder">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/Actions-folder-new-icon.png</normaloff>icons/Actions-folder-new-icon.png</iconset>
+   </property>
+   <property name="text">
+    <string>New Folder</string>
+   </property>
+  </action>
+  <action name="actionNewExperiment">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/New-Exp.png</normaloff>icons/New-Exp.png</iconset>
+   </property>
+   <property name="text">
+    <string>New Experiment</string>
+   </property>
+   <property name="toolTip">
+    <string>New Experiment</string>
+   </property>
+  </action>
+  <action name="actionViewCamera">
+   <property name="text">
+    <string>Camera</string>
+   </property>
+  </action>
+  <action name="actionViewFilterWheel">
+   <property name="text">
+    <string>Filterwheel</string>
+   </property>
+  </action>
+  <action name="actionViewTriax">
+   <property name="text">
+    <string>Triax</string>
+   </property>
+  </action>
+  <action name="action1x1">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/dot.png</normaloff>icons/dot.png</iconset>
+   </property>
+   <property name="text">
+    <string>1x1</string>
+   </property>
+  </action>
+  <action name="actionShowBrowser">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/view_tree.png</normaloff>icons/view_tree.png</iconset>
+   </property>
+   <property name="text">
+    <string>Show Browser</string>
+   </property>
+  </action>
+  <action name="actionViewPowerMeter">
+   <property name="text">
+    <string>Powermeter</string>
+   </property>
+  </action>
+  <action name="actionViewSLM">
+   <property name="text">
+    <string>SLM</string>
+   </property>
+  </action>
+  <action name="actionViewMOTMirror">
+   <property name="text">
+    <string>MOT Mirror</string>
+   </property>
+  </action>
+  <action name="actionViewAOM2">
+   <property name="text">
+    <string>AOM2</string>
+   </property>
+  </action>
+  <action name="actionCloseExperiment">
+   <property name="text">
+    <string>Close Experiment</string>
+   </property>
+  </action>
+  <action name="actionExit">
+   <property name="text">
+    <string>Exit</string>
+   </property>
+  </action>
+  <action name="actionHDF5_Browser">
+   <property name="text">
+    <string>HDF5 Browser</string>
+   </property>
+  </action>
+  <action name="actionAbort">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/stop.png</normaloff>icons/stop.png</iconset>
+   </property>
+   <property name="text">
+    <string>Abort</string>
+   </property>
+   <property name="toolTip">
+    <string>Abort</string>
+   </property>
+  </action>
+  <action name="actionSaveExperiment">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/Save-icon.png</normaloff>icons/Save-icon.png</iconset>
+   </property>
+   <property name="text">
+    <string>SaveExperiment</string>
+   </property>
+   <property name="toolTip">
+    <string>Save Experiment</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
+   </property>
+  </action>
+  <action name="actionVerticalLP">
+   <property name="checkable">
+    <bool>false</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/dot.png</normaloff>icons/dot.png</iconset>
+   </property>
+   <property name="text">
+    <string>Vertical</string>
+   </property>
+   <property name="iconVisibleInMenu">
+    <bool>false</bool>
+   </property>
+  </action>
+  <action name="actionHorizontalLP">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/dot.png</normaloff>icons/dot.png</iconset>
+   </property>
+   <property name="text">
+    <string>Horizontal</string>
+   </property>
+   <property name="iconVisibleInMenu">
+    <bool>false</bool>
+   </property>
+  </action>
+  <action name="actionRemoveLP">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/dot.png</normaloff>icons/dot.png</iconset>
+   </property>
+   <property name="text">
+    <string>Off</string>
+   </property>
+  </action>
+  <action name="actionHistOn">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/dot.png</normaloff>icons/dot.png</iconset>
+   </property>
+   <property name="text">
+    <string>On</string>
+   </property>
+  </action>
+  <action name="actionHistOff">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/dot.png</normaloff>icons/dot.png</iconset>
+   </property>
+   <property name="text">
+    <string>Off</string>
+   </property>
+  </action>
+  <action name="actionNightMode">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Night Mode</string>
+   </property>
+  </action>
+  <action name="actionLive">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/play-icon.png</normaloff>icons/play-icon.png</iconset>
+   </property>
+   <property name="text">
+    <string>live</string>
+   </property>
+   <property name="toolTip">
+    <string>Live</string>
+   </property>
+  </action>
+  <action name="actionLiveMenu">
+   <property name="text">
+    <string>Live on</string>
+   </property>
+  </action>
+  <action name="actionAutoHist">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/autoHistogram.png</normaloff>icons/autoHistogram.png</iconset>
+   </property>
+   <property name="text">
+    <string>Auto Hist</string>
+   </property>
+   <property name="toolTip">
+    <string>Auto Level</string>
+   </property>
+  </action>
+  <action name="actionROI">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/ROI.png</normaloff>icons/ROI.png</iconset>
+   </property>
+   <property name="text">
+    <string>ROI</string>
+   </property>
+   <property name="toolTip">
+    <string>set/unset ROI</string>
+   </property>
+  </action>
+  <action name="actionInitialise">
+   <property name="text">
+    <string>Initialise</string>
+   </property>
+  </action>
+  <action name="actionKeithley">
+   <property name="text">
+    <string>Keithley</string>
+   </property>
+  </action>
+  <action name="actionAutoscaleOn">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/dot.png</normaloff>icons/dot.png</iconset>
+   </property>
+   <property name="text">
+    <string>On</string>
+   </property>
+  </action>
+  <action name="actionAutoscaleOff">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/dot.png</normaloff>icons/dot.png</iconset>
+   </property>
+   <property name="text">
+    <string>Off</string>
+   </property>
+   <property name="iconVisibleInMenu">
+    <bool>false</bool>
+   </property>
+  </action>
+  <action name="actionCamRestart">
+   <property name="text">
+    <string>Restart</string>
+   </property>
+  </action>
+  <action name="actionKeithleyRestart">
+   <property name="text">
+    <string>Keithley</string>
+   </property>
+  </action>
+  <action name="actionTerminal">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/terminal.png</normaloff>icons/terminal.png</iconset>
+   </property>
+   <property name="text">
+    <string>Terminal</string>
+   </property>
+   <property name="toolTip">
+    <string>ipython</string>
+   </property>
+  </action>
+  <action name="actionSaveSettings">
+   <property name="text">
+    <string>Save Settings</string>
+   </property>
+  </action>
+  <action name="actionRecallSettings">
+   <property name="text">
+    <string>Recall Settings</string>
+   </property>
+  </action>
+  <action name="actionVerbosityOn">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/dot.png</normaloff>icons/dot.png</iconset>
+   </property>
+   <property name="text">
+    <string>On</string>
+   </property>
+   <property name="iconVisibleInMenu">
+    <bool>false</bool>
+   </property>
+  </action>
+  <action name="actionVerbosityOff">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/dot.png</normaloff>icons/dot.png</iconset>
+   </property>
+   <property name="text">
+    <string>Off</string>
+   </property>
+  </action>
+  <action name="actionHorLineProfile">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/horLP.png</normaloff>icons/horLP.png</iconset>
+   </property>
+   <property name="text">
+    <string>Hor Line Profile</string>
+   </property>
+   <property name="toolTip">
+    <string>Horizontal Line Profile</string>
+   </property>
+  </action>
+  <action name="actionVerLineProfile">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/verLP.png</normaloff>icons/verLP.png</iconset>
+   </property>
+   <property name="text">
+    <string>Ver Line Profile</string>
+   </property>
+   <property name="toolTip">
+    <string>Vertical Line Profile</string>
+   </property>
+  </action>
+  <action name="actionNoLineProfile">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/NoLP.png</normaloff>icons/NoLP.png</iconset>
+   </property>
+   <property name="text">
+    <string>Remove  Line Profile</string>
+   </property>
+   <property name="toolTip">
+    <string>Remove Line Profile</string>
+   </property>
+  </action>
+  <action name="actionFilterWheelReset">
+   <property name="text">
+    <string>Filterwheel</string>
+   </property>
+  </action>
+  <action name="actionFlipperReset">
+   <property name="text">
+    <string>Flipper</string>
+   </property>
+  </action>
+  <action name="actionMotMirrReset">
+   <property name="text">
+    <string>Mot Mirror</string>
+   </property>
+  </action>
+  <action name="actionLecroyScopeReset">
+   <property name="text">
+    <string>Scope</string>
+   </property>
+  </action>
+  <action name="actionTriaxReset">
+   <property name="text">
+    <string>Triax</string>
+   </property>
+  </action>
+  <action name="actionPowerMeterReset">
+   <property name="text">
+    <string>Powermeter</string>
+   </property>
+  </action>
+  <action name="actionAOM2Reset">
+   <property name="text">
+    <string>AOM2</string>
+   </property>
+  </action>
+  <action name="actionParkerStageReset">
+   <property name="text">
+    <string>Parker Stage</string>
+   </property>
+  </action>
+  <action name="actionViewLecroyScope">
+   <property name="text">
+    <string>Scope</string>
+   </property>
+  </action>
+  <action name="actionIgorOpen">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/igor.png</normaloff>icons/igor.png</iconset>
+   </property>
+   <property name="text">
+    <string>Igor Open</string>
+   </property>
+   <property name="toolTip">
+    <string>Open in Igor</string>
+   </property>
+  </action>
+  <action name="actionViewTerminal">
+   <property name="text">
+    <string>Terminal</string>
+   </property>
+  </action>
+  <action name="action8x8">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/dot.png</normaloff>icons/dot.png</iconset>
+   </property>
+   <property name="text">
+    <string>8x8</string>
+   </property>
+  </action>
+  <action name="actionCropmodeOn">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/dot.png</normaloff>icons/dot.png</iconset>
+   </property>
+   <property name="text">
+    <string>On</string>
+   </property>
+  </action>
+  <action name="actionCropmodeOff">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/dot.png</normaloff>icons/dot.png</iconset>
+   </property>
+   <property name="text">
+    <string>Off</string>
+   </property>
+  </action>
+  <action name="actionAbortGeneralScan">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/ScanStop.png</normaloff>
+     <normalon>../icons/ScanStop.png</normalon>icons/ScanStop.png</iconset>
+   </property>
+   <property name="text">
+    <string>AbortGeneralScan</string>
+   </property>
+  </action>
+  <action name="actionPauseGeneralScan">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/ScanPause.png</normaloff>
+     <normalon>icons/ScanPlay.png</normalon>icons/ScanPause.png</iconset>
+   </property>
+   <property name="text">
+    <string>PauseGeneralScan</string>
+   </property>
+  </action>
+  <action name="actionHistogram">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/dot.png</normaloff>icons/dot.png</iconset>
+   </property>
+   <property name="text">
+    <string>Histogram</string>
+   </property>
+  </action>
+  <action name="actionWarn">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Warn</string>
+   </property>
+  </action>
+  <action name="actionInfo">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Info</string>
+   </property>
+  </action>
+  <action name="actionDebug">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Debug</string>
+   </property>
+  </action>
+  <action name="actionAutofocus">
+   <property name="text">
+    <string>Autofocus</string>
+   </property>
+  </action>
+  <action name="actionAutothreshold">
+   <property name="text">
+    <string>Autothreshold</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

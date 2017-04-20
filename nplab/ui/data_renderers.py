@@ -578,6 +578,7 @@ add_renderer(DataRenderer2or3DPG)
 
 
 class JPEGRenderer(DataRenderer2or3DPG):
+    """Renders a 1D array holding JPEG data as a 2D image."""
     def __init__(self, h5object, parent=None):
         super(JPEGRenderer, self).__init__(h5object, parent)
 
@@ -995,6 +996,59 @@ class HyperSpec_Alan(DataRenderer, QtWidgets.QWidget):
 
 add_renderer(HyperSpec_Alan)
 
+class ScannedParticle(FigureRenderer):
+    """A renderer for individual particles from a particle scan."""
+    def display_data(self):
+        g = self.h5object
+        zscan = g['z_scan']
+        dz = g['z_scan'].attrs.get('dz', np.arange(zscan.shape[0]))
+        spectrum = np.mean(zscan, axis=0)
+        wavelengths = zscan.attrs.get("wavelengths")
+        spectrum_range = slice(None)
+        try:
+            background = zscan.attrs.get("background")
+            spectrum -= background #we'll fail here if there was no background recorded
+            reference = zscan.attrs.get("reference")
+            spectrum /= (reference - background) #if there's a reference, apply it
+            spectrum_range = reference > np.max(reference)/10
+        except:
+            pass # if reference/background are missing, ignore them.
+        import matplotlib.gridspec as gridspec
+        gs = gridspec.GridSpec(2,2)
+        ax0 = self.fig.add_subplot(gs[0,0])  # plot the overview image
+        ax0.imshow(g['camera_image'], extent=(0, 1, 0, 1), aspect="equal")
+        ax0.plot([0.5, 0.5], [0.2, 0.8], "w-") #crosshair
+        ax0.plot([0.2, 0.8], [0.5, 0.5], "w-")
+        ax0.get_xaxis().set_visible(False)
+        ax0.get_yaxis().set_visible(False)
+        ax0.set_title("Particle Image")
+
+        ax1 = self.fig.add_subplot(gs[0,1])  # plot the z stack
+        ax1.imshow(zscan, extent=(wavelengths.min(), wavelengths.max(), dz.min(), dz.max()), aspect="auto", cmap="cubehelix")
+        ax1.set_xlabel("Wavelength/nm")
+        ax1.set_ylabel("Z/um")
+
+        ax2 = self.fig.add_subplot(gs[1,0:2])  # plot the spectrum
+        ax2.plot(wavelengths[spectrum_range], spectrum[spectrum_range])
+        ax2.set_xlabel("Wavelength/nm")
+        ax2.set_ylabel("Z-averaged Spectrum")
+        self.fig.canvas.draw()
+
+    @classmethod
+    def is_suitable(cls, h5object):
+        # This relies on sensible exception handling: if an exception occurs here, the renderer
+        # will be deemed unsuitable (!)
+
+        # First, make sure we've got the right datasets (NB this also raises an exception if it's not a group)
+        g = h5object
+        keys = g.keys()
+        for k in ['camera_image', 'z_scan']:
+            assert k in keys, "missing dataset {}, can't be a particle...".format(k)
+        assert g['camera_image'].shape[0] > 10
+        assert g['camera_image'].shape[1] > 10
+        assert len(g['z_scan'].shape) == 2
+        return 500
+add_renderer(ScannedParticle)
 
 class PumpProbeShifted(DataRenderer, QtWidgets.QWidget):
     ''' A renderer for Pump probe experiments, leaving the data un changed'''
@@ -1299,10 +1353,6 @@ class PumpProbeX_loops(DataRenderer, QtWidgets.QWidget):
 
         self.layout.addWidget(Plots[0],0,0)
 
-        
-
-        
-        
     @classmethod
     def is_suitable(cls, h5object):
         suitability = 0

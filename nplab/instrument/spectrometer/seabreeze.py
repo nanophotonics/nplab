@@ -376,7 +376,13 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
         else:
             return SpectrometerUI(self)
 
-
+    def get_control_widget(self):
+        """Convenience function """
+        return self.get_qt_ui(control_only=True)
+        
+    def get_preview_widget(self):
+        """Convenience function """
+        return self.get_qt_ui(display_only=True)
 
 class OceanOpticsControlUI(SpectrometerControlUI):
     def __init__(self, spectrometer):

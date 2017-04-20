@@ -22,6 +22,7 @@ from weakref import WeakSet
 from nplab.instrument import Instrument
 from nplab.utils.notified_property import NotifiedProperty, DumbNotifiedProperty, register_for_property_changes
 
+
 class CameraParameter(NotifiedProperty):
     """A quick way of creating a property that alters a camera parameter.
     
@@ -56,7 +57,8 @@ class CameraParameter(NotifiedProperty):
             
     def fset(self, obj, value):
         obj.set_camera_parameter(self.parameter_name, value)
-          
+
+
 class Camera(Instrument):
     """Generic class for representing cameras.
     

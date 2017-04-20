@@ -9,6 +9,12 @@ Instrument (or possibly Experiment) should call self.log instead.
 
 import nplab
 import numpy as np
+import sys
+import os
+import logging
+if 'PYCHARM_HOSTED' not in os.environ:
+    import colorama
+    colorama.init()
 
 print_logs_to_console = False
 
@@ -63,3 +69,69 @@ def log(message, from_class=None, from_object=None,
             if assert_datafile:
                 print "Error saving log message - raising exception."
                 raise e
+
+
+'''COLORED LOGGING'''
+BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
+
+# These are the sequences need to get colored ouput
+RESET_SEQ = "\033[0m"
+COLOR_SEQ = "\033[1;%dm"
+BOLD_SEQ = "\033[1m"
+
+def formatter_message(message, use_color = True):
+    if use_color:
+        message = message.replace("$RESET", RESET_SEQ).replace("$BOLD", BOLD_SEQ)
+    else:
+        message = message.replace("$RESET", "").replace("$BOLD", "")
+    return message
+
+COLORS = {
+    'WARNING': YELLOW,
+    'INFO': WHITE,
+    'DEBUG': BLUE,
+    'CRITICAL': YELLOW,
+    'ERROR': RED
+}
+
+
+class ColoredFormatter(logging.Formatter):
+    def format(self, record):
+        levelname = record.levelname
+        if levelname in COLORS:
+            levelname_color = COLOR_SEQ % (30 + COLORS[levelname]) + levelname + RESET_SEQ
+            record.levelname = levelname_color
+        return logging.Formatter.format(self, record)
+
+
+def create_logger(name='Experiment', **kwargs):
+    '''This functions defines the Logger called Experiment, with the relevant colored formatting'''
+    if 'level' in kwargs:
+        LOGGER_LEVEL = kwargs['level']
+    else:
+        LOGGER_LEVEL = 'INFO'
+    if 'filename' in kwargs:
+        LOGGER_FILE = kwargs['filename']
+    else:
+        LOGGER_FILE = None
+    fh = logging.StreamHandler(sys.stdout)
+    f = ColoredFormatter('[%(name)s] - %(levelname)s: %(message)s - %(asctime)s ', '%H:%M')
+    fh.setFormatter(f)
+    test = logging.getLogger(name)
+    test.propagate = False
+    test.setLevel(LOGGER_LEVEL)
+    test.addHandler(fh)
+
+    if LOGGER_FILE is not None:
+        fh = logging.FileHandler(LOGGER_FILE)
+        fh.setFormatter(logging.Formatter('[%(name)s] - %(levelname)s: %(message)s - %(asctime)s ', datefmt='%H:%M'))
+        fh.setLevel(LOGGER_LEVEL)
+        test.addHandler(fh)
+
+    return test
+
+
+if __name__ == '__main__':
+    logger = create_logger()
+    for ii in ['debug','info','warn','error']:
+        getattr(logger,ii)(ii)

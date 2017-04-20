@@ -168,9 +168,12 @@ class Spectrometer(Instrument):
 
     def is_referenced(self):
         """Check whether there's currently a valid background and reference spectrum"""
-        return self.is_background_compensated and \
-            len(self.reference)==len(self.latest_raw_spectrum) and \
-            sum(self.reference)>0
+        try:
+            return self.is_background_compensated and \
+                len(self.reference)==len(self.latest_raw_spectrum) and \
+                sum(self.reference)>0
+        except TypeError:
+            return False
 
     def process_spectrum(self, spectrum):
         """Subtract the background and divide by the reference, if possible"""
@@ -234,6 +237,14 @@ class Spectrometer(Instrument):
             return SpectrometerDisplayUI(self)
         else:
             return SpectrometerUI(self)
+            
+    def get_control_widget(self):
+        """Convenience function """
+        return self.get_qt_ui(control_only=True)
+        
+    def get_preview_widget(self):
+        """Convenience function """
+        return self.get_qt_ui(display_only=True)
 
     def save_spectrum(self, spectrum=None, attrs={}, new_deque = False):
         """Save a spectrum to the current datafile, creating if necessary.
