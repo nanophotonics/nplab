@@ -201,7 +201,7 @@ class SolsTiS(Instrument):
                 else:
                     self.laser_status[ii] = status[ii]
 
-        self.updateGUI.emit()
+        # self.updateGUI.emit()
 
     def get_qt_ui(self):
         return SolsTiSUI(self)
@@ -227,7 +227,7 @@ class SolsTiSUI(QtWidgets.QWidget):
         self.signal = QtCore.SIGNAL('SolsTiSGUIupdate')
         self.SolsTiSMonitorThread = None
 
-        uic.loadUi(os.path.join(os.path.dirname(__file__), 'uiFiles/SolsTiS.ui'), self)
+        uic.loadUi(os.path.join(os.path.dirname(__file__), 'SolsTiS.ui'), self)
 
         self.checkBoxSolsTiSLockMonitor.stateChanged.connect(self.SolsTiSLockMonitor)
         self.checkBoxSolsTiSEtalonLock.stateChanged.connect(self.SolsTiSLockEtalon)
@@ -236,7 +236,7 @@ class SolsTiSUI(QtWidgets.QWidget):
         self.pushButtonSolsTiSstatusMonitor.clicked.connect(self.SolsTiSMonitor)
         self.pushButtonSolsTiSstopMonitor.clicked.connect(self.SolsTiSMonitorStop)
 
-        self.SolsTiS.updateGUI.connect(self.updateGUI)
+        # self.SolsTiS.updateGUI.connect(self.updateGUI)
 
     def SolsTiSLockMonitor(self):
         # ADD A SEcTION THAT CHECKS THAT THE ETALON VOLTAGE DOESN'T GO TOO FAR AWAY
@@ -372,17 +372,16 @@ class SolsTiSStatusThread(QtCore.QThread):
             time.sleep(1)
 
 
-def perdelta(start, end, delta):
-    return_list = []
-    curr = start
-    while curr < end:
-        # yield curr
-        return_list.append(curr)
-        curr += delta
-    return map(lambda x: (int(x.strftime('%d')), int(x.strftime('%m')), int(x.strftime('%y'))), return_list)
-
-
 def download_logs():
+    def perdelta(start, end, delta):
+        return_list = []
+        curr = start
+        while curr < end:
+            # yield curr
+            return_list.append(curr)
+            curr += delta
+        return map(lambda x: (int(x.strftime('%d')), int(x.strftime('%m')), int(x.strftime('%y'))), return_list)
+
     '''NOT GENERAL
 
     Script that can be used to download the logs created by automatic logging in the laser
@@ -469,5 +468,5 @@ id_dictionary = {'move_wave_t': {'status': {0: 'Successful', 1: 'Failed', 2: 'Ou
 
 if __name__ == '__main__':
     laser = SolsTiS('172.24.37.153')
-
-    all_logs = download_logs()
+    laser.show_gui()
+    # all_logs = download_logs()
