@@ -612,7 +612,7 @@ class Andor(Camera, AndorBase):
     def get_preview_widget(self):
         ui = self.get_qt_ui()
         if ui.DisplayWidget is None:
-            ui.DisplayWidget = DisplayWidget
+            ui.DisplayWidget = DisplayWidget()
         return self.ui.DisplayWidget
     #
     # def getRelevantParameters(self):
@@ -1151,4 +1151,11 @@ ERROR_CODE = {
 
 if __name__ == '__main__':
     andor = Andor() #wvl_to_pxl=32.5 / 1600, magnification=30, pxl_size=16)
-    andor.show_gui(True)
+    app = QtWidgets.QApplication([])
+    ui1 = andor.get_control_widget()
+    ui2 = andor.get_preview_widget()
+    print ui1, ui2
+
+    ui1.show()
+    ui2.show()
+    # andor.show_gui(True)
