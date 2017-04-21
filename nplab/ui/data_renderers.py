@@ -385,11 +385,11 @@ class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
         if isinstance(self.h5object,dict) or isinstance(self.h5object,h5py.Group):
             for i in range(len(self.h5object.values())):
                 if i == 0:    
-                    data = [np.array(self.h5object.values()[i])]
+                    data = np.array(self.h5object.values()[i])
                 else:
-                    data = np.append(data,[np.array(self.h5object.values()[i])],axis = 0)
+                    data = np.append(data,np.array(self.h5object.values()[i]),axis = 0)
                 ListData = True
-                
+            print np.shape(data)
         elif len(self.h5object.shape) == 1 and len(self.h5object.attrs['wavelengths'])<len(self.h5object) and len(self.h5object)%len(self.h5object.attrs['wavelengths']) == 0:
             RawData = np.array(self.h5object,dtype = float)
             Xlen = len(np.array(self.h5object.attrs['wavelengths']))
@@ -406,6 +406,7 @@ class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
         background_counter = 0
         reference_counter = 0
         i = 0
+        j = 0
         for h5object in data:
             Title = "A"
             variable_int = False
@@ -446,7 +447,12 @@ class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
                     Title = Title + " referenced"
                 else:
                     reference_counter = reference_counter +1
-            i = i +1
+   #         print i,j,np.max(data) ,self.h5object.values()[i].attrs.keys()
+            if len(self.h5object.values()) != len(data):
+                i = int((float(len(self.h5object.values()))/len(data))*j)
+                j=j+1
+            else:
+                i = i +1
             
         if ListData == False:
             data = data[0]            
@@ -684,18 +690,42 @@ class SpectrumRenderer(FigureRendererPG):
     control/shift as used in most windows apps.
     """
     def display_data(self):
-        if isinstance(self.h5object,dict) or isinstance(self.h5object,h5py.Group):
-            pass
-        elif len(self.h5object.shape)==2:
-            h5list = {}
-            for line in range(len(self.h5object[:,0])):
-                ldata = np.array(self.h5object)[line]
-                linedata = ArrayWithAttrs(ldata,attrs = self.h5object.attrs)
-                linedata.name = self.h5object.name+"_"+str(line)
-                h5list[linedata.name] =linedata
-            self.h5object = h5list
-        elif type(self.h5object) != dict or type(self.h5object) != df.Group or type(self.h5object) != h5py.Group:
+        if type(self.h5object) == h5py.Dataset:
             self.h5object = {self.h5object.name : self.h5object}
+        #Perform averaging
+        h5list = {}
+        for h5object in self.h5object.values():  
+            if 'averaging_enabled' in h5object.attrs.keys():
+                if h5object.attrs['averaging_enabled']==True:
+                    ldata = np.average(np.array(h5object)[...],axis = 0)
+                    linedata = ArrayWithAttrs(ldata,attrs = h5object.attrs)
+                    linedata.name = h5object.name
+                    h5list[linedata.name] =linedata
+                else:
+                    h5list[h5object.name] = h5object
+            else:
+                h5list[h5object.name] = h5object
+        self.h5object = h5list
+
+
+   #     if isinstance(self.h5object,dict) or isinstance(self.h5object,h5py.Group):
+   #         pass
+        #take 2D or one datasets and combine them
+        h5list = {}
+        for h5object in self.h5object.values():
+            if len(h5object.shape)==2:
+                for line in range(len(h5object[:,0])):
+                    ldata = np.array(h5object)[line]
+                    linedata = ArrayWithAttrs(ldata,attrs = h5object.attrs)
+                    linedata.name = h5object.name+"_"+str(line)
+                    h5list[linedata.name] =linedata
+            else:
+                h5list[h5object.name] = h5object
+        self.h5object = h5list
+   #     elif type(self.h5object) != dict or type(self.h5object) != df.Group or type(self.h5object) != h5py.Group:
+  #      elif type(self.h5object) == h5py.Dataset
+ #           self.h5object = {self.h5object.name : self.h5object}
+        #Deal with averaging of spectra
         plot = self.figureWidget
         plot.addLegend(offset = (-1,1))
         icolour = 0
@@ -729,7 +759,9 @@ class SpectrumRenderer(FigureRendererPG):
                         if len(np.array(h5object)) == len(np.array(h5object.attrs['reference'])):
                             Data = Data/(np.array(h5object.attrs['reference'])- np.array(h5object.attrs['background']))
                             Title = Title + " referenced"
-        
+            if 'absorption_enabled' in h5object.attrs.keys():
+                if h5object.attrs['absorption_enabled']:
+                    Data = np.log10(1/np.array(Data))
             plot.plot(x = np.array(h5object.attrs['wavelengths']), y = np.array(Data),name = h5object.name, pen =(icolour,len(self.h5object)) )
             Title = Title + " spectrum"
                 

@@ -19,7 +19,7 @@ from nplab.utils.log import create_logger, ColoredFormatter
 #from Experiments.exper_utils.h5browser import H5Browser
 #from Experiments.exper_utils.workerthreads import *
 
-pyqtgraph.setConfigOption('leftButtonPan', False)
+#pyqtgraph.setConfigOption('leftButtonPan', False)
 
 # TODO: Make GeneralScan GUI
 

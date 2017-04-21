@@ -28,9 +28,10 @@ class Spectrometer(Instrument):
     metadata_property_names = ('model_name', 'serial_number', 'integration_time',
                                'reference', 'background', 'wavelengths',
                                'background_int', 'reference_int','variable_int_enabled',
-                               'background_gradient','background_constant')
+                               'background_gradient','background_constant', 'averaging_enabled'
+                               ,'absorption_enabled')
    
-    variable_int_enabled = DumbNotifiedProperty(True)
+    variable_int_enabled = DumbNotifiedProperty(False)
 
     def __init__(self):
         super(Spectrometer, self).__init__()
@@ -47,8 +48,13 @@ class Spectrometer(Instrument):
         self.latest_raw_spectrum = None
         self.latest_spectrum = None
         self.averaging_enabled = False
-        self.spectra_deque = deque(maxlen = 5)
+        self.spectra_deque = deque(maxlen = 1)
+        self.absorption_enabled = False
         self._config_file = None
+
+        self.stored_references = {}
+        self.stored_backgrounds = {}
+        self.reference_ID = 0
 
     def __del__(self):
         try:
@@ -78,7 +84,7 @@ class Spectrometer(Instrument):
             f.create_dataset(name, data=data ,attrs = attrs)
         else:
             dset = f[name]
-            dset[:] = data
+            dset[...] = data
             f.flush()
 
     def get_model_name(self):
@@ -138,6 +144,10 @@ class Spectrometer(Instrument):
         self.background_constant = background_1-(self.integration_time*self.background_gradient)
         self.background = background_1
         self.background_int = self.integration_time
+        self.stored_backgrounds[self.reference_ID] = {'background_gradient' : self.background_gradient,
+                                                     'background_constant' : self.background_constant,
+                                                     'background' : self.background,
+                                                     'background_int': self.background_int}
         self.update_config('background_gradient', self.background_gradient)
         self.update_config('background_constant', self.background_constant)
         self.update_config('background', self.background)
@@ -155,11 +165,19 @@ class Spectrometer(Instrument):
         self.reference = self.read_spectrum() 
         self.reference_int = self.integration_time
         self.update_config('reference', self.reference)
-        self.update_config('reference_int',self.reference_int)
+        self.update_config('reference_int',self.reference_int) 
+        self.stored_references[self.reference_ID] = {'reference' : self.reference,
+                                                    'reference_int' : self.reference_int}
+    def load_reference(self,ID):
+        for attr in self.stored_backgrounds[ID]:
+            setattr(self,attr,self.stored_backgrounds[ID][attr])
+        for attr in self.stored_references[ID]:
+            setattr(self,attr,self.stored_references[ID][attr])
 
     def clear_reference(self):
         """Clear the current reference spectrum"""
         self.reference = None
+        self.reference_int = None
 
     def is_background_compensated(self):
         """Return whether there's currently a valid background spectrum"""
@@ -196,6 +214,8 @@ class Spectrometer(Instrument):
                 
         else:
             new_spectrum = spectrum
+        if self.absorption_enabled == True:
+            return np.log10(1/new_spectrum)
         return new_spectrum
 
     def read_processed_spectrum(self):
@@ -376,6 +396,8 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
         self.background_subtracted.stateChanged.connect(self.state_changed)
         self.referenced.stateChanged.connect(self.state_changed)
         
+        self.Absorption_checkBox.stateChanged.connect(self.state_changed)
+                
         register_for_property_changes(self.spectrometer,'variable_int_enabled',self.variable_int_state_change)
 #        if self.spectrometer.variable_int_enabled:
 #                self.background_subtracted.blockSignals(True)
@@ -388,7 +410,9 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
 #                self.background_subtracted.setCheckState(QtCore.Qt.Checked)
 #                self.background_subtracted.blockSignals(False)
         self.average_checkBox.stateChanged.connect(self.state_changed)
+        self.Average_spinBox.valueChanged.connect(self.update_averages)
         
+        self.referenceID_spinBox.valueChanged.connect(self.update_references)
 
 
         self.id_string.setText('{0} {1}'.format(self.spectrometer.model_name, self.spectrometer.serial_number))
@@ -403,6 +427,9 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
                 self.spectrometer.integration_time = float(args[0])
             except ValueError:
                 pass
+            
+    def update_averages(self,*args,**kwargs):
+        self.spectrometer.spectra_deque = deque(maxlen = args[0])
 
     def button_pressed(self, *args, **kwargs):
         sender = self.sender()
@@ -468,12 +495,37 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
             
         elif sender is self.average_checkBox:
             self.spectrometer.averaging_enabled = not self.spectrometer.averaging_enabled
+            
+        elif sender is self.Absorption_checkBox:
+            self.spectrometer.absorption_enabled = not self.spectrometer.absorption_enabled
         
     def variable_int_state_change(self):
         if self.spectrometer.variable_int_enabled == True:
             self.Variable_int.setCheckState(QtCore.Qt.Checked)
         if self.spectrometer.variable_int_enabled == False:
             self.Variable_int.setCheckState(QtCore.Qt.Unchecked)
+            
+    def update_references(self,*args, **kwargs):
+        self.spectrometer.reference_ID = args[0]
+        try:
+            self.spectrometer.load_reference(self.spectrometer.reference_ID )
+        except KeyError:
+            self.spectrometer.clear_reference()
+            self.referenced.blockSignals(True)
+            self.referenced.setCheckState(QtCore.Qt.Unchecked)
+            self.referenced.blockSignals(False)
+            
+            self.spectrometer.clear_background()
+            self.background_subtracted.blockSignals(True)
+            self.background_subtracted.setCheckState(QtCore.Qt.Unchecked)
+            self.background_subtracted.blockSignals(False)
+
+
+            self.spectrometer._logger.info('No refence/background saved in slot %s to load' %args[0])
+            
+        
+            
+        
 
 
 class DisplayThread(QtCore.QThread):
