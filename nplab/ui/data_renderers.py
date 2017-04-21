@@ -385,11 +385,11 @@ class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
         if isinstance(self.h5object,dict) or isinstance(self.h5object,h5py.Group):
             for i in range(len(self.h5object.values())):
                 if i == 0:    
-                    data = [np.array(self.h5object.values()[i])]
+                    data = np.array(self.h5object.values()[i])
                 else:
-                    data = np.append(data,[np.array(self.h5object.values()[i])],axis = 0)
+                    data = np.append(data,np.array(self.h5object.values()[i]),axis = 0)
                 ListData = True
-                
+            print np.shape(data)
         elif len(self.h5object.shape) == 1 and len(self.h5object.attrs['wavelengths'])<len(self.h5object) and len(self.h5object)%len(self.h5object.attrs['wavelengths']) == 0:
             RawData = np.array(self.h5object,dtype = float)
             Xlen = len(np.array(self.h5object.attrs['wavelengths']))
@@ -406,29 +406,53 @@ class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
         background_counter = 0
         reference_counter = 0
         i = 0
+        j = 0
         for h5object in data:
             Title = "A"
-            if 'background' in self.h5object.values()[i].attrs.keys():
-                if ListData == True:
-                    if len(np.array(data[i])) == len(np.array(self.h5object.values()[i].attrs['reference'])):
-                        data[i] = data[i] - np.array(self.h5object.values()[i].attrs['background'])     
-                else:
-                    if len(np.array(data)) == len(np.array(self.h5object.values()[i].attrs['background'])):
-                            data = data - np.array(self.h5object.values()[i].attrs['background'])[:,np.newaxis]       
-                    Title = Title + " background subtracted"
+            variable_int = False
+            if 'variable_int_enabled' in self.h5object.values()[i].attrs.keys():
+                variable_int = self.h5object.values()[i].attrs['variable_int_enabled']
+            if ((variable_int == True) and #Check for variable integration time and that the background_int and reference_int are not none
+                        ((self.h5object.values()[i].attrs['background_int'] != self.h5object.values()[i].attrs['integration_time'] 
+                            and (self.h5object.values()[i].attrs['background_int'] != None))
+                        or (self.h5object.values()[i].attrs['reference_int'] != self.h5object.values()[i].attrs['integration_time'] 
+                            and (self.h5object.values()[i].attrs['reference_int'] != None)))):
+                if self.h5object.values()[i].attrs['background_int'] != None:
+                    if self.h5object.values()[i].attrs['reference_int'] != None:
+                        data[i] = ((data[i]-(self.h5object.values()[i].attrs['background_constant']+self.h5object.values()[i].attrs['background_gradient']*self.h5object.values()[i].integration_time))/ 
+                                        ((self.h5object.values()[i].attrs['reference']-(self.h5object.values()[i].attrs['background_constant']+self.h5object.values()[i].attrs['background_gradient']*self.h5object.values()[i].attrs['reference_int']))
+                                        *self.h5object.values()[i].attrs['integration_time']/self.h5object.values()[i].attrs['reference_int']))
+                    else:
+                        data[i] = data[i]-(self.h5object.values()[i].attrs['background_constant']+self.h5object.values()[i].attrs['background_gradient']*self.h5object.values()[i].attrs['integration_time'])
+                        reference_counter = reference_counter +1
+                
             else:
-                background_counter = background_counter+1
-            if 'reference' in self.h5object.values()[i].attrs.keys():
-                if ListData == True:
-                    if len(np.array(data[i])) == len(np.array(self.h5object.values()[i].attrs['reference'])):
-                        data[i] = data[i]/(np.array(self.h5object.values()[i].attrs['reference'])- np.array(self.h5object.values()[i].attrs['background']))   
+                if 'background' in self.h5object.values()[i].attrs.keys():
+                    if ListData == True:
+                        if len(np.array(data[i])) == len(np.array(self.h5object.values()[i].attrs['reference'])):
+                            data[i] = data[i] - np.array(self.h5object.values()[i].attrs['background'])     
+                    else:
+                        if len(np.array(data)) == len(np.array(self.h5object.values()[i].attrs['background'])):
+                                data = data - np.array(self.h5object.values()[i].attrs['background'])[:,np.newaxis]       
+                        Title = Title + " background subtracted"
                 else:
-                    if len(np.array(data)) == len(np.array(self.h5object.values()[i].attrs['reference'])):
-                        data = data/(np.array(self.h5object.values()[i].attrs['reference'])[:,np.newaxis]- np.array(self.h5object.values()[i].attrs['background'])[:,np.newaxis])
-                Title = Title + " referenced"
+                    background_counter = background_counter+1
+                if 'reference' in self.h5object.values()[i].attrs.keys():
+                    if ListData == True:
+                        if len(np.array(data[i])) == len(np.array(self.h5object.values()[i].attrs['reference'])):
+                            data[i] = data[i]/(np.array(self.h5object.values()[i].attrs['reference'])- np.array(self.h5object.values()[i].attrs['background']))   
+                    else:
+                        if len(np.array(data)) == len(np.array(self.h5object.values()[i].attrs['reference'])):
+                            data = data/(np.array(self.h5object.values()[i].attrs['reference'])[:,np.newaxis]- np.array(self.h5object.values()[i].attrs['background'])[:,np.newaxis])
+                    Title = Title + " referenced"
+                else:
+                    reference_counter = reference_counter +1
+   #         print i,j,np.max(data) ,self.h5object.values()[i].attrs.keys()
+            if len(self.h5object.values()) != len(data):
+                i = int((float(len(self.h5object.values()))/len(data))*j)
+                j=j+1
             else:
-                reference_counter = reference_counter +1
-            i = i +1
+                i = i +1
             
         if ListData == False:
             data = data[0]            
@@ -666,18 +690,42 @@ class SpectrumRenderer(FigureRendererPG):
     control/shift as used in most windows apps.
     """
     def display_data(self):
-        if isinstance(self.h5object,dict) or isinstance(self.h5object,h5py.Group):
-            pass
-        elif len(self.h5object.shape)==2:
-            h5list = {}
-            for line in range(len(self.h5object[:,0])):
-                ldata = np.array(self.h5object)[line]
-                linedata = ArrayWithAttrs(ldata,attrs = self.h5object.attrs)
-                linedata.name = self.h5object.name+"_"+str(line)
-                h5list[linedata.name] =linedata
-            self.h5object = h5list
-        elif type(self.h5object) != dict or type(self.h5object) != df.Group or type(self.h5object) != h5py.Group:
+        if type(self.h5object) == h5py.Dataset:
             self.h5object = {self.h5object.name : self.h5object}
+        #Perform averaging
+        h5list = {}
+        for h5object in self.h5object.values():  
+            if 'averaging_enabled' in h5object.attrs.keys():
+                if h5object.attrs['averaging_enabled']==True:
+                    ldata = np.average(np.array(h5object)[...],axis = 0)
+                    linedata = ArrayWithAttrs(ldata,attrs = h5object.attrs)
+                    linedata.name = h5object.name
+                    h5list[linedata.name] =linedata
+                else:
+                    h5list[h5object.name] = h5object
+            else:
+                h5list[h5object.name] = h5object
+        self.h5object = h5list
+
+
+   #     if isinstance(self.h5object,dict) or isinstance(self.h5object,h5py.Group):
+   #         pass
+        #take 2D or one datasets and combine them
+        h5list = {}
+        for h5object in self.h5object.values():
+            if len(h5object.shape)==2:
+                for line in range(len(h5object[:,0])):
+                    ldata = np.array(h5object)[line]
+                    linedata = ArrayWithAttrs(ldata,attrs = h5object.attrs)
+                    linedata.name = h5object.name+"_"+str(line)
+                    h5list[linedata.name] =linedata
+            else:
+                h5list[h5object.name] = h5object
+        self.h5object = h5list
+   #     elif type(self.h5object) != dict or type(self.h5object) != df.Group or type(self.h5object) != h5py.Group:
+  #      elif type(self.h5object) == h5py.Dataset
+ #           self.h5object = {self.h5object.name : self.h5object}
+        #Deal with averaging of spectra
         plot = self.figureWidget
         plot.addLegend(offset = (-1,1))
         icolour = 0
@@ -685,15 +733,35 @@ class SpectrumRenderer(FigureRendererPG):
             icolour = icolour+1
             Data = np.array(h5object)
             Title = "A"
-            if 'background' in h5object.attrs.keys():
-                if len(np.array(h5object)) == len(np.array(h5object.attrs['background'])):
-                    Data = Data - np.array(h5object.attrs['background'])
-                    Title = Title + " background subtracted"
-                if 'reference' in h5object.attrs.keys():
-                    if len(np.array(h5object)) == len(np.array(h5object.attrs['reference'])):
-                        Data = Data/(np.array(h5object.attrs['reference'])- np.array(h5object.attrs['background']))
-                        Title = Title + " referenced"
-    
+            if 'variable_int_enabled' in h5object.attrs.keys():
+                variable_int = h5object.attrs['variable_int_enabled']
+            if ((variable_int == True) and #Check for variable integration time and that the background_int and reference_int are not none
+                        ((h5object.attrs['background_int'] != h5object.attrs['integration_time'] 
+                            and (h5object.attrs['background_int'] != None))
+                        or (h5object.attrs['reference_int'] != h5object.attrs['integration_time'] 
+                            and (h5object.attrs['reference_int'] != None)))):
+                Title = Title + " variable"
+                if h5object.attrs['background_int'] != None:
+                    if h5object.attrs['reference_int'] != None:
+                        Data = ((Data-(h5object.attrs['background_constant']+h5object.attrs['background_gradient']*h5object.attrs['integration_time']))/ 
+                                        ((h5object.attrs['reference']-(h5object.attrs['background_constant']+h5object.attrs['background_gradient']*h5object.attrs['reference_int']))
+                                        *h5object.attrs['integration_time']/h5object.attrs['reference_int']))
+                        Title = Title + " referenced and background subtracted"
+                    else:
+                        Data = Data-(h5object.attrs['background_constant']+h5object.attrs['background_gradient']*h5object.attrs['integration_time'])
+                        Title = Title + " background subtracted"
+            else:
+                if 'background' in h5object.attrs.keys():
+                    if len(np.array(h5object)) == len(np.array(h5object.attrs['background'])):
+                        Data = Data - np.array(h5object.attrs['background'])
+                        Title = Title + " background subtracted"
+                    if 'reference' in h5object.attrs.keys():
+                        if len(np.array(h5object)) == len(np.array(h5object.attrs['reference'])):
+                            Data = Data/(np.array(h5object.attrs['reference'])- np.array(h5object.attrs['background']))
+                            Title = Title + " referenced"
+            if 'absorption_enabled' in h5object.attrs.keys():
+                if h5object.attrs['absorption_enabled']:
+                    Data = np.log10(1/np.array(Data))
             plot.plot(x = np.array(h5object.attrs['wavelengths']), y = np.array(Data),name = h5object.name, pen =(icolour,len(self.h5object)) )
             Title = Title + " spectrum"
                 

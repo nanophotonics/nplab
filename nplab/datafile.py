@@ -193,17 +193,17 @@ class Group(h5py.Group, ShowGUIMixin):
         """Return a subgroup, creating it if it does not exist."""
         return Group(super(Group, self).require_group(name).id)  # wrap the returned group
 
-    def create_dataset(self, name, shape=None, dtype=None,
-                       data=None, attrs=None, auto_increment=True, timestamp=True, *args, **kwargs):
+    def create_dataset(self, name, auto_increment=True, shape=None, dtype=None,
+                       data=None, attrs=None, timestamp=True, *args, **kwargs):
         """Create a new dataset, optionally with an auto-incrementing name.
 
         :param name: the name of the new dataset
+        :param auto_increment: if True (default), add a number to the dataset name to
+            ensure it's unique.  To force the addition of a number, append %d to the dataset name.
         :param shape: a tuple describing the dimensions of the data (only needed if data is not specified)
         :param dtype: data type to be saved (if not specifying data)
         :param data: a numpy array or equivalent, to be saved - this specifies dtype and shape.
         :param attrs: a dictionary of metadata to be saved with the data
-        :param auto_increment: if True (default), add a number to the dataset name to
-            ensure it's unique.  To force the addition of a number, append %d to the dataset name.
         :param timestamp: if True (default), we save a "creation_timestamp" attribute with the current time.
 
         Further arguments are passed to h5py.Group.create_dataset.
@@ -221,7 +221,7 @@ class Group(h5py.Group, ShowGUIMixin):
 
     create_dataset.__doc__ += '\n\n'+h5py.Group.create_dataset.__doc__
 
-    def require_dataset(self, name, shape=None, dtype=None, data=None, attrs=None, auto_increment=True, timestamp=True,
+    def require_dataset(self, name, auto_increment=True, shape=None, dtype=None, data=None, attrs=None, timestamp=True,
                         *args, **kwargs):
         """Require a new dataset, optionally with an auto-incrementing name."""
         if name not in self:
@@ -231,13 +231,13 @@ class Group(h5py.Group, ShowGUIMixin):
             dset = self[name]
         return dset
 
-    def create_resizable_dataset(self, name, shape=(0,), maxshape=(None,), dtype=None, auto_increment=True, attrs=None, timestamp=True,
+    def create_resizable_dataset(self, name, shape=(0,), maxshape=(None,), auto_increment=True, dtype=None, attrs=None, timestamp=True,
                                  *args, **kwargs):
         """See create_dataset documentation"""
         return self.create_dataset(name, auto_increment, shape, dtype, attrs, timestamp,
                                    maxshape=maxshape, chunks=True, *args, **kwargs)
 
-    def require_resizable_dataset(self, name, shape=(0,), maxshape=(None,), dtype=None, auto_increment=True, attrs=None, timestamp=True,
+    def require_resizable_dataset(self, name, shape=(0,), maxshape=(None,), auto_increment=True, dtype=None, attrs=None, timestamp=True,
                                   *args, **kwargs):
         """Create a resizeable dataset, or return the dataset if it exists."""
         if name not in self:
@@ -344,54 +344,8 @@ class DataFile(Group):
         """ Returns the path of the datafolder the current datafile is in"""
         return os.path.dirname(self.file.filename)
 
-def HDF5_filename_dialog(action="save", caption="Select Data File"):
-    """Pop up a file dialogue to get an HDF5 file name
-
-    action : string (optional)
-        This should be either "save" or "open", and sets the text of the button in the dialogue.
-    caption : string (optional)
-        The title of the window.
-    """
-    assert action=="save" or action=="open", "The specified action must be 'save' or 'open'"
-    # NB the GUI stuff is imported here to avoid accidentally loading it when datafile is loaded.
-    import nplab.utils.gui
-    from nplab.utils.gui import QtGui
-    from nplab.utils.gui import QtWidgets
-    app = nplab.utils.gui.get_qt_app()  # ensure Qt is running
-    dialog_function = QtWidgets.QFileDialog.getSaveFileName if action=="save" else \
-        QtWidgets.QFileDialog.getOpenFileName
-    fname = dialog_function(
-        caption=caption,
-        directory=os.path.join(os.getcwd(), datetime.date.today().strftime("%Y-%m-%d.h5")),
-        filter="HDF5 Data (*.h5 *.hdf5)",
-        options=QtWidgets.QFileDialog.DontConfirmOverwrite,
-    )
-    if not isinstance(fname, basestring):
-        fname = fname[0]  # work around version-dependent Qt behaviour :(
-    if len(fname) > 0:
-        print
-        fname
-        if not "." in fname:
-            fname += ".h5"
-        return fname
-    else:
-        print "Cancelled by the user."
-        if exception_if_none:
-            raise ValueError("The file dialogue was cancelled by the user - no file to return :(")
-        return None
-
-def datafile_dialog(action="save", caption="Select Data File", mode='a', **kwargs):
-    """Display a file dialog, and return a DataFile object.
-
-    action should be 'save' or 'open', and mode sets the loaded file's mode.
-    An exception is raised if there is no file (e.g. if the user cancels)
-
-    Additional keyword args passed to DataFile constructor.
-    """
-    fname = HDF5_filename_dialog(action=action, caption=caption)
-    return DataFile(fname, mode=mode, **kwargs)
-
 _current_datafile = None
+
 
 def current(create_if_none=True, create_if_closed=True, mode='a'):
     """Return the current data file, creating one if it does not exist.
@@ -420,10 +374,29 @@ def current(create_if_none=True, create_if_closed=True, mode='a'):
     if _current_datafile is None and create_if_none:
         print "No current data file, attempting to create..."
         try:  # we try to pop up a Qt file dialog
-            df = datafile_dialog(action="save", mode=mode)
-            set_current(df)
-        except ValueError:
-            print "current datafile is None, probably because the user cancelled :("
+            import nplab.utils.gui
+            from nplab.utils.gui import QtGui
+            from nplab.utils.gui import QtWidgets
+            app = nplab.utils.gui.get_qt_app()  # ensure Qt is running
+            fname = QtWidgets.QFileDialog.getSaveFileName(
+                caption="Select Data File",
+                directory=os.path.join(os.getcwd(), datetime.date.today().strftime("%Y-%m-%d.h5")),
+                filter="HDF5 Data (*.h5 *.hdf5)",
+                options=QtWidgets.QFileDialog.DontConfirmOverwrite,
+            )
+            if not isinstance(fname, basestring):
+                fname = fname[0]  # work around version-dependent Qt behaviour :(
+            if len(fname) > 0:
+                print fname
+                if not "." in fname:
+                    fname += ".h5"
+                set_current(fname, mode=mode)
+            #                if os.path.isfile(fname): #FIXME: dirty hack to work around mode=a not working
+            #                    set_current(fname,mode='r+')
+            #                else:
+            #                    set_current(fname,mode='w-') #create the datafile
+            else:
+                print "Cancelled by the user."
         except Exception as e:
             print "File dialog went wrong :("
             print e
@@ -458,17 +431,28 @@ def close_current():
         except:
             print "Error closing the data file"
 
-def open_file(mode='a'):
+def open_file():
     """Open an existing data file"""
     global _current_datafile
     try:  # we try to pop up a Qt file dialog
-        df = datafile_dialog(action="open", mode=mode)
-        set_current(df)
-    except ValueError:
-        print
-        "current datafile is None, probably because the user cancelled :("
-    except Exception as e:
-        print "File dialog went wrong :("
+        import nplab.utils.gui
+        from nplab.utils.gui import QtGui
+        app = nplab.utils.gui.get_qt_app()  # ensure Qt is running
+        fname = QtGui.QFileDialog.getOpenFileName(
+            caption="Select Existing Data File",
+            directory=os.path.join(os.getcwd()),
+            filter="HDF5 Data (*.h5 *.hdf5)",
+#            options=qtgui.QFileDialog.DontConfirmOverwrite,
+        )
+        if not isinstance(fname, basestring):
+            fname = fname[0]  # work around version-dependent Qt behaviour :(
+        if len(fname) > 0:
+            print fname
+            set_current(fname, mode='a')
+        else:
+            print "Cancelled by the user."
+    except:
+            print "File dialog went wrong :("
 
     return _current_datafile  # if there is a file return it
 

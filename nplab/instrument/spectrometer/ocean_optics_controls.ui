@@ -20,7 +20,16 @@
    <string>Form</string>
   </property>
   <layout class="QVBoxLayout" name="layout">
-   <property name="margin">
+   <property name="leftMargin">
+    <number>5</number>
+   </property>
+   <property name="topMargin">
+    <number>5</number>
+   </property>
+   <property name="rightMargin">
+    <number>5</number>
+   </property>
+   <property name="bottomMargin">
     <number>5</number>
    </property>
    <item>
@@ -176,8 +185,8 @@
         <property name="verticalSpacing">
          <number>0</number>
         </property>
-        <item row="0" column="1">
-         <widget class="QPushButton" name="read_reference_button">
+        <item row="1" column="0">
+         <widget class="QPushButton" name="clear_background_button">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
             <horstretch>0</horstretch>
@@ -185,7 +194,7 @@
            </sizepolicy>
           </property>
           <property name="text">
-           <string>Read Reference</string>
+           <string>Clear Background</string>
           </property>
          </widget>
         </item>
@@ -215,8 +224,8 @@
           </property>
          </widget>
         </item>
-        <item row="1" column="0">
-         <widget class="QPushButton" name="clear_background_button">
+        <item row="0" column="1">
+         <widget class="QPushButton" name="read_reference_button">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
             <horstretch>0</horstretch>
@@ -224,22 +233,9 @@
            </sizepolicy>
           </property>
           <property name="text">
-           <string>Clear Background</string>
+           <string>Read Reference</string>
           </property>
          </widget>
-        </item>
-        <item row="0" column="3">
-         <spacer name="horizontalSpacer_4">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
         </item>
         <item row="2" column="0">
          <widget class="QCheckBox" name="background_subtracted">
@@ -253,6 +249,26 @@
            <string>Background Subtracted</string>
           </property>
          </widget>
+        </item>
+        <item row="3" column="1">
+         <widget class="QCheckBox" name="Variable_int">
+          <property name="text">
+           <string>Variable int</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="2">
+         <spacer name="horizontalSpacer_4">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
         </item>
         <item row="2" column="1">
          <widget class="QCheckBox" name="referenced">
@@ -273,6 +289,45 @@
            <string>Load State</string>
           </property>
          </widget>
+        </item>
+        <item row="3" column="2">
+         <layout class="QHBoxLayout" name="averaging_horizontalLayout">
+          <item>
+           <widget class="QCheckBox" name="average_checkBox">
+            <property name="text">
+             <string>Averaging</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSpinBox" name="Average_spinBox">
+            <property name="minimum">
+             <number>1</number>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item row="2" column="2">
+         <widget class="QCheckBox" name="Absorption_checkBox">
+          <property name="text">
+           <string>Absorption</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="2">
+         <layout class="QHBoxLayout" name="horizontalLayout">
+          <item>
+           <widget class="QLabel" name="label">
+            <property name="text">
+             <string>Reference ID</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSpinBox" name="referenceID_spinBox"/>
+          </item>
+         </layout>
         </item>
        </layout>
       </item>

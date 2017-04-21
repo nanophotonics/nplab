@@ -134,6 +134,11 @@ class HDF5ItemViewer(QtWidgets.QWidget, UiTools):
         renderers = suitable_renderers(self.data)
         combobox = self.renderer_combobox
         previous_selection = combobox.currentIndex() # remember previous choice
+        try:#Attempt to keep the same range
+            previous_view_rect = self.figure_widget.figureWidget.viewRect()
+        except AttributeError:
+            previous_view_rect = None
+            
         combobox.clear()
         for i, renderer in enumerate(renderers):
             combobox.addItem(renderer.__name__, renderer)
@@ -153,6 +158,11 @@ class HDF5ItemViewer(QtWidgets.QWidget, UiTools):
         except ValueError:
             combobox.setCurrentIndex(0)
             self.renderer_selected(0)
+        if previous_view_rect != None:
+            try:
+                self.figure_widget.figureWidget.setRange(previous_view_rect, padding=0)                                      
+            except AttributeError:
+                pass
     
     _renderer = None
     
