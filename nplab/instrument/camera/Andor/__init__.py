@@ -652,6 +652,7 @@ class AndorUI(QtWidgets.QWidget):
         self._setup_signals()
         self.updateGUI()
         self.BinningChanged()
+        self.data_file = None
 
         # self.Andor.updateGUI.connect(self.updateGUI)
 
@@ -680,6 +681,8 @@ class AndorUI(QtWidgets.QWidget):
         self.pushButtonCapture.clicked.connect(self.Capture)
         self.pushButtonLive.clicked.connect(self.Live)
         self.pushButtonAbort.clicked.connect(self.Abort)
+        self.save_pushButton.clicked.connect(self.Save)
+        self.referesh_groups_pushButton.clicked.connect(self.update_groups_box)
 
     @background_action
     def _constantlyUpdateTemperature(self):
@@ -843,7 +846,7 @@ class AndorUI(QtWidgets.QWidget):
             else:
                 self.Andor.SetParameter('IsolatedCropMode', 0, maxy, minx, current_binning, current_binning)
                 self.Andor.SetImage()
-    def save(self):
+    def Save(self):
         if self.data_file ==None:
             self.data_file = df.current()
         data=self.Andor.CurImage
@@ -858,13 +861,17 @@ class AndorUI(QtWidgets.QWidget):
                 group = self.data_file.create_group('AndorData')
         else:
             group = self.data_file[self.group_comboBox.currentText()]
-        
-        group.create_dataset(name = filename,data = data,attrs = self.Andor.parameters)
+        if np.shape(data)[0]==1:
+            data = data[0]
+        attrs =self.Andor.parameters
+        attrs['Description'] = self.description_plainTextEdit.toPlainText()
+        group.create_dataset(name = filename,data = data,attrs = attrs)
     def update_groups_box(self):
         if self.data_file ==None:
             self.data_file = df.current()
         self.group_comboBox.clear()
-        self.group_comboBox.addItem('AndorData')
+        if 'AndorData' not in self.data_file.values():
+            self.group_comboBox.addItem('AndorData')
         for group in self.data_file.values():
             if type(group) == df.Group:
                 self.group_comboBox.addItem(group.name[1:],group)
