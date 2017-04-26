@@ -332,6 +332,20 @@
      </layout>
     </widget>
    </item>
+   <item row="12" column="0" colspan="3">
+    <widget class="QLineEdit" name="filename_lineEdit">
+     <property name="text">
+      <string>Filename....</string>
+     </property>
+    </widget>
+   </item>
+   <item row="12" column="3">
+    <widget class="QPushButton" name="save_pushButton">
+     <property name="text">
+      <string>Save</string>
+     </property>
+    </widget>
+   </item>
    <item row="11" column="0" colspan="2">
     <widget class="QLabel" name="label_4">
      <property name="text">
@@ -615,35 +629,34 @@
      </property>
     </widget>
    </item>
-   <item row="14" column="0" colspan="3">
+   <item row="13" column="3">
+    <widget class="QLabel" name="label_6">
+     <property name="text">
+      <string>Group</string>
+     </property>
+    </widget>
+   </item>
+   <item row="17" column="0" rowspan="2" colspan="3">
     <widget class="QPlainTextEdit" name="description_plainTextEdit">
      <property name="plainText">
       <string>Description...</string>
      </property>
     </widget>
    </item>
-   <item row="12" column="0" colspan="3">
-    <widget class="QLineEdit" name="filename_lineEdit">
+   <item row="18" column="3">
+    <widget class="QPushButton" name="referesh_groups_pushButton">
      <property name="text">
-      <string>Filename....</string>
+      <string>PushButton</string>
      </property>
     </widget>
    </item>
-   <item row="12" column="3">
-    <widget class="QPushButton" name="pushButton">
-     <property name="text">
-      <string>Save</string>
-     </property>
-    </widget>
-   </item>
-   <item row="14" column="3">
-    <widget class="QComboBox" name="group_comboBox"/>
-   </item>
-   <item row="13" column="3">
-    <widget class="QLabel" name="label_6">
-     <property name="text">
-      <string>Group</string>
-     </property>
+   <item row="17" column="3">
+    <widget class="QComboBox" name="group_comboBox">
+     <item>
+      <property name="text">
+       <string>AndorData</string>
+      </property>
+     </item>
     </widget>
    </item>
   </layout>

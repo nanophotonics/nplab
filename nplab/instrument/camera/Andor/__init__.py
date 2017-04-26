@@ -2,6 +2,7 @@
 from nplab.utils.gui import QtWidgets, QtCore, uic
 from nplab.instrument.camera import Camera, CameraParameter
 from nplab.utils.thread_utils import background_action, locked_action
+import nplab.datafile as df
 
 import os
 import platform
@@ -842,6 +843,31 @@ class AndorUI(QtWidgets.QWidget):
             else:
                 self.Andor.SetParameter('IsolatedCropMode', 0, maxy, minx, current_binning, current_binning)
                 self.Andor.SetImage()
+    def save(self):
+        if self.data_file ==None:
+            self.data_file = df.current()
+        data=self.Andor.CurImage
+        if self.filename_lineEdit.text() != 'Filename....':
+            filename = self.filename_lineEdit.text()
+        else:
+            filename ='Andor_data_0'
+        if self.group_comboBox.currentText() == 'AndorData':
+            if 'AndorData' in self.data_file.keys():
+                group = self.data_file['AndorData']
+            else:
+                group = self.data_file.create_group('AndorData')
+        else:
+            group = self.data_file[self.group_comboBox.currentText()]
+        
+        group.create_dataset(name = filename,data = data,attrs = self.Andor.parameters)
+    def update_groups_box(self):
+        if self.data_file ==None:
+            self.data_file = df.current()
+        self.group_comboBox.clear()
+        self.group_comboBox.addItem('AndorData')
+        for group in self.data_file.values():
+            if type(group) == df.Group:
+                self.group_comboBox.addItem(group.name[1:],group)
 
     def ROI(self):
         if self.DisplayWidget is None:
