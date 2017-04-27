@@ -646,7 +646,7 @@
    <item row="18" column="3">
     <widget class="QPushButton" name="referesh_groups_pushButton">
      <property name="text">
-      <string>PushButton</string>
+      <string>Save</string>
      </property>
     </widget>
    </item>
