@@ -274,9 +274,9 @@ class APT_VCP(serial_instrument.SerialInstrument):
             if not hasattr(destination_id, '__iter__'):
                 destination_id = tuple(destination_id)
         for dest in destination_id:
-            print dest
+            self._logger.debug(str(dest))
             self.write(0x0492, destination_id = dest)
-        print destination_id,dest
+        self._logger.debug(str(destination_id) + str(dest))
         
     def _waitForReply(self):
         reply = ''

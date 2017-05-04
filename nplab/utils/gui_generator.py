@@ -21,7 +21,6 @@ from nplab.utils.log import create_logger, ColoredFormatter
 
 #pyqtgraph.setConfigOption('leftButtonPan', False)
 
-# TODO: Make GeneralScan GUI
 
 import logging
 LOGGER = create_logger('GeneratedGUI')
