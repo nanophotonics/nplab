@@ -6,7 +6,7 @@ from nplab.instrument.spectrometer import Spectrometer, Spectrometers
 from nplab.instrument.light_sources import LightSource
 from nplab.instrument.shutter import Shutter
 from nplab.utils.gui import *
-from PyQt4 import uic
+from nplab.utils.gui import uic
 from nplab.ui.ui_tools import UiTools
 import numpy as np
 import matplotlib
@@ -31,7 +31,7 @@ pg.setConfigOption('foreground', 'k')
 
 
 class HyperspectralScan(GridScanQt, ScanningExperimentHDF5):
-    view_layer_updated = QtCore.pyqtSignal(int)
+    view_layer_updated = QtCore.Signal(int)
 
     def __init__(self):
         GridScanQt.__init__(self)
@@ -275,7 +275,7 @@ class HyperspectralScan(GridScanQt, ScanningExperimentHDF5):
     #     print "Image position:", self.image_plots[0].mapFromScene(pos)
 
 
-class HyperspectralScanUI(QtGui.QWidget, UiTools):
+class HyperspectralScanUI(QtWidgets.QWidget, UiTools):
     def __init__(self, grid_scanner, parent=None):
         assert isinstance(grid_scanner, HyperspectralScan), \
             'scanner must be an instance of HyperspectralScan'
@@ -308,7 +308,7 @@ class HyperspectralScanUI(QtGui.QWidget, UiTools):
         self.stage_select.activated[str].connect(self.select_stage)
 
     def init_view_wavelength_controls(self):
-        self.view_wavelength.setValidator(QtGui.QIntValidator())
+        self.view_wavelength.setValidator(QtWidgets.QIntValidator())
         # self.view_wavelength.textChanged.connect(self.check_state)
         self.view_wavelength.returnPressed.connect(self.on_view_wavelength_change)
 
@@ -322,7 +322,7 @@ class HyperspectralScanUI(QtGui.QWidget, UiTools):
         self.wavelength_range.setValue(self.grid_scanner.view_wavelength)
 
     def init_view_select(self):
-        self.view_layer.setValidator(QtGui.QIntValidator())
+        self.view_layer.setValidator(QtWidgets.QIntValidator())
         self.view_layer.textChanged.connect(
             self.on_view_layer_change)  # (partial(setattr, self.grid_scanner, 'view_layer'))
         self.grid_scanner.view_layer_updated.connect(self.on_gs_view_layer_change)

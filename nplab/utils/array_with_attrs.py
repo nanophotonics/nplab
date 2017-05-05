@@ -80,3 +80,16 @@ def attribute_bundler(attrs):
     """Return a function that bundles the supplied attributes with an array."""
     def bundle_attrs(array):
         return ArrayWithAttrs(array, attrs=attrs)
+
+
+class DummyHDF5Group(dict):
+    def __init__(self,dictionary, attrs ={}, name="DummyHDF5Group"):
+        super(DummyHDF5Group, self).__init__()
+        self.attrs = attrs
+        for key in dictionary:
+            self[key] = dictionary[key]
+        self.name = name
+        self.basename = name
+
+    file = None
+    parent = None

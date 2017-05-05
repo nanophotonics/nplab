@@ -18,6 +18,7 @@ import re
 import sys
 from collections import Sequence
 import nplab.utils.version
+import numpy as np
 from nplab.utils.show_gui_mixin import ShowGUIMixin
 
 
@@ -92,6 +93,15 @@ def get_file(destination='local', rel_path='Desktop/Data',
     if set_current:
         f.make_current()
     return f
+    
+
+def transpose_datafile(data_set):
+    ''' A function that opens a datafile, transposes and resaves'''
+    parent = data_set.parent
+    transposed_datafile = np.copy(data_set[...].T)
+    file_name = data_set.name.split('/')[-1]
+    del parent[file_name]
+    parent.create_dataset(file_name,data = transposed_datafile)
 
 def wrap_h5py_item(item):
     """Wrap an h5py object: groups are returned as Group objects, datasets are unchanged."""
@@ -365,13 +375,14 @@ def current(create_if_none=True, create_if_closed=True, mode='a'):
         print "No current data file, attempting to create..."
         try:  # we try to pop up a Qt file dialog
             import nplab.utils.gui
-            from nplab.utils.gui import qtgui
+            from nplab.utils.gui import QtGui
+            from nplab.utils.gui import QtWidgets
             app = nplab.utils.gui.get_qt_app()  # ensure Qt is running
-            fname = qtgui.QFileDialog.getSaveFileName(
+            fname = QtWidgets.QFileDialog.getSaveFileName(
                 caption="Select Data File",
                 directory=os.path.join(os.getcwd(), datetime.date.today().strftime("%Y-%m-%d.h5")),
                 filter="HDF5 Data (*.h5 *.hdf5)",
-                options=qtgui.QFileDialog.DontConfirmOverwrite,
+                options=QtWidgets.QFileDialog.DontConfirmOverwrite,
             )
             if not isinstance(fname, basestring):
                 fname = fname[0]  # work around version-dependent Qt behaviour :(
@@ -386,8 +397,9 @@ def current(create_if_none=True, create_if_closed=True, mode='a'):
             #                    set_current(fname,mode='w-') #create the datafile
             else:
                 print "Cancelled by the user."
-        except:
+        except Exception as e:
             print "File dialog went wrong :("
+            print e
 
     if _current_datafile is not None:
         return _current_datafile  # if there is a file (or we created one) return it
@@ -433,9 +445,9 @@ def open_file():
     global _current_datafile
     try:  # we try to pop up a Qt file dialog
         import nplab.utils.gui
-        from nplab.utils.gui import qtgui
+        from nplab.utils.gui import QtGui
         app = nplab.utils.gui.get_qt_app()  # ensure Qt is running
-        fname = qtgui.QFileDialog.getOpenFileName(
+        fname = QtGui.QFileDialog.getOpenFileName(
             caption="Select Existing Data File",
             directory=os.path.join(os.getcwd()),
             filter="HDF5 Data (*.h5 *.hdf5)",

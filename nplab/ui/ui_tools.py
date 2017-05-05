@@ -1,7 +1,7 @@
 __author__ = 'alansanders'
 
 
-from nplab.utils.gui import QtGui, QtCore, uic
+from nplab.utils.gui import QtCore, QtGui, QtWidgets, uic
 from nplab.utils.notified_property import NotifiedProperty, register_for_property_changes
 import os
 import sys
@@ -39,7 +39,7 @@ class UiTools(object):
         uic.loadUi(os.path.join(os.path.dirname(current_file), filename), self)
         
     def replace_widget(self, layout, old_widget, new_widget, **kwargs):
-        if isinstance(layout, QtGui.QGridLayout):
+        if isinstance(layout, QtWidgets.QGridLayout):
             index = layout.indexOf(old_widget)
             position = layout.getItemPosition(index)
             layout.removeWidget(old_widget)
@@ -109,8 +109,8 @@ class UiTools(object):
             controlled_objects = controlled_objects + [self]
         
         # Connect buttons to methods with the same name
-        for button in self.findChildren(QtGui.QPushButton):
-            name = strip_suffices(button.objectName(), ["_button","Button","_pushButton"])
+        for button in self.findChildren(QtWidgets.QPushButton):
+            name = strip_suffices(button.objectName(), ["_button","_pushButton","Button"])
             try:
                 # look for the named function first in this object, then in the controlled objects
                 obj = first_object_with_attr([self] + controlled_objects, name)
@@ -172,17 +172,17 @@ class UiTools(object):
                         print "didn't connect {0} '{1}'".format(control_type, name)
                         print e
 
-class QuickControlBox(QtGui.QGroupBox, UiTools):
+class QuickControlBox(QtWidgets.QGroupBox, UiTools):
     "A groupbox that can quickly add controls that synchronise with properties."
     def __init__(self, title="Quick Settings", *args, **kwargs):
         super(QuickControlBox, self).__init__(*args, **kwargs)
         self.setTitle(title)
-        self.setLayout(QtGui.QFormLayout())
+        self.setLayout(QtWidgets.QFormLayout())
         self.controls = dict()
     
     def add_doublespinbox(self, name, vmin=-float("inf"), vmax=float("inf")):
         """Add a floating-point spin box control."""
-        sb = QtGui.QDoubleSpinBox()
+        sb = QtWidgets.QDoubleSpinBox()
         self.controls[name] = sb
         sb.setObjectName(name + "_spinbox")
         sb.setMinimum(vmin)
@@ -191,7 +191,7 @@ class QuickControlBox(QtGui.QGroupBox, UiTools):
     
     def add_spinbox(self, name, vmin=-2**31, vmax=2**31-1):
         """Add a floating-point spin box control."""
-        sb = QtGui.QSpinBox()
+        sb = QtWidgets.QSpinBox()
         self.controls[name] = sb
         sb.setObjectName(name + "_spinbox")
         sb.setMinimum(vmin)
@@ -200,7 +200,7 @@ class QuickControlBox(QtGui.QGroupBox, UiTools):
         
     def add_lineedit(self, name):
         """Add a single-line text box control."""
-        le = QtGui.QLineEdit()
+        le = QtWidgets.QLineEdit()
         self.controls[name] = le
         le.setObjectName(name + "_lineedit")
         self.layout().addRow(name.title(), le)
@@ -209,7 +209,7 @@ class QuickControlBox(QtGui.QGroupBox, UiTools):
         """Add a button."""
         if title is None:
             title = name.title()
-        button = QtGui.QPushButton()
+        button = QtWidgets.QPushButton()
         self.controls[name] = button
         button.setObjectName(name + "_button")
         button.setText(title)
@@ -218,7 +218,7 @@ class QuickControlBox(QtGui.QGroupBox, UiTools):
     def add_checkbox(self, name, title=None):
         if title is None:
             title = name.title()
-        checkbox = QtGui.QCheckBox()
+        checkbox = QtWidgets.QCheckBox()
         self.controls[name] = checkbox
         checkbox.setObjectName(name + "_checkbox")
         checkbox.setText(title)
@@ -291,7 +291,7 @@ def property_change_handler(value_name,
     return handler_generator
     
 auto_connectable_controls['checkbox'] = {
-    'qt_type': QtGui.QCheckBox,
+    'qt_type': QtWidgets.QCheckBox,
     'suffices': ["_checkbox","CheckBox","_checkBox"],
     'control_change_handler': control_change_handler(lambda x: x==QtCore.Qt.Checked),
     'control_change_slot_name': 'stateChanged',
@@ -299,29 +299,29 @@ auto_connectable_controls['checkbox'] = {
                 lambda x: QtCore.Qt.Checked if x else QtCore.Qt.Unchecked),
     }
 auto_connectable_controls['lineedit'] = {
-    'qt_type': QtGui.QLineEdit,
+    'qt_type': QtWidgets.QLineEdit,
     'suffices': ["_lineedit","LineEdit"],
     'control_change_handler': control_change_handler(),
     'control_change_slot_name': 'textChanged',
     'property_change_handler': property_change_handler("text", str),
     }
 auto_connectable_controls['plaintextedit'] = {
-    'qt_type': QtGui.QPlainTextEdit,
+    'qt_type': QtWidgets.QPlainTextEdit,
     'suffices': ["_plaintextedit","PlainTextEdit","_textedit","_textbox"],
     'control_change_handler': control_change_handler(),
     'control_change_slot_name': 'textChanged',
     'property_change_handler': property_change_handler("plainText", str, getter_name="toPlainText"),
     }
 auto_connectable_controls['spinbox'] = {
-    'qt_type': QtGui.QSpinBox,
+    'qt_type': QtWidgets.QSpinBox,
     'suffices': ["_spinbox","SpinBox","_spin"],
     'control_change_handler': control_change_handler(),
     'control_change_slot_name': 'valueChanged',
     'property_change_handler': property_change_handler("value", int),
     }
 auto_connectable_controls['doublespinbox'] = {
-    'qt_type': QtGui.QDoubleSpinBox,
-    'suffices': ["_spinbox","SpinBox","_spin","_doublespinbox","DoubleSpinBox"],
+    'qt_type': QtWidgets.QDoubleSpinBox,
+    'suffices': ["_doubleSpinBox","_spinbox","SpinBox","_spin","_doublespinbox","DoubleSpinBox"],
     'control_change_handler': control_change_handler(),
     'control_change_slot_name': 'valueChanged',
     'property_change_handler': property_change_handler("value", float),

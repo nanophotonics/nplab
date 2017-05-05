@@ -20,10 +20,14 @@ class ProScan(serial.SerialInstrument, stage.Stage):
     termination_character = "\r" #: All messages to or from the instrument end with this character.
     termination_line = "END" #: If multi-line responses are recieved, they must end with this string
 
-    def __init__(self, port=None, use_si_units = False):
+    def __init__(self, port=None, use_si_units = False, hardware_version = None):
         """
-        Set up the serial port and so on.
+        Set up the serial port and so on. 
+        If the controller is a ProScan II not a ProScan III. 
+        The hardware_version must be set to two or the Stopbit value will be incorrect
         """
+        if hardware_version == 2:
+            self.port_settings['stopbits'] = serial.STOPBITS_ONE
         serial.SerialInstrument.__init__(self, port=port) #this opens the port
         stage.Stage.__init__(self) #this opens the port
         
