@@ -4,8 +4,9 @@ Basic GUI methods for the Experiment class.
 
 """
 
+
 from nplab.experiment import Experiment, ExperimentStopped
-from nplab.utils.gui import QtCore, QtGui
+from nplab.utils.gui import QtCore, QtGui, QtWidgets
 from nplab.ui.ui_tools import UiTools, QuickControlBox
 
 class ExperimentGuiMixin(object):
@@ -42,7 +43,7 @@ class LogWidget(QuickControlBox):
         self.experiment = experiment
         super(LogWidget, self).__init__()
         
-        self.text_edit = QtGui.QPlainTextEdit()
+        self.text_edit = QtWidgets.QPlainTextEdit()
         self.text_edit.setReadOnly(True)
         self.layout().addRow(self.text_edit)
         self.add_button("clear", title="Clear Logs")
