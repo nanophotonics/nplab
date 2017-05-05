@@ -23,12 +23,13 @@ import numpy as np
 from nplab.utils.image_with_location import ImageWithLocation, ensure_3d, ensure_2d, locate_feature_in_image, datum_pixel
 from nplab.experiment import Experiment, ExperimentStopped
 from nplab.experiment.gui import ExperimentWithProgressBar, run_function_modally
-from nplab.utils.gui import QtCore, QtGui
+from nplab.utils.gui import QtCore, QtGui, QtWidgets
 import cv2
 import cv2.cv
 from scipy import ndimage
 from nplab.ui.ui_tools import QuickControlBox, UiTools
 from nplab.utils.notified_property import DumbNotifiedProperty
+import time
 
 # Autofocus merit functions
 def af_merit_squared_laplacian(image):
@@ -85,12 +86,17 @@ class CameraWithLocation(Instrument):
     def _add_position_metadata(self, image):
         """Add position metadata to an image, assuming it has just been acquired"""
         iwl = ImageWithLocation(image)
-        assert iwl.shape[:2] == self.pixel_to_sample_displacement_shape[:2], "Image shape is not the same" \
-                                                                             "as when we calibrated!"
-        iwl.attrs['pixel_to_sample_matrix'] = self.pixel_to_sample_matrix
         iwl.attrs['datum_pixel'] = self.datum_pixel
         iwl.attrs['stage_position'] = self.stage.position
+        if self.pixel_to_sample_displacement is not None:
+  #          assert iwl.shape[:2] == self.pixel_to_sample_displacement.shape[:2], "Image shape is not the same" \
+  #                                                                               "as when we calibrated!" #These lines dont make much sense, the iwl has the size of the image while the martix is always only 3x3
+            iwl.attrs['pixel_to_sample_matrix'] = self.pixel_to_sample_matrix
+        else:
+            iwl.attrs['pixel_to_sample_matrix'] = np.identity(4)
+            print 'Stage is not yet calbirated'
         return iwl
+
 
     ####### Wrapping functions for the camera #######
     def raw_image(self, *args, **kwargs):
@@ -117,7 +123,11 @@ class CameraWithLocation(Instrument):
     @property
     def datum_location(self):
         """The location in the sample of the datum point (i.e. the current stage position, corrected for drift)"""
-        return self.location - self.drift_estimate
+        if self.drift_estimate == None:
+            return self.stage.position
+        else:
+            return self.stage.position-self.drift_estimate
+        return self.stage.position - self.drift_estimate
 
     ####### Useful functions for closed-loop stage control #######
     def settle(self, flush_camera=True, *args, **kwargs):
@@ -129,7 +139,7 @@ class CameraWithLocation(Instrument):
         """
         time.sleep(self.settling_time)
         for i in range(self.frames_to_discard):
-            self.raw_image(*args, **kwargs)
+            self.camera.raw_image(*args, **kwargs)
 
     def move_to_feature(self, feature, ignore_position=False, margin=50, tolerance=0.5, max_iterations = 10):
         """Bring the feature in the supplied image to the centre of the camera
@@ -248,7 +258,7 @@ class CameraWithLocation(Instrument):
         """Run an autofocus using default parameters, with a GUI progress bar."""
         run_function_modally(self.quick_autofocus, progress_maximum=self.af_steps)
 
-    def calibrate_xy(self, step = None, min_step = 1e-5, max_step=1000, update_progress=lambda p:p):
+    def calibrate_xy(self,update_progress=lambda p:p, step = None, min_step = 1e-5, max_step=1000):
         """Make a series of moves in X and Y to determine the XY components of the pixel-to-sample matrix.
 
         Arguments:
@@ -266,19 +276,30 @@ class CameraWithLocation(Instrument):
 
         NB this currently assumes the stage deals with backlash correction for us.
         """
+        #,bonus_arg = None,
         # First, acquire a template image:
+        print step , min_step,  max_step,update_progress
+        print 'begining'
         self.settle()
+        print' settled'
         starting_image = self.color_image()
+        print'got image'
         starting_location = self.datum_location
+        print ' got location'
         w, h = starting_image.shape[:2]
+        print 'got w and h'
         template = starting_image[w/4:3*w/4,h/4:3*h/4, ...] # Use the central 50%x50% as template
-        threshold_shift = s[0]*0.02 # Require a shift of at least 2% of the image's width
-        target_shift = s[0]*0.1 # Aim for a shift of about 10%
-
-        assert np.sum((locate_feature_in_image(images[-1], template) - self.datum_pixel)**2) < 1, "Template's not centred!"
+        print ' made the template'
+        threshold_shift = w*0.02 # Require a shift of at least 2% of the image's width ,changed s[0] to w
+        print 'threshold_shifted'
+        target_shift = w*0.1 # Aim for a shift of about 10%
+        print ' got shifty'
+#Swapping images[-1] for starting_image
+        assert np.sum((locate_feature_in_image(starting_image, template) - self.datum_pixel)**2) < 1, "Template's not centred!"
         update_progress(1)
-
+        print 'before steps'
         if step is None:
+            print 'did i step?'
             # Next, move a small distance until we see a shift, to auto-determine the calibration distance.
             step = min_step
             shift = 0
@@ -293,21 +314,31 @@ class CameraWithLocation(Instrument):
                     step *= 10**(0.5)
             step *= target_shift / shift # Scale the amount we step the stage by, to get a reasonable image shift.
         update_progress(2)
-
+        print 'Got past step'
         # Move the stage in a square, recording the displacement from both the stage and the camera
         pixel_shifts = []
+        images = []
+        print 'step',step
         for i, p in enumerate([[-step, -step, 0], [-step, step, 0], [step, step, 0], [step, -step, 0]]):
+  #          print 'premove'
+    #        print starting_location,p
             self.move(starting_location + np.array(p))
+    #        print 'post move'
             self.settle()
             image = self.color_image()
             pixel_shifts.append(-locate_feature_in_image(image, template) - image.datum_pixel)
+            images.append(image)
             # NB the minus sign here: we want the position of the image we just took relative to the datum point of
             # the template, not the other way around.
+            print 'pre update'
             update_progress(3+i)
+            print 'post update'
         # We then use least-squares to fit the XY part of the matrix relating pixels to distance
         location_shifts = np.array([ensure_2d(im.datum_location - starting_location) for im in images])
         pixel_shifts = np.array(pixel_shifts)
+        print np.shape(pixel_shifts),np.shape(location_shifts)
         A, res, rank, s = np.linalg.lstsq(pixel_shifts, location_shifts) # we solve pixel_shifts*A = location_shifts
+
         self.pixel_to_sample_displacement = np.zeros((3,3))
         self.pixel_to_sample_displacement[2,2] = 1 # just pass Z through unaltered
         self.pixel_to_sample_displacement[:2,:2] = A # A deals with xy only
@@ -332,10 +363,12 @@ class CameraWithLocation(Instrument):
         """Create a QWidget to control the CameraWithLocation"""
         return CameraWithLocationControlUI(self)
 
-class CameraWithLocationControlUI(QtGUI.QWidget):
+class CameraWithLocationControlUI(QtWidgets.QWidget):
     """The control box for a CameraWithLocation"""
     calibration_distance = DumbNotifiedProperty(0)
     def __init__(self, cwl):
+        super(CameraWithLocationControlUI, self).__init__()
+        self.cwl = cwl
         cc = QuickControlBox("Settings")
         cc.add_doublespinbox("calibration_distance")
         cc.add_button("calibrate_xy_gui", "Calibrate XY")
@@ -347,24 +380,24 @@ class CameraWithLocationControlUI(QtGUI.QWidget):
         fc.add_spinbox("af_steps")
         fc.add_button("autofocus_gui", "Autofocus")
         fc.add_button("quick_autofocus_gui", "Quick Autofocus")
-        fc.auto_connect_by_name(self.cwm)
+        fc.auto_connect_by_name(self.cwl)
         self.focus_controls = fc
 
-        sc = 
+#        sc = 
 
-        l = QtGui.QHBoxLayout()
+        l = QtWidgets.QHBoxLayout()
         l.addWidget(cc)
         l.addWidget(fc)
         self.setLayout(l)
 
     def calibrate_xy_gui(self):
         """Run an XY calibration, with a progress bar in the foreground"""
-        run_function_modally(self.cwm.calibrate_xy,
-                             progress_maximum=7,
-                             step = None if self.calibration_distance<= 0 else float(self.calibration_distance))
+        # 
+        run_function_modally(self.cwl.calibrate_xy,
+                             progress_maximum=7, step = None if self.calibration_distance<= 0 else float(self.calibration_distance))
 
 
-class CameraWithLocationUI(QtGui.QWidget):
+class CameraWithLocationUI(QtWidgets.QWidget):
     """Generic user interface for a camera."""
 
     def __init__(self, cwl):
@@ -374,17 +407,17 @@ class CameraWithLocationUI(QtGui.QWidget):
 
         # Set up the UI
         self.setWindowTitle(self.cwl.camera.__class__.__name__ + " (location-aware)")
-        layout = QtGui.QVBoxLayout()
+        layout = QtWidgets.QVBoxLayout()
         # We use a tabbed control section below an image.
-        self.tabs = QtGui.QTabWidget()
+        self.tabs = QtWidgets.QTabWidget()
         self.microscope_controls = self.cwl.get_control_widget()
-        self.camera_controls = self.microscope.camera.get_control_widget()
-        self.tabs.addTab(self.microscope_controls, "Goniometer")
+        self.camera_controls = self.cwl.camera.get_control_widget()
+        self.tabs.addTab(self.microscope_controls, "Camera with Location controls")
         self.tabs.addTab(self.camera_controls, "Camera")
         # The camera viewer widget is provided by the camera...
         self.camera_preview = self.cwl.camera.get_preview_widget()
         # The overall layout puts the image at the top and the controls below
-        l = QtGui.QVBoxLayout()
+        l = QtWidgets.QVBoxLayout()
         l.addWidget(self.camera_preview)
         l.addWidget(self.tabs)
         self.setLayout(l)

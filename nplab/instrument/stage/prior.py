@@ -78,10 +78,16 @@ class ProScan(serial.SerialInstrument, stage.Stage):
         if self.use_si_units: x = np.array(x) * 1e6
         for i in range(len(x)): querystring += " %d" % int(x[i]/self.resolution)
         self.query(querystring)
+        time_0 = time.time()
         try:
             if(block):
                 while(self.is_moving()):
                     time.sleep(0.02)
+                    if (time.time()-time_0>10):
+                        print x,
+                        print self.position
+                        self.emergency_stop()
+                        self.move(x, relative, axis, block)
         except KeyboardInterrupt:
             self.emergency_stop()
 

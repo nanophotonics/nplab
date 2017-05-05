@@ -4,7 +4,6 @@ Basic GUI methods for the Experiment class.
 
 """
 
-
 from nplab.experiment import Experiment, ExperimentStopped
 from nplab.utils.gui import QtCore, QtGui, QtWidgets
 from nplab.ui.ui_tools import UiTools, QuickControlBox
@@ -53,12 +52,12 @@ class LogWidget(QuickControlBox):
         """Clear the text box, and the logs of the experiment."""
         self.experiment.log_messages = ""
 
-class QProgressDialogWithDeferredUpdate(QtGui.QProgressDialog):
+class QProgressDialogWithDeferredUpdate(QtWidgets.QProgressDialog):
     """A QProcessDialog that can have its value updated from a background thread."""
     set_new_value = QtCore.Signal(int)
 
     def __init__(self, *args, **kwargs):
-        QtGui.QProgressDialog.__init__(self, *args, **kwargs)
+        QtWidgets.QProgressDialog.__init__(self, *args, **kwargs)
         self.set_new_value.connect(self.setValue, type=QtCore.Qt.QueuedConnection)
 
     def setValueLater(self, progress):
@@ -106,7 +105,7 @@ class ExperimentWithProgressBar(Experiment):
         self._progress_bar.setAutoClose(True)
         self._progress_bar.canceled.disconnect()
         self._progress_bar.canceled.connect(self.stop_and_cancel_dialog)
-        self.run_in_background(self, *args, **kwargs)
+        self.run_in_background(*args, **kwargs)
         self._progress_bar.exec_()
 
     def stop_and_cancel_dialog(self):
@@ -139,7 +138,8 @@ class RunFunctionWithProgressBar(ExperimentWithProgressBar):
 
     def run(self, *args, **kwargs):
         print "running function {}".format(self.target)
-        self.target(*args, update_progress=self.update_progress, **kwargs)
+        #, update_progress=self.update_progress,
+        self.target(update_progress=self.update_progress,*args, **kwargs)
         self.update_progress(self.progress_maximum) # Ensure the progress dialog closes unless we're aborted.
 
 def run_function_modally(function, progress_maximum, *args, **kwargs):
@@ -154,5 +154,5 @@ def run_function_modally(function, progress_maximum, *args, **kwargs):
     Positional and keyword arguments are passed through, the only other argument needed is
     progress_maximum, which sets the final value of progress.
     """
-    e = RunFunctionWithProgressBar(function, progress_maximum)
+    e = RunFunctionWithProgressBar(function, progress_maximum = progress_maximum)
     e.run_modally(*args, **kwargs)
