@@ -554,14 +554,17 @@ class PreviewViewBox(pg.ViewBox):
         
 class PreviewImageItem(pg.ImageItem):
     legacy_click_callback = None
+    click_callback_signal = QtCore.Signal(np.ndarray)
     def mouseClickEvent(self, ev):
         """Handle a mouse click on the image."""
         if ev.button() == QtCore.Qt.LeftButton:
             pos = np.array(ev.pos())
             if self.legacy_click_callback is not None:
-                size = np.array(self.image.shape[:2])
-                point = pos/size
-                self.legacy_click_callback(point[1], point[0])
+        #        size = np.array(self.image.shape[:2])
+     #           point = pos/size
+      #          self.legacy_click_callback(point[1], point[0])
+                self.legacy_click_callback(int(pos[1]), int(pos[0]))
+                print pos,'pos'
                 ev.accept()
             else:
                 pass

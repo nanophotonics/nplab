@@ -73,6 +73,8 @@ class CameraWithLocation(Instrument):
 
         shape = self.camera.color_image().shape
         self.datum_pixel = np.array(shape[:2])/2.0 # Default to using the centre of the image as the datum point
+   #     self.camera.set_legacy_click_callback(self.move_to_feature_pixel)
+        self.camera.set_legacy_click_callback(self.move_to_pixel)
 
     @property
     def pixel_to_sample_matrix(self):
@@ -82,6 +84,7 @@ class CameraWithLocation(Instrument):
         M = np.zeros((4,4)) # NB M is never a matrix; that would create issues, as then all the vectors must be matrices
         M[0:3, 0:3] = self.pixel_to_sample_displacement # We calibrate the conversion of displacements and store it
         M[3, 0:3] = here - datum_displacement # Ensure that the datum pixel transforms to here.
+        return M
 
     def _add_position_metadata(self, image):
         """Add position metadata to an image, assuming it has just been acquired"""
@@ -119,6 +122,12 @@ class CameraWithLocation(Instrument):
     def move_rel(self, *args, **kwargs):
         """Move the stage by a given amount"""
         self.stage.move_rel(*args, **kwargs)
+    def move_to_pixel(self,x,y):
+        image = self.color_image()
+        print 'move coords', image.pixel_to_location([x,y])
+        print 'current position', self.stage.position
+        self.move(image.pixel_to_location([x,y]))
+        print 'post move position', self.stage.position
 
     @property
     def datum_location(self):
@@ -188,6 +197,22 @@ class CameraWithLocation(Instrument):
         if last_move > tolerance:
             self.log("Error centering on feature, final move was too large.")
         return last_move < tolerance
+        
+    def move_to_feature_pixel(self,x,y):
+        if self.pixel_to_sample_matrix is not None:
+            centre_width = 20
+            pos = [x,y]
+            image = self.color_image()
+            size = np.array(image.shape[:2])
+            point = np.array(pos*size,dtype = int)
+            feature = image[point[0]-int(centre_width/2):point[0]+int(centre_width/2),point[1]-int(centre_width/2):point[1]+int(centre_width/2)]
+            print feature.shape
+            print point
+            self.last_feature = feature
+            self.move_to_feature(feature)
+        else:
+            print 'CameraWithLocation is not yet calibrated!!'
+        
 
     def autofocus(self, dz=None, merit_function=af_merit_squared_laplacian, method="centre_of_mass", noise_floor=0.3, update_progress=lambda p:p):
         """Move to a range of Z positions and measure focus, then move to the best one.
@@ -208,11 +233,13 @@ class CameraWithLocation(Instrument):
         camera_live_view = self.camera.live_view
         if self.disable_live_view:
             self.camera.live_view = False
-        for z in dz:
+
+        for step_num, z in enumerate(dz):
             self.stage.move(np.array([0, 0, z]) + here)
             self.settle()
             positions.append(self.stage.position)
             powers.append(merit_function(self.color_image()))
+            update_progress(step_num)
         powers = np.array(powers)
         positions = np.array(positions)
         z = positions[:, 2]
@@ -238,6 +265,7 @@ class CameraWithLocation(Instrument):
             new_position = positions[powers.argmax(), :]
         self.stage.move(new_position)
         self.camera.live_view = camera_live_view
+        update_progress(self.af_steps+1)
         return new_position - here, positions, powers
 
     def quick_autofocus(self, dz, full_dz = None, trigger_full_af=True, update_progress=lambda p:p, **kwargs):
@@ -252,11 +280,11 @@ class CameraWithLocation(Instrument):
 
     def autofocus_gui(self):
         """Run an autofocus using default parameters, with a GUI progress bar."""
-        run_function_modally(self.autofocus, progress_maximum=self.af_steps)
+        run_function_modally(self.autofocus, progress_maximum=self.af_steps+1)
 
     def quick_autofocus_gui(self):
         """Run an autofocus using default parameters, with a GUI progress bar."""
-        run_function_modally(self.quick_autofocus, progress_maximum=self.af_steps)
+        run_function_modally(self.quick_autofocus, progress_maximum=self.af_steps+1)
 
     def calibrate_xy(self,update_progress=lambda p:p, step = None, min_step = 1e-5, max_step=1000):
         """Make a series of moves in X and Y to determine the XY components of the pixel-to-sample matrix.
@@ -278,28 +306,17 @@ class CameraWithLocation(Instrument):
         """
         #,bonus_arg = None,
         # First, acquire a template image:
-        print step , min_step,  max_step,update_progress
-        print 'begining'
         self.settle()
-        print' settled'
         starting_image = self.color_image()
-        print'got image'
         starting_location = self.datum_location
-        print ' got location'
         w, h = starting_image.shape[:2]
-        print 'got w and h'
         template = starting_image[w/4:3*w/4,h/4:3*h/4, ...] # Use the central 50%x50% as template
-        print ' made the template'
         threshold_shift = w*0.02 # Require a shift of at least 2% of the image's width ,changed s[0] to w
-        print 'threshold_shifted'
         target_shift = w*0.1 # Aim for a shift of about 10%
-        print ' got shifty'
 #Swapping images[-1] for starting_image
         assert np.sum((locate_feature_in_image(starting_image, template) - self.datum_pixel)**2) < 1, "Template's not centred!"
         update_progress(1)
-        print 'before steps'
         if step is None:
-            print 'did i step?'
             # Next, move a small distance until we see a shift, to auto-determine the calibration distance.
             step = min_step
             shift = 0
@@ -314,11 +331,9 @@ class CameraWithLocation(Instrument):
                     step *= 10**(0.5)
             step *= target_shift / shift # Scale the amount we step the stage by, to get a reasonable image shift.
         update_progress(2)
-        print 'Got past step'
         # Move the stage in a square, recording the displacement from both the stage and the camera
         pixel_shifts = []
         images = []
-        print 'step',step
         for i, p in enumerate([[-step, -step, 0], [-step, step, 0], [step, step, 0], [step, -step, 0]]):
   #          print 'premove'
     #        print starting_location,p
@@ -330,11 +345,10 @@ class CameraWithLocation(Instrument):
             images.append(image)
             # NB the minus sign here: we want the position of the image we just took relative to the datum point of
             # the template, not the other way around.
-            print 'pre update'
             update_progress(3+i)
-            print 'post update'
         # We then use least-squares to fit the XY part of the matrix relating pixels to distance
-        location_shifts = np.array([ensure_2d(im.datum_location - starting_location) for im in images])
+#        location_shifts = np.array([ensure_2d(im.datum_location - starting_location) for im in images])#Does this need to be the datum_location... will this really work for when the stage has not previously been calibrated
+        location_shifts = np.array([ensure_2d(im.attrs['stage_position'] - starting_location) for im in images])
         pixel_shifts = np.array(pixel_shifts)
         print np.shape(pixel_shifts),np.shape(location_shifts)
         A, res, rank, s = np.linalg.lstsq(pixel_shifts, location_shifts) # we solve pixel_shifts*A = location_shifts
@@ -343,9 +357,11 @@ class CameraWithLocation(Instrument):
         self.pixel_to_sample_displacement[2,2] = 1 # just pass Z through unaltered
         self.pixel_to_sample_displacement[:2,:2] = A # A deals with xy only
         fractional_error = np.sqrt(np.sum(res)/np.prod(pixel_shifts.shape)) / np.std(pixel_shifts)
+        print fractional_error
+        print np.sum(res),np.prod(pixel_shifts.shape),np.std(pixel_shifts)
         if fractional_error > 0.02: # Check it was a reasonably good fit
-            print "Warning: the error fitting measured displacements was %.1f%%" % fractional_error*100
-        self.log("Calibrated the pixel-location matrix.  Residuals were {}% of the shift.\nStage positions:\n{}\n"
+            print "Warning: the error fitting measured displacements was %.1f%%" % (fractional_error*100)
+        self.log("Calibrated the pixel-location matrix.\nResiduals were {}% of the shift.\nStage positions:\n{}\n"
                  "Pixel shifts:\n{}\nResulting matrix:\n{}".format(fractional_error*100, location_shifts, pixel_shifts,
                                                                    self.pixel_to_sample_displacement))
         update_progress(7)
