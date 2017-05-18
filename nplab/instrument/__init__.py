@@ -101,14 +101,14 @@ class Instrument(object, ShowGUIMixin):
             dset.file.flush() #make sure it's in the file if we wrote data
         return dset
 
-    def log(self, message):
+    def log(self, message,level = 'info'):
         """Save a log message to the current datafile.
 
         This is the preferred way to output debug/informational messages.  They
         will be saved in the current HDF5 file and optionally shown in the
         nplab console.
         """
-        nplab.utils.log.log(message, from_object=self)
+        nplab.utils.log.log(message, from_object=self,level = level)
 
     def get_metadata(self, 
                      property_names=[], 
