@@ -389,7 +389,6 @@ class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
                 else:
                     data = np.append(data,np.array(self.h5object.values()[i]),axis = 0)
                 ListData = True
-            print np.shape(data)
         elif len(self.h5object.shape) == 1 and len(self.h5object.attrs['wavelengths'])<len(self.h5object) and len(self.h5object)%len(self.h5object.attrs['wavelengths']) == 0:
             RawData = np.array(self.h5object,dtype = float)
             Xlen = len(np.array(self.h5object.attrs['wavelengths']))
@@ -402,7 +401,6 @@ class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
             data = [np.array(self.h5object)]
             self.h5object = {self.h5object.name : self.h5object}
             ListData = False
-        
         background_counter = 0
         reference_counter = 0
         i = 0
@@ -735,6 +733,8 @@ class SpectrumRenderer(FigureRendererPG):
             Title = "A"
             if 'variable_int_enabled' in h5object.attrs.keys():
                 variable_int = h5object.attrs['variable_int_enabled']
+            else:
+                variable_int = False
             if ((variable_int == True) and #Check for variable integration time and that the background_int and reference_int are not none
                         ((h5object.attrs['background_int'] != h5object.attrs['integration_time'] 
                             and (h5object.attrs['background_int'] != None))

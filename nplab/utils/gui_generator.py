@@ -183,7 +183,7 @@ class GuiGenerator(QtWidgets.QMainWindow,UiTools):
         else:
             self.setStyleSheet('')
     def menuSaveSettings(self):
-        dock_state = self.dockWidgetArea.sav1eState()
+        dock_state = self.dockWidgetArea.saveState()
         np.save(self.dock_settings_path+'dock_settings',dock_state)
         
     def menuLoadSettings(self):
