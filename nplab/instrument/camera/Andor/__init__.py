@@ -4,6 +4,8 @@ from nplab.instrument.camera import Camera, CameraParameter
 from nplab.utils.notified_property import NotifiedProperty
 from nplab.utils.thread_utils import background_action, locked_action
 import nplab.datafile as df
+from nplab.utils.array_with_attrs import ArrayWithAttrs
+from nplab.utils.notified_property import register_for_property_changes
 
 import os
 import platform
@@ -42,13 +44,7 @@ class AndorWarning(Warning):
         return self.error_name + '\n Error sent: ' + self.msg + '\n Error reply: ' + self.reply
     
 class AndorParameter(NotifiedProperty):
-    """A quick way of creating a property that alters a camera parameter.
-    
-    The majority of cameras have some sort of mechanism for setting parameters
-    like gain, integration time, etc. etc. that involves calling an API
-    function that takes the property name as an argument.  This is a way
-    of nicely wrapping up the boilerplate code so that these properties map
-    onto properties of the camera object.
+    """A quick way of creating a property that alters an Andor parameter.
     
     NB the property will be read immediately after it's written, to ensure
     that the value we send to any listening controls/indicators is correct
@@ -71,9 +67,15 @@ class AndorParameter(NotifiedProperty):
         self.parameter_name = parameter_name
         
     def fget(self, obj):
-        return obj.GetParameter(self.parameter_name)
+        value = obj.GetParameter(self.parameter_name)
+        if (type(value)==tuple) and (len(value)==1):
+            return value[0]
+        else:
+            return value
             
     def fset(self, obj, value):
+        if type(value)!=tuple:
+            value=(value,)
         obj.SetParameter(self.parameter_name, value)
 
 
@@ -105,64 +107,11 @@ class AndorBase:
             self.dll = cdll.LoadLibrary(dllname)
         else:
             raise Exception("Cannot detect operating system for Andor")
-        self.channel = 0
-        self.parameters = dict(
-            SoftwareWaitBetweenCaptures=(),
-            DetectorShape=dict(Get=dict(cmdName='GetDetector', Outputs=(c_int, c_int)), value=None),
-            SerialNumber=dict(Get=dict(cmdName='GetCameraSerialNumber', Outputs=(c_int,)), value=None),
-            HeadModel=dict(Get=dict(cmdName='GetHeadModel', Outputs=(c_char,) * 20), value=None),
-            Capabilities=dict(Get=dict(cmdName='GetCapabilities', Outputs=(
-                              AndorCapabilities(sizeof(c_ulong) * 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),)), value=None),
-            AcquisitionMode=dict(Set=dict(cmdName='SetAcquisitionMode', Inputs=(c_int,)), value=None),
-            TriggerMode=dict(Set=dict(cmdName='SetTriggerMode', Inputs=(c_int,)), value=None),
-            ReadMode=dict(Set=dict(cmdName='SetReadMode', Inputs=(c_int,)), value=None),
-            CropMode=dict(Set=dict(cmdName='SetCropMode', Inputs=(c_int,) * 3), value=None),
-            IsolatedCropMode=dict(Set=dict(cmdName='SetIsolatedCropMode', Inputs=(c_int,) * 5), value=(0,)),
-            AcquisitionTimings=dict(Get=dict(cmdName='GetAcquisitionTimings', Outputs=(c_float, c_float, c_float)),
-                                    value=None),
-            AccumCycleTime=dict(Set=dict(cmdName='SetAccumulationCycleTime', Inputs=(c_float,)),
-                                Finally='AcquisitionTimings'),
-            KinCycleTime=dict(Set=dict(cmdName='SetKineticCycleTime', Inputs=(c_float,)),
-                              Finally='AcquisitionTimings'),
-            Exposure=dict(Set=dict(cmdName='SetExposureTime', Inputs=(c_float,)), Finally='AcquisitionTimings'),
-            Image=dict(Set=dict(cmdName='SetImage', Inputs=(c_int,) * 6), value=None),
-            NAccum=dict(Set=dict(cmdName='SetNumberAccumulations', Inputs=(c_int,)), value=1),
-            NKin=dict(Set=dict(cmdName='SetNumberKinetics', Inputs=(c_int,)), value=1),
-            FastKinetics=dict(Set=dict(cmdName='SetFastKineticsEx', Inputs=(c_int, c_int, c_float,) + (c_int,) * 4)),
-            EMGain=dict(Set=dict(cmdName='SetEMCCDGain', Inputs=(c_int,)),
-                        Get=dict(cmdName='GetEMCCDGain', Outputs=(c_int,)), value=None),
-            EMAdvancedGain=dict(Set=dict(cmdName='SetEMAdvanced', Inputs=(c_int,)), value=None),
-            EMMode=dict(Set=dict(cmdName='SetEMCCDGainMode', Inputs=(c_int,)), value=None),
-            EMGainRange=dict(Set=dict(cmdName='GetEMCCDGainRange', Outputs=(c_int,) * 2), value=None),
-            Shutter=dict(Set=dict(cmdName='SetShutter', Inputs=(c_int,) * 4), value=None),
-            CoolerMode=dict(Set=dict(cmdName='SetCoolerMode', Inputs=(c_int,)), value=None),
-            FanMode=dict(Set=dict(cmdName='SetFanMode', Inputs=(c_int,)), value=None),
-            ImageFlip=dict(Set=dict(cmdName='SetImageFlip', Inputs=(c_int,) * 2), value=None),
-            ImageRotate=dict(Set=dict(cmdName='SetImageRotate', Inputs=(c_int,)), value=None),
-            CurrentTemperature=dict(Get=dict(cmdName='GetTemperature', Outputs=(c_int,)), value=None),
-            SetTemperature=dict(Set=dict(cmdName='SetTemperature', Inputs=(c_int,)), value=None),
-            OutAmp=dict(Set=dict(cmdName='SetOutputAmplifier', Inputs=(c_int,))),
-            FrameTransferMode=dict(Set=dict(cmdName='SetFrameTransferMode', Inputs=(c_int,)), value=None),
-            SingleTrack=dict(Set=dict(cmdName='SetSingleTrack', Inputs=(c_int,) * 2), value=None),
-            MultiTrack=dict(Set=dict(cmdName='SetMultiTrack', Inputs=(c_int,) * 3, Outputs=(c_int,) * 2)),
-            FVBHBin=dict(Set=dict(cmdName='SetFVBHBin', Inputs=(c_int,)), value=None),
-            Spool=dict(Set=dict(cmdName='SetSpool', Inputs=(c_int, c_int, c_char, c_int)), value=None),
-            NumVSSpeed=dict(Get=dict(cmdName='GetNumberVSSpeeds', Outputs=(c_int,)), value=None),
-            NumHSSpeed=dict(Get=dict(cmdName='GetNumberHSSpeeds', Inputs=(c_int, c_int,), Outputs=(c_int,)),
-                            value=None),
-            VSSpeed=dict(Set=dict(cmdName='SetVSSpeed', Inputs=(c_int,)),
-                         Get=dict(cmdName='GetVSSpeed', Inputs=(c_int,), Outputs=(c_float,)), GetAfterSet=True),
-            HSSpeed=dict(Set=dict(cmdName='SetHSSpeed', Inputs=(c_int,),Input_params = (('OutAmp',c_int),))),
-            HSSpeeds=dict(Get=dict(cmdName='GetHSSpeed', Inputs=(c_int,) * 2, Outputs=(c_float,),Input_params = (('channel',c_int),))),
-            NumPreAmp=dict(Get=dict(cmdName='GetNumberPreAmpGains', Outputs=(c_int,))),
-            PreAmpGain=dict(Set=dict(cmdName='SetPreAmpGain', Inputs=(c_int,)),
-                            Get=dict(cmdName='GetPreAmpGain', Inputs=(c_int,), Outputs=(c_float,)), GetAfterSet=True),
-            NumADChannels=dict(Get=dict(cmdName='GetNumberADChannels', Outputs=(c_int,))),
-            ADChannel=dict(Set=dict(cmdName='SetADChannel', Inputs=(c_int,))),
-            BitDepth=dict(Get=dict(cmdName='GetBitDepth', Inputs=(c_int,), Outputs=(c_int,)))
-        )
-
+ #       self.channel = (0,)
+        self.parameters = parameters
+#, Inputs=(c_int, c_int,)
         self.Initialize()
+        
 #        self.capabilities = {}
 #        for property_name in self.parameters:
 #            print property_name
@@ -246,7 +195,7 @@ class AndorBase:
             self._logger.debug("[%s]: %s %s" % (funcname, ERROR_CODE[error], str(args)))
         elif 'verbosity' in self.__dict__:
             if self.verbosity:
-                print "[%s]: %s" % (funcname, ERROR_CODE[error])
+                self._logger.error("[%s]: %s" % (funcname, ERROR_CODE[error]))
         if funcname == 'GetTemperature':
             return
         if error != 20002:
@@ -274,30 +223,37 @@ class AndorBase:
         -------
 
         """
-        func = self.parameters[param_loc]['Set']
-
-        form_in = ()
-        print ' form in'
-        if 'Input_params' in func:
-            for input_param in func['Input_params']:
-                form_in += ({'value': getattr(self,input_param[0])[0], 'type': input_param[1]},)
-        print 'input param'
-        for ii in range(len(inputs)):
-            form_in += ({'value': inputs[ii], 'type': func['Inputs'][ii]},)
-        print form_in
-        self._dllWrapper(func['cmdName'], inputs=form_in)
-
-        if len(inputs) == 1:
-            self.parameters[param_loc]['value'] = inputs[0]
-        else:
-            self.parameters[param_loc]['value'] = inputs
-
-        if 'Finally' in self.parameters[param_loc]:
-            self.GetParameter(self.parameters[param_loc]['Finally'])
-        if 'GetAfterSet' in self.parameters[param_loc]:
-            self.GetParameter(param_loc, *inputs)
+        if len(inputs)==1 and type(inputs[0])==tuple:
+            if len(np.shape(inputs))==2:
+                inputs = inputs[0]
+            elif len(np.shape(inputs))==3:
+                inputs = inputs[0][0]
+        if 'Set' in self.parameters[param_loc]:
+            func = self.parameters[param_loc]['Set']
+    
+            form_in = ()
+            if 'Input_params' in func:
+                for input_param in func['Input_params']:
+                    form_in += ({'value': getattr(self,input_param[0]), 'type': input_param[1]},)
+            for ii in range(len(inputs)):
+                form_in += ({'value': inputs[ii], 'type': func['Inputs'][ii]},)
+            self._dllWrapper(func['cmdName'], inputs=form_in)
+    
+            if len(inputs) == 1:
+                self.parameters[param_loc]['value'] = inputs[0]
+            else:
+                self.parameters[param_loc]['value'] = inputs
+    
+            if 'Finally' in self.parameters[param_loc]:
+                self.GetParameter(self.parameters[param_loc]['Finally'])
+     #       if 'GetAfterSet' in self.parameters[param_loc]:
+      #          self.GetParameter(param_loc, *inputs)
         if 'Get' not in self.parameters[param_loc].keys():
-            setattr(self,'_'+param_loc,inputs)
+            if len(inputs)==1:
+                setattr(self,'_'+param_loc,inputs[0])
+            else:
+                setattr(self,'_'+param_loc,inputs)
+            self.parameters[param_loc]['value'] = getattr(self,'_'+param_loc)
             
 
     def GetParameter(self, param_loc, *inputs):
@@ -330,38 +286,66 @@ class AndorBase:
                     form_in += ({'value': getattr(self,input_param[0]), 'type': input_param[1]},)      
             for ii in range(len(inputs)):
                 form_in += ({'value': inputs[ii], 'type': func['Inputs'][ii]},)
-            vals = self._dllWrapper(func['cmdName'], inputs=form_in, outputs=form_out)
+            if 'Iterator' not in func.keys():
+                vals = self._dllWrapper(func['cmdName'], inputs=form_in, outputs=form_out)
+            else:
+                vals = ()
+                for i in range(getattr(self,func['Iterator'])):
+                    form_in_iterator = form_in+({'value': i, 'type': c_int},)
+                    vals+=(self._dllWrapper(func['cmdName'], inputs=form_in_iterator, outputs=form_out),)
             # if len(vals) == 1:
             #     vals = vals[0]
             self.parameters[param_loc]['value'] = vals
             return vals
+        elif 'Get_from_prop' in self.parameters[param_loc].keys() and hasattr(self,'_'+param_loc):
+            vals = getattr(self,self.parameters[param_loc]['Get_from_prop'])[getattr(self,'_'+param_loc)]
+            self.parameters[param_loc]['value'] = vals
+            return vals
+        elif 'Get_from_fixed_prop' in self.parameters[param_loc].keys():
+            vals = getattr(self,self.parameters[param_loc]['Get_from_fixed_prop'])[0]
+            self.parameters[param_loc]['value'] = vals
+            return vals
+            
         elif hasattr(self,'_'+param_loc):
+            self.parameters[param_loc]['value'] = getattr(self,'_'+param_loc)
             return getattr(self,'_'+param_loc)
         else:
-            self._logger.warn('The '+param_loc+' has not previously been set!')
-            return self.parameters[param_loc]['value']
+            self._logger.info('The '+param_loc+' has not previously been set!')
+            return None
 
     def GetAllParameters(self):
         '''Gets all the parameters that can be gotten
-
-        The parameters that can be gotten are those that have a get capability in the .dll
-        Parameter getters that require inputs (i.e. HSSpeed, VSSpeed, PreAmpGain, BitDepth and NumHSSpeed), have to be
-        handled separately, and in particular HSSpeed, VSSpeed and PreAmpGain cannot be retrieved using this code as it
-        currently is.
-
         Returns:
-
+            An up to date paramters dict containing only values and names
         '''
-        for param in self.parameters.keys():
-            if 'Get' in self.parameters[param]:
-                if param not in ['HSSpeed', 'VSSpeed', 'PreAmpGain', 'BitDepth', 'NumHSSpeed','HSSpeeds']:
-                    self.GetParameter(param)
-        if self.parameters['NumADChannels']['value'] == 1:
-            self.GetParameter('BitDepth', 0)
-            if 'value' in self.parameters['OutAmp']:
-                self.GetParameter('NumHSSpeed', 0, self.parameters['OutAmp']['value'])
-
-        return self.parameters
+        param_dict = dict()
+        for param in self.parameters:
+           param_dict[param] =  getattr(self,param)
+        return param_dict
+    def SetAllParameters(self,Param_dict):
+        """Sets the values of the parameters listed within the dict Param_dict, It can take any number of parameters
+        """
+        if type(Param_dict)==dict:
+            
+            for param in Param_dict:
+  #              print param
+                if hasattr(self,param):
+                    if Param_dict[param]!=None:
+                        if 'Get_from_prop' in self.parameters[param]:
+                            value = getattr(self,self.parameters[param]['Get_from_prop'])[np.where(np.array(getattr(self,self.parameters[param]['Get_from_prop']))==Param_dict[param])[0][0]]
+                        else:
+                            value = Param_dict[param]
+            #            print param
+                        try:
+                            setattr(self,param, value)
+                        except Exception as e:
+                            print e,param
+                    else:
+                        self._logger.info('%s has not been set, as the value provided was "None" ' % param)
+                else:
+                    self._logger.warn('The parameter '+param+'does not exist and therefore cannot be set')
+        else:
+            self._logger.warn('Parameter set input must be a dict!')
 
     # def SetAllParameters(self, parameters):
     #     # msg = ''
@@ -389,20 +373,21 @@ class AndorBase:
 
     def Initialize(self):
         self._dllWrapper('Initialize', outputs=(c_char(),))
-        self.GetAllParameters()
-
+        
+        self.channel = 0
         self.SetParameter('ReadMode', 4)
         self.SetParameter('AcquisitionMode', 1)
         self.SetParameter('TriggerMode', 0)
         self.SetParameter('Exposure', 0.01)
-        self.SetParameter('Image', 1, 1, 1, self.parameters['DetectorShape']['value'][0], 1,
-                          self.parameters['DetectorShape']['value'][1])
+        self.SetParameter('Image', 1, 1, 1, self.DetectorShape[0], 1,
+                          self.DetectorShape[1])
         self.SetParameter('Shutter', 1, 0, 1, 1)
         self.SetParameter('SetTemperature', -60)
         self.SetParameter('CoolerMode', 0)
         self.SetParameter('FanMode', 0)
-        self.SetParameter('OutAmp', 0)
-
+        self.SetParameter('OutAmp', 1)
+        
+  #      self.GetAllParameters()
     # @background_action
     @locked_action
     def capture(self):
@@ -475,7 +460,7 @@ class AndorBase:
             imageArray = []
             for i in range(len(cimage)):
                 imageArray.append(0)
-
+        
         return imageArray, num_of_images, image_shape
 
     # @locked_action
@@ -604,9 +589,30 @@ class AndorBase:
             return acc.value
         else:
             return None
+        
+    def save_params_to_file(self,filepath = None):
+        if filepath==None:
+            data_file = df.create_file(set_current = False,mode= 'a')
+        else:
+            data_file = df.DataFile(filepath)
+        data_file.create_dataset(name = 'AndorSettings',data = [],attrs = self.GetAllParameters())
+        data_file.close()
+    def load_params_from_file(self,filepath = None):
+        if filepath ==None:
+            data_file = df.open_file(set_current = False,mode= 'r')
+        else:
+            data_file = df.DataFile(filepath)
+        if 'AndorSettings' in data_file.keys():
+            self.SetAllParameters(dict(data_file['AndorSettings'].attrs))
+        else:
+            self._logger.error('Load settings failed as "AndorSettings" does not exist')
+        data_file.close()
 
 parameters = dict(
-            SoftwareWaitBetweenCaptures=(),
+            channel=dict(value=0),
+            backgrounded=dict(value=False),
+            background=dict(value=None),
+            SoftwareWaitBetweenCaptures=dict(value=0),
             DetectorShape=dict(Get=dict(cmdName='GetDetector', Outputs=(c_int, c_int)), value=None),
             SerialNumber=dict(Get=dict(cmdName='GetCameraSerialNumber', Outputs=(c_int,)), value=None),
             HeadModel=dict(Get=dict(cmdName='GetHeadModel', Outputs=(c_char,) * 20), value=None),
@@ -623,7 +629,7 @@ parameters = dict(
                                 Finally='AcquisitionTimings'),
             KinCycleTime=dict(Set=dict(cmdName='SetKineticCycleTime', Inputs=(c_float,)),
                               Finally='AcquisitionTimings'),
-            Exposure=dict(Set=dict(cmdName='SetExposureTime', Inputs=(c_float,)), Finally='AcquisitionTimings'),
+            Exposure=dict(Set=dict(cmdName='SetExposureTime', Inputs=(c_float,)), Get_from_fixed_prop='AcquisitionTimings'),
             Image=dict(Set=dict(cmdName='SetImage', Inputs=(c_int,) * 6), value=None),
             NAccum=dict(Set=dict(cmdName='SetNumberAccumulations', Inputs=(c_int,)), value=1),
             NKin=dict(Set=dict(cmdName='SetNumberKinetics', Inputs=(c_int,)), value=1),
@@ -647,29 +653,30 @@ parameters = dict(
             FVBHBin=dict(Set=dict(cmdName='SetFVBHBin', Inputs=(c_int,)), value=None),
             Spool=dict(Set=dict(cmdName='SetSpool', Inputs=(c_int, c_int, c_char, c_int)), value=None),
             NumVSSpeed=dict(Get=dict(cmdName='GetNumberVSSpeeds', Outputs=(c_int,)), value=None),
-            NumHSSpeed=dict(Get=dict(cmdName='GetNumberHSSpeeds', Inputs=(c_int, c_int,), Outputs=(c_int,)),
-                            value=None),
-            VSSpeed=dict(Set=dict(cmdName='SetVSSpeed', Inputs=(c_int,)),
-                         Get=dict(cmdName='GetVSSpeed', Inputs=(c_int,), Outputs=(c_float,)), GetAfterSet=True),
-            HSSpeed=dict(Set=dict(cmdName='SetHSSpeed', Inputs=(c_int),Input_params = (('OutAmp',c_int),))),
-            HSSpeeds=dict(Get=dict(cmdName='GetHSSpeed', Inputs=(c_int,) * 2, Outputs=(c_float,),Input_params = (('channel',c_int),))),
+            NumHSSpeed=dict(Get=dict(cmdName='GetNumberHSSpeeds', Outputs=(c_int,),
+                            Input_params = (('channel',c_int),('OutAmp',c_int))), value=None),
+            VSSpeed=dict(Set=dict(cmdName='SetVSSpeed', Inputs=(c_int,)),Get_from_prop = 'VSSpeeds',GetAfterSet=True),
+            VSSpeeds=dict(Get=dict(cmdName='GetVSSpeed', Inputs=(c_int,), Outputs=(c_float,),Iterator = 'NumVSSpeed'), GetAfterSet=True),#why no work?
+            HSSpeed=dict(Set=dict(cmdName='SetHSSpeed', Inputs=(c_int,),Input_params = (('OutAmp',c_int),)),Get_from_prop = 'HSSpeeds'),
+            HSSpeeds=dict(Get=dict(cmdName='GetHSSpeed', Inputs=(c_int,) * 2,Iterator = 'NumHSSpeed', Outputs=(c_float,),
+                                   Input_params = (('channel',c_int),('OutAmp',c_int),))),
             NumPreAmp=dict(Get=dict(cmdName='GetNumberPreAmpGains', Outputs=(c_int,))),
-            PreAmpGain=dict(Set=dict(cmdName='SetPreAmpGain', Inputs=(c_int,)),
-                            Get=dict(cmdName='GetPreAmpGain', Inputs=(c_int,), Outputs=(c_float,)), GetAfterSet=True),
+            PreAmpGains=dict(Get=dict(cmdName='GetPreAmpGain', Inputs=(c_int,), Outputs=(c_float,),Iterator='NumPreAmp')),
+            PreAmpGain=dict(Set=dict(cmdName='SetPreAmpGain', Inputs=(c_int,)),Get_from_prop='PreAmpGains',GetAfterSet=True),
             NumADChannels=dict(Get=dict(cmdName='GetNumberADChannels', Outputs=(c_int,))),
             ADChannel=dict(Set=dict(cmdName='SetADChannel', Inputs=(c_int,))),
-            BitDepth=dict(Get=dict(cmdName='GetBitDepth', Inputs=(c_int,), Outputs=(c_int,)))
+            BitDepth=dict(Get=dict(cmdName='GetBitDepth', Inputs=(c_int,), Outputs=(c_int,),Iterator='NumADChannels'))
         )
 for param_name in parameters:
     setattr(AndorBase,param_name,AndorParameter(param_name))
     
 class Andor(Camera, AndorBase):
-    Exposure = CameraParameter('Exposure', "The exposure time in s")
-    AcquisitionMode = CameraParameter('AcquisitionMode')
-    TriggerMode = CameraParameter('TriggerMode')
-    metadata_property_names = ('Exposure', 'AcquisitionMode', 'TriggerMode')
+#    Exposure = CameraParameter('Exposure', "The exposure time in s")
+#    AcquisitionMode = CameraParameter('AcquisitionMode')
+#    TriggerMode = CameraParameter('TriggerMode')
+    metadata_property_names = ('Exposure', 'AcquisitionMode', 'TriggerMode','background')
 
-    def __init__(self, **kwargs):
+    def __init__(self,settings_filepath = None, **kwargs):
         Camera.__init__(self)
         AndorBase.__init__(self)
         
@@ -679,10 +686,10 @@ class Andor(Camera, AndorBase):
         # self.pxl_size = kwargs['pxl_size']
 
         self.CurImage = None
-        self.BGImage = None
-        self.SubtractBG = None
+        self.background = None
 
-        self.isAborted = False
+        if settings_filepath != None:
+            self.load_params_from_file(settings_filepath)
 
     '''Used functions'''
 
@@ -701,8 +708,11 @@ class Andor(Camera, AndorBase):
                 self.CurImage = np.reshape(self.imageArray, (num_of_images,) + image_shape)[..., ::-1]
             else:
                 self.CurImage = np.reshape(self.imageArray, (num_of_images,) + image_shape)
-
-            # return self.CurImage[0], 1
+            self.CurImage = self.bundle_metadata(self.CurImage)
+            if len(self.CurImage)==1:
+                return 1,self.CurImage[0]
+            else:
+                return 1,self.CurImage
         except Exception as e:
             self._logger.warn("Couldn't Capture because %s" % e)
 
@@ -763,7 +773,16 @@ class AndorUI(QtWidgets.QWidget):
         self.updateGUI()
         self.BinningChanged()
         self.data_file = None
-
+        self.save_all_parameters = False
+        
+        self.gui_params = ['ReadMode','Exposure','CoolerMode'
+                           ,'AcquisitionMode','OutAmp','TriggerMode']
+        self._func_dict = {}
+        for param in self.gui_params:
+            func = self.callback_to_update_prop(param)
+            self._func_dict[param] = func
+            print param
+            register_for_property_changes(self.Andor,param,self._func_dict[param])
         # self.Andor.updateGUI.connect(self.updateGUI)
 
     def __del__(self):
@@ -792,6 +811,8 @@ class AndorUI(QtWidgets.QWidget):
         self.pushButtonLive.clicked.connect(self.Live)
         self.pushButtonAbort.clicked.connect(self.Abort)
         self.save_pushButton.clicked.connect(self.Save)
+        self.pushButtonTakeBG.clicked.connect(self.take_background)
+        self.pushButtonRemoveBG.clicked.connect(self.remove_background)
         self.referesh_groups_pushButton.clicked.connect(self.update_groups_box)
 
     @background_action
@@ -870,7 +891,28 @@ class AndorUI(QtWidgets.QWidget):
         else:
             self.spinBoxCenterRow.hide()
             self.labelCenterRow.hide()
+    def update_ReadMode(self,index):
+        self.comboBoxReadMode.setCurrentIndex(index)
+    def update_TriggerMode(self,value):
+        available_modes = {0: 0, 1: 1, 6: 2}
+        index = available_modes[value]
+        self.comboBoxTrigMode.setCurrentIndex(index)
+    def update_Exposure(self,value):
+        self.lineEditExpT.setText(str(value))
+    def update_Cooler(self,value):
+        self.checkBoxCooler.setCheckState(value)
+    def update_OutAmp(self,value):
+        self.checkBoxEMMode.setCheckState(value)
+#    def update_IsolatedCropMode(self,value):
+#        self.checkBoxCrop.setChec
+    
 
+    
+    def callback_to_update_prop(self, propname):
+        """Return a callback function that refreshes the named parameter."""
+        def callback(value=None):
+            getattr(self,'update_'+propname)(value)
+        return callback
     def TrigChanged(self):
         available_modes = {'Internal': 0, 'External': 1, 'ExternalStart': 6}
         currentMode = self.comboBoxTrigMode.currentText()
@@ -956,6 +998,11 @@ class AndorUI(QtWidgets.QWidget):
             else:
                 self.Andor.SetParameter('IsolatedCropMode', 0, maxy, minx, current_binning, current_binning)
                 self.Andor.SetImage()
+    def take_background(self):
+        self.Andor.background = self.Andor.raw_snapshot()[1]  
+        self.Andor.backgrounded = True
+    def remove_background(self):
+        self.Andor.backgrounded = False
     def Save(self):
         if self.data_file ==None:
             self.data_file = df.current()
@@ -973,9 +1020,16 @@ class AndorUI(QtWidgets.QWidget):
             group = self.data_file[self.group_comboBox.currentText()]
         if np.shape(data)[0]==1:
             data = data[0]
-        attrs =self.Andor.parameters
+        if self.save_all_parameters ==True:
+            attrs = self.Andor.GetAllParameters()
+        else:
+            attrs = dict()
         attrs['Description'] = self.description_plainTextEdit.toPlainText()
-        group.create_dataset(name = filename,data = data,attrs = attrs)
+        try:
+            data_set = group.create_dataset(name = filename,data = data)
+        except Exception as e:
+            self.Andor._logger.info(e)
+        df.attributes_from_dict(data_set,attrs)
     def update_groups_box(self):
         if self.data_file ==None:
             self.data_file = df.current()
@@ -1062,19 +1116,26 @@ class AndorUI(QtWidgets.QWidget):
             scale = self.Andor.parameters['IsolatedCropMode']['value'][-2:]
         else:
             scale = self.Andor.parameters['Image']['value'][:2]
-
+        data = np.copy(self.Andor.CurImage)
+        if np.shape(data[0])==np.shape(self.Andor.background) and self.Andor.background != None:
+            if self.Andor.backgrounded ==True:
+                for image_number in range(len(self.Andor.CurImage)):
+                    data[image_number] = data[image_number]-self.Andor.background
+        else:
+            self.Andor._logger.info('The background and the current image are different shapes and therefore cannot be subtracted')
+        
         if len(self.Andor.CurImage.shape) == 2:
             if self.Andor.CurImage.shape[0] > self.DisplayWidget._max_num_line_plots:
                 self.DisplayWidget.splitter.setSizes([1, 0])
-                self.DisplayWidget.ImageDisplay.setImage(self.Andor.CurImage.transpose(), pos=offset, autoRange=False,
+                self.DisplayWidget.ImageDisplay.setImage(data, pos=offset, autoRange=False,
                                                          scale=scale)
             else:
                 self.DisplayWidget.splitter.setSizes([0, 1])
                 for ii in range(self.Andor.CurImage.shape[0]):
-                    self.DisplayWidget.plot[ii].setData(self.Andor.CurImage[ii])
+                    self.DisplayWidget.plot[ii].setData(data[ii])
         else:
             self.DisplayWidget.splitter.setSizes([1, 0])
-            image = np.transpose(self.Andor.CurImage, (0, 2, 1))
+            image = np.transpose(data, (0, 2, 1))
 
             if image.shape[0] == 1:
                 image = image[0]
@@ -1201,8 +1262,8 @@ class CaptureThread(QtCore.QThread):
     def SingleAcquire(self):
         self.Andor.raw_snapshot()
         if self.Andor.parameters['AcquisitionMode']['value'] in [1, 2] and self.Andor.parameters['NKin']['value'] > 1:
-            if self.Andor.parameters['SoftwareWaitBetweenCaptures']:
-                time.sleep(self.Andor.parameters['SoftwareWaitBetweenCaptures'])
+            if self.Andor.parameters['SoftwareWaitBetweenCaptures']['value']:
+                time.sleep(self.Andor.parameters['SoftwareWaitBetweenCaptures']['value'])
 
             final_array = np.zeros(
                 (self.Andor.parameters['NKin']['value'],) + self.Andor.CurImage.shape[1:])

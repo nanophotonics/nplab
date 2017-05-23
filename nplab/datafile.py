@@ -323,6 +323,8 @@ class DataFile(Group):
             self.attrs.create("version_info_%04d" % n, str(nplab.utils.version.version_info_string()))
             #except:
             #    print "Error: could not save version information"
+
+
     def flush(self):
         self.file.flush()
 
@@ -431,14 +433,14 @@ def close_current():
         except:
             print "Error closing the data file"
 
-def open_file():
+def open_file(set_current = True,mode = 'a'):
     """Open an existing data file"""
     global _current_datafile
     try:  # we try to pop up a Qt file dialog
         import nplab.utils.gui
-        from nplab.utils.gui import QtGui
+        from nplab.utils.gui import QtGui,QtWidgets
         app = nplab.utils.gui.get_qt_app()  # ensure Qt is running
-        fname = QtGui.QFileDialog.getOpenFileName(
+        fname = QtWidgets.QFileDialog.getOpenFileName(
             caption="Select Existing Data File",
             directory=os.path.join(os.getcwd()),
             filter="HDF5 Data (*.h5 *.hdf5)",
@@ -448,11 +450,44 @@ def open_file():
             fname = fname[0]  # work around version-dependent Qt behaviour :(
         if len(fname) > 0:
             print fname
-            set_current(fname, mode='a')
+            if set_current == True:
+                set_current(fname, mode=mode)
+            else:
+                return DataFile(fname,mode = mode )
         else:
             print "Cancelled by the user."
-    except:
+    except Exception as e:
             print "File dialog went wrong :("
+            print e
+
+    return _current_datafile  # if there is a file return it
+
+def create_file(set_current = False,mode = 'a'):
+    """Open an existing data file"""
+    global _current_datafile
+    try:  # we try to pop up a Qt file dialog
+        import nplab.utils.gui
+        from nplab.utils.gui import QtGui,QtWidgets
+        app = nplab.utils.gui.get_qt_app()  # ensure Qt is running
+        fname = QtWidgets.QFileDialog.getSaveFileName(
+            caption="Select Existing Data File",
+            directory=os.path.join(os.getcwd()),
+            filter="HDF5 Data (*.h5 *.hdf5)",
+#            options=qtgui.QFileDialog.DontConfirmOverwrite,
+        )
+        if not isinstance(fname, basestring):
+            fname = fname[0]  # work around version-dependent Qt behaviour :(
+        if len(fname) > 0:
+            print fname
+            if set_current == True:
+                set_current(fname, mode=mode)
+            else:
+                return DataFile(fname,mode = mode )
+        else:
+            print "Cancelled by the user."
+    except Exception as e:
+            print "File dialog went wrong :("
+            print e
 
     return _current_datafile  # if there is a file return it
 
