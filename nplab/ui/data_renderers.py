@@ -12,6 +12,7 @@ from matplotlib.figure import Figure
 import pyqtgraph as pg
 import numpy as np
 import nplab.datafile as df
+import operator
 
 #from nplab.utils.gui import QtWidgets
 #from PyQt4.QtCore import * 
@@ -383,13 +384,26 @@ class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
         self.layout.addWidget(w, 0, 1)
         
         if isinstance(self.h5object,dict) or isinstance(self.h5object,h5py.Group):
-            for i in range(len(self.h5object.values())):
+#            for i in range(len(self.h5object.values())):
+#                if i == 0:    
+#                    data = np.array(self.h5object.values()[i])
+#                else:
+#                    data = np.append(data,np.array(self.h5object.values()[i]),axis = 0)
+ #           sorted_values = 
+            data = np.array(self.h5object.values())
+            dict_of_times = {}
+            for h5object in self.h5object.values():
+                dict_of_times[h5object.attrs['creation_timestamp']]=h5object
+            data = np.array(dict_of_times.values())
+            for i,h5object_time in enumerate(sorted(dict_of_times.keys())):
                 if i == 0:    
-                    data = np.array(self.h5object.values()[i])
+                    data = np.array([dict_of_times[h5object_time]])
                 else:
-                    data = np.append(data,np.array(self.h5object.values()[i]),axis = 0)
-                ListData = True
-            print np.shape(data)
+                    data = np.append(data,np.array([dict_of_times[h5object_time]]),axis = 0)
+
+                
+            ListData = True
+            print np.shape(data),np.shape(self.h5object.values())
         elif len(self.h5object.shape) == 1 and len(self.h5object.attrs['wavelengths'])<len(self.h5object) and len(self.h5object)%len(self.h5object.attrs['wavelengths']) == 0:
             RawData = np.array(self.h5object,dtype = float)
             Xlen = len(np.array(self.h5object.attrs['wavelengths']))
@@ -402,7 +416,7 @@ class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
             data = [np.array(self.h5object)]
             self.h5object = {self.h5object.name : self.h5object}
             ListData = False
-        
+
         background_counter = 0
         reference_counter = 0
         i = 0
@@ -419,7 +433,7 @@ class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
                             and (self.h5object.values()[i].attrs['reference_int'] != None)))):
                 if self.h5object.values()[i].attrs['background_int'] != None:
                     if self.h5object.values()[i].attrs['reference_int'] != None:
-                        data[i] = ((data[i]-(self.h5object.values()[i].attrs['background_constant']+self.h5object.values()[i].attrs['background_gradient']*self.h5object.values()[i].integration_time))/ 
+                        data[i] = ((data[i]-(self.h5object.values()[i].attrs['background_constant']+self.h5object.values()[i].attrs['background_gradient']*self.h5object.values()[i].attrs['integration_time']))/ 
                                         ((self.h5object.values()[i].attrs['reference']-(self.h5object.values()[i].attrs['background_constant']+self.h5object.values()[i].attrs['background_gradient']*self.h5object.values()[i].attrs['reference_int']))
                                         *self.h5object.values()[i].attrs['integration_time']/self.h5object.values()[i].attrs['reference_int']))
                     else:

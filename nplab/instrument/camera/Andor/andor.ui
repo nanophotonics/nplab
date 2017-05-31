@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>360</width>
-    <height>296</height>
+    <height>318</height>
    </rect>
   </property>
   <property name="maximumSize">
@@ -174,6 +174,9 @@
           <widget class="QCheckBox" name="checkBoxCooler">
            <property name="text">
             <string>Cooler</string>
+           </property>
+           <property name="tristate">
+            <bool>false</bool>
            </property>
           </widget>
          </item>
@@ -402,19 +405,6 @@
      </property>
     </widget>
    </item>
-   <item row="3" column="2">
-    <widget class="QPushButton" name="pushButtonTakeBG">
-     <property name="maximumSize">
-      <size>
-       <width>70</width>
-       <height>16777215</height>
-      </size>
-     </property>
-     <property name="text">
-      <string>Take BG</string>
-     </property>
-    </widget>
-   </item>
    <item row="3" column="3">
     <widget class="QPushButton" name="pushButtonRemoveBG">
      <property name="maximumSize">
@@ -636,17 +626,10 @@
      </property>
     </widget>
    </item>
-   <item row="17" column="0" rowspan="2" colspan="3">
-    <widget class="QPlainTextEdit" name="description_plainTextEdit">
-     <property name="plainText">
-      <string>Description...</string>
-     </property>
-    </widget>
-   </item>
    <item row="18" column="3">
     <widget class="QPushButton" name="referesh_groups_pushButton">
      <property name="text">
-      <string>Save</string>
+      <string>Refresh Groups</string>
      </property>
     </widget>
    </item>
@@ -657,6 +640,40 @@
        <string>AndorData</string>
       </property>
      </item>
+    </widget>
+   </item>
+   <item row="3" column="2">
+    <widget class="QPushButton" name="pushButtonTakeBG">
+     <property name="maximumSize">
+      <size>
+       <width>70</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>Take BG</string>
+     </property>
+    </widget>
+   </item>
+   <item row="18" column="0">
+    <widget class="QPushButton" name="pushButton_SaveSettings">
+     <property name="text">
+      <string>Save settings</string>
+     </property>
+    </widget>
+   </item>
+   <item row="18" column="1">
+    <widget class="QPushButton" name="pushButton_LoadSettings">
+     <property name="text">
+      <string>Load settings</string>
+     </property>
+    </widget>
+   </item>
+   <item row="17" column="0" colspan="3">
+    <widget class="QPlainTextEdit" name="description_plainTextEdit">
+     <property name="plainText">
+      <string>Description...</string>
+     </property>
     </widget>
    </item>
   </layout>
