@@ -172,7 +172,6 @@ class AndorBase:
                 dll_input += (inpt['type'](inpt['value']),)
             for output in outputs:
                 dll_input += (byref(output),)
-#        print dll_input
         error = getattr(self.dll, funcname)(*dll_input)
         self._errorHandler(error, funcname, *(inputs + outputs))
 
@@ -193,9 +192,9 @@ class AndorBase:
     def _errorHandler(self, error, funcname='', *args):
         if '_logger' in self.__dict__:
             self._logger.debug("[%s]: %s %s" % (funcname, ERROR_CODE[error], str(args)))
-        elif 'verbosity' in self.__dict__:
-            if self.verbosity:
-                self._logger.error("[%s]: %s" % (funcname, ERROR_CODE[error]))
+#        elif 'verbosity' in self.__dict__:
+#            if self.verbosity:
+#                self._logger.error("[%s]: %s" % (funcname, ERROR_CODE[error]))
         if funcname == 'GetTemperature':
             return
         if error != 20002:
@@ -328,14 +327,12 @@ class AndorBase:
         if type(Param_dict)==dict:
             
             for param in Param_dict:
-  #              print param
                 if hasattr(self,param):
                     if Param_dict[param]!=None:
                         if 'Get_from_prop' in self.parameters[param]:
                             value = getattr(self,self.parameters[param]['Get_from_prop'])[np.where(np.array(getattr(self,self.parameters[param]['Get_from_prop']))==Param_dict[param])[0][0]]
                         else:
                             value = Param_dict[param]
-            #            print param
                         try:
                             setattr(self,param, value)
                         except Exception as e:
@@ -375,6 +372,7 @@ class AndorBase:
         self._dllWrapper('Initialize', outputs=(c_char(),))
         
         self.channel = 0
+        self.backgrounded = False
         self.SetParameter('ReadMode', 4)
         self.SetParameter('AcquisitionMode', 1)
         self.SetParameter('TriggerMode', 0)
@@ -687,6 +685,7 @@ class Andor(Camera, AndorBase):
 
         self.CurImage = None
         self.background = None
+        self.x_axis = None
 
         if settings_filepath != None:
             self.load_params_from_file(settings_filepath)
@@ -781,7 +780,6 @@ class AndorUI(QtWidgets.QWidget):
         for param in self.gui_params:
             func = self.callback_to_update_prop(param)
             self._func_dict[param] = func
-            print param
             register_for_property_changes(self.Andor,param,self._func_dict[param])
         # self.Andor.updateGUI.connect(self.updateGUI)
 
@@ -966,12 +964,12 @@ class AndorUI(QtWidgets.QWidget):
             expT = float(self.lineEditExpT.text()) * 5
         elif input == '/':
             expT = float(self.lineEditExpT.text()) / 5
-
+        self.Andor.Exposure = expT
         # self.Andor.SetExposureTime(expT)
-        self.Andor.SetParameter('Exposure', expT)
+    #    self.Andor.SetParameter('Exposure', expT)
         # self.Andor.GetAcquisitionTimings()
-        display_str = str(float('%#e' % self.Andor.parameters['AcquisitionTimings']['value'][0])).rstrip('0')
-        self.lineEditExpT.setText(display_str)
+    #    display_str = str(float('%#e' % self.Andor.parameters['AcquisitionTimings']['value'][0])).rstrip('0')
+     #   self.lineEditExpT.setText(self.Andor.Exposure)
 
     def EMGainChanged(self):
         gain = self.spinBoxEMGain.value()
@@ -1073,16 +1071,13 @@ class AndorUI(QtWidgets.QWidget):
                 # self.Andor.SetImage()
 
     def Capture(self, wait=True):
-        # print 'Capture'
-        # t = self.Andor.Capture()
         if self.captureThread is not None:
             if not self.captureThread.isFinished():
                 return
         self.captureThread = CaptureThread(self.Andor)
-#        self.connect(self.captureThread, self.captureThread.updateImage, self.updateImage)
         self.captureThread.updateImage.connect(self.updateImage)
-        # self.captureThread.finished.connect(self.updateImage)
         self.captureThread.start()
+
 
         if wait:
             self.captureThread.wait()
@@ -1109,7 +1104,6 @@ class AndorUI(QtWidgets.QWidget):
             self.DisplayWidget = DisplayWidget()
         if self.DisplayWidget.isHidden():
             self.DisplayWidget.show()
-
         offset = ((self.Andor.parameters['DetectorShape']['value'][0] - self.Andor.parameters['Image']['value'][3]),
                   self.Andor.parameters['Image']['value'][4] - 1)
         if self.Andor.parameters['IsolatedCropMode']['value'][0]:
@@ -1117,37 +1111,44 @@ class AndorUI(QtWidgets.QWidget):
         else:
             scale = self.Andor.parameters['Image']['value'][:2]
         data = np.copy(self.Andor.CurImage)
-        if np.shape(data[0])==np.shape(self.Andor.background) and self.Andor.background != None:
+        if np.shape(data[0])==np.shape(self.Andor.background) and self.Andor.backgrounded == True:
             if self.Andor.backgrounded ==True:
                 for image_number in range(len(self.Andor.CurImage)):
                     data[image_number] = data[image_number]-self.Andor.background
-        else:
+        elif self.Andor.backgrounded == True:
             self.Andor._logger.info('The background and the current image are different shapes and therefore cannot be subtracted')
-        
+        try:
+            if self.Andor.x_axis ==None or  np.shape(self.Andor.CurImage)[-1]!=np.shape(self.Andor.x_axis)[0]:
+                xvals = np.linspace(0, self.Andor.CurImage.shape[-1] - 1,self.Andor.CurImage.shape[-1])
+            else:
+    
+                xvals = self.Andor.x_axis
+        except Exception as e:
+            print e
         if len(self.Andor.CurImage.shape) == 2:
             if self.Andor.CurImage.shape[0] > self.DisplayWidget._max_num_line_plots:
                 self.DisplayWidget.splitter.setSizes([1, 0])
-                self.DisplayWidget.ImageDisplay.setImage(data, pos=offset, autoRange=False,
+                self.DisplayWidget.ImageDisplay.setImage(data,xvals = xvals, pos=offset, autoRange=False,
                                                          scale=scale)
             else:
                 self.DisplayWidget.splitter.setSizes([0, 1])
                 for ii in range(self.Andor.CurImage.shape[0]):
-                    self.DisplayWidget.plot[ii].setData(data[ii])
+                    self.DisplayWidget.plot[ii].setData(x= xvals,y = data[ii])
+
         else:
             self.DisplayWidget.splitter.setSizes([1, 0])
             image = np.transpose(data, (0, 2, 1))
-
+            zvals=0.99 * np.linspace(0, image.shape[0] - 1,image.shape[0])
             if image.shape[0] == 1:
                 image = image[0]
-                self.DisplayWidget.ImageDisplay.setImage(image,
-                                                         pos=offset, autoRange=False,
-                                                         scale=scale)
+                self.DisplayWidget.ImageDisplay.setImage(image,xvals = zvals,
+                                                             pos=offset, autoRange=False,
+                                                             scale=scale)
+
             else:
-                self.DisplayWidget.ImageDisplay.setImage(image, xvals=0.99 * np.linspace(0, image.shape[0] - 1,
-                                                                                         image.shape[0]),
+                self.DisplayWidget.ImageDisplay.setImage(image, xvals = zvals ,
                                                          pos=offset, autoRange=False,
                                                          scale=scale)
-#        self.emit(self.ImageUpdated, 'Andor')
         self.ImageUpdated.emit()
 
 class DisplayWidget(QtWidgets.QWidget):

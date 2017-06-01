@@ -286,8 +286,18 @@ class Camera(Instrument):
         `CameraParameter`, though I can't currently see how that would help...
         """
         # first, identify all the CameraParameter properties we've got
-        return [p for p in dir(self.__class__)
-                  if isinstance(getattr(self.__class__, p), CameraParameter)]
+        p_list = []
+        for p in dir(self.__class__):
+            try:
+                if isinstance(getattr(self.__class__, p), CameraParameter):
+                    getattr(self,p)
+                    p_list.append(p)
+            except:
+                delattr(self.__class__,p)
+                pass
+        return p_list
+   #     return [p for p in dir(self.__class__)
+    #              if isinstance(getattr(self.__class__, p), CameraParameter)]
     
     def get_camera_parameter(self, parameter_name):
         """Return the named property from the camera"""

@@ -154,7 +154,6 @@ class NotifiedProperty(Property):
         if obj not in self.callbacks_by_object.keys():
             self.callbacks_by_object[obj] = WeakSet()
         self.callbacks_by_object[obj].add(callback)
-        print callback,'callback added'
         
     def deregister_callback(self, obj, callback):
         """Remove a function from the list of callbacks."""
@@ -171,16 +170,12 @@ class NotifiedProperty(Property):
     def send_notification(self, obj, value):
         """Notify anyone that's interested that the value changed."""
         if obj in self.callbacks_by_object:
-            print 'obj'
             for callback in self.callbacks_by_object[obj].copy():
-                print callback,'in func'
                 try:
-                    print callback,'sending notification'
                     callback(value)
                 except:
                     # Get rid of failed/deleted callbacks
                     # Sometimes Qt objects don't delete cleanly, hence this bodge.
-                    print callback,'deregistering'
                     self.deregister_callback(obj, callback)
             
 class DumbNotifiedProperty(NotifiedProperty):

@@ -463,7 +463,7 @@ def open_file(set_current = True,mode = 'a'):
     return _current_datafile  # if there is a file return it
 
 def create_file(set_current = False,mode = 'a'):
-    """Open an existing data file"""
+    """Create a data file"""
     global _current_datafile
     try:  # we try to pop up a Qt file dialog
         import nplab.utils.gui

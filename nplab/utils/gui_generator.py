@@ -73,10 +73,10 @@ class GuiGenerator(QtWidgets.QMainWindow,UiTools):
 #        self._tabifyAll()
         self._setupSignals()
         if dock_settings_path is not None:
-            self.dock_settings_path = dock_settings_path+'\\'
+            self.dock_settings_path = dock_settings_path
+            self.menuLoadSettings()
         else:
-            self.dock_settings_path = None
-        self.menuLoadSettings()
+            self.dock_settings_path = None      
         self.showMaximized()
         
 
@@ -183,12 +183,33 @@ class GuiGenerator(QtWidgets.QMainWindow,UiTools):
         else:
             self.setStyleSheet('')
     def menuSaveSettings(self):
-        dock_state = self.dockWidgetArea.sav1eState()
-        np.save(self.dock_settings_path+'dock_settings',dock_state)
+        dock_state = self.dockWidgetArea.saveState()
+        if self.dock_settings_path==None:
+            import nplab.utils.gui
+            from nplab.utils.gui import QtGui,QtWidgets
+            app = nplab.utils.gui.get_qt_app()  # ensure Qt is running
+            self.dock_settings_path = QtWidgets.QFileDialog.getSaveFileName(
+                caption="Create new dock settings file",
+                directory=os.path.join(os.getcwd()),
+    #            options=qtgui.QFileDialog.DontConfirmOverwrite,
+            )
+
+
+        np.save(self.dock_settings_path[0],dock_state)
+
         
     def menuLoadSettings(self):
+        if self.dock_settings_path==None:
+            import nplab.utils.gui
+            from nplab.utils.gui import QtGui,QtWidgets
+            app = nplab.utils.gui.get_qt_app()  # ensure Qt is running
+            self.dock_settings_path = QtWidgets.QFileDialog.getOpenFileName(
+                caption="Select Existing Data File",
+                directory=os.path.join(os.getcwd()),
+    #            options=qtgui.QFileDialog.DontConfirmOverwrite,
+            )        
         try:
-            loaded_state = np.load(self.dock_settings_path+'dock_settings.npy')
+            loaded_state = np.load(self.dock_settings_path[0])
             loaded_state=loaded_state[()]
             self.dockWidgetArea.restoreState(loaded_state)
         except:
