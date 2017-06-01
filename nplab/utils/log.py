@@ -36,6 +36,9 @@ def log(message, from_class=None, from_object=None,
         new datafile (which may involve popping up a GUI).
         @param: assert_datafile: Set to true to raise an exception if there is
         no current datafile.
+        @param: level: This can either be used to add a value of 'importance' 
+        to the log, the default is 'info'. The other options are 'debug',
+        'warn'(as in warning) and 'error', and 'critical'.
 
         Note that if you are calling this from an `Instrument` subclass you
         should consider using `self.log()` which automatically fills in the
