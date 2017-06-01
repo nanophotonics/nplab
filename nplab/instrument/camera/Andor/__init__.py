@@ -1008,7 +1008,7 @@ class AndorUI(QtWidgets.QWidget):
         if self.filename_lineEdit.text() != 'Filename....':
             filename = self.filename_lineEdit.text()
         else:
-            filename ='Andor_data_0'
+            filename ='Andor_data'
         if self.group_comboBox.currentText() == 'AndorData':
             if 'AndorData' in self.data_file.keys():
                 group = self.data_file['AndorData']
@@ -1023,6 +1023,8 @@ class AndorUI(QtWidgets.QWidget):
         else:
             attrs = dict()
         attrs['Description'] = self.description_plainTextEdit.toPlainText()
+        if hasattr(self.Andor,'x_axis'):
+            attrs['wavelengths']=self.Andor.x_axis
         try:
             data_set = group.create_dataset(name = filename,data = data)
         except Exception as e:
