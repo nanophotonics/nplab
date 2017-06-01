@@ -26,11 +26,11 @@ import logging
 LOGGER = create_logger('GeneratedGUI')
 
 class GuiGenerator(QtWidgets.QMainWindow,UiTools):
-    def __init__(self, instrument_dict, parent=None, dock_settings_path = None, scripts_path = None):
+    def __init__(self, instrument_dict, parent=None, dock_settings_path = None, scripts_path = None,working_directory = None):
         super(GuiGenerator, self).__init__(parent)
         self._logger = LOGGER
         self.instr_dict = instrument_dict
-        self.data_file = df.current()
+        self.data_file = df.current(working_directory=working_directory)
         self.instr_dict['HDF5'] = self.data_file
         self.setDockNestingEnabled(1)
         
@@ -46,11 +46,15 @@ class GuiGenerator(QtWidgets.QMainWindow,UiTools):
         self.dockWidgetArea = self.replace_widget(self.verticalLayout, self.centralWidget(),self.dockwidgetArea)
         self.dockWidgetAllInstruments.setWidget(self.dockwidgetArea)
         self.dockWidgetAllInstruments.setTitleBarWidget(QtWidgets.QWidget())  # This trick makes the title bar disappear
-
+                               
         # Iterate over all the opened instruments. If the instrument has a GUI (i.e. if they have the get_qt_ui function
         # defined inside them), then create a pyqtgraph.Dock for it and add its widget to the Dock. Also prints out any
         # instruments that do not have GUIs
         self._logger.info('Opening all GUIs')
+        if working_directory==None:
+            self.working_directory = os.path.join(os.getcwd())
+        else:
+            self.working_directory = working_directory
         for instr in self.instr_dict:
             self._open_one_gui(instr)
 
@@ -177,11 +181,24 @@ class GuiGenerator(QtWidgets.QMainWindow,UiTools):
         self.actions['Views']['HDF5'].toggle()
         self._toggleView('HDF5')
     def toggleNightMode(self):
-        if self.actionNightMode.isChecked():
-            import qdarkstyle
-            self.setStyleSheet(qdarkstyle.load_stylesheet(pyside=False))
-        else:
-            self.setStyleSheet('')
+        try:
+            if self.actionNightMode.isChecked():
+                import qdarkstyle
+                self.setStyleSheet(qdarkstyle.load_stylesheet(pyside=False))
+            else:
+                self.setStyleSheet('')
+        except Exception as e:
+            print e
+            print 'trying Qt 5'
+            try:
+                if self.actionNightMode.isChecked():
+                    import qdarkstyle
+                    self.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+                else:
+                    self.setStyleSheet('')
+            except Exception as ee:
+                print ee
+                print 'Qt 5 style sheet failed'
     def menuSaveSettings(self):
         dock_state = self.dockWidgetArea.saveState()
         if self.dock_settings_path==None:
@@ -190,7 +207,7 @@ class GuiGenerator(QtWidgets.QMainWindow,UiTools):
             app = nplab.utils.gui.get_qt_app()  # ensure Qt is running
             self.dock_settings_path = QtWidgets.QFileDialog.getSaveFileName(
                 caption="Create new dock settings file",
-                directory=os.path.join(os.getcwd()),
+                directory=self.working_directory,
     #            options=qtgui.QFileDialog.DontConfirmOverwrite,
             )
 
@@ -205,11 +222,11 @@ class GuiGenerator(QtWidgets.QMainWindow,UiTools):
             app = nplab.utils.gui.get_qt_app()  # ensure Qt is running
             self.dock_settings_path = QtWidgets.QFileDialog.getOpenFileName(
                 caption="Select Existing Data File",
-                directory=os.path.join(os.getcwd()),
+                directory=self.working_directory,
     #            options=qtgui.QFileDialog.DontConfirmOverwrite,
-            )        
+            )[0]        
         try:
-            loaded_state = np.load(self.dock_settings_path[0])
+            loaded_state = np.load(self.dock_settings_path)
             loaded_state=loaded_state[()]
             self.dockWidgetArea.restoreState(loaded_state)
         except:
