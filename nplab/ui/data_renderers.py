@@ -749,6 +749,8 @@ class SpectrumRenderer(FigureRendererPG):
             Title = "A"
             if 'variable_int_enabled' in h5object.attrs.keys():
                 variable_int = h5object.attrs['variable_int_enabled']
+            else:
+                variable_int =False
             if ((variable_int == True) and #Check for variable integration time and that the background_int and reference_int are not none
                         ((h5object.attrs['background_int'] != h5object.attrs['integration_time'] 
                             and (h5object.attrs['background_int'] != None))
