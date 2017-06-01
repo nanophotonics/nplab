@@ -194,7 +194,7 @@ class Group(h5py.Group, ShowGUIMixin):
         return Group(super(Group, self).require_group(name).id)  # wrap the returned group
 
     def create_dataset(self, name, auto_increment=True, shape=None, dtype=None,
-                       data=None, attrs=None, timestamp=True, *args, **kwargs):
+                       data=None, attrs=None, timestamp=True,autoflush = True, *args, **kwargs):
         """Create a new dataset, optionally with an auto-incrementing name.
 
         :param name: the name of the new dataset
@@ -217,6 +217,8 @@ class Group(h5py.Group, ShowGUIMixin):
             attributes_from_dict(dset, data.attrs)
         if attrs is not None:
             attributes_from_dict(dset, attrs)  # quickly set the attributes
+        if autoflush==True:
+            dset.file.flush()
         return dset
 
     create_dataset.__doc__ += '\n\n'+h5py.Group.create_dataset.__doc__
@@ -349,7 +351,7 @@ class DataFile(Group):
 _current_datafile = None
 
 
-def current(create_if_none=True, create_if_closed=True, mode='a'):
+def current(create_if_none=True, create_if_closed=True, mode='a',working_directory = None):
     """Return the current data file, creating one if it does not exist.
 
     Arguments:
@@ -375,6 +377,8 @@ def current(create_if_none=True, create_if_closed=True, mode='a'):
 
     if _current_datafile is None and create_if_none:
         print "No current data file, attempting to create..."
+        if working_directory==None:
+            working_directory==os.getcwd()
         try:  # we try to pop up a Qt file dialog
             import nplab.utils.gui
             from nplab.utils.gui import QtGui
@@ -382,7 +386,7 @@ def current(create_if_none=True, create_if_closed=True, mode='a'):
             app = nplab.utils.gui.get_qt_app()  # ensure Qt is running
             fname = QtWidgets.QFileDialog.getSaveFileName(
                 caption="Select Data File",
-                directory=os.path.join(os.getcwd(), datetime.date.today().strftime("%Y-%m-%d.h5")),
+                directory=os.path.join(working_directory, datetime.date.today().strftime("%Y-%m-%d.h5")),
                 filter="HDF5 Data (*.h5 *.hdf5)",
                 options=QtWidgets.QFileDialog.DontConfirmOverwrite,
             )
