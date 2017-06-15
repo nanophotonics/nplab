@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>360</width>
-    <height>318</height>
+    <width>369</width>
+    <height>406</height>
    </rect>
   </property>
   <property name="maximumSize">
@@ -405,19 +405,6 @@
      </property>
     </widget>
    </item>
-   <item row="3" column="3">
-    <widget class="QPushButton" name="pushButtonRemoveBG">
-     <property name="maximumSize">
-      <size>
-       <width>70</width>
-       <height>16777215</height>
-      </size>
-     </property>
-     <property name="text">
-      <string>Remove BG</string>
-     </property>
-    </widget>
-   </item>
    <item row="2" column="3">
     <widget class="QPushButton" name="pushButtonAbort">
      <property name="maximumSize">
@@ -673,6 +660,13 @@
     <widget class="QPlainTextEdit" name="description_plainTextEdit">
      <property name="plainText">
       <string>Description...</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="3">
+    <widget class="QCheckBox" name="checkBoxRemoveBG">
+     <property name="text">
+      <string>Remove BG</string>
      </property>
     </widget>
    </item>
