@@ -5,7 +5,7 @@ scans are possible.
 """
 __author__ = 'alansanders'
 
-from .scanning_experiment import ParameterScanExperiment, ScanningExperimentHDF5
+from .scanning_experiment import ScanningExperiment, ScanningExperimentHDF5
 from .scan_timing import TimedScan
 from .linear_scanner import LinearScan, LinearScanQt
 from .continuous_linear_scanner import ContinuousLinearScan, ContinuousLinearScanQt

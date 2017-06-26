@@ -34,15 +34,14 @@ class ScanningExperiment(ExperimentWithDataDeque):
         self.acquisition_thread.start()
         
     def abort(self):
-        """Requests an abort of the currently running (grid) scan."""
+        """Requests an abort of the currently running grid scan."""
         if not hasattr(self, 'acquisition_thread'):
-            print 'no scan to abort!'            
             return
         if self.acquisition_thread.is_alive():
             print 'aborting'
             self.abort_requested = True
             self.acquisition_thread.join()
-      
+            
     def init_scan(self):
         """
         This is called before the experiment enters its own thread. Methods that should be

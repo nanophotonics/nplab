@@ -56,7 +56,7 @@ class PIStage(VisaInstrument, Stage):
         else:
             return False
 
-    def wait_until_stopped(self, axes=None): # same as in super class Stage
+    def wait_until_stopped(self, axes=None):
         """Block until the stage is no longer moving."""
         while self.is_moving(axes=axes):
             time.sleep(0.01)
