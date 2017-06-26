@@ -10,12 +10,12 @@ import time
 from nplab import datafile
 
 
-class ScanningExperiment(ExperimentWithDataDeque):
+class ParameterScanExperiment(ExperimentWithDataDeque):
     """
     This class defines the core methods required for a threaded scanning experiment.
     """
     def __init__(self):
-        super(ScanningExperiment, self).__init__()
+        super(ParameterScanExperiment, self).__init__()
         self.status = 'inactive'
         self.abort_requested = False
         self.acquisition_thread = None
@@ -104,7 +104,7 @@ class ScanningExperiment(ExperimentWithDataDeque):
         pass
 
 
-class ScanningExperimentHDF5(ScanningExperiment):
+class ScanningExperimentHDF5(ParameterScanExperiment):
     """
     This class adds HDF5 file functionality for recording scans in a standardised manner.
     """

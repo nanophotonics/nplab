@@ -19,7 +19,6 @@ class LinearScan(ScanningExperiment, TimedScan):
         self.scanner = None
         self.start, self.stop, self.step = (start, stop, step)
         self.parameter = None
-        # underscored attributes are made into properties
         self.status = 'inactive'
         self.abort_requested = False
         self.estimated_step_time = 0.001
@@ -27,7 +26,7 @@ class LinearScan(ScanningExperiment, TimedScan):
 
     def run(self):
         """
-        Starts the grid scan in its own thread and runs the update function at the specified
+        Starts the parameter scan in its own thread and runs the update function at the specified
         rate whilst acquiring the data.
 
         :param rate: the update period in seconds
@@ -57,7 +56,7 @@ class LinearScan(ScanningExperiment, TimedScan):
         raise NotImplementedError
 
     def scan(self, start, stop, step):
-        """Scans a grid, applying a function at each position."""
+        """Scans a parameter and applies a function at each position."""
         self.abort_requested = False
         p = self.init_parameter(start, stop, step)
         self.open_scan()

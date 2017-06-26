@@ -1,4 +1,4 @@
-__author__ = 'alansanders'
+__author__ = 'alansanders, chrisgrosse'
 
 import ctypes
 from ctypes import byref, c_int
@@ -138,7 +138,7 @@ class SmaractMCS(Stage):
         """
         if axis not in self.axis_names:
             raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
-        position *= 1e9
+        position *= 1e9 #??? why not 1e-9??
         ch = c_int(int(axis))
         position = c_int(int(position))
         self.check_open_status()
@@ -275,7 +275,10 @@ class SmaractMCS(Stage):
         for i in range(num_ch):
             self.find_references_ch(i)
 
-    ### Movement Methods ###
+    ### ==================================================== ###    
+    ### Methods to read-out position and move to a specific  ###
+    ### position via slip-stick motion and piezo movement    ###
+    ## ===================================================== ###
 
     def set_initial_position(self, ch, position):
         ch = c_int(int(ch))
@@ -377,11 +380,130 @@ class SmaractMCS(Stage):
         self.check_status(mcsc.SA_SetClosedLoopMaxFrequency_S(self.handle, ch,
                                                               frequency))
 
-    ### Scanning Methods ###
+    ### ==================================== ###
+    ### Methods to control slip-stick motion ###
+    ### ==================================== ###
 
+    def slip_stick_move(self, axis, steps=1, amplitude=500, step_frquency=0.1):
+ 
+        amplitude *= 1e9 #?? do we need this??
+        if axis not in self.axis_names:
+            raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))        
+        ch = c_int(int(axis))
+        steps = c_int(int(steps))
+        amplitude = c_uint(int(amplitude))
+        step_frequency = c_uint(int(step_frequency))
+        self.check_open_status()        
+        self.check_status(mcsc.SA_StepMove_A(self.handle, ch, steps, amplitude, step_frequency))
+        
+
+    ### ===================================== ###
+    ### Methods to control the piezo scanners ###
+    ### ===================================== ###
+
+    ### primary methods that provide diret interface to MCS main controller   
+ 
+    def get_scanner_position(self, axis=None):
+        """
+        Get the scanning position of the stage or of a specified axis.
+        :param axis:
+        :return:
+        """
+        if axis is None:
+            return [1e-9*10.*self.get_voltage(axis) for axis in self.axis_names]
+        else:
+            if axis not in self.axis_names:
+                raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
+            voltage = self.get_voltage(axis)
+            position = 1e-9*10.*voltage
+            return position
+    
+    def get_scanner_level(self, axis):
+        ch = c_int(int(axis))
+        level = c_int()
+        self.check_open_status()
+        mcsc.SA_GetVoltageLevel_S(self.handle, ch, byref(level))
+        return level.value
+
+    def move_scanner_to_level(self, level, axis, speed=4095, relative=False):
+        """
+        Scan up to 100V
+        level: 0 - 100 V, 0 - 4095
+        speed: 4095 s - 1 us for full 4095 voltage range, 1 - 4,095,000,000
+        """
+        if axis not in self.axis_names:
+            raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
+        ch = c_int(int(axis))
+        level = c_int(int(level))
+        speed = c_int(int(speed))
+        self.check_open_status()
+        if relative:
+            self.check_status(mcsc.SA_ScanMoveRelative_S(self.handle, ch, level, speed))
+        else:
+            self.check_status(mcsc.SA_ScanMoveAbsolute_S(self.handle, ch, level, speed))
+        self.wait_until_stopped(ch)
+                
+    def multi_move_scanner_to_level(self, levels, axes, speeds, relative=False):
+        self.check_open_status()
+        levels = [c_int(int(level)) for level in levels]
+        axes = [c_int(int(axis)) for axis in axes]
+        speeds = [c_int(int(speed)) for speed in speeds]
+        for i in range(len(axes)):
+            if relative:
+                pass
+            else:
+                self.check_status(mcsc.SA_ScanMoveAbsolute_S(self.handle, axes[i], levels[i], speeds[i]))
+        for axis in axes:
+            self.wait_until_stopped(axis)
+    
+    
+    ### additional useful methods to control the piezo scanners
+    
+    def move_scanner_to_level_rel(self, diff, axis, speed=4095):
+        """
+        Scan up to 50V
+        diff: -100 - 100 V, -4095 - 4095
+        speed: 4095 s - 1 us for full 4095 voltage range, 1 - 4,095,000,000
+        """
+        self.move_scanner_to_level(diff, axis, speed, relative=True)
+
+    def move_scanner_to_voltage(self, axis, voltage, speed, relative=False):
+        """
+        Scan to 50V
+        level: 0 - 100 V, 0 - 4095
+        speed: 4095 s - 1 us for full 4095 voltage range, 1 - 4,095,000,000
+        """
+        level = self.voltage_to_level(voltage)
+        self.move_scanner_to_level(level, axis, speed, relative)
+
+    def move_scanner_rel_to_voltage(self, axis, voltage_diff, speed):
+        """
+        Scan to 50V
+        level: 0 - 100 V, 0 - 4095
+        speed: 4095 s - 1 us for full 4095 voltage range, 1 - 4,095,000,000
+        """
+        diff = self.voltage_to_level(voltage_diff)
+        self.move_scanner_to_level(diff, axis, speed, relative=True)
+
+    def move_scanner_to_position(self, position, axis, speed, relative=False):
+        level = self.position_to_level(1e9*position)
+        self.move_scanner_to_level(level, axis, speed, relative)
+
+    def move_scanner_rel_to_position(self, axis, step, speed):
+        diff = self.position_to_level(1e9*step)
+        self.move_scanner_to_level(diff, axis, speed, relative=True)
+
+    def multi_move_scanner_to_voltage(self, voltages, axes, speeds, relative=False):
+        levels = [self.voltage_to_level(v) for v in voltages]
+        self.multi_move_scanner_to_level(levels, axes, speeds, relative)
+
+    def multi_move_scanner_to_position(self, positions, axes, speeds, relative=False):
+        levels = [self.position_to_level(1e9*p) for p in positions]
+        self.multi_move_scanner_to_level(levels, axes, speeds, relative)    
+    
     def position_to_level(self, position):
-        # 1 um per 100 V, position can be 0, 1000 nm
-        voltage = position / 10.
+        # 1.5 um per 100 V, position can be between 0 and 1500 nm
+        voltage = position / 15.
         level = self.voltage_to_level(voltage)
         return level
 
@@ -399,106 +521,10 @@ class SmaractMCS(Stage):
         position = voltage * 10.
         return position
 
-    def get_scan_level(self, axis):
-        ch = c_int(int(axis))
-        level = c_int()
-        self.check_open_status()
-        mcsc.SA_GetVoltageLevel_S(self.handle, ch, byref(level))
-        return level.value
-
-
     def get_voltage(self, ch):
-        level = self.get_scan_level(ch)
+        level = self.get_scanner_level(ch)
         voltage = self.level_to_voltage(level)
         return voltage
-
-    def get_scan_position(self, axis=None):
-        """
-        Get the scanning position of the stage or of a specified axis.
-        :param axis:
-        :return:
-        """
-        if axis is None:
-            return [1e-9*10.*self.get_voltage(axis) for axis in self.axis_names]
-        else:
-            if axis not in self.axis_names:
-                raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
-            voltage = self.get_voltage(axis)
-            position = 1e-9*10.*voltage
-            return position
-
-    def scan_move(self, level, axis, speed=4095, relative=False):
-        """
-        Scan up to 100V
-        level: 0 - 100 V, 0 - 4095
-        speed: 4095 s - 1 us for full 4095 voltage range, 1 - 4,095,000,000
-        """
-        if axis not in self.axis_names:
-            raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
-        ch = c_int(int(axis))
-        level = c_int(int(level))
-        speed = c_int(int(speed))
-        self.check_open_status()
-        if relative:
-            self.check_status(mcsc.SA_ScanMoveRelative_S(self.handle, ch, level, speed))
-        else:
-            self.check_status(mcsc.SA_ScanMoveAbsolute_S(self.handle, ch, level, speed))
-        self.wait_until_stopped(ch)
-
-    def scan_move_rel(self, diff, axis, speed=4095):
-        """
-        Scan up to 50V
-        diff: -100 - 100 V, -4095 - 4095
-        speed: 4095 s - 1 us for full 4095 voltage range, 1 - 4,095,000,000
-        """
-        self.scan_move(diff, axis, speed, relative=True)
-
-    def scan_move_to_voltage(self, axis, voltage, speed, relative=False):
-        """
-        Scan to 50V
-        level: 0 - 100 V, 0 - 4095
-        speed: 4095 s - 1 us for full 4095 voltage range, 1 - 4,095,000,000
-        """
-        level = self.voltage_to_level(voltage)
-        self.scan_move(level, axis, speed, relative)
-
-    def scan_move_rel_to_voltage(self, axis, voltage_diff, speed):
-        """
-        Scan to 50V
-        level: 0 - 100 V, 0 - 4095
-        speed: 4095 s - 1 us for full 4095 voltage range, 1 - 4,095,000,000
-        """
-        diff = self.voltage_to_level(voltage_diff)
-        self.scan_move(diff, axis, speed, relative=True)
-
-    def scan_move_to_position(self, position, axis, speed, relative=False):
-        level = self.position_to_level(1e9*position)
-        self.scan_move(level, axis, speed, relative)
-
-    def scan_move_rel_to_position(self, axis, step, speed):
-        diff = self.position_to_level(1e9*step)
-        self.scan_move(diff, axis, speed, relative=True)
-
-    def multi_scan_move(self, levels, axes, speeds, relative=False):
-        self.check_open_status()
-        levels = [c_int(int(level)) for level in levels]
-        axes = [c_int(int(axis)) for axis in axes]
-        speeds = [c_int(int(speed)) for speed in speeds]
-        for i in range(len(axes)):
-            if relative:
-                pass
-            else:
-                self.check_status(mcsc.SA_ScanMoveAbsolute_S(self.handle, axes[i], levels[i], speeds[i]))
-        for axis in axes:
-            self.wait_until_stopped(axis)
-
-    def multi_scan_move_to_voltage(self, voltages, axes, speeds, relative=False):
-        levels = [self.voltage_to_level(v) for v in voltages]
-        self.multi_scan_move(levels, axes, speeds, relative)
-
-    def multi_scan_move_to_position(self, positions, axes, speeds, relative=False):
-        levels = [self.position_to_level(1e9*p) for p in positions]
-        self.multi_scan_move(levels, axes, speeds, relative)
 
     def get_qt_ui(self):
         return SmaractMCSUI(self)
@@ -506,7 +532,7 @@ class SmaractMCS(Stage):
     ### Useful Properties ###
     num_ch = property(get_num_channels)
     position = property(get_position)
-    scan_position = property(get_scan_position)
+    scan_position = property(get_scanner_position)
 
 
 class SmaractStageUI(StageUI):
@@ -526,7 +552,7 @@ class SmaractScanStageUI(StageUI):
     def move_axis_relative(self, index, axis, dir=1):
         if axis in [1,2,4,5]:
             dir *= -1
-        self.stage.scan_move_to_position(dir*self.step_size[index], axis=axis, speed=4095, relative=True)
+        self.stage.move_scanner_to_position(dir*self.step_size[index], axis=axis, speed=4095, relative=True)
         self.update_ui[int].emit(axis)
 
     @QtCore.pyqtSlot(int)

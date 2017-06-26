@@ -903,7 +903,7 @@ class HyperSpec_Alan(DataRenderer, QtGui.QWidget):
             #create image item for current image                 
             Images.append(pg.ImageView(view=pg.PlotItem()))
             #Set image
-            Images[hyperspec_nom-1].setImage(data,xvals = np.array(self.h5object['wavelength2']),autoHistogramRange = True)
+            Images[hyperspec_nom-1].setImage(data,xvals = np.array(self.h5object['wavelength']),autoHistogramRange = True)
             
      
             # Formating of the Image
