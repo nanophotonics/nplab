@@ -1,7 +1,7 @@
 __author__ = 'alansanders, Will Deacon'
 
 import h5py
-from nplab.utils.gui import QtGui, uic, get_qt_app
+from nplab.utils.gui import QtGui, QtWidgets, get_qt_app, uic
 from nplab.utils.array_with_attrs import ArrayWithAttrs
 import os
 import matplotlib
@@ -12,8 +12,9 @@ from matplotlib.figure import Figure
 import pyqtgraph as pg
 import numpy as np
 import nplab.datafile as df
+import operator
 
-from PyQt4.QtGui import * 
+#from nplab.utils.gui import QtWidgets
 #from PyQt4.QtCore import * 
 
 
@@ -86,16 +87,18 @@ def suitable_renderers(h5object, return_scores=False):
     else:
         return [r for score, r in renderers_and_scores if score >= 0]
 
-
-hdf5_info_base, hdf5_info_widget = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'hdf5_info_renderer.ui'))
-class HDF5InfoRenderer(DataRenderer, hdf5_info_base, hdf5_info_widget):
+#hdf5_info_base,
+#hdf5_info_widget = uic.loadUi(os.path.join(os.path.dirname(__file__), 'hdf5_info_renderer.ui'))
+#Had to change load Ui Type to Load Ui
+class HDF5InfoRenderer(DataRenderer, QtWidgets.QWidget):
     """ A renderer returning the basic HDF5 info"""
     def __init__(self, h5object, parent=None):
         super(HDF5InfoRenderer, self).__init__(h5object, parent)
+        uic.loadUi(os.path.join(os.path.dirname(__file__), 'hdf5_info_renderer.ui'),self)
         self.parent = parent
         self.h5object = h5object
 
-        self.setupUi(self)
+
         self.lineEdit.setText(self.h5object.name)
         self.lineEdit2.setText(self.h5object.parent.name)
         self.lineEdit3.setText(self.h5object.file.filename)
@@ -113,14 +116,14 @@ class HDF5InfoRenderer(DataRenderer, hdf5_info_base, hdf5_info_widget):
 add_renderer(HDF5InfoRenderer)
 add_group_renderer(HDF5InfoRenderer)
 
-class ValueRenderer(DataRenderer, QtGui.QWidget):
+class ValueRenderer(DataRenderer, QtWidgets.QWidget):
     """A renderer returning the objects name type and shape if a dataset object"""
     def __init__(self, h5object, parent=None):
         super(ValueRenderer, self).__init__(h5object, parent)
         
         #our layout is simple - just a single QLabel
-        self.label = QtGui.QLabel()
-        layout = QtGui.QVBoxLayout(self)
+        self.label = QtWidgets.QLabel()
+        layout = QtWidgets.QVBoxLayout(self)
         layout.addWidget(self.label)
         self.setLayout(layout)
         
@@ -142,14 +145,14 @@ class ValueRenderer(DataRenderer, QtGui.QWidget):
 
 add_renderer(ValueRenderer)
 
-class TextRenderer(DataRenderer, QtGui.QWidget):
+class TextRenderer(DataRenderer, QtWidgets.QWidget):
     """A renderer returning the objects name type and shape if a dataset object"""
     def __init__(self, h5object, parent=None):
         super(TextRenderer, self).__init__(h5object, parent)
         
         #our layout is simple - just a single QLineEdit
-        self.label = QtGui.QLineEdit()
-        layout = QtGui.QFormLayout(self)
+        self.label = QtWidgets.QLineEdit()
+        layout = QtWidgets.QFormLayout(self)
         layout.addWidget(self.label)
         self.setLayout(layout)
         
@@ -166,25 +169,27 @@ class TextRenderer(DataRenderer, QtGui.QWidget):
 add_renderer(TextRenderer)
 add_group_renderer(TextRenderer)
 
-hdf5_attrs_base, hdf5_attrs_widget = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'hdf5_attrs_renderer.ui'))
-class AttrsRenderer(DataRenderer, hdf5_attrs_base, hdf5_attrs_widget):
+#hdf5_attrs_base, hdf5_attrs_widget = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'hdf5_attrs_renderer.ui'))
+#, hdf5_attrs_base, hdf5_attrs_widget
+class AttrsRenderer(DataRenderer, QtWidgets.QWidget):
     """ A renderer displaying a table with the Attributes of the HDF5 object selected"""
     
     def __init__(self, h5object, parent=None):
         super(AttrsRenderer, self).__init__(h5object)
+        uic.loadUi(os.path.join(os.path.join(os.path.dirname(__file__), 'hdf5_attrs_renderer.ui')),self)
+        
         self.h5object = h5object
-        self.setupUi(self)
         
         if type(h5object)==list:
-            item_info = QTableWidgetItem("Choose a single element to display its attributes!")
+            item_info = QtWidgets.QTableWidgetItem("Choose a single element to display its attributes!")
             self.tableWidget.setItem(0,0,item_info)
             self.tableWidget.resizeColumnsToContents()
         else:
             self.tableWidget.setRowCount(len(self.h5object.attrs))
             row = 0
             for key, value in sorted(h5object.attrs.iteritems()):
-                item_key = QTableWidgetItem(key)
-                item_value = QTableWidgetItem(str(value))
+                item_key = QtWidgets.QTableWidgetItem(key)
+                item_value = QtWidgets.QTableWidgetItem(str(value))
                 self.tableWidget.setItem(row,0,item_key)
                 self.tableWidget.setItem(row,1,item_value)
                 row = row + 1
@@ -209,7 +214,7 @@ class AttrsRenderer(DataRenderer, hdf5_attrs_base, hdf5_attrs_widget):
 add_renderer(AttrsRenderer)
 add_group_renderer(AttrsRenderer)
 
-class FigureRenderer(DataRenderer, QtGui.QWidget):
+class FigureRenderer(DataRenderer, QtWidgets.QWidget):
     """A renderer class which sets up a matplotlib figure for use 
     in more complicated renderers
     """
@@ -217,7 +222,7 @@ class FigureRenderer(DataRenderer, QtGui.QWidget):
         super(FigureRenderer, self).__init__(h5object, parent)
         self.fig = Figure()
 
-        layout = QtGui.QVBoxLayout(self)
+        layout = QtWidgets.QVBoxLayout(self)
         self.figureWidget = FigureCanvas(self.fig)
         layout.addWidget(self.figureWidget)
         self.setLayout(layout)
@@ -227,7 +232,7 @@ class FigureRenderer(DataRenderer, QtGui.QWidget):
     def display_data(self):
         self.fig.canvas.draw()
 
-class FigureRendererPG(DataRenderer, QtGui.QWidget):
+class FigureRendererPG(DataRenderer, QtWidgets.QWidget):
     """A renderer class which sets up a pyqtgraph for use 
     in more complicated renderers
     """
@@ -236,7 +241,7 @@ class FigureRendererPG(DataRenderer, QtGui.QWidget):
         pg.setConfigOption('background', 'w')
         pg.setConfigOption('foreground', 'k')
         self.figureWidget =  pg.PlotWidget(name='Plot1') 
-        self.layout = QtGui.QVBoxLayout(self)
+        self.layout = QtWidgets.QVBoxLayout(self)
         self.layout.addWidget(self.figureWidget)
         self.setLayout(self.layout)
 
@@ -343,7 +348,7 @@ class Scatter_plot1DPG(FigureRendererPG):
 
 add_renderer(Scatter_plot1DPG)
 
-class MultiSpectrum2D(DataRenderer, QtGui.QWidget):
+class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
     """ A renderer for large spectral datasets experessing them in a colour map using
     pyqt graph. Allowing the user to interact with the graph i.e. zooming into 
     selected region and changing the colour scheme through the use of a histogramLUT 
@@ -363,7 +368,7 @@ class MultiSpectrum2D(DataRenderer, QtGui.QWidget):
         super(MultiSpectrum2D, self).__init__(h5object, parent)
         pg.setConfigOption('background', 'w')
         pg.setConfigOption('foreground', 'k')
-        self.layout = QtGui.QGridLayout()
+        self.layout = QtWidgets.QGridLayout()
         self.setLayout(self.layout)
         self.layout.setSpacing(0)
 
@@ -379,13 +384,26 @@ class MultiSpectrum2D(DataRenderer, QtGui.QWidget):
         self.layout.addWidget(w, 0, 1)
         
         if isinstance(self.h5object,dict) or isinstance(self.h5object,h5py.Group):
-            for i in range(len(self.h5object.values())):
+#            for i in range(len(self.h5object.values())):
+#                if i == 0:    
+#                    data = np.array(self.h5object.values()[i])
+#                else:
+#                    data = np.append(data,np.array(self.h5object.values()[i]),axis = 0)
+ #           sorted_values = 
+            data = np.array(self.h5object.values())
+            dict_of_times = {}
+            for h5object in self.h5object.values():
+                dict_of_times[h5object.attrs['creation_timestamp']]=h5object
+            data = np.array(dict_of_times.values())
+            for i,h5object_time in enumerate(sorted(dict_of_times.keys())):
                 if i == 0:    
-                    data = [np.array(self.h5object.values()[i])]
+                    data = np.array([dict_of_times[h5object_time]])
                 else:
-                    data = np.append(data,[np.array(self.h5object.values()[i])],axis = 0)
-                ListData = True
+                    data = np.append(data,np.array([dict_of_times[h5object_time]]),axis = 0)
+
                 
+            ListData = True
+            print np.shape(data),np.shape(self.h5object.values())
         elif len(self.h5object.shape) == 1 and len(self.h5object.attrs['wavelengths'])<len(self.h5object) and len(self.h5object)%len(self.h5object.attrs['wavelengths']) == 0:
             RawData = np.array(self.h5object,dtype = float)
             Xlen = len(np.array(self.h5object.attrs['wavelengths']))
@@ -398,33 +416,57 @@ class MultiSpectrum2D(DataRenderer, QtGui.QWidget):
             data = [np.array(self.h5object)]
             self.h5object = {self.h5object.name : self.h5object}
             ListData = False
-        
+
         background_counter = 0
         reference_counter = 0
         i = 0
+        j = 0
         for h5object in data:
             Title = "A"
-            if 'background' in self.h5object.values()[i].attrs.keys():
-                if ListData == True:
-                    if len(np.array(data[i])) == len(np.array(self.h5object.values()[i].attrs['reference'])):
-                        data[i] = data[i] - np.array(self.h5object.values()[i].attrs['background'])     
-                else:
-                    if len(np.array(data)) == len(np.array(self.h5object.values()[i].attrs['background'])):
-                            data = data - np.array(self.h5object.values()[i].attrs['background'])[:,np.newaxis]       
-                    Title = Title + " background subtracted"
+            variable_int = False
+            if 'variable_int_enabled' in self.h5object.values()[i].attrs.keys():
+                variable_int = self.h5object.values()[i].attrs['variable_int_enabled']
+            if ((variable_int == True) and #Check for variable integration time and that the background_int and reference_int are not none
+                        ((self.h5object.values()[i].attrs['background_int'] != self.h5object.values()[i].attrs['integration_time'] 
+                            and (self.h5object.values()[i].attrs['background_int'] != None))
+                        or (self.h5object.values()[i].attrs['reference_int'] != self.h5object.values()[i].attrs['integration_time'] 
+                            and (self.h5object.values()[i].attrs['reference_int'] != None)))):
+                if self.h5object.values()[i].attrs['background_int'] != None:
+                    if self.h5object.values()[i].attrs['reference_int'] != None:
+                        data[i] = ((data[i]-(self.h5object.values()[i].attrs['background_constant']+self.h5object.values()[i].attrs['background_gradient']*self.h5object.values()[i].attrs['integration_time']))/ 
+                                        ((self.h5object.values()[i].attrs['reference']-(self.h5object.values()[i].attrs['background_constant']+self.h5object.values()[i].attrs['background_gradient']*self.h5object.values()[i].attrs['reference_int']))
+                                        *self.h5object.values()[i].attrs['integration_time']/self.h5object.values()[i].attrs['reference_int']))
+                    else:
+                        data[i] = data[i]-(self.h5object.values()[i].attrs['background_constant']+self.h5object.values()[i].attrs['background_gradient']*self.h5object.values()[i].attrs['integration_time'])
+                        reference_counter = reference_counter +1
+                
             else:
-                background_counter = background_counter+1
-            if 'reference' in self.h5object.values()[i].attrs.keys():
-                if ListData == True:
-                    if len(np.array(data[i])) == len(np.array(self.h5object.values()[i].attrs['reference'])):
-                        data[i] = data[i]/(np.array(self.h5object.values()[i].attrs['reference'])- np.array(self.h5object.values()[i].attrs['background']))   
+                if 'background' in self.h5object.values()[i].attrs.keys():
+                    if ListData == True:
+                        if len(np.array(data[i])) == len(np.array(self.h5object.values()[i].attrs['reference'])):
+                            data[i] = data[i] - np.array(self.h5object.values()[i].attrs['background'])     
+                    else:
+                        if len(np.array(data)) == len(np.array(self.h5object.values()[i].attrs['background'])):
+                                data = data - np.array(self.h5object.values()[i].attrs['background'])[:,np.newaxis]       
+                        Title = Title + " background subtracted"
                 else:
-                    if len(np.array(data)) == len(np.array(self.h5object.values()[i].attrs['reference'])):
-                        data = data/(np.array(self.h5object.values()[i].attrs['reference'])[:,np.newaxis]- np.array(self.h5object.values()[i].attrs['background'])[:,np.newaxis])
-                Title = Title + " referenced"
+                    background_counter = background_counter+1
+                if 'reference' in self.h5object.values()[i].attrs.keys():
+                    if ListData == True:
+                        if len(np.array(data[i])) == len(np.array(self.h5object.values()[i].attrs['reference'])):
+                            data[i] = data[i]/(np.array(self.h5object.values()[i].attrs['reference'])- np.array(self.h5object.values()[i].attrs['background']))   
+                    else:
+                        if len(np.array(data)) == len(np.array(self.h5object.values()[i].attrs['reference'])):
+                            data = data/(np.array(self.h5object.values()[i].attrs['reference'])[:,np.newaxis]- np.array(self.h5object.values()[i].attrs['background'])[:,np.newaxis])
+                    Title = Title + " referenced"
+                else:
+                    reference_counter = reference_counter +1
+   #         print i,j,np.max(data) ,self.h5object.values()[i].attrs.keys()
+            if len(self.h5object.values()) != len(data):
+                i = int((float(len(self.h5object.values()))/len(data))*j)
+                j=j+1
             else:
-                reference_counter = reference_counter +1
-            i = i +1
+                i = i +1
             
         if ListData == False:
             data = data[0]            
@@ -454,7 +496,7 @@ class MultiSpectrum2D(DataRenderer, QtGui.QWidget):
         img = pg.ImageItem(data)
 
         ConvertionC= self.h5object.values()[0].attrs['wavelengths'][0]
-        ConvertionM = self.h5object.values()[0].attrs['wavelengths'][1] - self.h5object.values()[0].attrs['wavelengths'][0]
+        ConvertionM = (self.h5object.values()[0].attrs['wavelengths'][-1] - self.h5object.values()[0].attrs['wavelengths'][0])/len(self.h5object.values()[0].attrs['wavelengths'])
 
 
 
@@ -490,7 +532,7 @@ class MultiSpectrum2D(DataRenderer, QtGui.QWidget):
       
             if 'wavelengths' in dataset.attrs.keys():
                 if len(dataset.shape) == 2:
-                    if len(np.array(dataset)[:,0])<20:
+                    if len(np.array(dataset)[:,0])<100:
                         suitability = suitability + len(h5object)-20
                     else:
                         return -1
@@ -512,7 +554,7 @@ class MultiSpectrum2D(DataRenderer, QtGui.QWidget):
 
 add_renderer(MultiSpectrum2D)
 
-class DataRenderer2or3DPG(DataRenderer, QtGui.QWidget):
+class DataRenderer2or3DPG(DataRenderer, QtWidgets.QWidget):
     """ A renderer for 2D datasets images experessing them in a colour map using
     pyqt graph. Allowing the user to interact with the graph i.e. zooming into 
     selected region and changing the colour scheme through the use of a histogramLUT 
@@ -523,7 +565,7 @@ class DataRenderer2or3DPG(DataRenderer, QtGui.QWidget):
         super(DataRenderer2or3DPG, self).__init__(h5object, parent)
         pg.setConfigOption('background', 'w')
         pg.setConfigOption('foreground', 'k')
-        self.layout = QtGui.QVBoxLayout()
+        self.layout = QtWidgets.QVBoxLayout()
         self.setLayout(self.layout)
         
 
@@ -556,6 +598,7 @@ add_renderer(DataRenderer2or3DPG)
 
 
 class JPEGRenderer(DataRenderer2or3DPG):
+    """Renders a 1D array holding JPEG data as a 2D image."""
     def __init__(self, h5object, parent=None):
         super(JPEGRenderer, self).__init__(h5object, parent)
 
@@ -661,18 +704,42 @@ class SpectrumRenderer(FigureRendererPG):
     control/shift as used in most windows apps.
     """
     def display_data(self):
-        if isinstance(self.h5object,dict) or isinstance(self.h5object,h5py.Group):
-            pass
-        elif len(self.h5object.shape)==2:
-            h5list = {}
-            for line in range(len(self.h5object[:,0])):
-                ldata = np.array(self.h5object)[line]
-                linedata = ArrayWithAttrs(ldata,attrs = self.h5object.attrs)
-                linedata.name = self.h5object.name+"_"+str(line)
-                h5list[linedata.name] =linedata
-            self.h5object = h5list
-        elif type(self.h5object) != dict or type(self.h5object) != df.Group or type(self.h5object) != h5py.Group:
+        if type(self.h5object) == h5py.Dataset:
             self.h5object = {self.h5object.name : self.h5object}
+        #Perform averaging
+        h5list = {}
+        for h5object in self.h5object.values():  
+            if 'averaging_enabled' in h5object.attrs.keys():
+                if h5object.attrs['averaging_enabled']==True:
+                    ldata = np.average(np.array(h5object)[...],axis = 0)
+                    linedata = ArrayWithAttrs(ldata,attrs = h5object.attrs)
+                    linedata.name = h5object.name
+                    h5list[linedata.name] =linedata
+                else:
+                    h5list[h5object.name] = h5object
+            else:
+                h5list[h5object.name] = h5object
+        self.h5object = h5list
+
+
+   #     if isinstance(self.h5object,dict) or isinstance(self.h5object,h5py.Group):
+   #         pass
+        #take 2D or one datasets and combine them
+        h5list = {}
+        for h5object in self.h5object.values():
+            if len(h5object.shape)==2:
+                for line in range(len(h5object[:,0])):
+                    ldata = np.array(h5object)[line]
+                    linedata = ArrayWithAttrs(ldata,attrs = h5object.attrs)
+                    linedata.name = h5object.name+"_"+str(line)
+                    h5list[linedata.name] =linedata
+            else:
+                h5list[h5object.name] = h5object
+        self.h5object = h5list
+   #     elif type(self.h5object) != dict or type(self.h5object) != df.Group or type(self.h5object) != h5py.Group:
+  #      elif type(self.h5object) == h5py.Dataset
+ #           self.h5object = {self.h5object.name : self.h5object}
+        #Deal with averaging of spectra
         plot = self.figureWidget
         plot.addLegend(offset = (-1,1))
         icolour = 0
@@ -680,15 +747,37 @@ class SpectrumRenderer(FigureRendererPG):
             icolour = icolour+1
             Data = np.array(h5object)
             Title = "A"
-            if 'background' in h5object.attrs.keys():
-                if len(np.array(h5object)) == len(np.array(h5object.attrs['background'])):
-                    Data = Data - np.array(h5object.attrs['background'])
-                    Title = Title + " background subtracted"
-                if 'reference' in h5object.attrs.keys():
-                    if len(np.array(h5object)) == len(np.array(h5object.attrs['reference'])):
-                        Data = Data/(np.array(h5object.attrs['reference'])- np.array(h5object.attrs['background']))
-                        Title = Title + " referenced"
-    
+            if 'variable_int_enabled' in h5object.attrs.keys():
+                variable_int = h5object.attrs['variable_int_enabled']
+            else:
+                variable_int =False
+            if ((variable_int == True) and #Check for variable integration time and that the background_int and reference_int are not none
+                        ((h5object.attrs['background_int'] != h5object.attrs['integration_time'] 
+                            and (h5object.attrs['background_int'] != None))
+                        or (h5object.attrs['reference_int'] != h5object.attrs['integration_time'] 
+                            and (h5object.attrs['reference_int'] != None)))):
+                Title = Title + " variable"
+                if h5object.attrs['background_int'] != None:
+                    if h5object.attrs['reference_int'] != None:
+                        Data = ((Data-(h5object.attrs['background_constant']+h5object.attrs['background_gradient']*h5object.attrs['integration_time']))/ 
+                                        ((h5object.attrs['reference']-(h5object.attrs['background_constant']+h5object.attrs['background_gradient']*h5object.attrs['reference_int']))
+                                        *h5object.attrs['integration_time']/h5object.attrs['reference_int']))
+                        Title = Title + " referenced and background subtracted"
+                    else:
+                        Data = Data-(h5object.attrs['background_constant']+h5object.attrs['background_gradient']*h5object.attrs['integration_time'])
+                        Title = Title + " background subtracted"
+            else:
+                if 'background' in h5object.attrs.keys():
+                    if len(np.array(h5object)) == len(np.array(h5object.attrs['background'])):
+                        Data = Data - np.array(h5object.attrs['background'])
+                        Title = Title + " background subtracted"
+                    if 'reference' in h5object.attrs.keys():
+                        if len(np.array(h5object)) == len(np.array(h5object.attrs['reference'])):
+                            Data = Data/(np.array(h5object.attrs['reference'])- np.array(h5object.attrs['background']))
+                            Title = Title + " referenced"
+            if 'absorption_enabled' in h5object.attrs.keys():
+                if h5object.attrs['absorption_enabled']:
+                    Data = np.log10(1/np.array(Data))
             plot.plot(x = np.array(h5object.attrs['wavelengths']), y = np.array(Data),name = h5object.name, pen =(icolour,len(self.h5object)) )
             Title = Title + " spectrum"
                 
@@ -736,7 +825,7 @@ class SpectrumRenderer(FigureRendererPG):
 add_renderer(SpectrumRenderer)    
 
 
-class HyperSpec(DataRenderer, QtGui.QWidget):
+class HyperSpec(DataRenderer, QtWidgets.QWidget):
     """ A renderer for large hyper spectral datasets experessing them in a colour map using
     pyqt graph. Allowing the user to interact with the graph i.e. zooming into 
     selected region and changing the colour scheme through the use of a histogramLUT 
@@ -750,7 +839,7 @@ class HyperSpec(DataRenderer, QtGui.QWidget):
         super(HyperSpec, self).__init__(h5object, parent)
         pg.setConfigOption('background', 'w')
         pg.setConfigOption('foreground', 'k')
-        self.layout = QtGui.QGridLayout()
+        self.layout = QtWidgets.QGridLayout()
         self.setLayout(self.layout)
         self.display_data()
 
@@ -854,7 +943,7 @@ class HyperSpec(DataRenderer, QtGui.QWidget):
 add_renderer(HyperSpec)
 
 
-class HyperSpec_Alan(DataRenderer, QtGui.QWidget):
+class HyperSpec_Alan(DataRenderer, QtWidgets.QWidget):
     """ A Renderer similar to HyperSpec however written to match Alan's style of 
     writting hyperspec images with the x,y and wavelengths being in different dataset within one group. 
     Currently only capable of displaying Hyperspec images from two spectromters in two dimensions.
@@ -866,7 +955,7 @@ class HyperSpec_Alan(DataRenderer, QtGui.QWidget):
         super(HyperSpec_Alan, self).__init__(h5object, parent)
         pg.setConfigOption('background', 'w')
         pg.setConfigOption('foreground', 'k')
-        self.layout = QtGui.QGridLayout()
+        self.layout = QtWidgets.QGridLayout()
         self.setLayout(self.layout)
         self.display_data()
 
@@ -955,8 +1044,61 @@ class HyperSpec_Alan(DataRenderer, QtGui.QWidget):
 
 add_renderer(HyperSpec_Alan)
 
+class ScannedParticle(FigureRenderer):
+    """A renderer for individual particles from a particle scan."""
+    def display_data(self):
+        g = self.h5object
+        zscan = g['z_scan']
+        dz = g['z_scan'].attrs.get('dz', np.arange(zscan.shape[0]))
+        spectrum = np.mean(zscan, axis=0)
+        wavelengths = zscan.attrs.get("wavelengths")
+        spectrum_range = slice(None)
+        try:
+            background = zscan.attrs.get("background")
+            spectrum -= background #we'll fail here if there was no background recorded
+            reference = zscan.attrs.get("reference")
+            spectrum /= (reference - background) #if there's a reference, apply it
+            spectrum_range = reference > np.max(reference)/10
+        except:
+            pass # if reference/background are missing, ignore them.
+        import matplotlib.gridspec as gridspec
+        gs = gridspec.GridSpec(2,2)
+        ax0 = self.fig.add_subplot(gs[0,0])  # plot the overview image
+        ax0.imshow(g['camera_image'], extent=(0, 1, 0, 1), aspect="equal")
+        ax0.plot([0.5, 0.5], [0.2, 0.8], "w-") #crosshair
+        ax0.plot([0.2, 0.8], [0.5, 0.5], "w-")
+        ax0.get_xaxis().set_visible(False)
+        ax0.get_yaxis().set_visible(False)
+        ax0.set_title("Particle Image")
 
-class PumpProbeShifted(DataRenderer, QtGui.QWidget):
+        ax1 = self.fig.add_subplot(gs[0,1])  # plot the z stack
+        ax1.imshow(zscan, extent=(wavelengths.min(), wavelengths.max(), dz.min(), dz.max()), aspect="auto", cmap="cubehelix")
+        ax1.set_xlabel("Wavelength/nm")
+        ax1.set_ylabel("Z/um")
+
+        ax2 = self.fig.add_subplot(gs[1,0:2])  # plot the spectrum
+        ax2.plot(wavelengths[spectrum_range], spectrum[spectrum_range])
+        ax2.set_xlabel("Wavelength/nm")
+        ax2.set_ylabel("Z-averaged Spectrum")
+        self.fig.canvas.draw()
+
+    @classmethod
+    def is_suitable(cls, h5object):
+        # This relies on sensible exception handling: if an exception occurs here, the renderer
+        # will be deemed unsuitable (!)
+
+        # First, make sure we've got the right datasets (NB this also raises an exception if it's not a group)
+        g = h5object
+        keys = g.keys()
+        for k in ['camera_image', 'z_scan']:
+            assert k in keys, "missing dataset {}, can't be a particle...".format(k)
+        assert g['camera_image'].shape[0] > 10
+        assert g['camera_image'].shape[1] > 10
+        assert len(g['z_scan'].shape) == 2
+        return 500
+add_renderer(ScannedParticle)
+
+class PumpProbeShifted(DataRenderer, QtWidgets.QWidget):
     ''' A renderer for Pump probe experiments, leaving the data un changed'''
     """ A renderer for 1D datasets experessing them in a line graph using
     pyqt graph. Allowing the user to interact with the graph i.e. zooming into 
@@ -966,7 +1108,7 @@ class PumpProbeShifted(DataRenderer, QtGui.QWidget):
         super(PumpProbeShifted, self).__init__(h5object, parent)
         pg.setConfigOption('background', 'w')
         pg.setConfigOption('foreground', 'k')
-        self.layout = QtGui.QGridLayout()
+        self.layout = QtWidgets.QGridLayout()
         self.setLayout(self.layout)
         self.display_data()
         
@@ -1044,7 +1186,7 @@ class PumpProbeShifted(DataRenderer, QtGui.QWidget):
             
             
 add_renderer(PumpProbeShifted)
-class PumpProbeRaw(DataRenderer, QtGui.QWidget):
+class PumpProbeRaw(DataRenderer, QtWidgets.QWidget):
     ''' A renderer for Pump probe experiments, leaving the data un changed'''
     """ A renderer for 1D datasets experessing them in a line graph using
     pyqt graph. Allowing the user to interact with the graph i.e. zooming into 
@@ -1054,7 +1196,7 @@ class PumpProbeRaw(DataRenderer, QtGui.QWidget):
         super(PumpProbeRaw, self).__init__(h5object, parent)
         pg.setConfigOption('background', 'w')
         pg.setConfigOption('foreground', 'k')
-        self.layout = QtGui.QGridLayout()
+        self.layout = QtWidgets.QGridLayout()
         self.setLayout(self.layout)
         self.display_data()
         
@@ -1128,7 +1270,7 @@ class PumpProbeRaw(DataRenderer, QtGui.QWidget):
 add_renderer(PumpProbeRaw)
     
 
-class PumpProbeRawXOnly(DataRenderer, QtGui.QWidget):
+class PumpProbeRawXOnly(DataRenderer, QtWidgets.QWidget):
     ''' A renderer for Pump probe experiments, leaving the data un changed'''
     """ A renderer for 1D datasets experessing them in a line graph using
     pyqt graph. Allowing the user to interact with the graph i.e. zooming into 
@@ -1138,7 +1280,7 @@ class PumpProbeRawXOnly(DataRenderer, QtGui.QWidget):
         super(PumpProbeRawXOnly, self).__init__(h5object, parent)
         pg.setConfigOption('background', 'w')
         pg.setConfigOption('foreground', 'k')
-        self.layout = QtGui.QGridLayout()
+        self.layout = QtWidgets.QGridLayout()
         self.setLayout(self.layout)
         self.display_data()
         
@@ -1212,7 +1354,7 @@ class PumpProbeRawXOnly(DataRenderer, QtGui.QWidget):
 
 add_renderer(PumpProbeRawXOnly)
         
-class PumpProbeX_loops(DataRenderer, QtGui.QWidget):
+class PumpProbeX_loops(DataRenderer, QtWidgets.QWidget):
     ''' A renderer for Pump probe experiments, leaving the data un changed'''
     """ A renderer for 1D datasets experessing them in a line graph using
     pyqt graph. Allowing the user to interact with the graph i.e. zooming into 
@@ -1222,7 +1364,7 @@ class PumpProbeX_loops(DataRenderer, QtGui.QWidget):
         super(PumpProbeX_loops, self).__init__(h5object, parent)
         pg.setConfigOption('background', 'w')
         pg.setConfigOption('foreground', 'k')
-        self.layout = QtGui.QGridLayout()
+        self.layout = QtWidgets.QGridLayout()
         self.setLayout(self.layout)
         self.display_data()
         
@@ -1259,10 +1401,6 @@ class PumpProbeX_loops(DataRenderer, QtGui.QWidget):
 
         self.layout.addWidget(Plots[0],0,0)
 
-        
-
-        
-        
     @classmethod
     def is_suitable(cls, h5object):
         suitability = 0

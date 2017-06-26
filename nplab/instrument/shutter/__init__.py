@@ -1,7 +1,7 @@
 __author__ = 'alansanders'
 
 from nplab.instrument import Instrument
-from nplab.utils.gui import QtGui, QtCore, uic, get_qt_app
+from nplab.utils.gui import QtCore, QtGui, QtWidgets, get_qt_app, uic
 from nplab.ui.ui_tools import UiTools, QuickControlBox
 import os
 import time
@@ -144,7 +144,7 @@ class ShutterWithEmulatedRead(Shutter):
         return self._last_set_state
     
 
-class ShutterUI(QtGui.QWidget, UiTools):
+class ShutterUI(QtWidgets.QWidget, UiTools):
     def __init__(self, shutter, parent=None):
         assert isinstance(shutter, Shutter), 'instrument must be a Shutter'
         self.shutter = shutter

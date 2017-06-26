@@ -2,7 +2,7 @@ __author__ = 'alansanders'
 
 from nplab.instrument import Instrument
 from nplab.utils.gui import *
-from PyQt4 import uic
+from nplab.utils.gui import uic
 from nplab.ui.ui_tools import UiTools
 from nplab.instrument.shutter import Shutter
 
@@ -42,7 +42,7 @@ class LightSource(Instrument):
         return LightSourceUI(self)
 
 
-class LightSourceUI(QtGui.QWidget, UiTools):
+class LightSourceUI(QtWidgets.QWidget, UiTools):
     def __init__(self, light_source, parent=None):
         assert isinstance(light_source, LightSource), 'instrument must be a LightSource'
         self.light_source = light_source

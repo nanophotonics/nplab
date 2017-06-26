@@ -116,8 +116,8 @@ class ContinuousLinearScan(ScanningExperiment, TimedScan):
 
 @inherit_docstring(ContinuousLinearScan)
 class ContinuousLinearScanQt(ContinuousLinearScan, QtCore.QObject):
-    direction_updated = QtCore.pyqtSignal(int)
-    step_updated = QtCore.pyqtSignal(float)
+    direction_updated = QtCore.Signal(int)
+    step_updated = QtCore.Signal(float)
 
     @inherit_docstring(ContinuousLinearScan.__init__)
     def __init__(self):
@@ -151,7 +151,7 @@ class ContinuousLinearScanQt(ContinuousLinearScan, QtCore.QObject):
         self.step_updated.emit(self.step)
 
 
-class ContinuousLinearScanUI(QtGui.QWidget, UiTools):
+class ContinuousLinearScanUI(QtWidgets.QWidget, UiTools):
     def __init__(self, cont_linear_scan):
         assert isinstance(cont_linear_scan, ContinuousLinearScanQt), 'An instance of ContinuousLinearScanQt must be supplied'
         super(ContinuousLinearScanUI, self).__init__()

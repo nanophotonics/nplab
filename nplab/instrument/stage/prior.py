@@ -20,10 +20,14 @@ class ProScan(serial.SerialInstrument, stage.Stage):
     termination_character = "\r" #: All messages to or from the instrument end with this character.
     termination_line = "END" #: If multi-line responses are recieved, they must end with this string
 
-    def __init__(self, port=None, use_si_units = False):
+    def __init__(self, port=None, use_si_units = False, hardware_version = None):
         """
-        Set up the serial port and so on.
+        Set up the serial port and so on. 
+        If the controller is a ProScan II not a ProScan III. 
+        The hardware_version must be set to two or the Stopbit value will be incorrect
         """
+        if hardware_version == 2:
+            self.port_settings['stopbits'] = serial.STOPBITS_ONE
         serial.SerialInstrument.__init__(self, port=port) #this opens the port
         stage.Stage.__init__(self) #this opens the port
         
@@ -74,10 +78,16 @@ class ProScan(serial.SerialInstrument, stage.Stage):
         if self.use_si_units: x = np.array(x) * 1e6
         for i in range(len(x)): querystring += " %d" % int(x[i]/self.resolution)
         self.query(querystring)
+        time_0 = time.time()
         try:
             if(block):
                 while(self.is_moving()):
                     time.sleep(0.02)
+                    if (time.time()-time_0>10):
+                        print x,
+                        print self.position
+                        self.emergency_stop()
+                        self.move(x, relative, axis, block)
         except KeyboardInterrupt:
             self.emergency_stop()
 

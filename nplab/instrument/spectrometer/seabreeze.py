@@ -35,15 +35,15 @@ from ctypes import byref, c_int, c_ulong, c_double
 import numpy as np
 import threading
 from nplab.instrument import Instrument
-from nplab.utils.gui import QtCore, QtGui
+from nplab.utils.gui import QtCore, QtGui, QtWidgets, uic
 from nplab.instrument.spectrometer import Spectrometer, Spectrometers, SpectrometerControlUI, SpectrometerDisplayUI, SpectrometerUI
 import traitsui
 import os
-from PyQt4 import uic
 import h5py
 import inspect
 import datetime
 from nplab.utils.array_with_attrs import ArrayWithAttrs
+from nplab.datafile import DataFile
 
 try:
     seabreeze = ctypes.cdll.seabreeze
@@ -202,7 +202,7 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
         if self._config_file is None:
             f = inspect.getfile(self.__class__)
             d = os.path.dirname(f)
-            self._config_file = h5py.File(os.path.join(d, self.model_name+'_'+self.serial_number+'_config.h5'))
+            self._config_file = DataFile(h5py.File(os.path.join(d, self.model_name+'_'+self.serial_number+'_config.h5')))
             self._config_file.attrs['date'] = datetime.datetime.now().strftime("%H:%M %d/%m/%y")
         return self._config_file
 
@@ -376,15 +376,19 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
         else:
             return SpectrometerUI(self)
 
+    def get_control_widget(self):
+        """Convenience function """
+        return self.get_qt_ui(control_only=True)
+        
+    def get_preview_widget(self):
+        """Convenience function """
+        return self.get_qt_ui(display_only=True)
 
-oo_base, oo_widget = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'ocean_optics_controls.ui'))
-
-#class OceanOpticsControlUI(SpectrometerControlUI, oo_base, oo_widget):
-class OceanOpticsControlUI(oo_base, SpectrometerControlUI, oo_widget):
+class OceanOpticsControlUI(SpectrometerControlUI):
     def __init__(self, spectrometer):
         assert isinstance(spectrometer, OceanOpticsSpectrometer), 'spectrometer must be an OceanOpticsSpectrometer'
-        super(OceanOpticsControlUI, self).__init__(spectrometer)
-        #self.setupUi(self)
+        super(OceanOpticsControlUI, self).__init__(spectrometer,os.path.join(os.path.dirname(__file__),'ocean_optics_controls.ui'))
+
 
         self.tec_temperature.setValidator(QtGui.QDoubleValidator())
         self.tec_temperature.textChanged.connect(self.check_state)

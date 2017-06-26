@@ -11,7 +11,7 @@ from nplab.instrument import Instrument
 import time
 import threading
 from nplab.utils.gui import *
-from PyQt4 import uic
+from nplab.utils.gui import uic
 from nplab.ui.ui_tools import UiTools
 import nplab.ui
 import inspect
@@ -116,8 +116,8 @@ class Stage(Instrument):
     # TODO: stored dictionary of 'bookmarked' locations for fast travel
 
 
-class StageUI(QtGui.QWidget, UiTools):
-    update_ui = QtCore.pyqtSignal([int], [str])
+class StageUI(QtWidgets.QWidget, UiTools):
+    update_ui = QtCore.Signal([int], [str])
 
     def __init__(self, stage, parent=None, stage_step_min=1e-9, stage_step_max=1e-3, default_step=1e-6):
         assert isinstance(stage, Stage), "instrument must be a Stage"
@@ -160,30 +160,30 @@ class StageUI(QtGui.QWidget, UiTools):
         self.set_position_buttons = []
         for i, ax in enumerate(self.stage.axis_names):
             col = 4 * (i / 3)
-            position = QtGui.QLineEdit('', self)
+            position = QtWidgets.QLineEdit('', self)
             position.setReadOnly(True)
             self.positions.append(position)
-            set_position = QtGui.QLineEdit('0', self)
+            set_position = QtWidgets.QLineEdit('0', self)
             set_position.setMinimumWidth(40)
             self.set_positions.append(set_position)
-            set_position_button = QtGui.QPushButton('', self)
+            set_position_button = QtWidgets.QPushButton('', self)
             set_position_button.setIcon(QtGui.QIcon(os.path.join(path, 'go.png')))
             set_position_button.setIconSize(icon_size)
             set_position_button.resize(icon_size)
             set_position_button.clicked.connect(self.button_pressed)
             self.set_position_buttons.append(set_position_button)
-            self.info_layout.addWidget(QtGui.QLabel(str(ax), self), i % 3, col)
+            self.info_layout.addWidget(QtWidgets.QLabel(str(ax), self), i % 3, col)
             self.info_layout.addWidget(position, i % 3, col + 1)
             self.info_layout.addWidget(set_position, i % 3, col + 2)
             self.info_layout.addWidget(set_position_button, i % 3, col + 3)
 
             if i % 3 == 0:
-                group = QtGui.QGroupBox('axes {0}'.format(1 + (i / 3)), self)
-                layout = QtGui.QGridLayout()
+                group = QtWidgets.QGroupBox('axes {0}'.format(1 + (i / 3)), self)
+                layout = QtWidgets.QGridLayout()
                 layout.setSpacing(3)
                 group.setLayout(layout)
                 self.axes_layout.addWidget(group, 0, i / 3)
-                zero_button = QtGui.QPushButton('', self)
+                zero_button = QtWidgets.QPushButton('', self)
                 zero_button.setIcon(QtGui.QIcon(os.path.join(path, 'zero.png')))
                 zero_button.setIconSize(icon_size)
                 zero_button.resize(icon_size)
@@ -192,20 +192,20 @@ class StageUI(QtGui.QWidget, UiTools):
                 zero_button.clicked.connect(partial(self.zero_all_axes, axes_set))
                 layout.addWidget(zero_button, 1, 1)
 
-            step_size_select = QtGui.QComboBox(self)
+            step_size_select = QtWidgets.QComboBox(self)
             step_size_select.addItems(self.step_size_values.keys())
             step_size_select.activated[str].connect(partial(self.on_activated, i))
             step_str = engineering_format(default_step, 'm')
             step_index = self.step_size_values.keys().index(step_str)
             step_size_select.setCurrentIndex(step_index)
-            layout.addWidget(QtGui.QLabel(str(ax), self), i % 3, 5)
+            layout.addWidget(QtWidgets.QLabel(str(ax), self), i % 3, 5)
             layout.addWidget(step_size_select, i % 3, 6)
             if i % 3 == 0:
-                layout.addItem(QtGui.QSpacerItem(12, 0), 0, 4)
+                layout.addItem(QtWidgets.QSpacerItem(12, 0), 0, 4)
 
-            plus_button = QtGui.QPushButton('', self)
+            plus_button = QtWidgets.QPushButton('', self)
             plus_button.clicked.connect(partial(self.move_axis_relative, i, ax, 1))
-            minus_button = QtGui.QPushButton('', self)
+            minus_button = QtWidgets.QPushButton('', self)
             minus_button.clicked.connect(partial(self.move_axis_relative, i, ax, -1))
             if i % 3 == 0:
                 plus_button.setIcon(QtGui.QIcon(os.path.join(path, 'right.png')))
@@ -239,9 +239,9 @@ class StageUI(QtGui.QWidget, UiTools):
         # print self.sender(), index, value
         self.step_size[index] = self.step_size_values[value]
 
-    @QtCore.pyqtSlot(int)
+    @QtCore.Slot(int)
     # @QtCore.pyqtSlot('QString')
-    @QtCore.pyqtSlot(str)
+    @QtCore.Slot(str)
     def update_positions(self, axis=None):
         if axis is None:
             for axis in self.stage.axis_names:
