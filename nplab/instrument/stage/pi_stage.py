@@ -11,7 +11,7 @@ class PIStage(VisaInstrument, Stage):
     """
     Control interface for PI stages.
     """
-    def __init__(self, address='ASRL8::INSTR',timeout = 10,baud_rate = 57600):
+    def __init__(self, address='ASRL3::INSTR',timeout = 10,baud_rate = 57600):
         super(PIStage, self).__init__(address=address)
         self.instr.read_termination = '\n'
         self.instr.write_termination = '\n'
@@ -20,7 +20,7 @@ class PIStage(VisaInstrument, Stage):
         self.axis_names = ('a', 'b')
         self.positions = [0 for ch in xrange(3)]
         self._stage_id = None
-        self.startup()
+        #self.startup()
 
     def move(self, pos, axis=None, relative=False):
         if relative:
