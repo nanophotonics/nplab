@@ -8,7 +8,7 @@ import numpy as np
 import threading
 import time
 import operator
-from nplab.experiment.scanning_experiment import ParameterScanExperiment, TimedScan
+from nplab.experiment.scanning_experiment import ScanningExperiment, TimedScan
 from nplab.instrument.stage import Stage
 from functools import partial
 from nplab.utils.gui import *
@@ -16,10 +16,10 @@ from nplab.ui.ui_tools import UiTools
 from nplab import inherit_docstring
 
 
-class GridScan(ParameterScanExperiment, TimedScan):
+class GridScan(ScanningExperiment, TimedScan):
     """
     Note that the axes (x,y,z) will relate to the indices (z,y,x) as per array standards.
-    
+
     TimedScan class: provides methods to estimate the acquisition time for the grid
     The actual scanning of the grid is done in scan(), which is called via run() to
     run the grid scan in its own background thread.
@@ -31,7 +31,7 @@ class GridScan(ParameterScanExperiment, TimedScan):
         self.stage_units = 1
         self.axes = list(self.stage.axis_names) # make a list from axis_names-tuple
         self.axes_names = list(str(ax) for ax in self.stage.axis_names)
-        self.size = np.ones(len(self.axes), dtype=np.float64) 
+        self.size = np.ones(len(self.axes), dtype=np.float64)
         self.step = 0.05 *np.ones(len(self.axes), dtype=np.float64)
         self.init = np.zeros(len(self.axes), dtype=np.float64)
         self.grid = None
@@ -41,18 +41,6 @@ class GridScan(ParameterScanExperiment, TimedScan):
         self._size_unit, self._step_unit, self._init_unit = ('um', 'um', 'um')
         self.grid_shape = (0,0)
         #self.init_grid(self.axes, self.size, self.step, self.init)
-            
-    num_axes = property(fget=lambda self: self._num_axes,
-                        fset=_update_num_axes)
-    size_unit = property(fget=lambda self: self._size_unit,
-                         fset=lambda self, value: self.rescale_parameter('size', value))
-    step_unit = property(fget=lambda self: self._step_unit,
-                         fset=lambda self, value: self.rescale_parameter('step', value))
-    init_unit = property(fget=lambda self: self._init_unit,
-                         fset=lambda self, value: self.rescale_parameter('init', value))
-    si_size = property(fget=lambda self: self.size*self._unit_conversion[self.size_unit])
-    si_step = property(fget=lambda self: self.step*self._unit_conversion[self.step_unit])
-    si_init = property(fget=lambda self: self.init*self._unit_conversion[self.init_unit])
 
     def _update_num_axes(self, num_axes):
         """
@@ -82,6 +70,19 @@ class GridScan(ParameterScanExperiment, TimedScan):
             self.size = current_size[:self.num_axes]
             self.step = current_step[:self.num_axes]
             self.init = current_init[:self.num_axes]
+
+    num_axes = property(fget=lambda self: self._num_axes,
+                        fset=_update_num_axes)
+    size_unit = property(fget=lambda self: self._size_unit,
+                         fset=lambda self, value: self.rescale_parameter('size', value))
+    step_unit = property(fget=lambda self: self._step_unit,
+                         fset=lambda self, value: self.rescale_parameter('step', value))
+    init_unit = property(fget=lambda self: self._init_unit,
+                         fset=lambda self, value: self.rescale_parameter('init', value))
+    si_size = property(fget=lambda self: self.size*self._unit_conversion[self.size_unit])
+    si_step = property(fget=lambda self: self.step*self._unit_conversion[self.step_unit])
+    si_init = property(fget=lambda self: self.init*self._unit_conversion[self.init_unit])
+
 
     def rescale_parameter(self, param, value):
         """
@@ -136,7 +137,7 @@ class GridScan(ParameterScanExperiment, TimedScan):
 
     def set_stage(self, stage, axes=None):
         """
-        Sets the stage 
+        Sets the stage
 
         :param axes: sequence of axes
         """
@@ -159,7 +160,7 @@ class GridScan(ParameterScanExperiment, TimedScan):
 
     def get_position(self, axis):
         return self.stage.get_position(axis=axis) * self.stage_units
-    
+
     def outer_loop_start(self):
         """This function is called before the scan happens, for each value of the outermost variable (usually Z)"""
         pass
@@ -172,7 +173,7 @@ class GridScan(ParameterScanExperiment, TimedScan):
     def middle_loop_end(self):
         """This function is called after the scan happens, for each value of the second-outermost variable (usually Y)"""
         pass
-    
+
     def scan(self, axes, size, step, init):
         """Scans a grid, applying a function at each position."""
         self.abort_requested = False
@@ -209,7 +210,7 @@ class GridScan(ParameterScanExperiment, TimedScan):
                         if self.abort_requested:
                             break
                         self.move(grid[2][i], axes[2])
-                        self.indices[2] = i 
+                        self.indices[2] = i
                         self.scan_function(k, j, i)
                         self._step_times[k,j,i] = time.time()
                         self._index += 1

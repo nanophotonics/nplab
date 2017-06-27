@@ -1,7 +1,7 @@
 __author__ = 'alansanders, chrisgrosse'
 
 import ctypes
-from ctypes import byref, c_int
+from ctypes import byref, c_int, c_uint
 from nplab.instrument import Instrument
 from nplab.instrument.stage import Stage, StageUI
 import os
@@ -275,7 +275,7 @@ class SmaractMCS(Stage):
         for i in range(num_ch):
             self.find_references_ch(i)
 
-    ### ==================================================== ###    
+    ### ==================================================== ###
     ### Methods to read-out position and move to a specific  ###
     ### position via slip-stick motion and piezo movement    ###
     ## ===================================================== ###
@@ -384,25 +384,26 @@ class SmaractMCS(Stage):
     ### Methods to control slip-stick motion ###
     ### ==================================== ###
 
-    def slip_stick_move(self, axis, steps=1, amplitude=500, step_frquency=0.1):
- 
-        amplitude *= 1e9 #?? do we need this??
+    def slip_stick_move(self, axis, steps=1, amplitude=500, step_frequency=1):
+
+        #amplitude *= 1e9 #?? do we need this??
         if axis not in self.axis_names:
-            raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))        
+            raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
         ch = c_int(int(axis))
         steps = c_int(int(steps))
         amplitude = c_uint(int(amplitude))
         step_frequency = c_uint(int(step_frequency))
-        self.check_open_status()        
-        self.check_status(mcsc.SA_StepMove_A(self.handle, ch, steps, amplitude, step_frequency))
-        
+        self.check_open_status()
+        mcsc.SA_StepMove_A(self.handle, ch, steps, amplitude, step_frequency)
+        #self.check_status(mcsc.SA_StepMove_A(self.handle, ch, steps, amplitude, step_frequency))
+
 
     ### ===================================== ###
     ### Methods to control the piezo scanners ###
     ### ===================================== ###
 
-    ### primary methods that provide diret interface to MCS main controller   
- 
+    ### primary methods that provide diret interface to MCS main controller
+
     def get_scanner_position(self, axis=None):
         """
         Get the scanning position of the stage or of a specified axis.
@@ -417,7 +418,7 @@ class SmaractMCS(Stage):
             voltage = self.get_voltage(axis)
             position = 1e-9*10.*voltage
             return position
-    
+
     def get_scanner_level(self, axis):
         ch = c_int(int(axis))
         level = c_int()
@@ -442,7 +443,7 @@ class SmaractMCS(Stage):
         else:
             self.check_status(mcsc.SA_ScanMoveAbsolute_S(self.handle, ch, level, speed))
         self.wait_until_stopped(ch)
-                
+
     def multi_move_scanner_to_level(self, levels, axes, speeds, relative=False):
         self.check_open_status()
         levels = [c_int(int(level)) for level in levels]
@@ -455,10 +456,10 @@ class SmaractMCS(Stage):
                 self.check_status(mcsc.SA_ScanMoveAbsolute_S(self.handle, axes[i], levels[i], speeds[i]))
         for axis in axes:
             self.wait_until_stopped(axis)
-    
-    
+
+
     ### additional useful methods to control the piezo scanners
-    
+
     def move_scanner_to_level_rel(self, diff, axis, speed=4095):
         """
         Scan up to 50V
@@ -499,8 +500,8 @@ class SmaractMCS(Stage):
 
     def multi_move_scanner_to_position(self, positions, axes, speeds, relative=False):
         levels = [self.position_to_level(1e9*p) for p in positions]
-        self.multi_move_scanner_to_level(levels, axes, speeds, relative)    
-    
+        self.multi_move_scanner_to_level(levels, axes, speeds, relative)
+
     def position_to_level(self, position):
         # 1.5 um per 100 V, position can be between 0 and 1500 nm
         voltage = position / 15.
@@ -555,8 +556,8 @@ class SmaractScanStageUI(StageUI):
         self.stage.move_scanner_to_position(dir*self.step_size[index], axis=axis, speed=4095, relative=True)
         self.update_ui[int].emit(axis)
 
-    @QtCore.pyqtSlot(int)
-    @QtCore.pyqtSlot(str)
+    @QtCore.Slot(int)
+    @QtCore.Slot(str)
     def update_positions(self, axis=None):
         if axis is None:
             current_position = self.stage.scan_position
