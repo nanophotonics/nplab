@@ -66,14 +66,14 @@ class SmaractError(Exception): #?? why two different types of errors: MCSError a
 class SmaractMCS(Stage):
     """
     Smaract MCS controller interface for SmarAct stages.
-    
+
     Check SmarAct's MCS Progammer's Guide for mor information.
     """
 
     @staticmethod
     def check_status(status):
         """
-        Checks the status of the MCS controller. If not 'SA_OK' return the MCSError code 
+        Checks the status of the MCS controller. If not 'SA_OK' return the MCSError code
         """
         if (status != SA_OK.value):
             raise MCSError(status)
@@ -108,7 +108,7 @@ class SmaractMCS(Stage):
         self.voltages = [0 for ch in range(self.num_ch)]
         self.scan_positions = [0 for ch in range(self.num_ch)]
 
-    ### ====================== ###    
+    ### ====================== ###
     ### Initialization methods ###
     ### ====================== ###
 
@@ -172,7 +172,7 @@ class SmaractMCS(Stage):
         self.check_status(mcsc.SA_SetChannelProperty_S(self.handle, ch,
                                                        mcsc.SA_EPK(SA_GENERAL, SA_LOW_VIBRATION, SA_OPERATION_MODE),
                                                        values[enable]))
-                                                       
+
     def get_acceleration(self, ch):
         ch = c_int(int(ch))
         acceleration = c_int()
@@ -333,20 +333,20 @@ class SmaractMCS(Stage):
         else:
             self.check_status(mcsc.SA_GotoPositionAbsolute_S(self.handle, ch, position, c_int(0)))
         self.wait_until_stopped(ch)
-        
+
     def stop(self, axis=None):
         """
         stops any ongoing movement of the positioner
         """
         if axis is None: # stop movement of all positioner
             axes= [c_int(int(axis)) for axis in self.axis_names]
-            for ch in axes:             
-                self.check_status(mcsc.SA_Stop_S(self.handle, ch)) 
+            for ch in axes:
+                self.check_status(mcsc.SA_Stop_S(self.handle, ch))
         elif axis not in self.axis_names: # wrong positioner name
             raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
         else:  # just stop movement of specified positioner
-            ch = c_int(int(axis))    
-            self.check_status(mcsc.SA_Stop_S(self.handle, ch))   
+            ch = c_int(int(axis))
+            self.check_status(mcsc.SA_Stop_S(self.handle, ch))
 
     def set_initial_position(self, ch, position):
         """
@@ -357,7 +357,7 @@ class SmaractMCS(Stage):
         position = c_int(position)
         self.check_open_status()
         mcsc.SA_SetPosition_S(self.handle, ch, position)
-        
+
     def set_position(self, ch, position): # same as set_initial_position() !!!
         '''
         units are nm
@@ -403,19 +403,20 @@ class SmaractMCS(Stage):
     ### Method to control slip-stick motion ###
     ### ==================================== ###
 
-    def slip_stick_move(self, axis, steps=2, amplitude=1024, frequency=10):
+    def slip_stick_move(self, axis, steps=1, amplitude=1800, frequency=100):
         """
         this method perforems a burst of slip-stick coarse motion steps.
-        
+
         :param axis: chanel index of selected SmarAct stage
         :param steps: number and direction of steps, ranging between -30,000 .. 30,000
                       with 0 stopping the positioner and +/-30,000 perfomes unbounded
                       move, which is strongly riscouraged!
         :param amplitude: voltage amplitude of the pulse send to the piezo,
                           ranging from 0 .. 4,095 with 0 corresponding to 0 V
-                          and 4,095 corresponding to 100 V
+                          and 4,095 corresponding to 100 V, a value of 2047
+                          roughly leads to a 500 nm step
         :param frequency: frequency the steps are performed with in Hz, ranging
-                          from 1 .. 18,500                          
+                          from 1 .. 18,500
         """
         if axis not in self.axis_names:
             raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
@@ -424,7 +425,7 @@ class SmaractMCS(Stage):
         amplitude = c_uint(int(amplitude))
         frequency = c_uint(int(frequency))
         self.check_open_status()
-        self.check_status(mcsc.SA_StepMove_S(self.handle, ch, steps, amplitude, step_frequency))
+        self.check_status(mcsc.SA_StepMove_S(self.handle, ch, steps, amplitude, frequency))
 
 
     ### ===================================== ###
@@ -455,7 +456,7 @@ class SmaractMCS(Stage):
         mcsc.SA_GetVoltageLevel_S(self.handle, ch, byref(level))
         return level.value
 
-    def move_scanner_to_level(self, level, axis, speed=4095, relative=False):
+    def set_scanner_level(self, level, axis, speed=4095, relative=False):
         """
         Scan up to 100V
         level: 0 - 100 V, 0 - 4095
@@ -473,7 +474,7 @@ class SmaractMCS(Stage):
             self.check_status(mcsc.SA_ScanMoveAbsolute_S(self.handle, ch, level, speed))
         self.wait_until_stopped(ch)
 
-    def multi_move_scanner_to_level(self, levels, axes, speeds, relative=False):
+    def multi_set_scanner_level(self, levels, axes, speeds, relative=False):
         self.check_open_status()
         levels = [c_int(int(level)) for level in levels]
         axes = [c_int(int(axis)) for axis in axes]
@@ -489,13 +490,13 @@ class SmaractMCS(Stage):
 
     ### additional useful methods to control the piezo scanners
 
-    def move_scanner_to_level_rel(self, diff, axis, speed=4095):
+    def set_scanner_level_rel(self, diff, axis, speed=4095):
         """
         Scan up to 50V
         diff: -100 - 100 V, -4095 - 4095
         speed: 4095 s - 1 us for full 4095 voltage range, 1 - 4,095,000,000
         """
-        self.move_scanner_to_level(diff, axis, speed, relative=True)
+        self.set_scanner_level(diff, axis, speed, relative=True)
 
     def move_scanner_to_voltage(self, axis, voltage, speed, relative=False):
         """
@@ -504,7 +505,7 @@ class SmaractMCS(Stage):
         speed: 4095 s - 1 us for full 4095 voltage range, 1 - 4,095,000,000
         """
         level = self.voltage_to_level(voltage)
-        self.move_scanner_to_level(level, axis, speed, relative)
+        self.set_scanner_level(level, axis, speed, relative)
 
     def move_scanner_rel_to_voltage(self, axis, voltage_diff, speed):
         """
@@ -513,23 +514,23 @@ class SmaractMCS(Stage):
         speed: 4095 s - 1 us for full 4095 voltage range, 1 - 4,095,000,000
         """
         diff = self.voltage_to_level(voltage_diff)
-        self.move_scanner_to_level(diff, axis, speed, relative=True)
+        self.set_scanner_level(diff, axis, speed, relative=True)
 
     def move_scanner_to_position(self, position, axis, speed, relative=False):
         level = self.position_to_level(1e9*position)
-        self.move_scanner_to_level(level, axis, speed, relative)
+        self.set_scanner_level(level, axis, speed, relative)
 
     def move_scanner_rel_to_position(self, axis, step, speed):
         diff = self.position_to_level(1e9*step)
-        self.move_scanner_to_level(diff, axis, speed, relative=True)
+        self.set_scanner_level(diff, axis, speed, relative=True)
 
     def multi_move_scanner_to_voltage(self, voltages, axes, speeds, relative=False):
         levels = [self.voltage_to_level(v) for v in voltages]
-        self.multi_move_scanner_to_level(levels, axes, speeds, relative)
+        self.multi_set_scanner_level(levels, axes, speeds, relative)
 
     def multi_move_scanner_to_position(self, positions, axes, speeds, relative=False):
         levels = [self.position_to_level(1e9*p) for p in positions]
-        self.multi_move_scanner_to_level(levels, axes, speeds, relative)
+        self.multi_set_scanner_level(levels, axes, speeds, relative)
 
     def position_to_level(self, position):
         # 1.5 um per 100 V, position can be between 0 and 1500 nm

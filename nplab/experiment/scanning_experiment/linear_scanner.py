@@ -13,11 +13,11 @@ class LinearScan(ScanningExperiment, TimedScan):
 
     """
 
-    def __init__(self, start=None, stop=None, step=None):
+    def __init__(self, start=None, stop=None, step=None, repetitions=1):
         ScanningExperiment.__init__(self)
         TimedScan.__init__(self)
         self.scanner = None
-        self.start, self.stop, self.step = (start, stop, step)
+        self.start, self.stop, self.step, self.repetitions = (start, stop, step, repetitions)
         self.parameter = None
         self.status = 'inactive'
         self.abort_requested = False
@@ -37,7 +37,8 @@ class LinearScan(ScanningExperiment, TimedScan):
             return
         self.init_scan()
         self.acquisition_thread = threading.Thread(target=self.scan,
-                                                   args=(self.start, self.stop, self.step))
+                                                   args=(self.start, self.stop,
+                                                         self.step, self.repetitions))
         self.acquisition_thread.start()
 
     def init_parameter(self, start, stop, step):
@@ -59,7 +60,7 @@ class LinearScan(ScanningExperiment, TimedScan):
         """
         Scans a parameter specified in set_parameter() and applies
         scan_function() at each position.
-        
+
         :param repetitions: number of scans that should be performed; if -1,
                             the scan is repeated continously until abort_requested
                             is set to true
@@ -84,8 +85,8 @@ class LinearScan(ScanningExperiment, TimedScan):
             n=-2
         else:
             raise ValueError("{0} is not a valid repetition number. It must be >0 or -1.".format(repetitions))
-        
-        while n<repetitions:        
+
+        while n<repetitions:
             for i in pnts:
                 if self.abort_requested:
                     break
@@ -96,15 +97,18 @@ class LinearScan(ScanningExperiment, TimedScan):
             if self.abort_requested:
                 break
             if repetitions > 0:
-                n+=1    
-        self.print_scan_time(time.time() - scan_start_time)
+                n+=1
         self.acquiring.clear()
+        self.print_scan_time(time.time() - scan_start_time)
         # move back to initial positions
         #self.set_parameter(p[0])
         # finish the scan
         self.analyse_scan()
         self.close_scan()
         self.status = 'scan complete'
+
+    def analyse_scan(self):
+        self.print_scan_time(time.time() - scan_start_time)
 
 
 class LinearScanQt(LinearScan, QtCore.QObject):
@@ -116,8 +120,8 @@ class LinearScanQt(LinearScan, QtCore.QObject):
     status_updated = QtCore.Signal(str)
     timing_updated = QtCore.Signal(str)
 
-    def __init__(self, start=None, stop=None, step=None):
-        LinearScan.__init__(self, start, stop, step)
+    def __init__(self, start=None, stop=None, step=None, repetitions=1):
+        LinearScan.__init__(self, start, stop, step, repetitions)
         QtCore.QObject.__init__(self)
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.update)
