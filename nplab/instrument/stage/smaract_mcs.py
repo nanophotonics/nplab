@@ -58,22 +58,22 @@ class MCSError(Exception):
             print "MCS error {:d}".format(value)
 
 
-class SmaractError(Exception):
+class SmaractError(Exception): #?? why two different types of errors: MCSError and SmaractError??
     def __init__(self, msg):
-        print "MCS error: %s" % msg
+        print "SmarAct error: %s" % msg
 
 
 class SmaractMCS(Stage):
     """
-    Smaract MCS controller interface for Smaract stages.
+    Smaract MCS controller interface for SmarAct stages.
+    
+    Check SmarAct's MCS Progammer's Guide for mor information.
     """
 
     @staticmethod
     def check_status(status):
         """
-        Checks whether a MCS dll function was a success and if not returns the error.
-        :param status: c_int status code returned from an MCS function
-        :return:
+        Checks the status of the MCS controller. If not 'SA_OK' return the MCSError code 
         """
         if (status != SA_OK.value):
             raise MCSError(status)
@@ -99,7 +99,7 @@ class SmaractMCS(Stage):
         super(SmaractMCS, self).__init__()
         self.mcs_id = system_id
         self.handle = c_int(0)
-        # self.setup()
+        # self.setup()  #?? why setup() not used anymore?? => sets sensor power modes, low vibration modes, speeds, acceleration, ... => maybe because don't need to be set/changed for every software start??
         self.is_open = False
         self._num_ch = None
         self.axis_names = tuple(i for i in range(self.num_ch))
@@ -108,47 +108,9 @@ class SmaractMCS(Stage):
         self.voltages = [0 for ch in range(self.num_ch)]
         self.scan_positions = [0 for ch in range(self.num_ch)]
 
-    ### Main Methods ###
-
-    def get_position(self, axis=None):
-        """
-        Get the position of the stage or of a specified axis.
-        :param axis:
-        :return:
-        """
-        if axis is None:
-            return [self.get_position(axis) for axis in self.axis_names]
-        else:
-            if axis not in self.axis_names:
-                raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
-            ch = c_int(int(axis))
-            position = c_int()
-            self.check_open_status()
-            mcsc.SA_GetPosition_S(self.handle, ch, byref(position))
-            return 1e-9 * position.value
-
-    def move(self, position, axis, relative=False):
-        """
-        Move the stage to the requested position. The function should block all further
-        actions until the stage has finished moving.
-        :param position: units of m (SI units, converted to nm in the method)
-        :param axis: integer channel index
-        :param relative:
-        :return:
-        """
-        if axis not in self.axis_names:
-            raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
-        position *= 1e9 #??? why not 1e-9??
-        ch = c_int(int(axis))
-        position = c_int(int(position))
-        self.check_open_status()
-        if relative:
-            self.check_status(mcsc.SA_GotoPositionRelative_S(self.handle, ch, position, c_int(0)))
-        else:
-            self.check_status(mcsc.SA_GotoPositionAbsolute_S(self.handle, ch, position, c_int(0)))
-        self.wait_until_stopped(ch)
-
-    ### Setup Methods ###
+    ### ====================== ###    
+    ### Initialization methods ###
+    ### ====================== ###
 
     def check_open_status(self):
         if self.open_mcs():
@@ -158,7 +120,7 @@ class SmaractMCS(Stage):
 
     def open_mcs(self):
         if not self.is_open:
-            mode = ctypes.c_char_p('sync')
+            mode = ctypes.c_char_p('sync') # use synchronouse communication mode
             if self.check_status(mcsc.SA_OpenSystem(byref(self.handle), self.mcs_id, mode)):
                 self.is_open = True
                 return True
@@ -210,6 +172,60 @@ class SmaractMCS(Stage):
         self.check_status(mcsc.SA_SetChannelProperty_S(self.handle, ch,
                                                        mcsc.SA_EPK(SA_GENERAL, SA_LOW_VIBRATION, SA_OPERATION_MODE),
                                                        values[enable]))
+                                                       
+    def get_acceleration(self, ch):
+        ch = c_int(int(ch))
+        acceleration = c_int()
+        self.check_open_status()
+        mcsc.SA_GetClosedLoopMoveAcceleration_S(self.handle, ch, byref(acceleration))
+        return acceleration.value
+
+    def set_acceleration(self, ch, acceleration):
+        '''
+        units are um/s/s.
+        '''
+        ch = c_int(int(ch))
+        acceleration = c_int(int(acceleration))
+        self.check_open_status()
+        mcsc.SA_SetClosedLoopMoveAcceleration_S(self.handle, ch, acceleration)
+
+    def get_speed(self, ch):
+        ch = c_int(int(ch))
+        speed = c_int()
+        self.check_open_status()
+        self.check_status(mcsc.SA_GetClosedLoopMoveSpeed_S(self.handle, ch,
+                                                           byref(speed)))
+        return speed.value
+
+    def set_speed(self, ch, speed):
+        '''
+        units are nm/s, max is 1e8. A value of 0 deactivates speed control
+        (defaults to max.).
+        '''
+        ch = c_int(int(ch))
+        speed = c_int(int(speed))
+        self.check_open_status()
+        self.check_status(mcsc.SA_SetClosedLoopMoveSpeed_S(self.handle, ch,
+                                                           speed))
+
+    def get_frequency(self, ch):
+        ch = c_int(int(ch))
+        frequency = c_int()
+        self.check_open_status()
+        self.check_status(mcsc.SA_GetClosedLoopMaxFrequency_S(self.handle, ch,
+                                                              byref(frequency)))
+        return frequency.value
+
+    def set_frequency(self, ch, frequency):
+        '''
+        units are nm/s, min is 50, max is 18,500. A value of 0 deactivates speed control
+        (defaults to max.).
+        '''
+        ch = c_int(int(ch))
+        frequency = c_int(int(frequency))
+        self.check_open_status()
+        self.check_status(mcsc.SA_SetClosedLoopMaxFrequency_S(self.handle, ch,
+                                                              frequency))
 
     ### Calibration Methods ###
 
@@ -280,9 +296,75 @@ class SmaractMCS(Stage):
     ### position via slip-stick motion and piezo movement    ###
     ## ===================================================== ###
 
+    def get_position(self, axis=None):
+        """
+        Get the position of the stage or of a specified axis.
+        :param axis:
+        :return:
+        """
+        if axis is None:
+            return [self.get_position(axis) for axis in self.axis_names]
+        else:
+            if axis not in self.axis_names:
+                raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
+            ch = c_int(int(axis))
+            position = c_int()
+            self.check_open_status()
+            mcsc.SA_GetPosition_S(self.handle, ch, byref(position))
+            return 1e-9 * position.value
+
+    def move(self, position, axis, relative=False):
+        """
+        Move the stage to the requested position. The function should block all further
+        actions until the stage has finished moving.
+        :param position: units of m (SI units, converted to nm in the method)
+        :param axis: integer channel index
+        :param relative:
+        :return:
+        """
+        if axis not in self.axis_names:
+            raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
+        position *= 1e9 #??? why not 1e-9??
+        ch = c_int(int(axis))
+        position = c_int(int(position))
+        self.check_open_status()
+        if relative:
+            self.check_status(mcsc.SA_GotoPositionRelative_S(self.handle, ch, position, c_int(0)))
+        else:
+            self.check_status(mcsc.SA_GotoPositionAbsolute_S(self.handle, ch, position, c_int(0)))
+        self.wait_until_stopped(ch)
+        
+    def stop(self, axis=None):
+        """
+        stops any ongoing movement of the positioner
+        """
+        if axis is None: # stop movement of all positioner
+            axes= [c_int(int(axis)) for axis in self.axis_names]
+            for ch in axes:             
+                self.check_status(mcsc.SA_Stop_S(self.handle, ch)) 
+        elif axis not in self.axis_names: # wrong positioner name
+            raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
+        else:  # just stop movement of specified positioner
+            ch = c_int(int(axis))    
+            self.check_status(mcsc.SA_Stop_S(self.handle, ch))   
+
     def set_initial_position(self, ch, position):
+        """
+        defines the current position to have a specific value; the measuring
+        scale is shifted accordingly
+        """
         ch = c_int(int(ch))
         position = c_int(position)
+        self.check_open_status()
+        mcsc.SA_SetPosition_S(self.handle, ch, position)
+        
+    def set_position(self, ch, position): # same as set_initial_position() !!!
+        '''
+        units are nm
+        '''
+        position *= 1e9
+        ch = c_int(int(ch))
+        position = c_int(int(position))
         self.check_open_status()
         mcsc.SA_SetPosition_S(self.handle, ch, position)
 
@@ -298,7 +380,7 @@ class SmaractMCS(Stage):
         else:
             raise SmaractError('Unknown return value')
 
-    def multi_move(self, positions, axes, relative=False):
+    def multi_move(self, positions, axes, relative=False): #?? doesn't this method include the simple move() method??
         self.check_open_status()
 
         positions = [c_int(1e9 * p) for p in positions]
@@ -316,86 +398,33 @@ class SmaractMCS(Stage):
         steps = [1e9 * step for axis in axes]
         self.multi_move(steps, axes, relative=True)
 
-    def set_position(self, ch, position):
-        '''
-        units are nm
-        '''
-        position *= 1e9
-        ch = c_int(int(ch))
-        position = c_int(int(position))
-        self.check_open_status()
-        mcsc.SA_SetPosition_S(self.handle, ch, position)
-
-    def get_acceleration(self, ch):
-        ch = c_int(int(ch))
-        acceleration = c_int()
-        self.check_open_status()
-        mcsc.SA_GetClosedLoopMoveAcceleration_S(self.handle, ch, byref(acceleration))
-        return acceleration.value
-
-    def set_acceleration(self, ch, acceleration):
-        '''
-        units are um/s/s.
-        '''
-        ch = c_int(int(ch))
-        acceleration = c_int(int(acceleration))
-        self.check_open_status()
-        mcsc.SA_SetClosedLoopMoveAcceleration_S(self.handle, ch, acceleration)
-
-    def get_speed(self, ch):
-        ch = c_int(int(ch))
-        speed = c_int()
-        self.check_open_status()
-        self.check_status(mcsc.SA_GetClosedLoopMoveSpeed_S(self.handle, ch,
-                                                           byref(speed)))
-        return speed.value
-
-    def set_speed(self, ch, speed):
-        '''
-        units are nm/s, max is 1e8. A value of 0 deactivates speed control
-        (defaults to max.).
-        '''
-        ch = c_int(int(ch))
-        speed = c_int(int(speed))
-        self.check_open_status()
-        self.check_status(mcsc.SA_SetClosedLoopMoveSpeed_S(self.handle, ch,
-                                                           speed))
-
-    def get_frequency(self, ch):
-        ch = c_int(int(ch))
-        frequency = c_int()
-        self.check_open_status()
-        self.check_status(mcsc.SA_GetClosedLoopMaxFrequency_S(self.handle, ch,
-                                                              byref(frequency)))
-        return frequency.value
-
-    def set_frequency(self, ch, frequency):
-        '''
-        units are nm/s, min is 50, max is 18,500. A value of 0 deactivates speed control
-        (defaults to max.).
-        '''
-        ch = c_int(int(ch))
-        frequency = c_int(int(frequency))
-        self.check_open_status()
-        self.check_status(mcsc.SA_SetClosedLoopMaxFrequency_S(self.handle, ch,
-                                                              frequency))
 
     ### ==================================== ###
-    ### Methods to control slip-stick motion ###
+    ### Method to control slip-stick motion ###
     ### ==================================== ###
 
-    def slip_stick_move(self, axis, steps=1, amplitude=500, step_frequency=1):
-
-        #amplitude *= 1e9 #?? do we need this??
+    def slip_stick_move(self, axis, steps=2, amplitude=1024, frequency=10):
+        """
+        this method perforems a burst of slip-stick coarse motion steps.
+        
+        :param axis: chanel index of selected SmarAct stage
+        :param steps: number and direction of steps, ranging between -30,000 .. 30,000
+                      with 0 stopping the positioner and +/-30,000 perfomes unbounded
+                      move, which is strongly riscouraged!
+        :param amplitude: voltage amplitude of the pulse send to the piezo,
+                          ranging from 0 .. 4,095 with 0 corresponding to 0 V
+                          and 4,095 corresponding to 100 V
+        :param frequency: frequency the steps are performed with in Hz, ranging
+                          from 1 .. 18,500                          
+        """
         if axis not in self.axis_names:
             raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
         ch = c_int(int(axis))
         steps = c_int(int(steps))
         amplitude = c_uint(int(amplitude))
-        step_frequency = c_uint(int(step_frequency))
+        frequency = c_uint(int(frequency))
         self.check_open_status()
-        mcsc.SA_StepMove_A(self.handle, ch, steps, amplitude, step_frequency)
-        #self.check_status(mcsc.SA_StepMove_A(self.handle, ch, steps, amplitude, step_frequency))
+        self.check_status(mcsc.SA_StepMove_S(self.handle, ch, steps, amplitude, step_frequency))
 
 
     ### ===================================== ###

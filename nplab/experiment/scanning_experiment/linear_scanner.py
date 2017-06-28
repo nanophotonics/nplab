@@ -55,8 +55,15 @@ class LinearScan(ScanningExperiment, TimedScan):
         """Vary the independent parameter."""
         raise NotImplementedError
 
-    def scan(self, start, stop, step):
-        """Scans a parameter and applies a function at each position."""
+    def scan(self, start, stop, step, repetitions=1):
+        """
+        Scans a parameter specified in set_parameter() and applies
+        scan_function() at each position.
+        
+        :param repetitions: number of scans that should be performed; if -1,
+                            the scan is repeated continously until abort_requested
+                            is set to true
+        """
         self.abort_requested = False
         p = self.init_parameter(start, stop, step)
         self.open_scan()
@@ -71,13 +78,25 @@ class LinearScan(ScanningExperiment, TimedScan):
         self.acquiring.set()
         scan_start_time = time.time()
 
-        for i in pnts:
+        if repetitions > 0:
+            n=0
+        elif repetitions == -1:
+            n=-2
+        else:
+            raise ValueError("{0} is not a valid repetition number. It must be >0 or -1.".format(repetitions))
+        
+        while n<repetitions:        
+            for i in pnts:
+                if self.abort_requested:
+                    break
+                self.index = i
+                self.set_parameter(p[i])
+                self.scan_function(i)
+                self._index += 1
             if self.abort_requested:
                 break
-            self.index = i
-            self.set_parameter(p[i])
-            self.scan_function(i)
-            self._index += 1
+            if repetitions > 0:
+                n+=1    
         self.print_scan_time(time.time() - scan_start_time)
         self.acquiring.clear()
         # move back to initial positions
