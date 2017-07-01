@@ -23,6 +23,7 @@ class VirtualInstrument_listener(object):
         self.end_line = 'THE END\n'
         self.out_size = memory_size*100
         self.memory_identifier = memory_identifier
+        np.set_printoptions(threshold=np.inf)
     def begin_listening(self):
         """ Start the listening loop
         """
@@ -48,14 +49,14 @@ class VirtualInstrument_listener(object):
                             data_i_str = np.array_str(data_i)
                             print data_i_str
                             try:
-                                self.memory_map_out.write('data.append(np.array('+data_i_str+');')
+                                self.memory_map_out.write('data.append(np.array('+data_i_str+'));')
                             except ValueError:
                                 print 'Memory map size error, Increase the output map size'
 
                         except AttributeError:
-                            self.memory_map_out.write('data.append('+str(data_i)+')')
-                            self.memory_map_out.write(';')
-                    self.memory_map_out.write(self.end_line)
+                            self.memory_map_out.write('data.append('+str(data_i)+');')
+                    self.memory_map_out.write('\n'+self.end_line)
+                running = False
             
                     
                 
@@ -106,27 +107,36 @@ class VirtualInstrument_speaker(MessageBusInstrument):
         lines = ''
         while reading:
             new_line = self.memory_map_out.readline()
-            print new_line
+#            print new_line
             if new_line == self.end_line:
                 reading=False
             else:
                 lines+=new_line
             if new_line=='':
                 return None
-        print lines
+#        print 'lines', lines
         data = re.sub('\n','',lines)
-        print data
-        data = re.sub(r'\] \[','],[',data)
-        print data
-        data = re.sub(r'  ',',',data)
-        print data
+#        print 'data', data
+        data = re.sub(r'\]  *\[','],[',data)
+  #      data = re.sub(r'([\[\]])  *([0-9])','\1\2',data)
+#        print 'subbed_data',data
+  #      data = re.sub(r'  ',',',data)
+        data = re.sub(r'([0-9])  *([0-9])',r'\1,\2',data)
+        data = re.sub(r'([0-9])  *([0-9])',r'\1,\2',data)
+        data = re.sub(' *','',data)
+  #      data = re.sub(r'  ',',',data)
+#        print '2nd sub data',data
         try:
             exec(data)
             return data
+    #        return data
         except:
-            return lines
+            return None
+       #     return lines
     def write(self,command):
-        self.memory_map_in.write(command)
+        self.memory_map_in.seek(0)
+        self.memory_map_in.write(command+'\n')
+        self.memory_map_in.write(self.end_line)
         
 class DummyCameraStripped(DummyCamera):
     def __init__(self):
