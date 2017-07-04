@@ -29,25 +29,25 @@ class VirtualInstrument_listener(object):
         """
         running = True
         while running == True:
-            
+            time.sleep(0.2)
             self.memory_map_in.seek(0)
             command_str = self.memory_map_in.readline()
             self.memory_map_in.seek(0)
             self.memory_map_in.write(self.end_line)
             command_str = re.sub('\n','',command_str)
-            print 'command string in listening', command_str
+     #       print 'command string in listening', command_str
             if command_str != self.end_line[:-1]:
                 data = self.run_command_str(command_str)
                 if data != None:
                     self.memory_map_out.seek(0)
-                    print data 
+          #          print data 
                     if not hasattr(data,'__iter__'):
                         data = (data,)
                     self.memory_map_out.write('data = [];')
                     for data_i in data:
                         try:
                             data_i_str = np.array_str(data_i)
-                            print data_i_str
+            #                print data_i_str
                             try:
                                 self.memory_map_out.write('data.append(np.array('+data_i_str+'));')
                             except ValueError:
@@ -56,7 +56,6 @@ class VirtualInstrument_listener(object):
                         except AttributeError:
                             self.memory_map_out.write('data.append('+str(data_i)+');')
                     self.memory_map_out.write('\n'+self.end_line)
-                running = False
             
                     
                 
@@ -126,6 +125,8 @@ class VirtualInstrument_speaker(MessageBusInstrument):
         data = re.sub(' *','',data)
   #      data = re.sub(r'  ',',',data)
 #        print '2nd sub data',data
+        self.memory_map_out.seek(0)
+        self.memory_map_out.write(self.end_line+'\n')
         try:
             exec(data)
             return data
@@ -158,11 +159,12 @@ def function_builder(command_name):
         obj.memory_map_in.seek(0)
         obj.memory_map_in.write(command_name+'('+input_str+')\n')
         print 'written string',command_name+'('+input_str+')\n'
+        time.sleep(1)
         return obj.read()
     return function
         #print input_str
      
-function_dict = {}  
+#function_dict = {}  
 for command_name in DummyCamera.__dict__.keys():
     command =getattr(DummyCameraStripped,command_name)
     print command_name,inspect.ismethod(command),command
@@ -172,7 +174,7 @@ for command_name in DummyCamera.__dict__.keys():
 class virtual_dum_cam(DummyCameraStripped,VirtualInstrument_speaker):
     def __init__(self):
         VirtualInstrument_speaker.__init__(self)
-        DummyCameraStripped.__init__(self)
+   #     DummyCameraStripped.__init__(self)
        
    #     super(virtual_dum_cam).__init__()
         
@@ -184,4 +186,49 @@ class virtual_dum_cam_listener(DummyCamera,VirtualInstrument_listener):
              
     
 
+def create_speaker_class(original_class):
+ #   listener_class = getattr(nplab,full_class_name)
+    class original_class_Stripped(original_class):
+        def __init__(self):
+            original_class.__init__(self)
+#    function_dict = {}  
+    for command_name in original_class.__dict__.keys():
+        command = getattr(original_class_Stripped,command_name)
+        print command_name,inspect.ismethod(command),command
+        if inspect.ismethod(command):
+             setattr(original_class_Stripped,command_name,function_builder(command_name))
+    class virtual_speaker_class(original_class_Stripped,VirtualInstrument_speaker):
+        def __init__(self,memory_size=65536,memory_identifier='VirtualInstMemory_'+original_class.__name__):
+            VirtualInstrument_speaker.__init__(self,memory_size,memory_identifier)
+    return virtual_speaker_class()
 
+def create_listener_class(original_class):
+    class virtual_listener(original_class,VirtualInstrument_listener):
+        def __init__(self,memory_size=65536,memory_identifier='VirtualInstMemory_'+original_class.__name__):
+            print memory_identifier
+            original_class.__init__(self)      
+            VirtualInstrument_listener.__init__(self,memory_size,memory_identifier)
+            print self.memory_identifier
+            
+    return virtual_listener
+
+def create_listener_by_name(module_name,class_name):
+    exec('from '+(module_name+" import "+class_name)+' as '+ class_name)
+    exec('virtual_listener=create_listener_class('+class_name+')')
+    print type(virtual_listener)
+    return virtual_listener
+
+def setup_communication(original_class):
+    speaker_class = create_speaker_class(original_class)
+    import subprocess
+    subprocess.call(["python32",
+                     "-c",
+                     "\"exec('from nplab.instrument.virtual_instrument import inialise_listenser;inialise_listenser(\"'+original_class.__module__+'\",\"'+original_class.__name__+'\")')\""])
+    return speaker_class()
+def inialise_listenser(module_name,class_name):
+    print 'start'
+    listener_class = create_listener_by_name(module_name,class_name)
+    listener = listener_class()
+    listener.begin_listening()
+    print 'hello'
+    return 1
