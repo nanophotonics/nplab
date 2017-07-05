@@ -378,7 +378,7 @@ def current(create_if_none=True, create_if_closed=True, mode='a',working_directo
     if _current_datafile is None and create_if_none:
         print "No current data file, attempting to create..."
         if working_directory==None:
-            working_directory==os.getcwd()
+            working_directory=os.getcwd()
         try:  # we try to pop up a Qt file dialog
             import nplab.utils.gui
             from nplab.utils.gui import QtGui
