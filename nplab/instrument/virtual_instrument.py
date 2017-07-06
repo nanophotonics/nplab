@@ -29,7 +29,7 @@ class VirtualInstrument_listener(object):
         """
         running = True
         while running == True:
-            time.sleep(0.2)
+            time.sleep(0.01)
             self.memory_map_in.seek(0)
             command_str = self.memory_map_in.readline()
             self.memory_map_in.seek(0)
@@ -66,7 +66,7 @@ class VirtualInstrument_listener(object):
         #example input string = create_dataset(name='blah',data = 'blah')
         command = re.sub(r'\((.*?)\)','',input_str)
         if hasattr(self,command):
-            print 'command' , command
+   #         print 'command' , command
             function = getattr(self,command)
             input_list = re.findall(r'\((.*?)\)',input_str)[0].split(',')
             if len(input_list)>1:
@@ -77,10 +77,10 @@ class VirtualInstrument_listener(object):
                         input_dict[input_param.split('=')[0]] = input_param.split('=')[1]
                     else:
                         print 'Arguments must be named for use through VirtualInstrument'
-                print 'input_dict', input_dict
+     #           print 'input_dict', input_dict
                 return function(**input_dict)
             else:
-                print'got to run'
+     #           print'got to run'
                 return function()                
 #            return_vals = exec('self.'+input_str)
             
@@ -155,10 +155,10 @@ def function_builder(command_name):
         for input_name,input_value in kargs.iteritems():
             input_str = input_str+input_name+'='+input_value+','
         input_str = input_str[:-1]
-        print 'input str',input_str, command_name
+ #       print 'input str',input_str, command_name
         obj.memory_map_in.seek(0)
         obj.memory_map_in.write(command_name+'('+input_str+')\n')
-        print 'written string',command_name+'('+input_str+')\n'
+ #       print 'written string',command_name+'('+input_str+')\n'
         time.sleep(1)
         return obj.read()
     return function
@@ -167,7 +167,7 @@ def function_builder(command_name):
 #function_dict = {}  
 for command_name in DummyCamera.__dict__.keys():
     command =getattr(DummyCameraStripped,command_name)
-    print command_name,inspect.ismethod(command),command
+ #   print command_name,inspect.ismethod(command),command
     if inspect.ismethod(command):
          setattr(DummyCameraStripped,command_name,function_builder(command_name))
 
@@ -194,7 +194,7 @@ def create_speaker_class(original_class):
 #    function_dict = {}  
     for command_name in original_class.__dict__.keys():
         command = getattr(original_class_Stripped,command_name)
-        print command_name,inspect.ismethod(command),command
+ #       print command_name,inspect.ismethod(command),command
         if inspect.ismethod(command):
              setattr(original_class_Stripped,command_name,function_builder(command_name))
     class virtual_speaker_class(original_class_Stripped,VirtualInstrument_speaker):
@@ -205,30 +205,31 @@ def create_speaker_class(original_class):
 def create_listener_class(original_class):
     class virtual_listener(original_class,VirtualInstrument_listener):
         def __init__(self,memory_size=65536,memory_identifier='VirtualInstMemory_'+original_class.__name__):
-            print memory_identifier
+ #           print memory_identifier
             original_class.__init__(self)      
             VirtualInstrument_listener.__init__(self,memory_size,memory_identifier)
-            print self.memory_identifier
+ #           print self.memory_identifier
             
     return virtual_listener
 
 def create_listener_by_name(module_name,class_name):
     exec('from '+(module_name+" import "+class_name)+' as '+ class_name)
     exec('virtual_listener=create_listener_class('+class_name+')')
-    print type(virtual_listener)
+#    print type(virtual_listener)
     return virtual_listener
 
 def setup_communication(original_class):
     speaker_class = create_speaker_class(original_class)
     import subprocess
-    subprocess.call(["python32",
-                     "-c",
-                     "\"exec('from nplab.instrument.virtual_instrument import inialise_listenser;inialise_listenser(\"'+original_class.__module__+'\",\"'+original_class.__name__+'\")')\""])
-    return speaker_class()
+    command_str = "exec(\'import qtpy;from nplab.instrument.virtual_instrument import inialise_listenser;inialise_listenser("+r"\""+original_class.__module__+r"\",\""+original_class.__name__+r"\""+")')"
+    listner_console = subprocess.Popen(["python32",
+                 "-c",
+                 command_str])
+    return speaker_class,listner_console
 def inialise_listenser(module_name,class_name):
-    print 'start'
+ #   print 'start'
     listener_class = create_listener_by_name(module_name,class_name)
     listener = listener_class()
     listener.begin_listening()
-    print 'hello'
-    return 1
+ #   print 'hello'
+  #  return 1
