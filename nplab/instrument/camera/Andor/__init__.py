@@ -697,7 +697,8 @@ class Andor(Camera, AndorBase):
 
         self.CurImage = None
         self.background = None
-        self.x_axis = None
+        if not hasattr(self,'x_axis'):
+            self.x_axis = None
 
         if settings_filepath != None:
             self.load_params_from_file(settings_filepath)
@@ -1082,7 +1083,9 @@ class AndorUI(QtWidgets.QWidget):
         except Exception as e:
             self.Andor._logger.info(e)
         df.attributes_from_dict(data_set, attrs)
-
+        if self.Andor.backgrounded == False and 'background' in data_set.attrs.keys():
+            del data_set.attrs['background']
+        
     def update_groups_box(self):
         if self.data_file == None:
             self.data_file = df.current()
