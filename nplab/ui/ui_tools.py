@@ -187,6 +187,7 @@ class QuickControlBox(QtWidgets.QGroupBox, UiTools):
         sb.setObjectName(name + "_spinbox")
         sb.setMinimum(vmin)
         sb.setMaximum(vmax)
+        sb.setKeyboardTracking(False)
         self.layout().addRow(name.title(), sb)
     
     def add_spinbox(self, name, vmin=-2**31, vmax=2**31-1):
@@ -196,6 +197,7 @@ class QuickControlBox(QtWidgets.QGroupBox, UiTools):
         sb.setObjectName(name + "_spinbox")
         sb.setMinimum(vmin)
         sb.setMaximum(vmax)
+        sb.setKeyboardTracking(False)
         self.layout().addRow(name.title(), sb)
         
     def add_lineedit(self, name):
