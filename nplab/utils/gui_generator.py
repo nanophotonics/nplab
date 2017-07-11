@@ -205,10 +205,10 @@ class GuiGenerator(QtWidgets.QMainWindow,UiTools):
                 caption="Create new dock settings file",
                 directory=self.working_directory,
     #            options=qtgui.QFileDialog.DontConfirmOverwrite,
-            )
+            )[0]
 
 
-        np.save(self.dock_settings_path[0],dock_state)
+        np.save(self.dock_settings_path,dock_state)
 
         
     def menuLoadSettings(self):
