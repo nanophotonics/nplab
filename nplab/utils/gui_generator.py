@@ -14,12 +14,7 @@ from nplab.utils.terminal import ipython
 from nplab.ui.ui_tools import UiTools
 import nplab.datafile as df
 from nplab.utils.log import create_logger, ColoredFormatter
-#from Experiments import settings
-#from Experiments.exper_utils import GeneralScan
-#from Experiments.exper_utils.h5browser import H5Browser
-#from Experiments.exper_utils.workerthreads import *
 
-#pyqtgraph.setConfigOption('leftButtonPan', False)
 
 
 import logging
@@ -30,6 +25,10 @@ class GuiGenerator(QtWidgets.QMainWindow,UiTools):
         super(GuiGenerator, self).__init__(parent)
         self._logger = LOGGER
         self.instr_dict = instrument_dict
+        if working_directory==None:
+            self.working_directory = os.path.join(os.getcwd())
+        else:
+            self.working_directory = working_directory
         self.data_file = df.current(working_directory=working_directory)
         self.instr_dict['HDF5'] = self.data_file
         self.setDockNestingEnabled(1)
@@ -51,10 +50,7 @@ class GuiGenerator(QtWidgets.QMainWindow,UiTools):
         # defined inside them), then create a pyqtgraph.Dock for it and add its widget to the Dock. Also prints out any
         # instruments that do not have GUIs
         self._logger.info('Opening all GUIs')
-        if working_directory==None:
-            self.working_directory = os.path.join(os.getcwd())
-        else:
-            self.working_directory = working_directory
+
         for instr in self.instr_dict:
             self._open_one_gui(instr)
 

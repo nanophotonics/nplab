@@ -250,7 +250,10 @@ def control_change_handler(conversion=lambda x: x):
             The name of the property to update
         """
         def update_property(value):
-            setattr(obj, name, conversion(value))
+            try:
+                setattr(obj, name, conversion(value))
+            except AttributeError:
+                print name,'has no setter?'
         return update_property
     return handler_generator
 def property_change_handler(value_name, 

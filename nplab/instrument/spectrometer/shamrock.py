@@ -19,6 +19,7 @@ import sys
 from nplab.instrument import Instrument
 from nplab.utils.notified_property import NotifiedProperty
 from nplab.ui.ui_tools import QuickControlBox
+from nplab.utils.gui import QtWidgets
 class Shamrock(Instrument):
     def __init__(self):
         super(Shamrock,self).__init__()
@@ -52,7 +53,7 @@ class Shamrock(Instrument):
     
     def GetSerialNumber(self):
         ShamrockSN = c_char()
-        error = self.dll.ShamrockGetSerialNumber(self.current_shamrock, byref(self.ShamrockSN))
+        error = self.dll.ShamrockGetSerialNumber(self.current_shamrock, byref(ShamrockSN))
         self.verbose(ERROR_CODE[error], sys._getframe().f_code.co_name)
         return ShamrockSN
     serial_number = property(GetSerialNumber)
