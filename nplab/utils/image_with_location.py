@@ -123,11 +123,12 @@ class ImageWithLocation(ArrayWithAttrs):
         except:
             raise IndexError("Error: arguments of feature_at were invalid: {}, {}".format(centre_position, size))
         pos = centre_position
+
         # For now, rely on numpy to complain if the feature is outside the image.  May do bound-checking at some point.
         # If so, we might need to think carefully about the datum pixel of the resulting image.
         thumb = self[pos[0] - size[0]/2:pos[0] + size[0]/2, pos[1] - size[1]/2:pos[1] + size[1]/2, ...]
         if set_datum_to_centre:
-            thumb.datum_pixel = (size/2, size/2) # Make the datum point of the new image its centre.
+            thumb.datum_pixel = (size[0]/2, size[1]/2) # Make the datum point of the new image its centre.
         return thumb
 
     def downsample(self, n):

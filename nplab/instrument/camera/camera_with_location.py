@@ -170,6 +170,10 @@ class CameraWithLocation(Instrument):
         max_iterations : int (optional)
             The maximum number of moves we make to fine-tune the position.
         """
+        if (feature.datum_pixel[0]<0 or feature.datum_pixel[0]>np.shape(feature)[0] or 
+            feature.datum_pixel[1]<0 or feature.datum_pixel[1]>np.shape(feature)[1]):
+                self.log('The datum picture of the feature is outside of the image!',level = 'WARN')
+            
         if not ignore_position:
             try:
                 self.move(feature.datum_location) #initial move to where we recorded the feature was
@@ -200,14 +204,8 @@ class CameraWithLocation(Instrument):
         
     def move_to_feature_pixel(self,x,y):
         if self.pixel_to_sample_matrix is not None:
-            centre_width = 20
-            pos = [x,y]
             image = self.color_image()
-            size = np.array(image.shape[:2])
-            point = np.array(pos*size,dtype = int)
-            feature = image[point[0]-int(centre_width/2):point[0]+int(centre_width/2),point[1]-int(centre_width/2):point[1]+int(centre_width/2)]
-            print feature.shape
-            print point
+            feature = image.feature_at((x,y))
             self.last_feature = feature
             self.move_to_feature(feature)
         else:
@@ -335,13 +333,13 @@ class CameraWithLocation(Instrument):
         pixel_shifts = []
         images = []
         for i, p in enumerate([[-step, -step, 0], [-step, step, 0], [step, step, 0], [step, -step, 0]]):
-  #          print 'premove'
-    #        print starting_location,p
+          #          print 'premove'
+        #        print starting_location,p
             self.move(starting_location + np.array(p))
-    #        print 'post move'
+        #        print 'post move'
             self.settle()
             image = self.color_image()
-            pixel_shifts.append(-locate_feature_in_image(image, template) - image.datum_pixel)
+            pixel_shifts.append(-locate_feature_in_image(image, template) + image.datum_pixel)
             images.append(image)
             # NB the minus sign here: we want the position of the image we just took relative to the datum point of
             # the template, not the other way around.
