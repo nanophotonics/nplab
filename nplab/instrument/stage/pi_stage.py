@@ -1,4 +1,4 @@
-__author__ = 'alansanders'
+__author__ = 'alansanders, chrisgrosse'
 
 from nplab.instrument.visa_instrument import VisaInstrument
 from nplab.instrument.stage import Stage, StageUI
@@ -29,16 +29,35 @@ class PIStage(VisaInstrument, Stage):
             self.set_axis_param(self.move_axis, pos, axis)
 
     def move_axis(self, pos, axis, relative=False):
+        if not loop_mode(axis): # check whether servo-control mode is on
+            loop_mode(1,axis)        
         if relative:
             self.write('mvr {0}{1}'.format(axis, 1e6*pos))
         else:
             self.write('mov {0}{1}'.format(axis, 1e6*pos))
         self.wait_until_stopped(axis)
-
+        
+    def stop(self):
+        """
+        stops any ongoing movement of the positioner
+        """
+        self.write('#24')      
+        
     def get_position(self, axis=None):
         return self.get_axis_param(lambda axis: 1e-6*float(self.query('pos? {0}'.format(axis))), axis)
-    position = property(fget=get_position, doc="Current position of the stage")
-
+    position = property(fget=get_position, doc="Current position of the stage") 
+    
+    def get_piezo_voltage(self, axis=None):
+        return self.get_axis_param(lambda axis: self.query('vol? {0}'.format(axis)),axis) 
+    def set_piezo_voltage(self, voltage, axis=None):
+        if loop_mode(axis): # servo-control mode needs to be switched off to set voltage!
+            loop_mode(0,axis)
+        self.set_axis_param(lambda axis, value: self.write('svr {0}{1}'.format(axis, voltage)), axis, voltage)   
+    piezo_voltage = property(fget=get_piezo_voltage, fset=set_piezo_voltage, doc="Current voltage of the stage")
+  
+    def check_status(self):
+        return str(self.query('err?'))        
+        
     def is_moving(self, axes=None):
         """
         Returns True if any of the specified axes are in motion.
@@ -76,9 +95,22 @@ class PIStage(VisaInstrument, Stage):
     def shutdown(self):
         self.loop_mode = 0
         self.online = 0
+    
+    def get_min_voltage(self, axis=None):
+        return self.get_axis_param(lambda axis: bool(self.query('vmi? {0}'.format(axis))), axis)      
+        
+    def set_min_voltage(self, voltage, axis=None):
+        self.set_axis_param(lambda voltage, axis: self.write('vmi {0}{1}'.format(axis, voltage)), voltage, axis)
+    
+    def get_max_voltage(self, axis=None):
+        return self.get_axis_param(lambda axis: bool(self.query('vmi? {0}'.format(axis))), axis) 
+    
+    def set_max_voltage(self, voltage, axis=None):
+        self.set_axis_param(lambda voltage, axis: self.write('vma {0}{1}'.format(axis, voltage)), voltage, axis)
 
     def get_velocity(self, axis=None):
         return self.get_axis_param(lambda axis: float(self.query('vel? {0}'.format(axis))), axis)
+    
     def set_velocity(self, value, axis=None):
         self.set_axis_param(lambda value, axis: self.write('vel {0}{1}'.format(axis, value)), value, axis)
     velocity = property(get_velocity, set_velocity)
