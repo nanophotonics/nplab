@@ -22,20 +22,20 @@ import collections
 
 class Stage(Instrument):
     """A class representing motion-control stages.
-    
+
     This class primarily provides two things: the ability to find the position
-    of the stage (using `Stage.position` or `Stage.get_position(axis="a")`), 
+    of the stage (using `Stage.position` or `Stage.get_position(axis="a")`),
     and the ability to move the stage (see `Stage.move()`).
-    
+
     Subclassing Notes
     -----------------
     The minimum you need to do in order to subclass this is to override the
     `move` method and the `get_position` method.  NB you must handle the case
     where `axis` is specified and where it is not.  For `move`, `move_axis` is
-    provided, which will help emulate single-axis moves on stages that can't 
+    provided, which will help emulate single-axis moves on stages that can't
     make them natively.
-    
-    In the future, a class factory method might be available, that will 
+
+    In the future, a class factory method might be available, that will
     simplify the emulation of various features.
     """
     axis_names = ('x', 'y', 'z')
@@ -51,11 +51,11 @@ class Stage(Instrument):
 
     def move_axis(self, pos, axis, relative=False, **kwargs):
         """Move along one axis.
-        
-        This function moves only in one axis, by calling self.move with 
+
+        This function moves only in one axis, by calling self.move with
         appropriately generated values (i.e. it supplies all axes with position
         instructions, but those not moving just get the current position).
-        
+
         It's intended for use in stages that don't support single-axis moves."""
         if axis not in self.axis_names:
             raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
@@ -141,8 +141,10 @@ class StageUI(QtWidgets.QWidget, UiTools):
             self.update_ui[int].emit(axis)
 
     def move_axis_relative(self, index, axis, dir=1):
+        print axis,'move rel axis'
         self.stage.move(dir * self.step_size[index], axis=axis, relative=True)
         if type(axis) == str:
+            print axis
             #    axis = QtCore.QString(axis)
             self.update_ui[str].emit(axis)
         elif type(axis) == int:
@@ -243,6 +245,8 @@ class StageUI(QtWidgets.QWidget, UiTools):
     # @QtCore.pyqtSlot('QString')
     @QtCore.Slot(str)
     def update_positions(self, axis=None):
+        if axis not in self.stage.axis_names:
+            axis = None
         if axis is None:
             for axis in self.stage.axis_names:
                 self.update_positions(axis=axis)
