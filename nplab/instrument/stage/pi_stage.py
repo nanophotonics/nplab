@@ -97,7 +97,7 @@ class PIStage(VisaInstrument, Stage):
         txt = self.get_axis_param(lambda axis: self.float_query('vol? {0}'.format(axis)),axis)
         self.check_status()
         return txt
-    def set_voltage(self, voltage, axis=None):
+    def set_voltage(self, axis, voltage):
         if self.get_loop_mode(axis): # servo-control mode needs to be switched off to set voltage!
             self.set_loop_mode(0,axis)
         self.set_axis_param(lambda value, axis: self.write('sva {0}{1}'.format(axis, voltage)), voltage, axis)
@@ -156,6 +156,8 @@ class PIStage(VisaInstrument, Stage):
     def set_min_voltage(self, voltage, axis=None):
         self.set_axis_param(lambda voltage, axis: self.write('vmi {0}{1}'.format(axis, voltage)), voltage, axis)
         self.check_status()
+    min_voltage = property(fget=get_min_voltage)
+
 
     def get_max_voltage(self, axis=None):
         txt = self.get_axis_param(lambda axis: float(self.float_query('vma? {0}'.format(axis))), axis)
@@ -164,6 +166,7 @@ class PIStage(VisaInstrument, Stage):
     def set_max_voltage(self, voltage, axis=None):
         self.set_axis_param(lambda voltage, axis: self.write('vma {0}{1}'.format(axis, voltage)), voltage, axis)
         self.check_status()
+    max_voltage = property(fget=get_max_voltage)
 
     def get_velocity(self, axis=None):
         return self.get_axis_param(lambda axis: float(self.float_query('vel? {0}'.format(axis))), axis)
