@@ -435,7 +435,8 @@ class CameraControlWidget(QtWidgets.QWidget, UiTools):
         super(CameraControlWidget, self).__init__()
         self.camera=camera
         self.load_ui_from_file(__file__,"camera_controls_generic.ui")
-        self.auto_connect_by_name(controlled_object=self.camera, verbose=False)
+        if auto_connect==True:
+            self.auto_connect_by_name(controlled_object=self.camera, verbose=False)
         
     def snapshot(self):
         """Take a new snapshot and display it."""
