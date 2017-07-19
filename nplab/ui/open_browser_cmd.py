@@ -7,6 +7,7 @@ Created on Mon Dec 05 17:41:32 2016
 A Python file that allows you to run the databrowser from cmd line on a h5 file
 """
 
+import qtpy
 import sys
 import nplab.datafile as df
 import h5py

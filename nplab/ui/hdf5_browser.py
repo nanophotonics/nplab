@@ -21,6 +21,7 @@ from nplab.ui.data_renderers import suitable_renderers
 from nplab.ui.ui_tools import UiTools
 import functools
 from nplab.utils.array_with_attrs import DummyHDF5Group
+import nplab.datafile as df
 
 import subprocess
 import os
@@ -543,6 +544,7 @@ class HDF5Browser(QtWidgets.QWidget, UiTools):
         """Callback function to update the displayed item when the tree selection changes."""
         try:
             self.viewer.data = self.treeWidget.selected_h5item()
+            df.set_current_group(self.treeWidget.selected_h5item())
         except Exception as e:
             print e, 'That could be corrupted'
             

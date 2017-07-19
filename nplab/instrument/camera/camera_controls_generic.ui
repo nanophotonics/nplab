@@ -73,6 +73,13 @@
      </property>
      <layout class="QVBoxLayout" name="verticalLayout">
       <item>
+       <widget class="QLineEdit" name="filename_lineEdit">
+        <property name="text">
+         <string>Filename...</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QLineEdit" name="description_lineedit">
         <property name="toolTip">
          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;A short description that is saved with the data&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>

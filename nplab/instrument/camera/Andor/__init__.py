@@ -732,7 +732,12 @@ class Andor(Camera, AndorBase):
         return self.GetParameter(parameter_name)
 
     def set_camera_parameter(self, parameter_name, parameter_value):
-        self.SetParameter(parameter_name, parameter_value)
+        try:
+            self.SetParameter(parameter_name, parameter_value)
+        except Exception as e:
+            self.log('paramter' +parameter_name+' could not be set with the value '+parameter_value+
+                     'due to error '+str(e))
+            
 
     def get_qt_ui(self):
         if not hasattr(self, 'ui'):
@@ -1063,7 +1068,9 @@ class AndorUI(QtWidgets.QWidget):
         else:
             filename = 'Andor_data'
         if self.group_comboBox.currentText() == 'AndorData':
-            if 'AndorData' in self.data_file.keys():
+            if df._use_current_group == True:
+                group = df._current_group
+            elif 'AndorData' in self.data_file.keys():
                 group = self.data_file['AndorData']
             else:
                 group = self.data_file.create_group('AndorData')

@@ -1,16 +1,11 @@
-import gc
 import os
-import re
 import inspect
 import numpy as np
 
-import h5py
 import pyqtgraph
 import pyqtgraph.dockarea
-from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 
-from nplab.utils.gui import QtWidgets, QtGui, uic, QtCore
-from nplab.utils.terminal import ipython
+from nplab.utils.gui import QtWidgets, uic, QtCore
 from nplab.ui.ui_tools import UiTools
 import nplab.datafile as df
 from nplab.utils.log import create_logger, ColoredFormatter
@@ -219,7 +214,6 @@ class GuiGenerator(QtWidgets.QMainWindow,UiTools):
             self.dock_settings_path = QtWidgets.QFileDialog.getOpenFileName(
                 caption="Select Existing Data File",
                 directory=self.working_directory,
-    #            options=qtgui.QFileDialog.DontConfirmOverwrite,
             )[0]        
         try:
             loaded_state = np.load(self.dock_settings_path)

@@ -190,49 +190,51 @@ class CameraStageMapper(Instrument):
         threading.Thread(target=self.calibrate).start()
     def calibrate(self, dx=None):
         """Move the stage in a square and set the transformation matrix."""
-        with self._action_lock:
-            if dx is None or dx is False: dx=self.calibration_distance #use a sensible default
-            here = self.camera_centre_position()
-            if len(self.stage.axis_names)==2:
-                pos = [np.array([i,j]) for i in [-dx,dx] for j in [-dx,dx]]
-            elif len(self.stage.axis_names)==3:
-                pos = [np.array([i,j,0]) for i in [-dx,dx] for j in [-dx,dx]]
-            print pos, dx
-            camera_pos = []
-            self.camera.update_latest_frame() # make sure we've got a fresh image
-            initial_image = self.camera.gray_image()
-            w, h, = initial_image.shape
-            template = initial_image[w/4:3*w/4,h/4:3*h/4] #.astype(np.float)
-            #template -= cv2.blur(template, (21,21), borderType=cv2.BORDER_REPLICATE)
-    #        self.calibration_template = template
-    #        self.calibration_images = []
-            camera_live_view = self.camera.live_view
-            if self.disable_live_view:
-                self.camera.live_view = False
-            for p in pos:
-                self.move_to_sample_position(here + p)
-                self.flush_camera_and_wait()
-                current_image = self.camera.gray_image()
-                corr = cv2.matchTemplate(current_image,template,cv2.TM_SQDIFF_NORMED)
-                corr *= -1. #invert the image
-                corr += (corr.max()-corr.min())*0.1 - corr.max() ##
-                corr = cv2.threshold(corr, 0, 0, cv2.THRESH_TOZERO)[1]
-    #            peak = np.unravel_index(corr.argmin(),corr.shape)
-                peak = ndimage.measurements.center_of_mass(corr)
-                camera_pos.append(peak - (np.array(current_image.shape) - \
-                                                       np.array(template.shape))/2)
-    #            self.calibration_images.append({"image":current_image,"correlation":corr,"pos":p,"peak":peak})
-            self.move_to_sample_position(here)
-            self.flush_camera_and_wait()#otherwise we get a worrying "jump" when enabling live view...
-            self.camera.live_view = camera_live_view
-            #camera_pos now contains the displacements in pixels for each move
-            sample_displacement = np.array([-p[0:2] for p in pos]) #nb need to convert to 2D, and the stage positioning is flipped from sample coords
-            camera_displacement = np.array([self.camera_pixel_to_point(p) for p in camera_pos])
-            print "sample was moved (in um):\n",sample_displacement
-            print "the image shifted (in fractions-of-a-camera):\n",camera_displacement
-            A, res, rank, s = np.linalg.lstsq(camera_displacement, sample_displacement)
-            self.camera_to_sample = A
-
+        try:
+            with self._action_lock:
+                if dx is None or dx is False: dx=self.calibration_distance #use a sensible default
+                here = self.camera_centre_position()
+                if len(self.stage.axis_names)==2:
+                    pos = [np.array([i,j]) for i in [-dx,dx] for j in [-dx,dx]]
+                elif len(self.stage.axis_names)==3:
+                    pos = [np.array([i,j,0]) for i in [-dx,dx] for j in [-dx,dx]]
+                print pos, dx
+                camera_pos = []
+                self.camera.update_latest_frame() # make sure we've got a fresh image
+                initial_image = self.camera.gray_image()
+                w, h, = initial_image.shape
+                template = initial_image[w/4:3*w/4,h/4:3*h/4] #.astype(np.float)
+                #template -= cv2.blur(template, (21,21), borderType=cv2.BORDER_REPLICATE)
+        #        self.calibration_template = template
+        #        self.calibration_images = []
+                camera_live_view = self.camera.live_view
+                if self.disable_live_view:
+                    self.camera.live_view = False
+                for p in pos:
+                    self.move_to_sample_position(here + p)
+                    self.flush_camera_and_wait()
+                    current_image = self.camera.gray_image()
+                    corr = cv2.matchTemplate(current_image,template,cv2.TM_SQDIFF_NORMED)
+                    corr *= -1. #invert the image
+                    corr += (corr.max()-corr.min())*0.1 - corr.max() ##
+                    corr = cv2.threshold(corr, 0, 0, cv2.THRESH_TOZERO)[1]
+        #            peak = np.unravel_index(corr.argmin(),corr.shape)
+                    peak = ndimage.measurements.center_of_mass(corr)
+                    camera_pos.append(peak - (np.array(current_image.shape) - \
+                                                           np.array(template.shape))/2)
+        #            self.calibration_images.append({"image":current_image,"correlation":corr,"pos":p,"peak":peak})
+                self.move_to_sample_position(here)
+                self.flush_camera_and_wait()#otherwise we get a worrying "jump" when enabling live view...
+                self.camera.live_view = camera_live_view
+                #camera_pos now contains the displacements in pixels for each move
+                sample_displacement = np.array([-p[0:2] for p in pos]) #nb need to convert to 2D, and the stage positioning is flipped from sample coords
+                camera_displacement = np.array([self.camera_pixel_to_point(p) for p in camera_pos])
+                print "sample was moved (in um):\n",sample_displacement
+                print "the image shifted (in fractions-of-a-camera):\n",camera_displacement
+                A, res, rank, s = np.linalg.lstsq(camera_displacement, sample_displacement)
+                self.camera_to_sample = A
+        except Exception as e:
+            print 'Calibration failed because', e
     def flush_camera_and_wait(self):
         """take and discard a number of images from the camera to make sure the image is fresh
         

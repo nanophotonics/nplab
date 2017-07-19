@@ -32,7 +32,7 @@ class Spectrometer(Instrument):
                                ,'absorption_enabled')
    
     variable_int_enabled = DumbNotifiedProperty(False)
-
+    filename = DumbNotifiedProperty("spectrum")
     def __init__(self):
         super(Spectrometer, self).__init__()
         self._model_name = None
@@ -55,6 +55,7 @@ class Spectrometer(Instrument):
         self.stored_references = {}
         self.stored_backgrounds = {}
         self.reference_ID = 0
+
 
     def __del__(self):
         try:
@@ -280,7 +281,7 @@ class Spectrometer(Instrument):
             spectrum = self.read_spectrum() if spectrum is None else spectrum
         metadata = self.metadata
         metadata.update(attrs) #allow extra metadata to be passed in
-        self.create_dataset("spectrum", data=spectrum, attrs=metadata) 
+        self.create_dataset(self.filename, data=spectrum, attrs=metadata) 
         #save data in the default place (see nplab.instrument.Instrument)
     def read_averaged_spectrum(self,new_deque = False,fresh = False):
             if fresh == True:
@@ -596,7 +597,8 @@ class SpectrometerDisplayUI(QtWidgets.QWidget,UiTools):
         self._display_thread.spectra_ready.connect(self.update_display)
 
         self.period = 0.2
-
+        self.filename_lineEdit.textChanged.connect(self.filename_changed_ui)
+        register_for_property_changes(self.spectrometer,'filename',self.filename_changed)
     def button_pressed(self, *args, **kwargs):
         sender = self.sender()
         if sender is self.take_spectrum_button:
@@ -664,7 +666,10 @@ class SpectrometerDisplayUI(QtWidgets.QWidget,UiTools):
             else:
                 self.plotdata[0].setData(x = self.spectrometer.wavelengths,y= spectrum)
 
-
+    def filename_changed_ui(self):
+        self.spectrometer.filename = self.filename_lineEdit.text()
+    def filename_changed(self):
+        self.filename_lineEdit.setText(self.spectrometer.filename)
 
 class SpectrometerUI(QtWidgets.QWidget):
     """

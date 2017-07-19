@@ -305,7 +305,7 @@ auto_connectable_controls['checkbox'] = {
     }
 auto_connectable_controls['lineedit'] = {
     'qt_type': QtWidgets.QLineEdit,
-    'suffices': ["_lineedit","LineEdit"],
+    'suffices': ["_lineedit","LineEdit","_lineEdit"],
     'control_change_handler': control_change_handler(),
     'control_change_slot_name': 'textChanged',
     'property_change_handler': property_change_handler("text", str),
