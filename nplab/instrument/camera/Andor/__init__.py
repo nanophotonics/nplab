@@ -1,5 +1,5 @@
 # import nplab.utils.gui
-from nplab.utils.gui import QtWidgets, QtCore, uic
+from nplab.utils.gui import QtWidgets, QtCore, uic, QtGui
 from nplab.instrument.camera import Camera, CameraParameter
 from nplab.utils.notified_property import NotifiedProperty
 from nplab.utils.thread_utils import background_action, locked_action
@@ -827,7 +827,8 @@ class AndorUI(QtWidgets.QWidget):
         # self.checkBoxAutoExp.stateChanged.connect(self.AutoExpose)
         self.checkBoxEMMode.stateChanged.connect(self.OutputAmplifierChanged)
         self.spinBoxEMGain.valueChanged.connect(self.EMGainChanged)
-        self.lineEditExpT.returnPressed.connect(self.ExposureChanged)
+        self.lineEditExpT.editingFinished.connect(self.ExposureChanged)
+        self.lineEditExpT.setValidator(QtGui.QDoubleValidator())
         self.pushButtonDiv5.clicked.connect(lambda: self.ExposureChanged('/'))
         self.pushButtonTimes5.clicked.connect(lambda: self.ExposureChanged('x'))
 
@@ -1195,11 +1196,14 @@ class AndorUI(QtWidgets.QWidget):
             self.Andor._logger.info(
                 'The background and the current image are different shapes and therefore cannot be subtracted')
         try:
-            if self.Andor.x_axis == None or np.shape(self.Andor.CurImage)[-1] != np.shape(self.Andor.x_axis)[0]:
+            if self.Andor._current_x_axis == None or np.shape(self.Andor.CurImage)[-1] != np.shape(self.Andor._current_x_axis)[0]:
                 xvals = np.linspace(0, self.Andor.CurImage.shape[-1] - 1, self.Andor.CurImage.shape[-1])
             else:
-
-                xvals = self.Andor.x_axis
+                xvals = self.Andor._current_x_axis
+     #       else:
+    
+    ##            xvals = self.Andor.x_axis
+            
         except Exception as e:
             print e
         if len(self.Andor.CurImage.shape) == 2:
@@ -1333,6 +1337,7 @@ class CaptureThread(QtCore.QThread):
         self.wait()
 
     def run(self):
+        self.Andor._current_x_axis = self.Andor.x_axis
         if self.live:
             self.Andor.isAborted = False
             while not self.Andor.isAborted:
