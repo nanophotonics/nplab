@@ -170,6 +170,7 @@ def function_builder(command_name):
         input_str = input_str[:-1]
         obj.memory_map_in.seek(0)
         obj.memory_map_in.write(command_name+'('+input_str+')\n')
+        print command_name+'('+input_str+')\n'
         time.sleep(1)
         return obj.read()
     return function
@@ -186,7 +187,7 @@ def create_speaker_class(original_class):
     for command_name in original_class.__dict__.keys(): #replaces any method
         command = getattr(original_class_Stripped,command_name)
         if inspect.ismethod(command):
-             setattr(original_class_Stripped,command_name,function_builder(command_name))
+             setattr(original_class_Stripped,command_name,function_builder(command_name))           
              
     class virtual_speaker_class(original_class_Stripped,VirtualInstrument_speaker): # creates the new class by sublcassing the stripped class and the speaker class
         def __init__(self,memory_size=65536,memory_identifier='VirtualInstMemory_'+original_class.__name__):
@@ -238,3 +239,7 @@ def inialise_listenser(module_name,class_name):
     listener.begin_listening()
  #   print 'hello'
   #  return 1
+  
+if __name__ == '__main__':
+    from nplab.instrument.camera import DummyCamera
+    speaker_cam,listener_console_cam = setup_communication(DummyCamera)
