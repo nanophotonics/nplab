@@ -141,7 +141,6 @@ class NotifiedProperty(Property):
         super(NotifiedProperty, self).__set__(obj, value)
         if self.read_back:
             # This ensures the notified value is correct, at the expense of a read
-            print value,self.__get__(obj),self.last_value,self.single_update
             if self.single_update:
                 if value!=self.last_value:
                     self.last_value = np.round(self.__get__(obj),len(str(value).split('.')[1]))
