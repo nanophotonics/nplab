@@ -612,14 +612,17 @@ class CameraPreviewWidget(pg.GraphicsView):
         # forced floating-point for anything that isn't a u8, and assumed u8
         # wants to be displayed raw.  You can always use filter_function to
         # tweak the brightness/contrast.
+        if len(newimage.shape)==2:
+            newimage = newimage.transpose()
+        elif len(newimage.shape)==3:
+            newimage = newimage.transpose((1,0,2))
         if newimage.dtype =="uint8":
-            self.image_item.setImage(newimage.transpose((1,0,2)), autoLevels=False)
+            self.image_item.setImage(newimage, autoLevels=False)
         else:
-            self.image_item.setImage(newimage.transpose((1,0,2)).astype(float))
+            self.image_item.setImage(newimage.astype(float))
         if newimage.shape != self._image_shape:
             self._image_shape = newimage.shape
             self.set_crosshair_centre((newimage.shape[0]/2.0, newimage.shape[1]/2.0))
-            
     def update_image(self, newimage):
         """Update the image displayed in the preview widget."""
         # NB compared to previous versions, pyqtgraph flips in y, hence the
