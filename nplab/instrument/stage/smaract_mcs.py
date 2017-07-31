@@ -326,7 +326,7 @@ class SmaractMCS(Stage):
         """
         if axis not in self.axis_names:
             raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
-        position *= 1e9 #??? why not 1e-9??
+        position *= 1e9
         ch = c_int(int(axis))
         position = c_int(int(position))
         self.check_open_status()

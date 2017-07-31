@@ -355,7 +355,7 @@ class GridScanUI(QtWidgets.QWidget, UiTools):
 
         self.setWindowTitle(self.grid_scanner.__class__.__name__)
 
-        self.num_axes.setValidator(QtWidgets.QIntValidator())
+        self.num_axes.setValidator(QtGui.QIntValidator())
         self.num_axes.textChanged.connect(self.check_state)
         self.num_axes.returnPressed.connect(self.renew_axes_ui)
 
