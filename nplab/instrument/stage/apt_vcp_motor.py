@@ -585,6 +585,8 @@ class DC_APT(APT_VCP_motor):
         return counts/(self.EncCnt*self.t_constant**2*65536)*1E3
     def acc_to_counts(self,acc):
         return self.EncCnt*self.t_constant**2*65536*acc/1E3
+    def move_step(self,axis,direction):
+        self.move_rel(self.stepsize*direction,axis)
         
     counts_to = {'position' : counts_to_pos,
                  'velocity' : counts_to_vel,

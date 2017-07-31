@@ -185,6 +185,13 @@
          </spacer>
         </item>
         <item>
+         <widget class="QLineEdit" name="filename_lineEdit">
+          <property name="text">
+           <string>Filename...</string>
+          </property>
+         </widget>
+        </item>
+        <item>
          <widget class="QLineEdit" name="description">
           <property name="text">
            <string>Description...</string>

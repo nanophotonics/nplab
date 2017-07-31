@@ -1,5 +1,5 @@
 # import nplab.utils.gui
-from nplab.utils.gui import QtWidgets, QtCore, uic
+from nplab.utils.gui import QtWidgets, QtCore, uic, QtGui
 from nplab.instrument.camera import Camera, CameraParameter
 from nplab.utils.notified_property import NotifiedProperty
 from nplab.utils.thread_utils import background_action, locked_action
@@ -697,7 +697,8 @@ class Andor(Camera, AndorBase):
 
         self.CurImage = None
         self.background = None
-        self.x_axis = None
+        if not hasattr(self,'x_axis'):
+            self.x_axis = None
 
         if settings_filepath != None:
             self.load_params_from_file(settings_filepath)
@@ -731,7 +732,12 @@ class Andor(Camera, AndorBase):
         return self.GetParameter(parameter_name)
 
     def set_camera_parameter(self, parameter_name, parameter_value):
-        self.SetParameter(parameter_name, parameter_value)
+        try:
+            self.SetParameter(parameter_name, parameter_value)
+        except Exception as e:
+            self.log('paramter' +parameter_name+' could not be set with the value '+parameter_value+
+                     'due to error '+str(e))
+            
 
     def get_qt_ui(self):
         if not hasattr(self, 'ui'):
@@ -821,7 +827,8 @@ class AndorUI(QtWidgets.QWidget):
         # self.checkBoxAutoExp.stateChanged.connect(self.AutoExpose)
         self.checkBoxEMMode.stateChanged.connect(self.OutputAmplifierChanged)
         self.spinBoxEMGain.valueChanged.connect(self.EMGainChanged)
-        self.lineEditExpT.returnPressed.connect(self.ExposureChanged)
+        self.lineEditExpT.editingFinished.connect(self.ExposureChanged)
+        self.lineEditExpT.setValidator(QtGui.QDoubleValidator())
         self.pushButtonDiv5.clicked.connect(lambda: self.ExposureChanged('/'))
         self.pushButtonTimes5.clicked.connect(lambda: self.ExposureChanged('x'))
 
@@ -1062,7 +1069,9 @@ class AndorUI(QtWidgets.QWidget):
         else:
             filename = 'Andor_data'
         if self.group_comboBox.currentText() == 'AndorData':
-            if 'AndorData' in self.data_file.keys():
+            if df._use_current_group == True:
+                group = df._current_group
+            elif 'AndorData' in self.data_file.keys():
                 group = self.data_file['AndorData']
             else:
                 group = self.data_file.create_group('AndorData')
@@ -1082,7 +1091,9 @@ class AndorUI(QtWidgets.QWidget):
         except Exception as e:
             self.Andor._logger.info(e)
         df.attributes_from_dict(data_set, attrs)
-
+        if self.Andor.backgrounded == False and 'background' in data_set.attrs.keys():
+            del data_set.attrs['background']
+        
     def update_groups_box(self):
         if self.data_file == None:
             self.data_file = df.current()
@@ -1185,11 +1196,14 @@ class AndorUI(QtWidgets.QWidget):
             self.Andor._logger.info(
                 'The background and the current image are different shapes and therefore cannot be subtracted')
         try:
-            if self.Andor.x_axis == None or np.shape(self.Andor.CurImage)[-1] != np.shape(self.Andor.x_axis)[0]:
+            if self.Andor._current_x_axis == None or np.shape(self.Andor.CurImage)[-1] != np.shape(self.Andor._current_x_axis)[0]:
                 xvals = np.linspace(0, self.Andor.CurImage.shape[-1] - 1, self.Andor.CurImage.shape[-1])
             else:
-
-                xvals = self.Andor.x_axis
+                xvals = self.Andor._current_x_axis
+     #       else:
+    
+    ##            xvals = self.Andor.x_axis
+            
         except Exception as e:
             print e
         if len(self.Andor.CurImage.shape) == 2:
@@ -1323,6 +1337,7 @@ class CaptureThread(QtCore.QThread):
         self.wait()
 
     def run(self):
+        self.Andor._current_x_axis = self.Andor.x_axis
         if self.live:
             self.Andor.isAborted = False
             while not self.Andor.isAborted:

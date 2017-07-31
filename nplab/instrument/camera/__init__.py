@@ -71,6 +71,7 @@ class Camera(Instrument):
     """
     
     video_priority = DumbNotifiedProperty(False)
+    filename = DumbNotifiedProperty('snapshot_%d')
     """Set video_priority to True to avoid disturbing the video stream when
     taking images.  raw_snapshot may ignore the setting, but get_image and by
     extension rgb_image and gray_image will honour it."""
@@ -91,6 +92,7 @@ class Camera(Instrument):
         # to remove junk (e.g. if some of the parameters are meaningless)
 #        self.metadata_property_names = self.metadata_property_names + tuple(self.camera_parameter_names())
         self.metadata_property_names = tuple(self.metadata_property_names) + tuple(self.camera_parameter_names())
+ #       self.filename = 'snapshot_%d'
 
     def __del__(self):
         self.close()
@@ -207,7 +209,7 @@ class Camera(Instrument):
                 
     def save_raw_image(self, update_latest_frame=True, attrs={}):
         """Save an image to the default place in the default HDF5 file."""
-        d=self.create_dataset('snapshot_%d', 
+        d=self.create_dataset(self.filename, 
                               data=self.raw_image(
                                   bundle_metadata=True,
                                   update_latest_frame=update_latest_frame))
@@ -433,7 +435,8 @@ class CameraControlWidget(QtWidgets.QWidget, UiTools):
         super(CameraControlWidget, self).__init__()
         self.camera=camera
         self.load_ui_from_file(__file__,"camera_controls_generic.ui")
-        self.auto_connect_by_name(controlled_object=self.camera, verbose=False)
+        if auto_connect==True:
+            self.auto_connect_by_name(controlled_object=self.camera, verbose=False)
         
     def snapshot(self):
         """Take a new snapshot and display it."""
