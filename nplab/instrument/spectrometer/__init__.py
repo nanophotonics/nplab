@@ -397,6 +397,8 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
         self.spectrometer = spectrometer
 
         self.integration_time.setValidator(QtGui.QDoubleValidator())
+     #   self.integration_time.editingFinished.connect(self.check_state)
+     #   self.integration_time.editingFinished.connect(self.update_param)
         self.integration_time.textChanged.connect(self.check_state)
         self.integration_time.textChanged.connect(self.update_param)
 
@@ -424,6 +426,7 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
 #                self.background_subtracted.blockSignals(False)
         self.average_checkBox.stateChanged.connect(self.state_changed)
         self.Average_spinBox.valueChanged.connect(self.update_averages)
+        self.Average_spinBox.setRange(1,2**31-1)
 
         self.referenceID_spinBox.valueChanged.connect(self.update_references)
 
