@@ -622,7 +622,7 @@ class CameraPreviewWidget(pg.GraphicsView):
             self.image_item.setImage(newimage.astype(float))
         if newimage.shape != self._image_shape:
             self._image_shape = newimage.shape
-            self.set_crosshair_centre((newimage.shape[0]/2.0, newimage.shape[1]/2.0))
+            self.set_crosshair_centre((newimage.shape[1]/2.0, newimage.shape[0]/2.0))
     def update_image(self, newimage):
         """Update the image displayed in the preview widget."""
         # NB compared to previous versions, pyqtgraph flips in y, hence the

@@ -65,6 +65,7 @@ class CameraStageMapper(Instrument):
         self.camera.set_legacy_click_callback(self.move_to_camera_point)
         self.disable_live_view = True
         self._action_lock = threading.Lock() #prevent us from doing two things involving motion at once!
+        self.filter_images = False
     
     ############ Coordinate Conversion ##################
     def camera_pixel_to_point(self, p):
@@ -201,7 +202,10 @@ class CameraStageMapper(Instrument):
                 print pos, dx
                 camera_pos = []
                 self.camera.update_latest_frame() # make sure we've got a fresh image
-                initial_image = self.camera.gray_image()
+                if self.filter_images==True and self.camera.filter_function != None:
+                    initial_image = self.camera.filter_function(self.camera.raw_image())
+                else:
+                    initial_image = self.camera.gray_image()
                 w, h, = initial_image.shape
                 template = initial_image[w/4:3*w/4,h/4:3*h/4] #.astype(np.float)
                 #template -= cv2.blur(template, (21,21), borderType=cv2.BORDER_REPLICATE)
@@ -213,7 +217,10 @@ class CameraStageMapper(Instrument):
                 for p in pos:
                     self.move_to_sample_position(here + p)
                     self.flush_camera_and_wait()
-                    current_image = self.camera.gray_image()
+                    if self.filter_images==True and self.camera.filter_function != None:
+                        current_image = self.camera.filter_function(self.camera.raw_image())
+                    else:
+                        current_image = self.camera.gray_image()
                     corr = cv2.matchTemplate(current_image,template,cv2.TM_SQDIFF_NORMED)
                     corr *= -1. #invert the image
                     corr += (corr.max()-corr.min())*0.1 - corr.max() ##
@@ -309,9 +316,14 @@ class CameraStageMapper(Instrument):
         thrown off by very bright objects if the camera is saturated."""
         self.flush_camera_and_wait()
 #        self.camera.update_latest_frame() #take an extra frame to make sure this one is fresh
-        img = self.camera.raw_image()
+        if self.filter_images == True and self.camera.filter_function != None:
+            img = self.camera.filter_function(self.camera.raw_image())
+        else:
+            img = self.camera.raw_image()
+        if np.shape(img)[-1]==3:
+            img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
 #        return np.sum((img - cv2.blur(img,(21,21))).astype(np.single)**2)
-        return np.sum(cv2.Laplacian(cv2.cvtColor(img,cv2.COLOR_BGR2GRAY), ddepth=cv2.CV_32F)**2)
+        return np.sum(cv2.Laplacian(img, ddepth=cv2.CV_32F)**2)
 
 
     def autofocus_in_background(self):
