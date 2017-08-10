@@ -1,12 +1,12 @@
 __author__ = 'jm806'
 
 
-from nplab.instrument.shutter import Shutter
+from nplab.instrument.shutter import ShutterWithEmulatedRead
 from nplab.instrument.serial_instrument import SerialInstrument
 import serial
 
 
-class Uniblitz(Shutter, SerialInstrument):
+class Uniblitz(ShutterWithEmulatedRead, SerialInstrument):
     """
     Shutter controller from Uniblitz for BX51 white light path
     """
@@ -21,22 +21,29 @@ class Uniblitz(Shutter, SerialInstrument):
         self.termination_character = "\r"
         SerialInstrument.__init__(self, port=port)
         self.shutter_state = 0
+    
+    def set_state(self,state):
+        if state=='Open':
+            self.ser.write('@')
+        elif state == 'Closed': 
+            self.ser.write('A')
 
-    def toggle(self):
-        if self.shutter_state:
-            self.close_shutter()
-        else:
-            self.open_shutter()
+#
+#    def toggle(self):
+#        if self.shutter_state == 'Open':
+#            self.close_shutter()
+#        elif self.shutter_state == 'Closed':
+#            self.open_shutter()
 
-    def open_shutter(self):
-        # using write commands from the instrument class causes errors (at least on my computer...)
-        # Error message: 'ser' does not have an attribute 'outWaiting'
-        self.ser.write('@')
-        self.shutter_state = 1
-
-    def close_shutter(self):
-        self.ser.write('A')
-        self.shutter_state = 0
+#    def open_shutter(self):
+#        # using write commands from the instrument class causes errors (at least on my computer...)
+#        # Error message: 'ser' does not have an attribute 'outWaiting'
+#        self.ser.write('@')
+#        self.shutter_state = 1
+#
+#    def close_shutter(self):
+#        self.ser.write('A')
+#        self.shutter_state = 0
 
 
 if __name__ == '__main__':
