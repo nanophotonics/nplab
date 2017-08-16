@@ -124,10 +124,12 @@ class CameraWithLocation(Instrument):
         self.stage.move_rel(*args, **kwargs)
     def move_to_pixel(self,x,y):
         image = self.color_image()
-        print 'move coords', image.pixel_to_location([x,y])
-        print 'current position', self.stage.position
-        self.move(image.pixel_to_location([x,y]))
-        print 'post move position', self.stage.position
+        if (image.pixel_to_sample_matrix != np.identity(4)).any():
+            #check if the image has been calibrated
+            print 'move coords', image.pixel_to_location([x,y])
+            print 'current position', self.stage.position
+            self.move(image.pixel_to_location([x,y]))
+            print 'post move position', self.stage.position
 
     @property
     def datum_location(self):
@@ -266,7 +268,7 @@ class CameraWithLocation(Instrument):
         update_progress(self.af_steps+1)
         return new_position - here, positions, powers
 
-    def quick_autofocus(self, dz, full_dz = None, trigger_full_af=True, update_progress=lambda p:p, **kwargs):
+    def quick_autofocus(self, dz=0.5, full_dz = None, trigger_full_af=True, update_progress=lambda p:p, **kwargs):
         """Do a quick 3-step autofocus, performing a full autofocus if needed
 
         dz is a single number - we move this far above and below the current position."""
@@ -475,5 +477,5 @@ class AcquireGridOfImages(ExperimentWithProgressBar):
         except ExperimentStopped:
             self.log("Experiment was aborted.")
         finally:
-            self.move_to_sample_position(centre_position)  # go back to the start point
+            self.cwl.move(centre_image.datum_location)  # go back to the start point
         return dest
