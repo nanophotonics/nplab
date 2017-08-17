@@ -70,6 +70,17 @@ class NIDAQ(Instrument):
         data = self._parse_data(self.channels, data)
         return time, data
 
+    def setup_do(self):
+
+        digital_output = Task()
+        phys_channel = '{0}/port{1}/line{2}'.format(self.device_id, 0,0)
+        sample_rate=1e6
+        digital_output.CreateDOChan(phys_channel,"",DAQmx_Val_ChanForAllLines) # create channel
+        digital_output.CfgSampClkTiming("", sample_rate, DAQmx_Val_Rising, DAQmx_Val_ContSamps) # set sampling rate and continuous sample generation
+        # write samples
+        # start task
+
+
     def setup_multi_ai_cont(self, channels, sample_rate, time_interval):
         '''
         '''
@@ -165,13 +176,13 @@ class Itask(Task):
         Task.__init__(self)
         self.mode = None
 
-    
+
     def setupmulti_ao(self,device_id,channels,minoutput,maxoutput):
-        """ The command required to setup a task/channel in the analog output 
+        """ The command required to setup a task/channel in the analog output
             configuration
         Args:
             device_id (string): the name of the device setup in NI Max
-                                This should alawys be pulled straight from the 
+                                This should alawys be pulled straight from the
                                 NIDAQ object via self.device_id
             channels(list): The channel number you wish to control in list format
             minoutput (float): The minimum voltage the device will apply
@@ -183,32 +194,32 @@ class Itask(Task):
         s = ''
         for ch in channels:
             s += '{0}/ao{1},'.format(self.device_id, str(ch))
-            
+
         self.CreateAOVoltageChan(s,'',self.minoutput,self.maxoutput,DAQmx_Val_Volts, None)
         self.mode = "AO"
-    
+
     def set_ao(self,value):
-        """ the command for setting analog output voltages, input values are in 
+        """ the command for setting analog output voltages, input values are in
             Volts. self.setupmulti_ao must be called before this method can be used
-        
+
         Args:
             value(float): the new output voltage in Volts
-            
+
         Raises:
             BaseException: The task is not currently in analog output mode i.e. run self.setupmulti_ao()"""
-            
+
         if self.mode != "AO":
             raise BaseException('This Task is not setup for analog output, the current Task is setup for',self.mode)
         value = np.array(float(value))
         self.WriteAnalogF64( len(self.channels), True, 10.0, DAQmx_Val_GroupByChannel, value,  byref(int32()), None)
 
 
-        
-    
-    
-    
-     
-    
+
+
+
+
+
+
 if __name__ == '__main__':
     from pylab import plot, show
     import timeit
@@ -244,5 +255,4 @@ if __name__ == '__main__':
     daq = NIDAQ('Dev2')
     multi_read(daq)
     show()
-    
-    
+

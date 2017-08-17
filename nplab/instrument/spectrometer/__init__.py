@@ -282,7 +282,7 @@ class Spectrometer(Instrument):
             spectrum = self.read_spectrum() if spectrum is None else spectrum
         metadata = self.metadata
         metadata.update(attrs) #allow extra metadata to be passed in
-        group.create_dataset('spectrum_%d', data=spectrum, attrs=metadata)
+        group.create_dataset(self.filename, data=spectrum, attrs=metadata)
         #save data in the default place (see nplab.instrument.Instrument)
     def read_averaged_spectrum(self,new_deque = False,fresh = False):
             if fresh == True:
@@ -312,6 +312,8 @@ class Spectrometers(Instrument):
             'an invalid spectrometer was supplied'
         super(Spectrometers, self).__init__()
         self.spectrometers = spectrometer_list
+        for i,spectrometer in enumerate(self.spectrometers):
+            spectrometer.filename = 'Spectrometer_'+str(i)
         self.num_spectrometers = len(spectrometer_list)
         self._pool = ThreadPool(processes=self.num_spectrometers)
         self._wavelengths = None

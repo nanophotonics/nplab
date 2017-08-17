@@ -179,7 +179,8 @@ class LinearScanUI(QtWidgets.QWidget, UiTools):
 
         self.start.setText(str(self.linear_scanner.start))
         self.stop.setText(str(self.linear_scanner.stop))
-        self.step.setText(str(self.linear_scanner.step))
+#        self.step.setText(str(self.linear_scanner.step))
+        self.step.setText(str(self.linear_scanner.num_steps))
         self.status.setText(self.linear_scanner.status)
 
     def on_click(self):
@@ -187,12 +188,15 @@ class LinearScanUI(QtWidgets.QWidget, UiTools):
         if sender == self.start_button:
             self.linear_scanner.run(self.rate)
         elif sender == self.step_up:
-            self.linear_scanner.step *= 2
-            self.step.setText(str(self.linear_scanner.step))
+#            self.linear_scanner.step *= 2
+#            self.step.setText(str(self.linear_scanner.step))
+            self.linear_scanner.num_step +=1
+            self.num_steps.setText(str(self.linear_scanner.num_steps))
         elif sender == self.step_down:
-            self.linear_scanner.step /= 2
-            self.step.setText(str(self.linear_scanner.step))
-
+#            self.linear_scanner.step /= 2
+#            self.step.setText(str(self.linear_scanner.step))
+            self.linear_scanner.num_step -=1
+            self.num_steps.setText(str(self.linear_scanner.num_steps))
     def on_text_change(self, value):
         sender = self.sender()
         if sender.validator() is not None:
@@ -203,8 +207,10 @@ class LinearScanUI(QtWidgets.QWidget, UiTools):
             self.linear_scanner.start = float(value)
         elif sender == self.stop:
             self.linear_scanner.stop = float(value)
-        elif sender == self.step:
-            self.linear_scanner.step = float(value)
+#        elif sender == self.step:
+#            self.linear_scanner.step = float(value)
+        elif sender == self.num_steps:
+            self.linear_scanner.num_steps = float(value)
 
     def update_parameters(self):
         self.total_points.setText(str(self.linear_scanner.total_points))
@@ -236,7 +242,7 @@ if __name__ == '__main__':
     class DummyLinearScan(template):
         def __init__(self):
             super(DummyLinearScan, self).__init__()
-            self.start, self.stop, self.step = (0, 1, 0.01)
+            self.start, self.stop, self.num_step = (0, 1, 100)
             self.estimated_step_time = 0.0005
             self.fig = Figure()
             self.data = None
