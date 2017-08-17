@@ -98,7 +98,7 @@ class AndorBase:
     def __init__(self):
         if platform.system() == 'Windows':
             if platform.architecture()[0] == '32bit':
-                self.dll = windll(os.path.dirname(__file__) + "\\atmcd32d")
+                self.dll = windll.LoadLibrary(os.path.dirname(__file__) + "\\atmcd32d")
             elif platform.architecture()[0] == '64bit':
                 self.dll = CDLL(os.path.dirname(__file__) + "\\atmcd64d")
             else:

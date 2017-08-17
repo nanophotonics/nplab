@@ -67,7 +67,7 @@ object to be passed in.
 
 import functools
 from weakref import WeakSet, WeakKeyDictionary
-
+import numpy as np
 
 class Property(object):
     """Emulate PyProperty_Type() in Objects/descrobject.c
@@ -113,7 +113,7 @@ class Property(object):
 
 class NotifiedProperty(Property):
     """A property that notifies when it's changed."""        
-    def __init__(self, fget=None, fset=None, fdel=None, doc=None, read_back=False):
+    def __init__(self, fget=None, fset=None, fdel=None, doc=None, read_back=False,single_update = True):
         """Return a property that notifies when it's changed.
         
         This subclasses the pure Python implementation of properties, adding
@@ -133,13 +133,25 @@ class NotifiedProperty(Property):
         # Python garbage-collecting them.
         self.callbacks_by_object = WeakKeyDictionary()
         self.read_back = read_back
+        self.single_update = single_update
+        self.last_value=None
     
     def __set__(self, obj, value):
         """Update the property's value, and notify listeners of the change."""
         super(NotifiedProperty, self).__set__(obj, value)
         if self.read_back:
             # This ensures the notified value is correct, at the expense of a read
-            self.send_notification(obj, self.__get__(obj))
+            if self.single_update:
+                if value!=self.last_value:
+                    if len(str(value).split('.'))==1:
+                        self.last_value=self.__get__(obj)
+                    else:
+                        self.last_value = np.round(self.__get__(obj),len(str(value).split('.')[-1]))
+                    self.send_notification(obj, self.__get__(obj))
+                    
+         #   
+            else:
+                self.send_notification(obj, self.__get__(obj))
         else:
             # This is faster, but notifies the requested value, not the actual one
             self.send_notification(obj, value)

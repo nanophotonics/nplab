@@ -92,11 +92,11 @@ class Shutter(Instrument):
         
     def open_shutter(self):
         """Open the shutter."""
-        self.set_state("Open")
+        self._set_state_proxy("Open")
     
     def close_shutter(self):
         """Close the shutter."""
-        self.set_state("Closed")
+        self._set_state_proxy("Closed")
 
     # This slightly ugly hack means it's not necessary to redefine the 
     # state property every time it's subclassed.
