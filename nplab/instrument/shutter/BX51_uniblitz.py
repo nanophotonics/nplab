@@ -48,6 +48,6 @@ class Uniblitz(ShutterWithEmulatedRead, SerialInstrument):
 
 if __name__ == '__main__':
 
-    shutter = Uniblitz('COM5')
+    shutter = Uniblitz('COM7')
     shutter.show_gui()
     shutter.close()
