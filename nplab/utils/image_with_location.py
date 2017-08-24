@@ -87,8 +87,9 @@ class ImageWithLocation(ArrayWithAttrs):
         Returns : numpy.ndarray
         A 2- or 3- element position, to match the size of location passed in.
         """
-        l = np.concatenate([ensure_3d(location), [1]])
-        p = np.dot(l, np.linalg.inv(self.pixel_to_sample_matrix))
+        l = ensure_2d(location)
+        l = l[:2]-self.pixel_to_sample_matrix[3,:2]
+        p = np.dot(l, np.linalg.inv(self.pixel_to_sample_matrix[:2,:2]))
         if check_bounds:
             assert np.all(0 <= p[0:2]), "The location was not within the image"
             assert np.all(p[0:2] <= self.shape[0:2]), "The location was not within the image"
