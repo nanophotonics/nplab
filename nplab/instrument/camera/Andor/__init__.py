@@ -818,6 +818,7 @@ class AndorUI(QtWidgets.QWidget):
         self.comboBoxReadMode.activated.connect(self.ReadModeChanged)
         self.comboBoxTrigMode.activated.connect(self.TrigChanged)
         self.spinBoxNumFrames.valueChanged.connect(self.NumFramesChanged)
+        self.spinBoxNumFrames.setRange(1,1000000)
         self.spinBoxNumAccum.valueChanged.connect(self.NumAccumChanged)
         self.spinBoxNumRows.valueChanged.connect(self.NumRowsChanged)
         self.spinBoxCenterRow.valueChanged.connect(self.NumRowsChanged)
