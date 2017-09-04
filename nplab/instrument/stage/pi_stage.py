@@ -16,7 +16,7 @@ class PIStage(VisaInstrument, Stage):
         self.instr.read_termination = '\n'
         self.instr.write_termination = '\n'
         self.instr.baud_rate = 57600
-   #     self.instr.timeout = 10
+        self.instr.timeout = timeout
         self.axis_names = ('a', 'b')
         self.positions = [0 for ch in xrange(3)]
         self._stage_id = None
@@ -165,8 +165,56 @@ class PIStage(VisaInstrument, Stage):
         return StageUI(self, stage_step_min=0.1e-9, stage_step_max=100e-6)
 
 
-if __name__ == '__main__':
-    stage = PIStage()
+
+class PIStageViaArduino(PIStage):
+    """
+    This class allows to control a PI stage via an RS-323 board of an Arduino
+    Due.
+    
+    It inherets from the original PIStage and overwrites the read(), write(),
+    and quere() methods such that all commands are sent via the PyCmdMessenger/
+    CmdMessenger interface.
+    """
+    
+    def __init__(self, arduino_instance, pi_command='pi_cmd'):
+        """
+        pi_command: String of the CmdMessenger command that is used to send PI
+                    commands to the Arduino.
+        """
+        self.arduino = arduino_instance
+        self.pi_command = pi_command
+        self.read_termination = '\n'
+        self.write_termination = '\n'
+        self.axis_names = ('a', 'b', 'c') # axis order for AFM experiment
+        self.positions = [0 for ch in xrange(3)]
+        self._stage_id = None
+        
+    def write(self, msg):
+        msg+=self.write_termination
+        self.arduino.send(self.pi_command, msg)
+        
+    def query(self, msg):
+        print 'message without termination:', msg
+        msg+=self.write_termination
+        print 'message send to query:', msg
+        self.arduino.send(self.pi_command, msg)
+        # wait for answer from Arduino ..
+        t0 = time.clock()
+        while self.arduino.pi_message == None:
+            if time.clock()-t0 > 1:
+                err = "PI stage does not respond!"
+                raise ValueError(err)
+        print 'response took:', time.clock()-t0
+        answer = self.arduino.pi_message
+        self.arduino.pi_message = None
+        return answer
+    
+
+
+
+
+#if __name__ == '__main__':
+#    stage = PIStage()
   #  stage.move((5e-6, 10e-6))
 #    print stage.position
 #    print stage.get_position()
