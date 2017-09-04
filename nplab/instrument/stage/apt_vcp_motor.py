@@ -140,7 +140,7 @@ class APT_VCP_motor(APT_VCP, Stage):
     #        self._waitForReply(0x0444, 6)
             self._waitFinishMove()
 
-    def move(self, pos, axis=None, relative=False,channel_number = None):
+    def move(self, pos, axis=None, relative=False,channel_number = None,block = True):
         if channel_number is None:
             channel_number = 1
         if not hasattr(pos, '__iter__'):
@@ -170,7 +170,8 @@ class APT_VCP_motor(APT_VCP, Stage):
             pos_in_counts = int(np.round(self.convert(pos[axis_number],'position','counts'),decimals = 0))
             data = bytearray(struct.pack('<HL', self.channel_number_to_identity[channel_number], pos_in_counts))
             self.write(0x0453, data=data,destination_id=axis)
-            self._waitFinishMove()
+            if block ==True:
+                self._waitFinishMove()
             axis_number += 1
 
     '''PARAMETERS'''
@@ -585,6 +586,8 @@ class DC_APT(APT_VCP_motor):
         return counts/(self.EncCnt*self.t_constant**2*65536)*1E3
     def acc_to_counts(self,acc):
         return self.EncCnt*self.t_constant**2*65536*acc/1E3
+    def move_step(self,axis,direction):
+        self.move_rel(self.stepsize*direction,axis)
         
     counts_to = {'position' : counts_to_pos,
                  'velocity' : counts_to_vel,

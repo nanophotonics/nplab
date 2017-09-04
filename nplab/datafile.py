@@ -20,6 +20,7 @@ from collections import Sequence
 import nplab.utils.version
 import numpy as np
 from nplab.utils.show_gui_mixin import ShowGUIMixin
+from nplab.utils.array_with_attrs import DummyHDF5Group
 
 
 def attributes_from_dict(group_or_dataset, dict_of_attributes):
@@ -350,7 +351,6 @@ class DataFile(Group):
 
 _current_datafile = None
 
-
 def current(create_if_none=True, create_if_closed=True, mode='a',working_directory = None):
     """Return the current data file, creating one if it does not exist.
 
@@ -378,7 +378,7 @@ def current(create_if_none=True, create_if_closed=True, mode='a',working_directo
     if _current_datafile is None and create_if_none:
         print "No current data file, attempting to create..."
         if working_directory==None:
-            working_directory==os.getcwd()
+            working_directory=os.getcwd()
         try:  # we try to pop up a Qt file dialog
             import nplab.utils.gui
             from nplab.utils.gui import QtGui
@@ -436,6 +436,23 @@ def close_current():
             _current_datafile.close()
         except:
             print "Error closing the data file"
+_current_group = None
+_use_current_group = False
+def set_current_group(selected_object):
+    '''Grabs the currently selected group, using the parent group if a dataset is selected.
+    This only works if the datafile the group resides in is the current datafile'''
+    global _current_group
+    try:
+        if type(selected_object) == DummyHDF5Group:
+            potential_group = selected_object.values()[0]
+        else:
+            potential_group = selected_object
+        if type(selected_object) == Group or type(selected_object)==h5py.Group:
+            _current_group =  wrap_h5py_item(selected_object)
+        else:
+            _current_group = wrap_h5py_item(potential_group.parent)
+    except AttributeError:
+        _current_group = current()
 
 def open_file(set_current = True,mode = 'a'):
     """Open an existing data file"""

@@ -16,7 +16,7 @@ if 'PYCHARM_HOSTED' not in os.environ:
     import colorama
     colorama.init()
 
-print_logs_to_console = False
+
 
 def log(message, from_class=None, from_object=None,
         create_datafile=False, assert_datafile=False, level= 'info'):
@@ -45,6 +45,8 @@ def log(message, from_class=None, from_object=None,
         object and class fields.
         """
         try:
+            if hasattr(from_object,'_logger'):
+                getattr(from_object._logger,level)(message)
             df = nplab.current_datafile(create_if_none=create_datafile,
                                         create_if_closed=create_datafile)
             logs = df.require_group("nplab_log")
@@ -66,15 +68,9 @@ def log(message, from_class=None, from_object=None,
             if from_class is not None:
                 dset.attrs.create("class",np.string_(from_class))
 
-            #if nothing's gone wrong, and we've been asked to, print the message
-            if print_logs_to_console:
-                print "log: " + message
-            if hasattr(from_object,'_logger'):
-                getattr(from_object._logger,level)(message)
-
         except Exception as e:
-            print "Couldn't log to file: " + message
-            print 'due to error', e
+#            print "Couldn't log to file: " + message
+#            print 'due to error', e
             if assert_datafile:
                 print "Error saving log message - raising exception."
                 raise e

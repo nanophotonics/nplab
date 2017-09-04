@@ -100,11 +100,11 @@ class HyperspectralScan(GridScanQt, ScanningExperimentHDF5):
             self.data.create_dataset('hs_image'+suffix,
                                      shape=self.grid_shape + (spectrometer.wavelengths.size,),
                                      dtype=np.float64,
-                                     attrs={}.update(spectrometer.metadata))
+                                     attrs=spectrometer.metadata)
             self.data.create_dataset('raw_data/hs_image'+suffix,
                                      shape=self.grid_shape + (spectrometer.wavelengths.size,),
                                      dtype=np.float64,
-                                     attrs={}.update(spectrometer.metadata))
+                                     attrs=spectrometer.metadata)
         if isinstance(self.spectrometer, Spectrometer):
             self.read_spectra = self.spectrometer.read_spectrum
             self.process_spectra = self.spectrometer.process_spectrum
@@ -127,10 +127,15 @@ class HyperspectralScan(GridScanQt, ScanningExperimentHDF5):
         time.sleep(self.delay)
         raw_spectra = self.read_spectra()
         spectra = self.process_spectra(raw_spectra)
-        for i, (spectrum, raw_spectrum) in enumerate(zip(spectra, raw_spectra)):
-            suffix = self._suffix(i)
-            self.data['raw_data/hs_image'+suffix][indices] = raw_spectrum
-            self.data['hs_image'+suffix][indices] = spectrum
+        self.data['raw_data/hs_image'+self._suffix(0)][indices] = raw_spectra
+        self.data['hs_image'+self._suffix(0)][indices] = spectra
+#        for i, (spectrum, raw_spectrum) in enumerate(zip(spectra, raw_spectra)):
+#            try:
+#                suffix = self._suffix(i)
+#                self.data['raw_data/hs_image'+suffix][indices] = raw_spectrum
+#                self.data['hs_image'+suffix][indices] = spectrum
+#            except Exception as e:
+#                print e
         self.check_for_data_request(*self.set_latest_view(*indices))
 
     def set_latest_view(self, *indices):
@@ -308,7 +313,7 @@ class HyperspectralScanUI(QtWidgets.QWidget, UiTools):
         self.stage_select.activated[str].connect(self.select_stage)
 
     def init_view_wavelength_controls(self):
-        self.view_wavelength.setValidator(QtWidgets.QIntValidator())
+        self.view_wavelength.setValidator(QtGui.QIntValidator())
         # self.view_wavelength.textChanged.connect(self.check_state)
         self.view_wavelength.returnPressed.connect(self.on_view_wavelength_change)
 
@@ -322,7 +327,7 @@ class HyperspectralScanUI(QtWidgets.QWidget, UiTools):
         self.wavelength_range.setValue(self.grid_scanner.view_wavelength)
 
     def init_view_select(self):
-        self.view_layer.setValidator(QtWidgets.QIntValidator())
+        self.view_layer.setValidator(QtGui.QIntValidator())
         self.view_layer.textChanged.connect(
             self.on_view_layer_change)  # (partial(setattr, self.grid_scanner, 'view_layer'))
         self.grid_scanner.view_layer_updated.connect(self.on_gs_view_layer_change)

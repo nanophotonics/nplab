@@ -107,6 +107,8 @@ class SmaractMCS(Stage):
         self.levels = [0 for ch in range(self.num_ch)]
         self.voltages = [0 for ch in range(self.num_ch)]
         self.scan_positions = [0 for ch in range(self.num_ch)]
+        self.min_voltage = [0, 0, 0, 0, 0, 0]
+        self.max_voltage = [100, 100, 100, 100, 100, 100]
 
     ### ====================== ###
     ### Initialization methods ###
@@ -324,7 +326,7 @@ class SmaractMCS(Stage):
         """
         if axis not in self.axis_names:
             raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
-        position *= 1e9 #??? why not 1e-9??
+        position *= 1e9
         ch = c_int(int(axis))
         position = c_int(int(position))
         self.check_open_status()
@@ -498,7 +500,7 @@ class SmaractMCS(Stage):
         """
         self.set_scanner_level(diff, axis, speed, relative=True)
 
-    def move_scanner_to_voltage(self, axis, voltage, speed, relative=False):
+    def set_voltage(self, axis, voltage, speed=4095000000, relative=False):
         """
         Scan to 50V
         level: 0 - 100 V, 0 - 4095
@@ -507,7 +509,7 @@ class SmaractMCS(Stage):
         level = self.voltage_to_level(voltage)
         self.set_scanner_level(level, axis, speed, relative)
 
-    def move_scanner_rel_to_voltage(self, axis, voltage_diff, speed):
+    def set_rel_voltage(self, axis, voltage_diff, speed):
         """
         Scan to 50V
         level: 0 - 100 V, 0 - 4095
@@ -524,7 +526,7 @@ class SmaractMCS(Stage):
         diff = self.position_to_level(1e9*step)
         self.set_scanner_level(diff, axis, speed, relative=True)
 
-    def multi_move_scanner_to_voltage(self, voltages, axes, speeds, relative=False):
+    def multi_set_voltage(self, voltages, axes, speeds, relative=False):
         levels = [self.voltage_to_level(v) for v in voltages]
         self.multi_set_scanner_level(levels, axes, speeds, relative)
 

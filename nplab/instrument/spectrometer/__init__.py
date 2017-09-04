@@ -30,7 +30,7 @@ class Spectrometer(Instrument):
                                'background_int', 'reference_int','variable_int_enabled',
                                'background_gradient','background_constant', 'averaging_enabled'
                                ,'absorption_enabled')
-   
+
     variable_int_enabled = DumbNotifiedProperty(False)
 
     def __init__(self):
@@ -75,7 +75,7 @@ class Spectrometer(Instrument):
 
     def update_config(self, name, data, attrs= None):
         """Update the configuration file for this spectrometer.
-        
+
         A file is created in the nplab directory that holds configuration
         data for the spectrometer, including reference/background.  This
         function allows values to be stored in that file."""
@@ -162,10 +162,10 @@ class Spectrometer(Instrument):
 
     def read_reference(self):
         """Acquire a new spectrum and use it as a reference."""
-        self.reference = self.read_spectrum() 
+        self.reference = self.read_spectrum()
         self.reference_int = self.integration_time
         self.update_config('reference', self.reference)
-        self.update_config('reference_int',self.reference_int) 
+        self.update_config('reference_int',self.reference_int)
         self.stored_references[self.reference_ID] = {'reference' : self.reference,
                                                     'reference_int' : self.reference_int}
     def load_reference(self,ID):
@@ -211,7 +211,7 @@ class Spectrometer(Instrument):
                     new_spectrum = spectrum-(self.background_constant+self.background_gradient*self.integration_time)
                 else:
                     new_spectrum = spectrum-self.background
-                
+
         else:
             new_spectrum = spectrum
         if self.absorption_enabled == True:
@@ -220,7 +220,7 @@ class Spectrometer(Instrument):
 
     def read_processed_spectrum(self):
         """Acquire a new spectrum and return a processed (referenced/background-subtracted) spectrum.
-        
+
         NB if saving data to file, it's best to save raw spectra along with metadata - this is a
         convenience method for display purposes."""
         if self.averaging_enabled == True:
@@ -249,7 +249,7 @@ class Spectrometer(Instrument):
     def get_qt_ui(self, control_only=False,display_only = False):
         """Create a Qt interface for the spectrometer"""
         if control_only:
-            
+
             newwidget = SpectrometerControlUI(self)
             self._preview_widgets.add(newwidget)
             return newwidget
@@ -257,30 +257,32 @@ class Spectrometer(Instrument):
             return SpectrometerDisplayUI(self)
         else:
             return SpectrometerUI(self)
-            
+
     def get_control_widget(self):
         """Convenience function """
         return self.get_qt_ui(control_only=True)
-        
+
     def get_preview_widget(self):
         """Convenience function """
         return self.get_qt_ui(display_only=True)
 
-    def save_spectrum(self, spectrum=None, attrs={}, new_deque = False):
+    def save_spectrum(self, spectrum=None, attrs={}, new_deque = False,group =None):
         """Save a spectrum to the current datafile, creating if necessary.
-        
+
         If no spectrum is passed in, a new spectrum is taken.  The convention
         is to save raw spectra only, along with reference/background to allow
         later processing.
-        
+
         The attrs dictionary allows extra metadata to be saved in the HDF5 file."""
+        if group ==None:
+            group = self
         if self.averaging_enabled == True:
             spectrum = self.read_averaged_spectrum(new_deque = new_deque)
         else:
             spectrum = self.read_spectrum() if spectrum is None else spectrum
         metadata = self.metadata
         metadata.update(attrs) #allow extra metadata to be passed in
-        self.create_dataset("spectrum", data=spectrum, attrs=metadata) 
+        group.create_dataset(self.filename, data=spectrum, attrs=metadata)
         #save data in the default place (see nplab.instrument.Instrument)
     def read_averaged_spectrum(self,new_deque = False,fresh = False):
             if fresh == True:
@@ -290,17 +292,18 @@ class Spectrometer(Instrument):
             while len(self.spectra_deque) < self.spectra_deque.maxlen:
                 self.spectra_deque.append(self.read_spectrum())
             return self.spectra_deque
-        
+
+
     def save_reference_to_file(self):
         pass
 
     def load_reference_from_file(self):
         pass
-    
+
 #    def read_averaged_spectrum(self):
  #       averaged_data = []
   #      for spectrum_num in range(self.number_averages):
-            
+
 
 
 class Spectrometers(Instrument):
@@ -309,6 +312,8 @@ class Spectrometers(Instrument):
             'an invalid spectrometer was supplied'
         super(Spectrometers, self).__init__()
         self.spectrometers = spectrometer_list
+        for i,spectrometer in enumerate(self.spectrometers):
+            spectrometer.filename = 'Spectrometer_'+str(i)
         self.num_spectrometers = len(spectrometer_list)
         self._pool = ThreadPool(processes=self.num_spectrometers)
         self._wavelengths = None
@@ -358,12 +363,22 @@ class Spectrometers(Instrument):
         If no spectra are given, new ones are acquired - NB you should pass
         raw spectra in - metadata will be saved along with the spectra.
         """
-        spectra = self.read_spectra() if spectra is None else spectra
-        metadata_list = self.get_metadata_list()
+  #      spectra = self.read_spectra() if spectra is None else spectra
+  #      metadata_list = self.get_metadata_list()
         g = self.create_data_group('spectra',attrs=attrs) # create a uniquely numbered group in the default place
-        for spectrum,metadata in zip(spectra,metadata_list):
-            g.create_dataset('spectrum_%d',data=spectrum,attrs=metadata)
-            
+        self._pool.map(lambda s: s.save_spectrum(new_deque = True,group = g), self.spectrometers)
+# #       for spectrum,metadata in zip(spectra,metadata_list):
+# #           g.create_dataset('spectrum_%d',data=spectrum,attrs=metadata)
+#        save_spectrum
+#        for spectrometer in self.spectrometers:
+#            if spectrometer.averaging_enabled == True:
+#                spectrum = spectrometer.read_averaged_spectrum(new_deque = True)
+#            else:
+#                spectrum = spectrometer.read_spectrum() if spectra is None else spectra
+#            metadata = spectrometer.metadata
+#            metadata.update(attrs) #allow extra metadata to be passed in
+#            g.create_dataset('spectrum_%d', data=spectrum, attrs=metadata)
+
     def get_metadata(self):
         """
         Returns a list of dictionaries containing relevant spectrometer properties
@@ -376,14 +391,16 @@ class Spectrometers(Instrument):
 
 
 class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
-    
+
     def __init__(self, spectrometer, ui_file =os.path.join(os.path.dirname(__file__),'spectrometer_controls.ui'),  parent=None):
         assert isinstance(spectrometer, Spectrometer), "instrument must be a Spectrometer"
         super(SpectrometerControlUI, self).__init__()
         uic.loadUi(ui_file, self)
         self.spectrometer = spectrometer
-        
+
         self.integration_time.setValidator(QtGui.QDoubleValidator())
+     #   self.integration_time.editingFinished.connect(self.check_state)
+     #   self.integration_time.editingFinished.connect(self.update_param)
         self.integration_time.textChanged.connect(self.check_state)
         self.integration_time.textChanged.connect(self.update_param)
 
@@ -395,23 +412,24 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
 
         self.background_subtracted.stateChanged.connect(self.state_changed)
         self.referenced.stateChanged.connect(self.state_changed)
-        
+
         self.Absorption_checkBox.stateChanged.connect(self.state_changed)
-                
+
         register_for_property_changes(self.spectrometer,'variable_int_enabled',self.variable_int_state_change)
 #        if self.spectrometer.variable_int_enabled:
 #                self.background_subtracted.blockSignals(True)
 #                self.background_subtracted.setCheckState(QtCore.Qt.Checked)
 #                self.background_subtracted.blockSignals(False)
         self.Variable_int.stateChanged.connect(self.state_changed)
-        
+
 #                if self.spectrometer.variable_int_enabled:
 #                self.background_subtracted.blockSignals(True)
 #                self.background_subtracted.setCheckState(QtCore.Qt.Checked)
 #                self.background_subtracted.blockSignals(False)
         self.average_checkBox.stateChanged.connect(self.state_changed)
         self.Average_spinBox.valueChanged.connect(self.update_averages)
-        
+        self.Average_spinBox.setRange(1,2**31-1)
+
         self.referenceID_spinBox.valueChanged.connect(self.update_references)
 
 
@@ -427,7 +445,7 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
                 self.spectrometer.integration_time = float(args[0])
             except ValueError:
                 pass
-            
+
     def update_averages(self,*args,**kwargs):
         self.spectrometer.spectra_deque = deque(maxlen = args[0])
 
@@ -437,7 +455,7 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
             self.spectrometer.read_background()
             self.background_subtracted.blockSignals(True)
             self.background_subtracted.setCheckState(QtCore.Qt.Checked)
-            self.background_subtracted.blockSignals(False)            
+            self.background_subtracted.blockSignals(False)
         elif sender is self.clear_background_button:
             self.spectrometer.clear_background()
             self.background_subtracted.blockSignals(True)
@@ -462,7 +480,7 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
                     self.spectrometer.background_gradient = self.spectrometer.config_file['background_gradient'][:]
                 if 'background_int' in self.spectrometer.config_file:
                     self.spectrometer.background_int = self.spectrometer.config_file['background_constant'][...]
-                    
+
                 self.background_subtracted.blockSignals(True)
                 self.background_subtracted.setCheckState(QtCore.Qt.Checked)
                 self.background_subtracted.blockSignals(False)
@@ -477,7 +495,7 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
                 self.referenced.blockSignals(False)
             else:
                 print 'reference not found in config file'
-                
+
 
     def state_changed(self, state):
         sender = self.sender()
@@ -489,22 +507,22 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
             self.spectrometer.read_reference()
         elif sender is self.referenced and state == QtCore.Qt.Unchecked:
             self.spectrometer.clear_reference()
-            
+
         elif sender is self.Variable_int:
             self.spectrometer.variable_int_enabled = not self.spectrometer.variable_int_enabled
-            
+
         elif sender is self.average_checkBox:
             self.spectrometer.averaging_enabled = not self.spectrometer.averaging_enabled
-            
+
         elif sender is self.Absorption_checkBox:
             self.spectrometer.absorption_enabled = not self.spectrometer.absorption_enabled
-        
+
     def variable_int_state_change(self):
         if self.spectrometer.variable_int_enabled == True:
             self.Variable_int.setCheckState(QtCore.Qt.Checked)
         if self.spectrometer.variable_int_enabled == False:
             self.Variable_int.setCheckState(QtCore.Qt.Unchecked)
-            
+
     def update_references(self,*args, **kwargs):
         self.spectrometer.reference_ID = args[0]
         try:
@@ -514,7 +532,7 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
             self.referenced.blockSignals(True)
             self.referenced.setCheckState(QtCore.Qt.Unchecked)
             self.referenced.blockSignals(False)
-            
+
             self.spectrometer.clear_background()
             self.background_subtracted.blockSignals(True)
             self.background_subtracted.setCheckState(QtCore.Qt.Unchecked)
@@ -522,10 +540,10 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
 
 
             self.spectrometer._logger.info('No refence/background saved in slot %s to load' %args[0])
-            
-        
-            
-        
+
+
+
+
 
 
 class DisplayThread(QtCore.QThread):
@@ -575,7 +593,7 @@ class SpectrometerDisplayUI(QtWidgets.QWidget,UiTools):
         pg.setConfigOption('foreground', 'k')
         self.plotbox = QtWidgets.QGroupBox()
         self.plotbox.setLayout(QtWidgets.QGridLayout())
-        self.plotlayout = self.plotbox.layout()          
+        self.plotlayout = self.plotbox.layout()
         self.plots =[]
 
         for spectrometer_nom in range(self.spectrometer.num_spectrometers):
@@ -583,7 +601,7 @@ class SpectrometerDisplayUI(QtWidgets.QWidget,UiTools):
             self.plotlayout.addWidget(self.plots[spectrometer_nom])
 
         self.figure_widget = self.replace_widget(self.display_layout,
-                                                 self.figure_widget, self.plotbox)         
+                                                 self.figure_widget, self.plotbox)
         self.take_spectrum_button.clicked.connect(self.button_pressed)
         self.live_button.clicked.connect(self.button_pressed)
         self.save_button.clicked.connect(self.button_pressed)
@@ -640,22 +658,22 @@ class SpectrometerDisplayUI(QtWidgets.QWidget,UiTools):
             self.update_spectrum()
 
     def update_display(self, spectrum):
-        #Update the graphs  
+        #Update the graphs
         if self.enable_threshold.checkState() == QtCore.Qt.Checked:
             threshold = float(self.threshold.text())
             if isinstance(self.spectrometer, Spectrometers):
                 spectrum = [spectrometer.mask_spectrum(s, threshold) for (spectrometer, s) in zip(self.spectrometer.spectrometers, spectrum)]
             else:
                 spectrum = self.spectrometer.mask_spectrum(spectrum, threshold)
-                    
+
         if not self.plots[0].getPlotItem().listDataItems():
             self.plotdata = []
             if isinstance(self.spectrometer, Spectrometers):
                 for spectrometer_nom in range(self.spectrometer.num_spectrometers):
                     self.plotdata.append(self.plots[spectrometer_nom].plot(x = self.spectrometer.wavelengths[spectrometer_nom],y = spectrum[spectrometer_nom],pen =(spectrometer_nom,len(range(self.spectrometer.num_spectrometers)))))
-                    
-   
-            else:                
+
+
+            else:
                 self.plotdata.append(self.plots[0].plot(x = self.spectrometer.wavelengths,y = spectrum,pen =(0,len(range(self.spectrometer.num_spectrometers)))))
         else:
             if isinstance(self.spectrometer, Spectrometers):

@@ -22,25 +22,26 @@ import collections
 
 class Stage(Instrument):
     """A class representing motion-control stages.
-    
+
     This class primarily provides two things: the ability to find the position
-    of the stage (using `Stage.position` or `Stage.get_position(axis="a")`), 
+    of the stage (using `Stage.position` or `Stage.get_position(axis="a")`),
     and the ability to move the stage (see `Stage.move()`).
-    
+
     Subclassing Notes
     -----------------
     The minimum you need to do in order to subclass this is to override the
     `move` method and the `get_position` method.  NB you must handle the case
     where `axis` is specified and where it is not.  For `move`, `move_axis` is
-    provided, which will help emulate single-axis moves on stages that can't 
+    provided, which will help emulate single-axis moves on stages that can't
     make them natively.
-    
-    In the future, a class factory method might be available, that will 
+
+    In the future, a class factory method might be available, that will
     simplify the emulation of various features.
     """
     axis_names = ('x', 'y', 'z')
-    def __init__(self):
+    def __init__(self,unit = 'm'):
         Instrument.__init__(self)
+        self.unit = unit
 
     def move(self, pos, axis=None, relative=False):
         raise NotImplementedError("You must override move() in a Stage subclass")
@@ -51,11 +52,11 @@ class Stage(Instrument):
 
     def move_axis(self, pos, axis, relative=False, **kwargs):
         """Move along one axis.
-        
-        This function moves only in one axis, by calling self.move with 
+
+        This function moves only in one axis, by calling self.move with
         appropriately generated values (i.e. it supplies all axes with position
         instructions, but those not moving just get the current position).
-        
+
         It's intended for use in stages that don't support single-axis moves."""
         if axis not in self.axis_names:
             raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
@@ -89,7 +90,10 @@ class Stage(Instrument):
             time.sleep(0.01)
 
     def get_qt_ui(self):
-        return StageUI(self)
+        if self.unit =='m':
+            return StageUI(self)
+        if self.unit == 'u':
+            return StageUI(self,stage_step_min = 1E-3,stage_step_max = 1000.0,default_step = 1.0)
 
     def get_axis_param(self, get_func, axis=None):
         if axis is None:
@@ -125,7 +129,7 @@ class StageUI(QtWidgets.QWidget, UiTools):
         self.stage = stage
         #self.setupUi(self)
         uic.loadUi(os.path.join(os.path.dirname(__file__), 'stage.ui'), self)
-        self.step_size_values = step_size_dict(stage_step_min, stage_step_max)
+        self.step_size_values = step_size_dict(stage_step_min, stage_step_max,unit = self.stage.unit)
         self.step_size = [self.step_size_values[self.step_size_values.keys()[0]] for axis in stage.axis_names]
         self.create_axes_layout(default_step)
         self.update_ui[int].connect(self.update_positions)
@@ -141,8 +145,10 @@ class StageUI(QtWidgets.QWidget, UiTools):
             self.update_ui[int].emit(axis)
 
     def move_axis_relative(self, index, axis, dir=1):
+        print axis,'move rel axis'
         self.stage.move(dir * self.step_size[index], axis=axis, relative=True)
         if type(axis) == str:
+            print axis
             #    axis = QtCore.QString(axis)
             self.update_ui[str].emit(axis)
         elif type(axis) == int:
@@ -195,7 +201,7 @@ class StageUI(QtWidgets.QWidget, UiTools):
             step_size_select = QtWidgets.QComboBox(self)
             step_size_select.addItems(self.step_size_values.keys())
             step_size_select.activated[str].connect(partial(self.on_activated, i))
-            step_str = engineering_format(default_step, 'm')
+            step_str = engineering_format(default_step, self.stage.unit)
             step_index = self.step_size_values.keys().index(step_str)
             step_size_select.setCurrentIndex(step_index)
             layout.addWidget(QtWidgets.QLabel(str(ax), self), i % 3, 5)
@@ -243,23 +249,25 @@ class StageUI(QtWidgets.QWidget, UiTools):
     # @QtCore.pyqtSlot('QString')
     @QtCore.Slot(str)
     def update_positions(self, axis=None):
+        if axis not in self.stage.axis_names:
+            axis = None
         if axis is None:
             for axis in self.stage.axis_names:
                 self.update_positions(axis=axis)
         else:
             i = self.stage.axis_names.index(axis)
             try:
-                p = engineering_format(self.stage.position[i], base_unit='m', digits_of_precision=4)
+                p = engineering_format(self.stage.position[i], base_unit=self.stage.unit, digits_of_precision=4)
             except ValueError:
                 p = '0 m'
             self.positions[i].setText(p)
 
 
-def step_size_dict(smallest, largest, mantissas=[1, 2, 5]):
+def step_size_dict(smallest, largest, mantissas=[1, 2, 5],unit = 'm'):
     """Return a dictionary with nicely-formatted distances as keys and metres as values."""
     log_range = np.arange(np.floor(np.log10(smallest)), np.floor(np.log10(largest)) + 1)
     steps = [m * 10 ** e for e in log_range for m in mantissas if smallest <= m * 10 ** e <= largest]
-    return OrderedDict((engineering_format(s, 'm'), s) for s in steps)
+    return OrderedDict((engineering_format(s, unit), s) for s in steps)
 
 
 # class Stage(HasTraits):
