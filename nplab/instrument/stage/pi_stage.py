@@ -261,9 +261,8 @@ class PIStageViaArduino(PIStage):
         self.arduino.send(self.pi_command, msg)
         
     def query(self, msg):
-        print 'message without termination:', msg
         msg+=self.write_termination
-        print 'message send to query:', msg
+#        print 'message send to query:', msg
         self.arduino.send(self.pi_command, msg)
         # wait for answer from Arduino ..
         t0 = time.clock()
@@ -271,17 +270,18 @@ class PIStageViaArduino(PIStage):
             if time.clock()-t0 > 1:
                 err = "PI stage does not respond!"
                 raise ValueError(err)
-        print 'response took:', time.clock()-t0
+#        print 'response took:', time.clock()-t0
         answer = self.arduino.pi_message
         self.arduino.pi_message = None
         return answer
-    
 
 
 
 
-#if __name__ == '__main__':
-#    stage = PIStage()
+
+if __name__ == '__main__':
+#    stage = PIStage(address='COM4')
+    PIStageViaArduino(address='COM4')
   #  stage.move((5e-6, 10e-6))
 #    print stage.position
 #    print stage.get_position()
