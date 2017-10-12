@@ -1214,15 +1214,15 @@ class PumpProbeRaw(DataRenderer, QtWidgets.QWidget):
         for plot in Plots:
             plot.addLegend(offset = (-1,1))
         
-        stepperoffset = -5.0
+   #     stepperoffset = -5.0
         
         for h5object in self.h5object.values():
             for axis in axes.keys():
                 data = np.array(h5object)
-                data[np.where(data[:,7]%2 != 0),5] +=  stepperoffset
-                data[:,5] = -1*(data[:,5]-(864.0))
+          #      data[np.where(data[:,7]%2 != 0),5] +=  stepperoffset
+        #        data[:,5] = -1*(data[:,5]-(864.0))
 
-                Plots[axis].plot(x = data[:,5], y = data[:,axis],name = h5object.name,pen =(icolour,len(self.h5object)))
+                Plots[axis].plot(x = data[:,6], y = data[:,axis],name = h5object.name,pen =(icolour,len(self.h5object)))
                 Plots[axis].setLabel('left',axes[axis]+" (V)")
                 Plots[axis].setLabel('bottom', 'Time (ps)')
             icolour = icolour + 1        
