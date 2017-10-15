@@ -204,9 +204,10 @@ class CameraWithLocation(Instrument):
             self.log("Error centering on feature, final move was too large.")
         return last_move < tolerance
         
-    def move_to_feature_pixel(self,x,y):
+    def move_to_feature_pixel(self,x,y,image = None):
         if self.pixel_to_sample_matrix is not None:
-            image = self.color_image()
+            if image==None:
+                image = self.color_image()
             feature = image.feature_at((x,y))
             self.last_feature = feature
             self.move_to_feature(feature)
