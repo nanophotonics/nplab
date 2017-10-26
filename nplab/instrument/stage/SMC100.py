@@ -102,6 +102,8 @@ class SMC100(SerialInstrument, Stage):
 
         self.software_home = None
         self._last_sendcmd_time = 0
+        if not hasattr(smcID, '__iter__'):
+            smcID = (smcID, )
         self._smcID = list(smcID)
         self.axis_names = ()
         for id in self._smcID:
@@ -368,21 +370,31 @@ class SMC100(SerialInstrument, Stage):
             self._wait_states((STATE_READY_FROM_MOVING, STATE_READY_FROM_HOMING))
 
     def move_referenced(self, position_mm, **kwargs):
-        '''
+        """
         Moves to an absolute position referenced from the software home
-        :param position_mm: position from the software home
-        :return:
-        '''
+
+        Args:
+            position_mm: position from the software home
+            **kwargs: kwargs to be passed to the move command
+
+        Returns:
+
+        """
+
+        if not hasattr(position_mm, '__iter__'):
+            position_mm = (position_mm, )
 
         final_pos = map(lambda x, y: x+y, self.software_home, position_mm)
 
         self.move(final_pos, **kwargs)
 
     def set_software_home(self):
-        '''
+        """
         Sets a software home, so that we can easily go back to similar sample positions
-        :return:
-        '''
+
+        Returns:
+
+        """
         self.software_home = self.get_position()
 
     def go_software_home(self):

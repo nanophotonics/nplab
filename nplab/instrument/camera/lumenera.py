@@ -45,7 +45,7 @@ from nplab.ui.ui_tools import QuickControlBox
 class LumeneraCamera(Camera):
     last_frame_time = -1
     fps = -1
-    metadata_property_names = ['gain', 'exposure']
+    
     
 #    traits_view = View(VGroup(
 #                Item(name="image_plot",editor=ComponentEditor(),show_label=False,springy=True),
@@ -81,6 +81,14 @@ class LumeneraCamera(Camera):
         self.auto_restore_metadata = {'exposure':self.exposure, 'gain':self.gain,} #
         
         super(LumeneraCamera,self).__init__() #NB this comes after setting up the hardware
+        self.metadata_property_names = ['gain', 'exposure']
+#        for pname in lucam.Lucam.PROPERTY.keys():
+#            try:
+#                getattr(self, pname)
+#            except:
+#                del lucam.Lucam.PROPERTY[pname]
+#         #       del self.metadata_property_names[pname]
+#                delattr(self.__class__,pname)
     
     def restart(self):
         """Close down the Lumenera camera, wait, and re-open.  Useful if it crashes."""
@@ -279,6 +287,7 @@ class LumeneraCameraControlWidget(CameraControlWidget):
 # a little.
 for pname in lucam.Lucam.PROPERTY.keys():
     setattr(LumeneraCamera, pname, CameraParameter(pname))
+
 
 if __name__ == "__main__":
     cam = LumeneraCamera(1)

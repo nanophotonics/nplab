@@ -21,6 +21,7 @@ from nplab.ui.data_renderers import suitable_renderers
 from nplab.ui.ui_tools import UiTools
 import functools
 from nplab.utils.array_with_attrs import DummyHDF5Group
+import nplab.datafile as df
 
 import subprocess
 import os
@@ -128,6 +129,9 @@ class HDF5ItemViewer(QtWidgets.QWidget, UiTools):
         
     @data.setter
     def data(self, newdata):
+        if newdata == None:
+            return None
+        
         self._data = newdata
 
         # When data changes, update the list of renderers
@@ -154,7 +158,11 @@ class HDF5ItemViewer(QtWidgets.QWidget, UiTools):
             else:
                 index = renderers.index(self.renderer.__class__)
                 combobox.setCurrentIndex(index)
-                self.renderer_selected(index)
+                try:
+                    self.renderer_selected(index)
+                except Exception as e:
+                    print 'The selected renderer failed becasue',e
+
         except ValueError:
             combobox.setCurrentIndex(0)
             self.renderer_selected(0)
@@ -195,13 +203,18 @@ class HDF5ItemViewer(QtWidgets.QWidget, UiTools):
     def refresh(self):
         """Re-render the data, using the current renderer (if it is still appropriate)"""
         self.data = self.data
+
     
     def CopyActivated(self):
         """Copy an image of the currently-displayed figure."""
         ## TO DO: move this to the HDF5 viewer
-        Pixelmap = QtGui.QPixmap.grabWidget(self.figure_widget)
-        self.clipboard.setPixmap(Pixelmap)
-        print "Figure copied to clipboard."
+        print 'yes'
+#        try:
+#            Pixelmap = QtGui.QPixmap.grabWidget(self.figure_widget)
+#        except Exception as e:
+#            print 'Copy Failed due to', e
+#        self.clipboard.setPixmap(Pixelmap)
+#        print "Figure copied to clipboard."
 
 
 def split_number_from_name(name):
@@ -529,7 +542,12 @@ class HDF5Browser(QtWidgets.QWidget, UiTools):
 
     def selection_changed(self, selected, deselected):
         """Callback function to update the displayed item when the tree selection changes."""
-        self.viewer.data = self.treeWidget.selected_h5item()
+        try:
+            self.viewer.data = self.treeWidget.selected_h5item()
+            df.set_current_group(self.treeWidget.selected_h5item())
+        except Exception as e:
+            print e, 'That could be corrupted'
+            
 
     def __del__(self):
         pass  # self.data_file.close()
