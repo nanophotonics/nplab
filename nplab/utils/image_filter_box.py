@@ -77,7 +77,9 @@ class Image_Filter_box(Instrument):
             self.log('Image processing has failed due to: '+str(e),level = 'WARN')
     def connect_function_to_property_changes(self,function):
         for variable_name in vars(self):
-            if type(getattr(self,variable_name))==NotifiedProperty:
+            if (hasattr(self.__class__,variable_name)
+                and type(getattr(self.__class__,variable_name))==NotifiedProperty):
+                print variable_name
                 register_for_property_changes(self,variable_name,function)
         
     def get_qt_ui(self):

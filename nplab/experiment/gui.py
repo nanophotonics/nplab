@@ -94,7 +94,7 @@ class ExperimentWithProgressBar(Experiment):
         This method replaces `Experiment.start()` and is blocking; it can safely be called
         from a Qt signal from a button.
         """
-        self.prepare_to_run(*args, **kwargs)
+     #   self.prepare_to_run(*args, **kwargs)
         if self.progress_maximum is None:
             raise NotImplementedError("self.progress_maximum was not set - this is necessary.")
         self._progress_bar = QProgressDialogWithDeferredUpdate(
@@ -105,7 +105,7 @@ class ExperimentWithProgressBar(Experiment):
         self._progress_bar.setAutoClose(True)
         self._progress_bar.canceled.disconnect()
         self._progress_bar.canceled.connect(self.stop_and_cancel_dialog)
-        self.run_in_background(*args, **kwargs)
+        self._experiment_thread = self.run_in_background(*args, **kwargs)
         self._progress_bar.exec_()
 
     def stop_and_cancel_dialog(self):
