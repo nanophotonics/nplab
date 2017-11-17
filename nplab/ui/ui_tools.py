@@ -232,9 +232,9 @@ class QuickControlBox(QtWidgets.QGroupBox, UiTools):
         combobox = QtWidgets.QComboBox()
         for option in options:
             combobox.addItem(option)
-        self.controls[name] = checkbox
+
+        self.controls[name] = combobox
         combobox.setObjectName(name + "_combobox")
-        combobox.setText(title)
         self.layout().addRow("", combobox)
 
 auto_connectable_controls = {}
@@ -347,5 +347,5 @@ auto_connectable_controls['combobox'] = {
     'suffices': ["_Combobox","_combobox","combobox","_comboBox","comboBox","ComboBox"],
     'control_change_handler': control_change_handler(),
     'control_change_slot_name': 'currentIndexChanged',
-    'property_change_handler': property_change_handler("currentText", str),
+    'property_change_handler': property_change_handler("currentIndex", int),
     }
