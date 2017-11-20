@@ -28,6 +28,8 @@ class Frequency_counter_F390(SerialInstrument):
         self.live_window = 100
         self._live_view = False
         self.int_time = integration_time
+        self.write('FO') #do not apply low pass filter
+        self.write('Z5') #for 50 Ohms impedance
         
     function_dict = {'0' :  'B Input Period',
                     '1':    'A Input Period',
@@ -109,6 +111,8 @@ class Frequency_counter_F390(SerialInstrument):
                  1:'2',
                  10:'3',
                  100:'4'}
+    impedances = {'50': 'Z5', 
+                  '1M': 'Z1'}
     def get_int_time(self):
         '''A property for the integration time possible values are:
                 0.3 s, 1s, 10s,100s '''
@@ -120,6 +124,7 @@ class Frequency_counter_F390(SerialInstrument):
         except KeyError:
             self.log('Invalid integration time', level ='WARN')
     int_time = NotifiedProperty(get_int_time,set_int_time)
+    
     def get_qt_ui(self):
         self.ui = CounterUI(self)
         self.display_ui = self.ui.preview_widget
@@ -136,8 +141,8 @@ class Frequency_counter_F390(SerialInstrument):
         while self._live_view:
             data = None
             data = self.measure_next_fast()
-            while data == None:
-                time.sleep(self.int_time)
+       #     while data == None:
+            time.sleep(self.int_time)
             self.live_deque.append([data,time.time()])
             self.display_ui.update_data_signal.emit(np.array(self.live_deque))
        
