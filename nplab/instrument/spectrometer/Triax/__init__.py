@@ -13,18 +13,24 @@ from math import sqrt
 from numpy.polynomial.polynomial import polyval
 
 
-class Triax550(VisaInstrument):
+calibrations = {'550': [(13413.3, 381.485, 0.0795158),
+                        (13413.3, 381.485, 0.0795158),
+                        (13413.3, 381.485, 0.0795158)],
+                '320': [(13413.3, 381.485, 0.0795158),
+                        (13413.3, 381.485, 0.0795158),
+                        (13413.3, 381.485, 0.0795158)]}
+
+
+class Triax(VisaInstrument):
     metadata_property_names = ('wavelength', )
 
-    def __init__(self, address, **kwargs):
+    def __init__(self, address, wl_offset=-90., model='550'):
         VisaInstrument.__init__(self, address, settings=dict(timeout=4000, write_termination='\n'))
 
-        if 'wl_offset' in kwargs:
-            self.zero_WL_offset = kwargs['wl_offset']
-        else:
-            self.zero_WL_offset = -90.0
-        self.KKcoef = [13413.3, 381.485, 0.0795158]
+        self.zero_WL_offset = wl_offset
+        self.model = model
         self.waitTimeout = 120
+        self.n_grating = self.grating()
 
     def reset(self):
         self.instr.write_raw('\xde')
@@ -64,11 +70,12 @@ class Triax550(VisaInstrument):
         self.write("d0\r")  # sets the entrance mirror to axial as well
 
     def counts_to_wavelength(self, Tstep):
-        KKcoef = self.KKcoef
+        KKcoef = calibrations[self.model][self.n_grating]
         return (-KKcoef[1] + sqrt(KKcoef[1] ** 2 - 4 * KKcoef[2] * (KKcoef[0] - Tstep))) / (2 * KKcoef[2]) - self.zero_WL_offset
 
     def wavelength_to_counts(self, wl):
-        return polyval(wl + self.zero_WL_offset, self.KKcoef)
+        KKcoef = calibrations[self.model][self.n_grating]
+        return polyval(wl + self.zero_WL_offset, KKcoef)
 
     def counts(self):
         self.write("H0\r")
@@ -81,6 +88,7 @@ class Triax550(VisaInstrument):
             self.write("Z451,0,0,0,%i\r" % (grat - 1))
             time.sleep(1)
             self.waitTillReady()
+            self.n_grating = grat
 
     def moveSteps(self, newpos):
         if (newpos <= 0):  # backlash correction
@@ -129,9 +137,10 @@ class Triax550(VisaInstrument):
         return TriaxUI(self)
 
 
+
 class TriaxUI(QtWidgets.QWidget):
     def __init__(self, triax):
-        assert isinstance(triax, Triax550), "instrument must be a Triax550"
+        assert isinstance(triax, Triax), "instrument must be a Triax550"
         super(TriaxUI, self).__init__()
         uic.loadUi(os.path.join(os.path.dirname(__file__), 'Triax.ui'), self)
 
@@ -158,5 +167,5 @@ class TriaxUI(QtWidgets.QWidget):
 
 
 if __name__ == '__main__':
-    triax = Triax550('GPIB0::1::INSTR')
+    triax = Triax('GPIB0::1::INSTR')
     triax.show_gui()
