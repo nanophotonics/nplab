@@ -110,7 +110,7 @@ class UiTools(object):
         
         # Connect buttons to methods with the same name
         for button in self.findChildren(QtWidgets.QPushButton):
-            name = strip_suffices(button.objectName(), ["_button","Button","_pushButton"])
+            name = strip_suffices(button.objectName(), ["_button","_pushButton","Button"])
             try:
                 # look for the named function first in this object, then in the controlled objects
                 obj = first_object_with_attr([self] + controlled_objects, name)
@@ -187,6 +187,7 @@ class QuickControlBox(QtWidgets.QGroupBox, UiTools):
         sb.setObjectName(name + "_spinbox")
         sb.setMinimum(vmin)
         sb.setMaximum(vmax)
+        sb.setKeyboardTracking(False)
         self.layout().addRow(name.title(), sb)
     
     def add_spinbox(self, name, vmin=-2**31, vmax=2**31-1):
@@ -196,6 +197,7 @@ class QuickControlBox(QtWidgets.QGroupBox, UiTools):
         sb.setObjectName(name + "_spinbox")
         sb.setMinimum(vmin)
         sb.setMaximum(vmax)
+        sb.setKeyboardTracking(False)
         self.layout().addRow(name.title(), sb)
         
     def add_lineedit(self, name):
@@ -223,6 +225,17 @@ class QuickControlBox(QtWidgets.QGroupBox, UiTools):
         checkbox.setObjectName(name + "_checkbox")
         checkbox.setText(title)
         self.layout().addRow("", checkbox)
+        
+    def add_combobox(self, name,options, title=None):
+        if title is None:
+            title = name.title()
+        combobox = QtWidgets.QComboBox()
+        for option in options:
+            combobox.addItem(option)
+        self.controls[name] = combobox
+        combobox.setObjectName(name + "_combobox")
+  #      combobox.setText(title)
+        self.layout().addRow("", combobox)
 
 auto_connectable_controls = {}
 
@@ -248,7 +261,10 @@ def control_change_handler(conversion=lambda x: x):
             The name of the property to update
         """
         def update_property(value):
-            setattr(obj, name, conversion(value))
+            try:
+                setattr(obj, name, conversion(value))
+            except AttributeError:
+                print name,'has no setter?'
         return update_property
     return handler_generator
 def property_change_handler(value_name, 
@@ -300,7 +316,7 @@ auto_connectable_controls['checkbox'] = {
     }
 auto_connectable_controls['lineedit'] = {
     'qt_type': QtWidgets.QLineEdit,
-    'suffices': ["_lineedit","LineEdit"],
+    'suffices': ["_lineedit","LineEdit","_lineEdit"],
     'control_change_handler': control_change_handler(),
     'control_change_slot_name': 'textChanged',
     'property_change_handler': property_change_handler("text", str),
@@ -321,8 +337,15 @@ auto_connectable_controls['spinbox'] = {
     }
 auto_connectable_controls['doublespinbox'] = {
     'qt_type': QtWidgets.QDoubleSpinBox,
-    'suffices': ["_spinbox","SpinBox","_spin","_doublespinbox","DoubleSpinBox"],
+    'suffices': ["_doubleSpinBox","_spinbox","SpinBox","_spin","_doublespinbox","DoubleSpinBox"],
     'control_change_handler': control_change_handler(),
     'control_change_slot_name': 'valueChanged',
     'property_change_handler': property_change_handler("value", float),
+    }
+auto_connectable_controls['combobox'] = {
+    'qt_type': QtWidgets.QComboBox,
+    'suffices': ["_Combobox","_combobox","combobox","_comboBox","comboBox","ComboBox"],
+    'control_change_handler': control_change_handler(),
+    'control_change_slot_name': 'currentIndexChanged',
+    'property_change_handler': property_change_handler("currentIndex", int),
     }

@@ -39,8 +39,9 @@ class Stage(Instrument):
     simplify the emulation of various features.
     """
     axis_names = ('x', 'y', 'z')
-    def __init__(self):
+    def __init__(self,unit = 'm'):
         Instrument.__init__(self)
+        self.unit = unit
 
     def move(self, pos, axis=None, relative=False):
         raise NotImplementedError("You must override move() in a Stage subclass")
@@ -89,7 +90,10 @@ class Stage(Instrument):
             time.sleep(0.01)
 
     def get_qt_ui(self):
-        return StageUI(self)
+        if self.unit =='m':
+            return StageUI(self)
+        if self.unit == 'u':
+            return StageUI(self,stage_step_min = 1E-3,stage_step_max = 1000.0,default_step = 1.0)
 
     def get_axis_param(self, get_func, axis=None):
         if axis is None:
@@ -125,7 +129,7 @@ class StageUI(QtWidgets.QWidget, UiTools):
         self.stage = stage
         #self.setupUi(self)
         uic.loadUi(os.path.join(os.path.dirname(__file__), 'stage.ui'), self)
-        self.step_size_values = step_size_dict(stage_step_min, stage_step_max)
+        self.step_size_values = step_size_dict(stage_step_min, stage_step_max,unit = self.stage.unit)
         self.step_size = [self.step_size_values[self.step_size_values.keys()[0]] for axis in stage.axis_names]
         self.create_axes_layout(default_step)
         self.update_ui[int].connect(self.update_positions)
@@ -195,7 +199,7 @@ class StageUI(QtWidgets.QWidget, UiTools):
             step_size_select = QtWidgets.QComboBox(self)
             step_size_select.addItems(self.step_size_values.keys())
             step_size_select.activated[str].connect(partial(self.on_activated, i))
-            step_str = engineering_format(default_step, 'm')
+            step_str = engineering_format(default_step, self.stage.unit)
             step_index = self.step_size_values.keys().index(step_str)
             step_size_select.setCurrentIndex(step_index)
             layout.addWidget(QtWidgets.QLabel(str(ax), self), i % 3, 5)
@@ -249,17 +253,17 @@ class StageUI(QtWidgets.QWidget, UiTools):
         else:
             i = self.stage.axis_names.index(axis)
             try:
-                p = engineering_format(self.stage.position[i], base_unit='m', digits_of_precision=4)
+                p = engineering_format(self.stage.position[i], base_unit=self.stage.unit, digits_of_precision=4)
             except ValueError:
                 p = '0 m'
             self.positions[i].setText(p)
 
 
-def step_size_dict(smallest, largest, mantissas=[1, 2, 5]):
+def step_size_dict(smallest, largest, mantissas=[1, 2, 5],unit = 'm'):
     """Return a dictionary with nicely-formatted distances as keys and metres as values."""
     log_range = np.arange(np.floor(np.log10(smallest)), np.floor(np.log10(largest)) + 1)
     steps = [m * 10 ** e for e in log_range for m in mantissas if smallest <= m * 10 ** e <= largest]
-    return OrderedDict((engineering_format(s, 'm'), s) for s in steps)
+    return OrderedDict((engineering_format(s, unit), s) for s in steps)
 
 
 # class Stage(HasTraits):

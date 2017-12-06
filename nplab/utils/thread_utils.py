@@ -40,10 +40,10 @@ def locked_action_decorator(wait_for_lock=True):
         #the decorator is meant to be called as @locked_action_decorator()
         #so we need to return a function, which is what actually gets used
         #to modify the function we're decorating.
-        def locked_action(self, wait_for_lock=wait_for_lock, *args, **kwargs):
+        @functools.wraps(function)
+        def locked_action(self, *args, **kwargs):
             """Perform an action, but use a lock so only one locked action can
             happen at any time"""
-            #TODO: make sure this doesn't mess up docstrings
             #First: make sure the lock object exists
             if not hasattr(self, "_nplab_action_lock"):
                 self._nplab_action_lock = threading.RLock()
@@ -78,8 +78,9 @@ def background_action_decorator(background_by_default=True, ):
     * 
     """
     def decorator(function):
-        def background_action(self, run_in_background_thread=background_by_default, *args, **kwargs):
-            if run_in_background_thread:
+        @functools.wraps(function)
+        def background_action(self, *args, **kwargs):
+            if background_by_default:
                 if not hasattr(self, "_nplab_background_action_threads"):
                     self._nplab_background_action_threads = set([])
                 t = threading.Thread()
@@ -142,3 +143,5 @@ if __file__ == "__main__":
             for c in message+"\n":
                 time.sleep(0.1)
                 print(c),
+
+

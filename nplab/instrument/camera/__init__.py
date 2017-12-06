@@ -22,6 +22,7 @@ from weakref import WeakSet
 from nplab.instrument import Instrument
 from nplab.utils.notified_property import NotifiedProperty, DumbNotifiedProperty, register_for_property_changes
 
+
 class CameraParameter(NotifiedProperty):
     """A quick way of creating a property that alters a camera parameter.
     
@@ -56,7 +57,8 @@ class CameraParameter(NotifiedProperty):
             
     def fset(self, obj, value):
         obj.set_camera_parameter(self.parameter_name, value)
-          
+
+
 class Camera(Instrument):
     """Generic class for representing cameras.
     
@@ -69,6 +71,7 @@ class Camera(Instrument):
     """
     
     video_priority = DumbNotifiedProperty(False)
+    filename = DumbNotifiedProperty('snapshot_%d')
     """Set video_priority to True to avoid disturbing the video stream when
     taking images.  raw_snapshot may ignore the setting, but get_image and by
     extension rgb_image and gray_image will honour it."""
@@ -89,6 +92,7 @@ class Camera(Instrument):
         # to remove junk (e.g. if some of the parameters are meaningless)
 #        self.metadata_property_names = self.metadata_property_names + tuple(self.camera_parameter_names())
         self.metadata_property_names = tuple(self.metadata_property_names) + tuple(self.camera_parameter_names())
+ #       self.filename = 'snapshot_%d'
 
     def __del__(self):
         self.close()
@@ -205,7 +209,7 @@ class Camera(Instrument):
                 
     def save_raw_image(self, update_latest_frame=True, attrs={}):
         """Save an image to the default place in the default HDF5 file."""
-        d=self.create_dataset('snapshot_%d', 
+        d=self.create_dataset(self.filename, 
                               data=self.raw_image(
                                   bundle_metadata=True,
                                   update_latest_frame=update_latest_frame))
@@ -284,8 +288,18 @@ class Camera(Instrument):
         `CameraParameter`, though I can't currently see how that would help...
         """
         # first, identify all the CameraParameter properties we've got
-        return [p for p in dir(self.__class__)
-                  if isinstance(getattr(self.__class__, p), CameraParameter)]
+        p_list = []
+        for p in dir(self.__class__):
+            try:
+                if isinstance(getattr(self.__class__, p), CameraParameter):
+                    getattr(self,p)
+                    p_list.append(p)
+            except:
+                delattr(self.__class__,p)
+                pass
+        return p_list
+   #     return [p for p in dir(self.__class__)
+    #              if isinstance(getattr(self.__class__, p), CameraParameter)]
     
     def get_camera_parameter(self, parameter_name):
         """Return the named property from the camera"""
@@ -421,7 +435,8 @@ class CameraControlWidget(QtWidgets.QWidget, UiTools):
         super(CameraControlWidget, self).__init__()
         self.camera=camera
         self.load_ui_from_file(__file__,"camera_controls_generic.ui")
-        self.auto_connect_by_name(controlled_object=self.camera, verbose=False)
+        if auto_connect==True:
+            self.auto_connect_by_name(controlled_object=self.camera, verbose=False)
         
     def snapshot(self):
         """Take a new snapshot and display it."""
@@ -597,14 +612,17 @@ class CameraPreviewWidget(pg.GraphicsView):
         # forced floating-point for anything that isn't a u8, and assumed u8
         # wants to be displayed raw.  You can always use filter_function to
         # tweak the brightness/contrast.
+        if len(newimage.shape)==2:
+            newimage = newimage.transpose()
+        elif len(newimage.shape)==3:
+            newimage = newimage.transpose((1,0,2))
         if newimage.dtype =="uint8":
-            self.image_item.setImage(newimage.transpose((1,0,2)), autoLevels=False)
+            self.image_item.setImage(newimage, autoLevels=False)
         else:
-            self.image_item.setImage(newimage.transpose((1,0,2)).astype(float))
+            self.image_item.setImage(newimage.astype(float))
         if newimage.shape != self._image_shape:
             self._image_shape = newimage.shape
-            self.set_crosshair_centre((newimage.shape[0]/2.0, newimage.shape[1]/2.0))
-            
+            self.set_crosshair_centre((newimage.shape[1]/2.0, newimage.shape[0]/2.0))
     def update_image(self, newimage):
         """Update the image displayed in the preview widget."""
         # NB compared to previous versions, pyqtgraph flips in y, hence the
