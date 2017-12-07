@@ -526,7 +526,8 @@ class HDF5Browser(QtWidgets.QWidget, UiTools):
         self.treeWidget = HDF5TreeWidget(data_file,
                                          parent=self,
                                          )
-        self.treeWidget.selectionModel().selectionChanged.connect(self.selection_changed)
+        self.selection_model = self.treeWidget.selectionModel() 
+        self.selection_model.selectionChanged.connect(self.selection_changed)
         self.viewer = HDF5ItemViewer(parent=self, 
                                      show_controls=True,
                                      )
