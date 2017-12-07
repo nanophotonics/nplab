@@ -8,7 +8,7 @@ Various utility functions for GUI-related stuff.
 import os
 import sys
 import warnings
-import qtpy
+import qtpy #removing this breaks line 42 in some cases
 ui_toolkit = 'native'  # by default use pyqt4
 if os.environ.get('QT_API') is None:
     os.environ['QT_API'] = 'pyqt'  # by default use pyqt4
@@ -21,7 +21,6 @@ API_NAMES = ["QDate", "QDateTime", "QString", "QTextStream", "QTime", "QUrl", "Q
 API_VERSION = 2
 for name in API_NAMES:
     sip.setapi(name, API_VERSION)
-print "TEST",os.environ['QT_API'], ui_toolkit
 if ui_toolkit == 'native' and os.environ['QT_API'] == 'pyside':
     try:
         from PySide import QtCore, QtGui
