@@ -27,7 +27,7 @@ where the dot denotes matrix multiplication using `numpy.dot`.
 import numpy as np
 from nplab.utils.array_with_attrs import ArrayWithAttrs
 import cv2
-import cv2.cv
+#import cv2.cv
 from scipy import ndimage
 
 class ImageWithLocation(ArrayWithAttrs):

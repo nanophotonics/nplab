@@ -22,7 +22,6 @@ class Image_Filter_box(Instrument):
     bilat_height = DumbNotifiedProperty()
     bilat_size = DumbNotifiedProperty()
     morph_kernel_size = DumbNotifiedProperty()
-
     def __init__(self,threshold = 40, bin_fac = 4,min_size = 2,max_size = 6,
                  bilat_size = 3, bilat_height = 40, morph_kernel_size = 3):
         self.threshold = threshold
@@ -36,6 +35,7 @@ class Image_Filter_box(Instrument):
         self.show_particles = False
         self.return_original_with_particles = False
         self.current_filter_index = 0
+        self.update_functions = []
     def current_filter(self,image):
         if self.current_filter_proxy == None:
             return image
@@ -76,11 +76,12 @@ class Image_Filter_box(Instrument):
         except Exception as e:
             self.log('Image processing has failed due to: '+str(e),level = 'WARN')
     def connect_function_to_property_changes(self,function):
-        for variable_name in vars(self):
-            if (hasattr(self.__class__,variable_name)
-                and type(getattr(self.__class__,variable_name))==NotifiedProperty):
-                print variable_name
-                register_for_property_changes(self,variable_name,function)
+    #    print function
+        for variable_name in vars(self.__class__):
+            self.update_functions.append(function)
+            if type(getattr(self.__class__,variable_name)) == DumbNotifiedProperty:
+                
+                register_for_property_changes(self,variable_name,self.update_functions[-1])
         
     def get_qt_ui(self):
         return Camera_filter_Control_ui(self)
@@ -229,10 +230,10 @@ def build_strided_filter(func):
     def filter_func(image):
         return func(strided_rescale(image))
     return filter_func
-if __name__ == '__main__':
-    from nplab.instrument.camera.lumenera import LumeneraCamera
-    cam = LumeneraCamera(1)
-    cam.show_gui(blocking = False)
-    cam_filter = Camera_Filter_box()
-    cam_filter.show_gui(blocking = False)
-    cam.filter_function = cam_filter.STBOC_with_size_filter
+#if __name__ == '__main__':
+#    from nplab.instrument.camera.lumenera import LumeneraCamera
+#    cam = LumeneraCamera(1)
+#    cam.show_gui(blocking = False)
+#    cam_filter = Camera_Filter_box()
+#    cam_filter.show_gui(blocking = False)
+#    cam.filter_function = cam_filter.STBOC_with_size_filter

@@ -655,6 +655,12 @@ class DummyCamera(Camera):
         return self._camera_parameters[name]
     def set_camera_parameter(self, name, value):
         self._camera_parameters[name] = value
+    def print_numbers(self,a = 5.0,b = 10):
+        print a, b
+    def print_strs(self,a= 'hello'):
+        print a
+    def print_array(self,a = np.array([1, 2, 3, 4])):
+        print a
         
 if __name__ == '__main__':
     cam = DummyCamera()

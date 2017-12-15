@@ -294,7 +294,8 @@ class DataFile(Group):
     change in the future...
     """
 
-    def __init__(self, name, mode=None, save_version_info=True, *args, **kwargs):
+    def __init__(self, name, mode=None, save_version_info=True,
+                 update_current_group = True, *args, **kwargs):
         """Open or create an HDF5 file.
 
         :param name: The filename/path of the HDF5 file to open or create, or an h5py File object
@@ -326,7 +327,7 @@ class DataFile(Group):
             self.attrs.create("version_info_%04d" % n, str(nplab.utils.version.version_info_string()))
             #except:
             #    print "Error: could not save version information"
-
+        self.update_current_group = update_current_group
 
     def flush(self):
         self.file.flush()

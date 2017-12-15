@@ -537,6 +537,7 @@ class HDF5Browser(QtWidgets.QWidget, UiTools):
         self.setLayout(QtWidgets.QHBoxLayout())
         self.layout().addWidget(splitter)
 
+
     def sizeHint(self):
         return QtCore.QSize(1024,768)
 
@@ -544,7 +545,8 @@ class HDF5Browser(QtWidgets.QWidget, UiTools):
         """Callback function to update the displayed item when the tree selection changes."""
         try:
             self.viewer.data = self.treeWidget.selected_h5item()
-            df.set_current_group(self.treeWidget.selected_h5item())
+            if self.data_file.update_current_group == True:
+                df.set_current_group(self.treeWidget.selected_h5item())
         except Exception as e:
             print e, 'That could be corrupted'
             

@@ -25,7 +25,7 @@ from nplab.experiment import Experiment, ExperimentStopped
 from nplab.experiment.gui import ExperimentWithProgressBar, run_function_modally
 from nplab.utils.gui import QtCore, QtGui, QtWidgets
 import cv2
-import cv2.cv
+#import cv2.cv
 from scipy import ndimage
 from nplab.ui.ui_tools import QuickControlBox, UiTools
 from nplab.utils.notified_property import DumbNotifiedProperty

@@ -235,7 +235,7 @@ class QuickControlBox(QtWidgets.QGroupBox, UiTools):
 
         self.controls[name] = combobox
         combobox.setObjectName(name + "_combobox")
-        self.layout().addRow("", combobox)
+        self.layout().addRow(title, combobox)
 
 auto_connectable_controls = {}
 
