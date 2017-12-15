@@ -698,8 +698,10 @@ class Andor(Camera, AndorBase):
 
         self.CurImage = None
         self.background = None
-        if not hasattr(self,'x_axis'):
+        try:
             self.x_axis = None
+        except AttributeError:
+            pass
 
         if settings_filepath != None:
             self.load_params_from_file(settings_filepath)
