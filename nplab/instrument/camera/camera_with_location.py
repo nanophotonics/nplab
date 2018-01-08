@@ -189,7 +189,8 @@ class CameraWithLocation(Instrument):
             try:
                 self.settle()
                 image = self.color_image()
-                pixel_position = locate_feature_in_image(image, feature, margin=margin, restrict=margin>0)
+            #    pixel_position = locate_feature_in_image(image, feature, margin=margin, restrict=margin>0)
+                pixel_position = locate_feature_in_image(image, feature)
                 new_position = image.pixel_to_location(pixel_position)
                 self.move(new_position)
                 last_move = np.sqrt(np.sum((new_position - image.datum_location)**2)) # calculate the distance moved
@@ -206,7 +207,7 @@ class CameraWithLocation(Instrument):
         
     def move_to_feature_pixel(self,x,y,image = None):
         if self.pixel_to_sample_matrix is not None:
-            if image==None:
+            if image is None:
                 image = self.color_image()
             feature = image.feature_at((x,y))
             self.last_feature = feature
@@ -442,9 +443,10 @@ class CameraWithLocationUI(QtWidgets.QWidget):
 
 class AcquireGridOfImages(ExperimentWithProgressBar):
     """Use a CameraWithLocation to acquire a grid of image tiles that can later be stitched together"""
-    def __init__(self, camera_with_location=None, **kwargs):
+    def __init__(self, camera_with_location=None,completion_function= None, **kwargs):
         super(AcquireGridOfImages, self).__init__(**kwargs)
         self.cwl = camera_with_location
+        self.completion_function = completion_function
 
     def prepare_to_run(self, n_tiles=None, data_group=None, *args, **kwargs):
         self.progress_maximum = n_tiles[0] * n_tiles[1]
@@ -479,4 +481,6 @@ class AcquireGridOfImages(ExperimentWithProgressBar):
             self.log("Experiment was aborted.")
         finally:
             self.cwl.move(centre_image.datum_location)  # go back to the start point
+            if self.completion_function is not None:
+                self.completion_function()
         return dest
