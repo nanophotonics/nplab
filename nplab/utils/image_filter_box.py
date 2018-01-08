@@ -22,6 +22,8 @@ class Image_Filter_box(Instrument):
     bilat_height = DumbNotifiedProperty()
     bilat_size = DumbNotifiedProperty()
     morph_kernel_size = DumbNotifiedProperty()
+    show_particles = DumbNotifiedProperty()
+    return_original_with_particles = DumbNotifiedProperty()
     def __init__(self,threshold = 40, bin_fac = 4,min_size = 2,max_size = 6,
                  bilat_size = 3, bilat_height = 40, morph_kernel_size = 3):
         self.threshold = threshold
@@ -79,7 +81,8 @@ class Image_Filter_box(Instrument):
     #    print function
         for variable_name in vars(self.__class__):
             self.update_functions.append(function)
-            if type(getattr(self.__class__,variable_name)) == DumbNotifiedProperty:
+            if (type(getattr(self.__class__,variable_name)) == DumbNotifiedProperty or
+                type(getattr(self.__class__,variable_name)) == NotifiedProperty):
                 
                 register_for_property_changes(self,variable_name,self.update_functions[-1])
         
@@ -116,7 +119,7 @@ def strided_rescale(g, bin_fac= 4):
         strided = np.uint8((strided-np.min(strided))*254.0/(np.max(strided)-np.min(strided)))
         strided=strided.repeat(bin_fac,0)
         strided=strided.repeat(bin_fac,1)
-        return strided
+        return np.copy(strided)
     except Exception as e:
         print e
         
@@ -134,7 +137,8 @@ def StrBiThresOpen(g, bin_fac= 4,threshold =40,bilat_size = 3,bilat_height = 40,
         kernel = np.ones((morph_kernel_size,morph_kernel_size),np.uint8)
         strided =cv2.morphologyEx(strided, cv2.MORPH_OPEN, kernel)
         strided = cv2.morphologyEx(strided, cv2.MORPH_CLOSE, kernel)
-        return strided
+        strided[strided!=0]=255
+        return np.copy(strided)
     except Exception as e:
         print e
         
@@ -143,22 +147,28 @@ def STBOC_with_size_filter(g, bin_fac= 4,bilat_size = 3, bilat_height = 40,
                            show_particles = False, return_original_with_particles = False,
                            return_centers = False):
     try:
+        g = np.copy(g)
         strided = StrBiThresOpen(g, bin_fac,threshold,bilat_size,bilat_height,morph_kernel_size)
-        strided, contours, hierarchy = cv2.findContours(strided,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
-        centers_and_radi = []
+        contours, hierarchy = cv2.findContours(strided,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
+        centers = []
+        radi = []
         for cnt in contours:
             (x,y),radius = cv2.minEnclosingCircle(cnt)
+        #    center = (int(x),int(y))
             center = (int(x),int(y))
       #      radius = int(radius)+2
             if radius>max_size or radius<min_size:
                 radius = int(radius)+2
                 strided[center[1]-radius:center[1]+radius,center[0]-radius:center[0]+radius] = 0
             else:
-                centers_and_radi.append([center,radius])
-        if return_original_with_particles == True:
+                centers.append(center)
+                radi.append(radius)
+        if return_centers==True:
+            return np.array(centers)[:,::-1]
+        elif return_original_with_particles == True:
       #      g = cv2.cvtColor(g,cv2.COLOR_GRAY2RGB)
-            g = g/255.0
-            for cnt,radius in centers_and_radi:
+       #     g = g#/255.0
+            for cnt,radius in zip(centers,radi):
                 cv2.circle(g, cnt, int(radius*2), (255, 0, 0), 2)
             return g
         elif show_particles==True:
@@ -168,14 +178,13 @@ def STBOC_with_size_filter(g, bin_fac= 4,bilat_size = 3, bilat_height = 40,
             strided = strided[:,:,np.newaxis]
             strided = strided.repeat(3,axis = 2)
         #    strided=strided/255.0
-            for cnt,radius in centers_and_radi:
+            for cnt,radius in zip(centers,radi):
           #      print np.shape(strided_copy),  center
                 cv2.circle(strided, cnt, int(radius*2), (255,0,0), 2)
-        if return_centers==True:
-            return np.array(centers_and_radi)[:,0]
-        else:    
-            return strided
-            
+
+        strided[strided!=0]=255
+        return strided
+        
    #     strided=strided.repeat(bin_fac, 0)
     #    strided=strided.repeat(bin_fac, 1)
  #       return strided
