@@ -25,6 +25,7 @@ import nplab.datafile as df
 
 import subprocess
 import os
+import datetime
 
 
 # base, widget = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'hdf5_browser.ui'))
@@ -297,7 +298,16 @@ class HDF5TreeItem(object):
             return []
         if self._children is None:
             keys = self.data_file[self.name].keys()
-            keys.sort(key=split_number_from_name)
+            try:
+                time_stamps = []
+                for value in self.data_file[self.name].values():
+                    time_stamp_str = value.attrs['creation_timestamp']
+                    time_stamp_float = datetime.datetime.strptime(time_stamp_str,"%Y-%m-%dT%H:%M:%S.%f")
+                    time_stamps.append(time_stamp_float)
+                keys = np.array(keys)[np.argsort(time_stamps)]
+            except KeyError:
+                keys.sort(key=split_number_from_name)
+            
             self._children = [HDF5TreeItem(self.data_file, self, self.name.rstrip("/") + "/" + k, i)
                               for i, k in enumerate(keys)]
         return self._children
@@ -516,7 +526,8 @@ class HDF5Browser(QtWidgets.QWidget, UiTools):
         self.treeWidget = HDF5TreeWidget(data_file,
                                          parent=self,
                                          )
-        self.treeWidget.selectionModel().selectionChanged.connect(self.selection_changed)
+        self.selection_model = self.treeWidget.selectionModel() 
+        self.selection_model.selectionChanged.connect(self.selection_changed)
         self.viewer = HDF5ItemViewer(parent=self, 
                                      show_controls=True,
                                      )

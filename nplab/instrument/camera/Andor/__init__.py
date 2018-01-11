@@ -14,7 +14,8 @@ from ctypes import *
 import numpy as np
 import pyqtgraph
 from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
-
+from nplab.ui.ui_tools import UiTools
+import operator
 
 class AndorCapabilities(Structure):
     _fields_ = [("ulSize", c_ulong),
@@ -697,8 +698,10 @@ class Andor(Camera, AndorBase):
 
         self.CurImage = None
         self.background = None
-        if not hasattr(self,'x_axis'):
+        try:
             self.x_axis = None
+        except AttributeError:
+            pass
 
         if settings_filepath != None:
             self.load_params_from_file(settings_filepath)
@@ -778,7 +781,7 @@ class Andor(Camera, AndorBase):
 
 
 # TODO: get the GUI to update when parameters are changed from the command line
-class AndorUI(QtWidgets.QWidget):
+class AndorUI(QtWidgets.QWidget, UiTools):
     ImageUpdated = QtCore.Signal()
 
     def __init__(self, andor):
@@ -1170,6 +1173,7 @@ class AndorUI(QtWidgets.QWidget):
     def updateImage(self):
         if self.DisplayWidget is None:
             self.DisplayWidget = DisplayWidget()
+            
         if self.DisplayWidget.isHidden():
             self.DisplayWidget.show()
 
@@ -1197,7 +1201,7 @@ class AndorUI(QtWidgets.QWidget):
             self.Andor._logger.info(
                 'The background and the current image are different shapes and therefore cannot be subtracted')
         try:
-            if self.Andor._current_x_axis == None or np.shape(self.Andor.CurImage)[-1] != np.shape(self.Andor._current_x_axis)[0]:
+            if self.Andor._current_x_axis == None or np.shape(self.Andor.CurImage)[-1] != np.shape(self.Andor._current_x_axis)[0] or not np.all(self.Andor._current_x_axis):
                 xvals = np.linspace(0, self.Andor.CurImage.shape[-1] - 1, self.Andor.CurImage.shape[-1])
             else:
                 xvals = self.Andor._current_x_axis
@@ -1216,33 +1220,39 @@ class AndorUI(QtWidgets.QWidget):
                 self.DisplayWidget.splitter.setSizes([0, 1])
                 for ii in range(self.Andor.CurImage.shape[0]):
                     self.DisplayWidget.plot[ii].setData(x=xvals, y=data[ii])
-
+                    
         else:
             self.DisplayWidget.splitter.setSizes([1, 0])
             image = np.transpose(data, (0, 2, 1))
             zvals = 0.99 * np.linspace(0, image.shape[0] - 1, image.shape[0])
             if image.shape[0] == 1:
                 image = image[0]
-                self.DisplayWidget.ImageDisplay.setImage(image, xvals=zvals,
-                                                         pos=offset, autoRange=False,
-                                                         scale=scale)
+                if self.DisplayWidget.ImageDisplay.image is None:
+                    self.DisplayWidget.ImageDisplay.setImage(image, xvals=zvals,
+                                                         pos=tuple(map(operator.add, offset, (xvals[0],0))), autoRange=False,
+                                                         scale=((xvals[-1]-xvals[0])/len(xvals),1), autoLevels=True)
+                else:
+                    self.DisplayWidget.ImageDisplay.setImage(image, xvals=zvals,
+                                                         pos=tuple(map(operator.add, offset, (xvals[0],0))), autoRange=False,
+                                                         scale=((xvals[-1]-xvals[0])/len(xvals),1), autoLevels=False)
 
             else:
                 self.DisplayWidget.ImageDisplay.setImage(image, xvals=zvals,
-                                                         pos=offset, autoRange=False,
-                                                         scale=scale)
+                                                         pos=tuple(map(operator.add, offset, (xvals[0],0))), autoRange=False,
+                                                         scale=((xvals[-1]-xvals[0])/len(xvals),1))
         self.ImageUpdated.emit()
 
 
-class DisplayWidget(QtWidgets.QWidget):
+class DisplayWidget(QtWidgets.QWidget,UiTools):
     _max_num_line_plots = 4
 
     def __init__(self):
         QtWidgets.QWidget.__init__(self)
 
         uic.loadUi(os.path.join(os.path.dirname(__file__), 'CameraDefaultDisplay.ui'), self)
-
+        self.ImageDisplay = self.replace_widget(self.imagelayout,self.ImageDisplay,pyqtgraph.ImageView(view = pyqtgraph.PlotItem()))
         self.ImageDisplay.getHistogramWidget().gradient.restoreState(Gradients.values()[1])
+        
         self.plot = ()
         for ii in range(self._max_num_line_plots):
             self.plot += (self.LineDisplay.plot(pen=pyqtgraph.intColor(ii, self._max_num_line_plots)),)

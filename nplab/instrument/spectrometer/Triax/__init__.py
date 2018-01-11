@@ -13,19 +13,35 @@ from math import sqrt
 from numpy.polynomial.polynomial import polyval
 
 
-class Triax550(VisaInstrument):
+calibrations = {'550': [(13413.3, 381.485, 0.0795158),
+                        (13413.3, 381.485, 0.0795158),
+                        (13413.3, 381.485, 0.0795158)],
+                '320': [(110.119, 13.2421, 0.0016122),
+                        (-61.459, 7.1619, 9.0522E-6),
+                        (13413.3, 381.485, 0.0795158)]}
+
+
+class Triax(VisaInstrument):
     metadata_property_names = ('wavelength', )
 
-    def __init__(self, address, **kwargs):
+    def __init__(self, address, wl_offset=-90., model='550'):  
         VisaInstrument.__init__(self, address, settings=dict(timeout=4000, write_termination='\n'))
 
-        if 'wl_offset' in kwargs:
-            self.zero_WL_offset = kwargs['wl_offset']
-        else:
-            self.zero_WL_offset = -90.0
-        self.KKcoef = [13413.3, 381.485, 0.0795158]
+        self.zero_WL_offset = wl_offset
+        self.model = model
         self.waitTimeout = 120
-
+        self.n_grating = 0#self.grating()        
+        #try:
+        #    self.n_grating = self.grating()
+        #except:
+        #    try:
+        #        self.reset()
+        #        time.sleep(60)
+        #        self.waitTillReady()
+        #        self.n_grating = self.grating()
+        #    except Exception as e:
+        #        raise e
+ 
     def reset(self):
         self.instr.write_raw('\xde')
         time.sleep(5)
@@ -44,6 +60,7 @@ class Triax550(VisaInstrument):
         self.waitTillReady()
         self.wavelength = 0
         self.grating(1)
+        self.n_grating = self.grating()
 
     def get_wavelength(self):
         Tstep = self.counts()
@@ -64,23 +81,28 @@ class Triax550(VisaInstrument):
         self.write("d0\r")  # sets the entrance mirror to axial as well
 
     def counts_to_wavelength(self, Tstep):
-        KKcoef = self.KKcoef
+        KKcoef = calibrations[self.model][self.n_grating]
         return (-KKcoef[1] + sqrt(KKcoef[1] ** 2 - 4 * KKcoef[2] * (KKcoef[0] - Tstep))) / (2 * KKcoef[2]) - self.zero_WL_offset
 
     def wavelength_to_counts(self, wl):
-        return polyval(wl + self.zero_WL_offset, self.KKcoef)
+        KKcoef = calibrations[self.model][self.n_grating]
+        return polyval(wl + self.zero_WL_offset, KKcoef)
 
     def counts(self):
         self.write("H0\r")
         return int(self.read()[1:])
 
     def grating(self, grat=None):
+        if grat not in [None,0,1,2]:
+            raise ValueError('Grating number too large')
+            
         if grat is None:
-            return int(self.query("Z452,0,0,0\r")[1:]) + 1
+            return int(self.query("Z452,0,0,0\r")[1:])
         else:
-            self.write("Z451,0,0,0,%i\r" % (grat - 1))
+            self.write("Z451,0,0,0,%i\r" % (grat))
             time.sleep(1)
             self.waitTillReady()
+            self.n_grating = grat
 
     def moveSteps(self, newpos):
         if (newpos <= 0):  # backlash correction
@@ -129,9 +151,10 @@ class Triax550(VisaInstrument):
         return TriaxUI(self)
 
 
+
 class TriaxUI(QtWidgets.QWidget):
     def __init__(self, triax):
-        assert isinstance(triax, Triax550), "instrument must be a Triax550"
+        assert isinstance(triax, Triax), "instrument must be a Triax550"
         super(TriaxUI, self).__init__()
         uic.loadUi(os.path.join(os.path.dirname(__file__), 'Triax.ui'), self)
 
@@ -158,5 +181,5 @@ class TriaxUI(QtWidgets.QWidget):
 
 
 if __name__ == '__main__':
-    triax = Triax550('GPIB0::1::INSTR')
-    triax.show_gui()
+    triax = Triax('GPIB0::1::INSTR')
+    triax.show_gui(blocking=False)
