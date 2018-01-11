@@ -68,7 +68,7 @@ class CameraWithLocation(Instrument):
             stage = Stage.get_instance(create=False)
         self.camera = camera
         self.stage = stage
-
+        self.filter_images = False
         Instrument.__init__(self)
 
         shape = self.camera.color_image().shape
@@ -110,9 +110,14 @@ class CameraWithLocation(Instrument):
         """Return a grayscale image from the camera, including position metadata"""
         return self._add_position_metadata(self.camera.gray_image(*args, **kwargs))
 
-    def color_image(self, *args, **kwargs):
+    def color_image(self,ignore_filter=False, *args, **kwargs):
         """Return a colour image from the camera, including position metadata"""
-        return self._add_position_metadata(self.camera.color_image(*args, **kwargs))
+        image = self.camera.color_image(*args, **kwargs)
+        if (ignore_filter == False and 
+            self.filter_images == True and 
+            self.camera.filter_function is not None):
+            image = self.camera.filter_function(image)
+        return self._add_position_metadata(image)
     def thumb_image(self,size = (100,100)):
         """Return a cropped "thumb" from the CWL with size  """
         image =self.color_image()

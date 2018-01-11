@@ -149,7 +149,7 @@ def STBOC_with_size_filter(g, bin_fac= 4,bilat_size = 3, bilat_height = 40,
     try:
         g = np.copy(g)
         strided = StrBiThresOpen(g, bin_fac,threshold,bilat_size,bilat_height,morph_kernel_size)
-        contours, hierarchy = cv2.findContours(strided,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
+        strided, contours, hierarchy = cv2.findContours(strided,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
         centers = []
         radi = []
         for cnt in contours:
