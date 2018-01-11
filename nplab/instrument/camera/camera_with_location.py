@@ -113,6 +113,12 @@ class CameraWithLocation(Instrument):
     def color_image(self, *args, **kwargs):
         """Return a colour image from the camera, including position metadata"""
         return self._add_position_metadata(self.camera.color_image(*args, **kwargs))
+    def thumb_image(self,size = (100,100)):
+        """Return a cropped "thumb" from the CWL with size  """
+        image =self.color_image()
+        thumb = image[image.shape[0]/2-size[0]/2:image.shape[0]/2+size[0]/2,
+                     image.shape[1]/2-size[1]/2:image.shape[1]/2+size[1]/2]
+        return thumb
 
     ###### Wrapping functions for the stage ######
     def move(self, *args, **kwargs): # TODO: take account of drift
@@ -152,7 +158,7 @@ class CameraWithLocation(Instrument):
         for i in range(self.frames_to_discard):
             self.camera.raw_image(*args, **kwargs)
 
-    def move_to_feature(self, feature, ignore_position=False, margin=50, tolerance=0.5, max_iterations = 10):
+    def move_to_feature(self, feature, ignore_position=False, ignore_z_pos = False, margin=50, tolerance=0.5, max_iterations = 10):
         """Bring the feature in the supplied image to the centre of the camera
 
         Strictly, what this aims to do is move the sample such that the datum pixel of the "feature" image is on the
@@ -178,7 +184,10 @@ class CameraWithLocation(Instrument):
             
         if not ignore_position:
             try:
-                self.move(feature.datum_location) #initial move to where we recorded the feature was
+                if ignore_z_pos==True:
+                    self.move(feature.datum_location[:2]) #ignore original z value
+                else:
+                    self.move(feature.datum_location) #initial move to where we recorded the feature was
             except:
                 print "Warning: no position data in feature image, skipping initial move."
         image = self.color_image()
@@ -189,8 +198,8 @@ class CameraWithLocation(Instrument):
             try:
                 self.settle()
                 image = self.color_image()
-            #    pixel_position = locate_feature_in_image(image, feature, margin=margin, restrict=margin>0)
-                pixel_position = locate_feature_in_image(image, feature)
+                pixel_position = locate_feature_in_image(image, feature, margin=margin, restrict=margin>0)
+             #   pixel_position = locate_feature_in_image(image, feature,margin=margin)
                 new_position = image.pixel_to_location(pixel_position)
                 self.move(new_position)
                 last_move = np.sqrt(np.sum((new_position - image.datum_location)**2)) # calculate the distance moved
@@ -216,7 +225,8 @@ class CameraWithLocation(Instrument):
             print 'CameraWithLocation is not yet calibrated!!'
         
 
-    def autofocus(self, dz=None, merit_function=af_merit_squared_laplacian, method="centre_of_mass", noise_floor=0.3, update_progress=lambda p:p):
+    def autofocus(self, dz=None, merit_function=af_merit_squared_laplacian,
+                  method="centre_of_mass", noise_floor=0.3,exposure_factor =1.0, update_progress=lambda p:p):
         """Move to a range of Z positions and measure focus, then move to the best one.
 
         Arguments:
@@ -227,6 +237,7 @@ class CameraWithLocation(Instrument):
         update_progress : function, optional
             This will be called each time we take an image - for use with run_function_modally.
         """
+        self.camera.exposure = self.camera.exposure/exposure_factor
         if dz is None:
             dz = (np.arange(self.af_steps) - (self.af_steps - 1)/2) * self.af_step_size # Default value
         here = self.stage.position
@@ -268,6 +279,7 @@ class CameraWithLocation(Instrument):
         self.stage.move(new_position)
         self.camera.live_view = camera_live_view
         update_progress(self.af_steps+1)
+        self.camera.exposure = self.camera.exposure*exposure_factor
         return new_position - here, positions, powers
 
     def quick_autofocus(self, dz=0.5, full_dz = None, trigger_full_af=True, update_progress=lambda p:p, **kwargs):
