@@ -161,6 +161,8 @@ def STBOC_with_size_filter(g, bin_fac= 4,bilat_size = 3, bilat_height = 40,
                 radius = int(radius)+2
                 strided[center[1]-radius:center[1]+radius,center[0]-radius:center[0]+radius] = 0
             else:
+                M = cv2.moments(cnt,binaryImage = True)
+                center = (int(M['m10']/M['m00']),int(M['m01']/M['m00']))
                 centers.append(center)
                 radi.append(radius)
         if return_centers==True:
