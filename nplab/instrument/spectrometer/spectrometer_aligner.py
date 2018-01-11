@@ -15,6 +15,7 @@ import numpy as np
 import nplab.instrument.spectrometer
 import nplab.instrument.stage
 from nplab.instrument import Instrument
+from nplab.utils.array_with_attrs import ArrayWithAttrs
 import time
 #from nplab.utils.traitsui_mpl_qt import MPLFigureEditor
 import matplotlib.pyplot as plt
@@ -60,8 +61,14 @@ class SpectrometerAligner(Instrument):
         super(SpectrometerAligner,self).__init__()
         self.spectrometer = spectrometer
         self.stage = stage
+        self.align_to_raw_spectra=False
+        self.settling_time=0.3
+        self.spectrum_mask = None
+#        self.step_size=Range(0.01,100.,0.5)
+#        self.tolerance=Range(0.01,10.,0.05)
+#        self.number_of_points = Range(2,20,5)
 #        self.figure = 
-        self.figure.add_subplot(111)
+#        self.figure.add_subplot(111)
         self._action_lock=threading.RLock() #reentrant lock, so that it doesn't matter that both optimise, and iterate_points (which it calls) acquire the lock
 #        self._plot_data = ArrayPlotData(xpos=[],ypos=[])
 #        self.plot = Plot(self._plot_data)
@@ -210,10 +217,13 @@ class SpectrometerAligner(Instrument):
         return positions, powers
     def _do_XY_optimisation_fired(self):
         threading.Thread(target=self.optimise_2D,args=[self.tolerance], kwargs=dict(stepsize=self.step_size, npoints = self.number_of_points)).start()
-    def optimise_2D(self, tolerance, max_steps=10, stepsize=1, npoints=3, print_move=True):
+    def optimise_2D(self, tolerance=0.03, max_steps=10, stepsize=0.2, npoints=3, print_move=True,reduce_integration_time = True):
         """repeatedly move and take spectra to find the peak
         
         we run iterate_circle until the movement produced is small enough."""
+        if reduce_integration_time == True:
+            start_expo =self.spectrometer.integration_time
+            self.spectrometer.integration_time = start_expo/3.0
         self._action_lock.acquire()
         positions = [np.array(self.stage.position)]
         powers = [self.merit_function()]
@@ -227,8 +237,10 @@ class SpectrometerAligner(Instrument):
         print "performed %d iterations" % (len(positions)-1)
         self._action_lock.release()
         self.plot_alignment(positions, powers, [np.NaN,np.NaN], cla=False, fade=False, color="green")
+        if reduce_integration_time == True:
+            self.spectrometer.integration_time = start_expo
         return positions, powers
-    def z_scan(self, dz):
+    def z_scan(self, dz = np.arange(-4,4,0.4)):
         """Take spectra at (relative) z positions dz and return as a 2D array"""
         spectra = []
         here = self.stage.position
@@ -237,24 +249,25 @@ class SpectrometerAligner(Instrument):
             time.sleep(self.settling_time)
             spectra.append(self.spectrometer.read_spectrum())
         self.stage.move(here)
-        return np.array(spectra)
+        return ArrayWithAttrs(spectra, attrs=self.spectrometer.metadata)
     def plot_alignment(self,positions, powers, mean_position, cla=True, fade=True, **kwargs):
         """plot an alignment so we can see how it went"""
-        x = [p[0] for p in positions]
-        y = [p[1] for p in positions]
-        powers = np.array(powers)
-        s = powers/powers.max() * 200
-        ax = self.figure.axes[0]
-        if cla:
-            ax.cla()
-        elif fade: #fade out existing plots
-            for c in ax.collections:
-                c.set_color(tuple(np.array(c.get_facecolor())*0.5+np.array([1,1,1,1])*0.5))
-        ax.scatter(x,y,s=s,**kwargs)
-        ax.plot([mean_position[0]],[mean_position[1]], 'r+')         
-        canvas = self.figure.canvas
-        if canvas is not None:
-            canvas.draw()
+        pass
+#        x = [p[0] for p in positions]
+#        y = [p[1] for p in positions]
+#        powers = np.array(powers)
+#        s = powers/powers.max() * 200
+#        ax = self.figure.axes[0]
+#        if cla:
+#            ax.cla()
+#        elif fade: #fade out existing plots
+#            for c in ax.collections:
+#                c.set_color(tuple(np.array(c.get_facecolor())*0.5+np.array([1,1,1,1])*0.5))
+#        ax.scatter(x,y,s=s,**kwargs)
+#        ax.plot([mean_position[0]],[mean_position[1]], 'r+')         
+#        canvas = self.figure.canvas
+#        if canvas is not None:
+#            canvas.draw()
             
 def fit_parabola(positions, powers, *args):
     positions = np.array(positions)
