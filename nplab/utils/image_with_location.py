@@ -239,7 +239,7 @@ def locate_feature_in_image(image, feature, margin=0, restrict=False):
     image_shift = np.array((0,0))
     if restrict:
         # if requested, crop the larger image so that our search area is (2*margin + 1) square.
-        image_shift = lower_margin - margin
+        image_shift = np.array(lower_margin - margin,dtype = int)
         image = image[image_shift[0]:image_shift[0] + feature.shape[0] + 2 * margin + 1,
                       image_shift[1]:image_shift[1] + feature.shape[1] + 2 * margin + 1, ...]
 
