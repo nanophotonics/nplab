@@ -705,6 +705,7 @@ class Andor(Camera, AndorBase):
 
         if settings_filepath != None:
             self.load_params_from_file(settings_filepath)
+        self.isAborted = False
 
     '''Used functions'''
 
@@ -1201,7 +1202,9 @@ class AndorUI(QtWidgets.QWidget, UiTools):
             self.Andor._logger.info(
                 'The background and the current image are different shapes and therefore cannot be subtracted')
         try:
-            if self.Andor._current_x_axis == None or np.shape(self.Andor.CurImage)[-1] != np.shape(self.Andor._current_x_axis)[0] or not np.all(self.Andor._current_x_axis):
+            if (self.Andor._current_x_axis == None or 
+                np.shape(self.Andor.CurImage)[-1] != np.shape(self.Andor._current_x_axis)[0]
+                or not np.all(self.Andor._current_x_axis)):
                 xvals = np.linspace(0, self.Andor.CurImage.shape[-1] - 1, self.Andor.CurImage.shape[-1])
             else:
                 xvals = self.Andor._current_x_axis
@@ -1211,11 +1214,14 @@ class AndorUI(QtWidgets.QWidget, UiTools):
             
         except Exception as e:
             print e
+            
+        wavelengthScale = ((xvals[-1]-xvals[0])/len(xvals),1)
+            
         if len(self.Andor.CurImage.shape) == 2:
             if self.Andor.CurImage.shape[0] > self.DisplayWidget._max_num_line_plots:
                 self.DisplayWidget.splitter.setSizes([1, 0])
-                self.DisplayWidget.ImageDisplay.setImage(data, xvals=xvals, pos=offset, autoRange=False,
-                                                         scale=scale)
+                self.DisplayWidget.ImageDisplay.setImage(data.T, pos=tuple(map(operator.add, offset, (xvals[0],0))), autoRange=False,
+                                                         scale=(scale[0]*wavelengthScale[0],scale[1]*wavelengthScale[1]))
             else:
                 self.DisplayWidget.splitter.setSizes([0, 1])
                 for ii in range(self.Andor.CurImage.shape[0]):
@@ -1230,16 +1236,50 @@ class AndorUI(QtWidgets.QWidget, UiTools):
                 if self.DisplayWidget.ImageDisplay.image is None:
                     self.DisplayWidget.ImageDisplay.setImage(image, xvals=zvals,
                                                          pos=tuple(map(operator.add, offset, (xvals[0],0))), autoRange=False,
-                                                         scale=((xvals[-1]-xvals[0])/len(xvals),1), autoLevels=True)
+                                                         scale=(scale[0]*wavelengthScale[0],scale[1]*wavelengthScale[1]), autoLevels=True)
                 else:
                     self.DisplayWidget.ImageDisplay.setImage(image, xvals=zvals,
                                                          pos=tuple(map(operator.add, offset, (xvals[0],0))), autoRange=False,
-                                                         scale=((xvals[-1]-xvals[0])/len(xvals),1), autoLevels=False)
+                                                         scale=(scale[0]*wavelengthScale[0],scale[1]*wavelengthScale[1]), autoLevels=False)
 
             else:
                 self.DisplayWidget.ImageDisplay.setImage(image, xvals=zvals,
                                                          pos=tuple(map(operator.add, offset, (xvals[0],0))), autoRange=False,
-                                                         scale=((xvals[-1]-xvals[0])/len(xvals),1))
+                                                         scale=(scale[0]*wavelengthScale[0],scale[1]*wavelengthScale[1]))
+
+        chxmin = xvals[0]
+        chxmax = xvals[-1]
+        chymin = self.DisplayWidget.ImageDisplay.getImageItem().pos()[1]
+        chymax = self.DisplayWidget.ImageDisplay.getImageItem().pos()[1] + self.DisplayWidget.ImageDisplay.getImageItem().height()
+
+        # Keep the crosshairs within the image x range
+        ch1x, ch1y = self.DisplayWidget.CrossHair1.pos()
+        ch2x, ch2y = self.DisplayWidget.CrossHair2.pos()
+        if not (chxmin <= ch1x <= chxmax and chxmin <= ch2x <= chxmax):
+            if ch1x < chxmin:
+                self.DisplayWidget.CrossHair1.setPos(QtCore.QPointF(chxmin, ch1y))
+            if ch2x < chxmin:
+                self.DisplayWidget.CrossHair2.setPos(QtCore.QPointF(chxmin, ch2y))
+            if ch1x > chxmax:
+                self.DisplayWidget.CrossHair1.setPos(QtCore.QPointF(chxmax, ch1y))
+            if ch2x > chxmax:
+                self.DisplayWidget.CrossHair2.setPos(QtCore.QPointF(chxmax, ch2y))
+            self.DisplayWidget.ImageDisplay.autoRange()
+
+        # Keep the crosshairs within the image y range
+        ch1x, ch1y = self.DisplayWidget.CrossHair1.pos()
+        ch2x, ch2y = self.DisplayWidget.CrossHair2.pos()
+        if not (chymin <= ch1y <= chymax and chymin <= ch2y <= chymax):
+            if ch1y < chymin:
+                self.DisplayWidget.CrossHair1.setPos(QtCore.QPointF(ch1x, chymin))
+            if ch2y < chymin:
+                self.DisplayWidget.CrossHair2.setPos(QtCore.QPointF(ch2x, chymin))
+            if ch1y > chymax:
+                self.DisplayWidget.CrossHair1.setPos(QtCore.QPointF(ch1x, chymax))
+            if ch2y > chymax:
+                self.DisplayWidget.CrossHair2.setPos(QtCore.QPointF(ch2x, chymax))
+            self.DisplayWidget.ImageDisplay.autoRange()
+
         self.ImageUpdated.emit()
 
 
@@ -1251,7 +1291,10 @@ class DisplayWidget(QtWidgets.QWidget,UiTools):
 
         uic.loadUi(os.path.join(os.path.dirname(__file__), 'CameraDefaultDisplay.ui'), self)
         self.ImageDisplay = self.replace_widget(self.imagelayout,self.ImageDisplay,pyqtgraph.ImageView(view = pyqtgraph.PlotItem()))
+        self.ImageDisplay.view.setAspectLocked(False)
         self.ImageDisplay.getHistogramWidget().gradient.restoreState(Gradients.values()[1])
+        self.labelCrossHairPositions = QtWidgets.QLabel()
+        self.imagelayout.addWidget(self.labelCrossHairPositions)
         
         self.plot = ()
         for ii in range(self._max_num_line_plots):
@@ -1268,8 +1311,6 @@ class DisplayWidget(QtWidgets.QWidget,UiTools):
 
         self.LineDisplay.showGrid(x=True, y=True)
 
-        #        self.connect(self.CrossHair1, self.CrossHair1.CrossHairMoved, self.mouseMoved)
-        #        self.connect(self.CrossHair2, self.CrossHair2.CrossHairMoved, self.mouseMoved)
         self.CrossHair1.CrossHairMoved.connect(self.mouseMoved)
         self.CrossHair2.CrossHairMoved.connect(self.mouseMoved)
 

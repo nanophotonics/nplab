@@ -29,7 +29,9 @@ class Shamrock(Instrument):
         
         tekst = c_char()        
         error = self.dll.ShamrockInitialize(byref(tekst))
+        
         self.current_shamrock = 0 #for more than one Shamrock this has to be varied, see ShamrockGetNumberDevices
+        self.center_wavelength = 0.0
 
     def verbose(self, error, function=''):
         self.log( "[%s]: %s" %(function, error),level = 'info')
