@@ -232,10 +232,10 @@ class QuickControlBox(QtWidgets.QGroupBox, UiTools):
         combobox = QtWidgets.QComboBox()
         for option in options:
             combobox.addItem(option)
+
         self.controls[name] = combobox
         combobox.setObjectName(name + "_combobox")
-  #      combobox.setText(title)
-        self.layout().addRow("", combobox)
+        self.layout().addRow(title, combobox)
 
 auto_connectable_controls = {}
 
@@ -330,7 +330,7 @@ auto_connectable_controls['plaintextedit'] = {
     }
 auto_connectable_controls['spinbox'] = {
     'qt_type': QtWidgets.QSpinBox,
-    'suffices': ["_spinbox","SpinBox","_spin"],
+    'suffices': ["_spinbox","SpinBox","_spin",'_spinBox'],
     'control_change_handler': control_change_handler(),
     'control_change_slot_name': 'valueChanged',
     'property_change_handler': property_change_handler("value", int),

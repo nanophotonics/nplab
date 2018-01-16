@@ -576,6 +576,11 @@ class DataRenderer2or3DPG(DataRenderer, QtWidgets.QWidget):
             data = np.array(self.h5object)
         data[np.where(np.isnan(data))] = 0 
         img = pg.ImageView()
+        if len(data.shape)==3 and data.shape[2]==3:
+            data = np.transpose(data,axes = (1,0,2))
+        elif len(data.shape)==2:
+            data = np.transpose(data)
+            
         img.setImage(data)
         #img.setMinimumSize(950,750) #This seems unhelpful to me - RWB
         img.view.setAspectLocked(lock_aspect)
