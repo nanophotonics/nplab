@@ -5,6 +5,8 @@ from ctypes import *
 import numpy as np
 from nplab.instrument import Instrument
 from nplab.instrument.electronics import adlink9812_constants
+from nplab.utils.gui import *
+from nplab.ui.ui_tools import *
 
 ### Steps of PCI-DASK applications:
 #
@@ -149,8 +151,6 @@ class Adlink9812(Instrument):
 		6. Convert all data to volts and return
 
 		'''
-
-
 		#AI_AsyncDblBufferMode - initialize Double Buffer Mode
 		buffModeErr = ctypes.c_int16(self.dll.AI_AsyncDblBufferMode(c_ushort(self.card_id),ctypes.c_bool(1)))
 		if verbose or buffModeErr.value != None:
@@ -218,39 +218,19 @@ class Adlink9812(Instrument):
 	
 		return np.concatenate(oBs)
 
+class Adlink9812UI(QtWidgets.QWidget, UiTools):
+	def __init__(self,card, parent=None):
+		if not isinstance(card, Adlink9812):
+			raise ValueError("Object is not an instnace of the Adlink9812 Daq")
+		super(Adlink9812UI, self).__init__()
+		self.card = card 
+		self.parent = parent
 
+		#TODO - add adlink9812.ui file properly
+		# uic.loadUi(os.path.join(os.path.dirname(__file__), 'adlink9812.ui'), self)
 
-
-
-
-def sample_data(sample_freq, read_count,channel = 0,verbose=False):
-
-	N = int(2e5)
-	#if less than some value - use synchronous mode
-	if read_count <= N:
-		return synchronous_analog_input_read(sample_freq=sample_freq,read_count=read_count)
-	#if more than some value - use asynchronous mode/double buffered
-	elif read_count > N:
-		return asynchronous_double_buffered_analog_input_read(sample_freq=sample_freq,read_count=read_count,card_buffer_size = 500000)
-
-
-#for testing double buffered reading
-def test_asynchronous():
-	f = int(2e7)
-	dt = 1.0/f
-	n = int(2e7)
-
-	cbs = 200000
-	vs = sample_data(sample_freq=f,read_count=n,card_buffer_size=cbs,verbose=True)
-	import matplotlib.pyplot as plt 
-	print len(vs)
-	ubs = cbs/2 
-	ts = [i*dt for i in range(len(vs))]
-	# print vs
-	plt.plot(ts[int(ubs*0.99):int(ubs*1.01)],vs[int(ubs*0.99):int(ubs*1.01)])
-	plt.show()
 
 if __name__ == "__main__":
-	# print "pass"
-	card = Adlink9812("C:\ADLINK\PCIS-DASK\Lib\PCI-Dask64.dll")
-	# test_asynchronous()
+	
+	card = Adlink9812("C:\ADLINK\PCIS-DASK\Lib\PCI-Dask64.dll") #should error
+	print "pass"
