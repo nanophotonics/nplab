@@ -388,7 +388,7 @@ class AndorBase:
         self.SetParameter('CoolerMode', 0)
         self.SetParameter('FanMode', 0)
         self.SetParameter('OutAmp', 1)
-
+        self.CoolerON()
         #      self.GetAllParameters()
 
     # @background_action
@@ -807,7 +807,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
             func = self.callback_to_update_prop(param)
             self._func_dict[param] = func
             register_for_property_changes(self.Andor, param, self._func_dict[param])
-            # self.Andor.updateGUI.connect(self.updateGUI)
+        #self.Andor.updateGUI.connect(self.updateGUI)
 
     def __del__(self):
         self._stopTemperatureThread = True

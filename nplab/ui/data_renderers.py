@@ -535,7 +535,7 @@ class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
                     if len(np.array(dataset)[:,0])<100:
                         suitability = suitability + len(h5object)-20
                     else:
-                        return -1
+                        return 1
                 elif (len(np.array(dataset))/len(dataset.attrs['wavelengths']))>1 and (len(np.array(dataset))%len(dataset.attrs['wavelengths'])) == 0 :           
                     suitability = suitability + 50
                 elif len(dataset.attrs['wavelengths']) != len(np.array(dataset)):
@@ -812,7 +812,7 @@ class SpectrumRenderer(FigureRendererPG):
                     if len(np.array(dataset)[:,0])<20:
                         suitability = suitability + len(h5object)-20
                     else:
-                        return -1
+                        return 1
                 elif len(dataset.attrs['wavelengths']) != len(np.array(dataset)):
                     print "the number of bins does not equal the number of wavelengths!"
                     return -1
