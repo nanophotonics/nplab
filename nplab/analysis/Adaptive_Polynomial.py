@@ -43,7 +43,7 @@ def Iterative_Step(Data,Current_Params,Degree,Return_BG=False):
 	
 	Poly_Params=np.polyfit(range(len(Data)),Data,Degree,w=Weights)
 
-	if Return_Weights is False:
+	if Return_BG is False:
 		return Poly_Params
 	else:
 		return Poly_Params,Background
