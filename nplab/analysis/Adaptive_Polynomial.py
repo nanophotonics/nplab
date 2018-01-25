@@ -1,5 +1,5 @@
 """
-Program to interatively remove a non-trivial background from a spectrum of peaks. Note that this is not a rapid process.
+Program to iteratively remove a non-trivial background from a spectrum of peaks. Note that this is not a rapid process.
 
 Author: Jack Griffiths 2017
 
@@ -7,10 +7,10 @@ METHOD:
 
 This uses the adaptive polynomial method.
 
-First,the spectrum is fit to a high order polynomial. We want this fit to move low weight around peaks and high weight otherwise. But everywhere
-is initally equally wieghted. The counts at each wavelength are taken as Poisson distributed with the fit value at the mean. The probabilites that 
-the observed counts or higher would be seen in this case are calculated. This will be high for points below the fit and low for points greatly above
-the fit. These are used as weights for the next round of fitting. This continues untilt he fit converges. 
+First, the spectrum is fit to a high order polynomial. We want this fit to use low weights around peaks and high weights otherwise, but everywhere
+is initially equally weighted. The counts at each wavelength are taken as Poisson distributed with the fit value as the mean. The probabilities that 
+the observed counts or higher would be seen in this case are calculated. This will be high for points below the fit and low for points above
+the fit. These are used as weights for the next round of fitting. This continues until the fit converges.
 """
 
 import numpy as np
@@ -37,7 +37,7 @@ def Iterative_Step(Data,Current_Params,Degree,Return_BG=False):
 	"""
 
 	Background=np.polyval(Current_Params,range(len(Data)))
-	Background*=(Background>0)
+	Background*=(Background>0)  #For a Poisson distribution, negative values are meaningless
 
 	Weights=Find_Weights(Background,Data)
 	
@@ -52,7 +52,7 @@ def Run(Data,Degree,Threshold=0.0001,Max_Steps=None,Auto_Remove=True):
 	"""
 	Main function that completes the background subtraction. 
 
-	Data=1D array for spectrum. Degree is the polynomial degree to fit. The intial sum squared difference between the first two backgrounds is 
+	Data=1D array for spectrum. Degree is the polynomial degree to fit. The initial sum squared difference between the first two backgrounds is 
 	calculated. The function returns when this sum between two successive background fits is less than Threshold*the original difference. If
 	Max_Steps is a number, the function will automatically return after Max_Steps iterations. 
 
