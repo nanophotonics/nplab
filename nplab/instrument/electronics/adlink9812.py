@@ -7,7 +7,9 @@ from nplab.instrument import Instrument
 from nplab.instrument.electronics import adlink9812_constants
 from nplab.utils.gui import *
 from nplab.ui.ui_tools import *
-
+import nplab
+import datetime
+import matplotlib.pyplot as plt 
 ### Steps of PCI-DASK applications:
 #
 # Full documentation: ADLINK PCIS-DASK User's Manual
@@ -29,14 +31,18 @@ from nplab.ui.ui_tools import *
 
 DATATYPE = c_ushort
 
+VERSION = 0.01
+
 
 class Adlink9812(Instrument):
 
-	def __init__(self, dll_path="C:\ADLINK\PCIS-DASK\Lib\PCI-Dask64.dll"):
+	def __init__(self, dll_path="C:\ADLINK\PCIS-DASK\Lib\PCI-Dask64.dll",debug=False):
 		"""Initialize DLL and configure card"""
 		# super(Adlink9812,self).__init__()
+		self.debug = debug
 		if not os.path.exists(dll_path):
-			raise ValueError("Adlink DLL not found: {}".format(dll_path))
+			if self.debug != True:
+				raise ValueError("Adlink DLL not found: {}".format(dll_path))
 		else:
 			self.dll = CDLL(dll_path)
 			self.card_id = self.register_card()
@@ -86,7 +92,7 @@ class Adlink9812(Instrument):
 
 	def convert_to_volts(self,inputBuffer, outputBuffer, buffer_size):
 		convertErr = ctypes.c_int16(self.dll.AI_ContVScale(
-				c_ushort(self.card_id),								#CardNumber
+				c_ushort(self.card_id),							#CardNumber
 				c_ushort(adlink9812_constants.AD_B_1_V),		#AdRange
 				inputBuffer, 									#DataBuffer   - array storing raw 16bit A/D values
 				outputBuffer, 									#VoltageArray - reference to array storing voltages
@@ -98,15 +104,12 @@ class Adlink9812(Instrument):
 		return 
 
 
-	def synchronous_analog_input_read(self,sample_freq, read_count):
-		#register card
-		#load default configuration
-		configure_card(self.card_id)
+	def synchronous_analog_input_read(self,sample_freq, sample_count,verbose = False):
 		#Initialize Buffers
 		#databuffer for holding A/D samples + metadata bits
-		dataBuff = (c_ushort*read_count)()
+		dataBuff = (c_ushort*sample_count)()
 		#voltageArray for holding converted voltage values
-		voltageOut = (c_double*read_count)()
+		voltageOut = (c_double*sample_count)()
 
 		#Sample data, Mode: Synchronous
 		readErr = ctypes.c_int16(self.dll.AI_ContReadChannel(
@@ -114,7 +117,7 @@ class Adlink9812(Instrument):
 			c_ushort(channel),       						#Channel
 			c_ushort(adlink9812_constants.AD_B_1_V),		#AdRange
 			dataBuff,												#Buffer
-			c_uint32(read_count),							#ReadCount
+			c_uint32(sample_count),							#ReadCount
 			c_double(sample_freq),							#SampleRate (Hz)
 			c_ushort(adlink9812_constants.SYNCH_OP)			#SyncMode
 		))
@@ -123,10 +126,10 @@ class Adlink9812(Instrument):
 			print "AI_ContReadChannel: Non-zero status code:", readErr.value
 
 		#Convert to volts
-		convert_to_volts(self.card_id, dataBuff,voltageOut,read_count)
+		convert_to_volts(self.card_id, dataBuff,voltageOut,sample_count)
 		return np.asarray(voltageOut)
 
-	def asynchronous_double_buffered_analog_input_read(self,sample_freq,read_count,card_buffer_size = 500000,verbose=False, channel = 0):
+	def asynchronous_double_buffered_analog_input_read(self,sample_freq,sample_count,card_buffer_size = 500000,verbose=False, channel = 0):
 		'''
 		Non-Triggered Double-Buffered Asynchronous  Analog Input Continuous Read
 		Steps: [Adlink PCIS-DASK manual,page 47]
@@ -161,7 +164,7 @@ class Adlink9812(Instrument):
 
 		#user buffers
 		user_buffer_size = card_buffer_size/2 #half due to being full when buffer is read
-		nbuff = int(math.ceil(read_count/float(user_buffer_size)))
+		nbuff = int(math.ceil(sample_count/float(user_buffer_size)))
 		
 		# uBs = [(c_double*user_buffer_size)()]*nbuff
 		uBs = []
@@ -232,19 +235,148 @@ class Adlink9812(Instrument):
 				print "AI_ContVScale: Non-zero status code:", convertErr.value
 		return np.concatenate(oBs)
 
+	@staticmethod
+	def get_times(dt,nsamples):
+		return [i*dt for i in range(nsamples)]
+
+	def capture(self,sample_freq, sample_count,verbose = False):
+		assert(sample_freq <= int(2e7) and sample_freq > 1)
+		dt = 1.0/sample_freq
+		if self.debug:
+			print "---DEBUG MODE ENABLED---"
+			debug_out = (2.0*np.random.rand(sample_count))-1.0 
+			return debug_out,dt
+		elif sample_count < 200000:
+			return self.asynchronous_double_buffered_analog_input_read(sample_freq= sample_freq,sample_count = sample_count,verbose = verbose),dt
+		else:
+			return self.synchronous_analog_input_read(sample_freq= sample_freq,sample_count = sample_count,verbose = verbose),dt
+
+
+
+
+
 class Adlink9812UI(QtWidgets.QWidget, UiTools):
-	def __init__(self,card, parent=None):
+	def __init__(self,card, parent=None,debug = False):
 		if not isinstance(card, Adlink9812):
 			raise ValueError("Object is not an instnace of the Adlink9812 Daq")
 		super(Adlink9812UI, self).__init__()
 		self.card = card 
 		self.parent = parent
+		self.debug = debug
 
 		#TODO - add adlink9812.ui file properly
-		# uic.loadUi(os.path.join(os.path.dirname(__file__), 'adlink9812.ui'), self)
+		uic.loadUi(os.path.join(os.path.dirname(__file__), 'adlink9812.ui'), self)
 
+		#bind widgets to functions
+		self.capture_button.clicked.connect(self.capture)
+		self.sample_freq_textbox.textChanged.connect(self.set_sample_freq)
+		self.sample_count_textbox.textChanged.connect(self.set_sample_count)
+		self.series_name_textbox.textChanged.connect(self.set_series_name)
+		self.series_key_textbox.textChanged.connect(self.set_series_key)
+
+
+		self.set_sample_freq()
+		self.set_sample_count()
+		self.set_series_name()
+		self.set_series_key()
+		
+
+	def set_sample_freq(self):
+		print "Setting sample freq"
+		MHz = 1e6
+		try:
+			self.sample_freq = int(float(self.sample_freq_textbox.text())*MHz)
+		except Exception,e:
+			print "Failed parsing sampling frequency to float:",self.sample_freq_w.text()
+		return
+
+	def set_sample_count(self):
+		try:
+			self.sample_count = int(float(self.sample_count_textbox.text())*1000)
+		except Exception,e:
+			print "Failed parsing sample count to int:",self.sample_freq_textbox.text()
+		return
+
+	def set_series_name(self):
+		self.series_group = self.series_name_textbox.text()
+		return
+
+	def set_series_key(self):
+		self.series_key = self.series_key_textbox.text()
+		return
+	
+
+	def plot_series(self,voltages, dt, timestamp):
+		print voltages[0:10]
+		times = self.card.get_times(dt, len(voltages))
+		fig,ax = plt.subplots(1)
+		ax.plot(times, voltages)
+		ax.set_xlabel("Time [s]")
+		ax.set_ylabel("Voltage [V]")
+		ax.set_title("Adlink9812 Capture, Timestamp: {0}".format(timestamp))
+		plt.show()
+		return
+
+	def capture(self):
+		
+		save = self.save_checkbox.isChecked()
+		plot = self.plot_checkbox.isChecked()
+
+		print "-"*5+"Adlink 9812: Capture" + "-"*5
+		print "SamplingFreq (Hz):", self.sample_freq
+		print "SampleCount (counts):", self.sample_count
+		print "SeriesName: ", self.series_group
+		print "Serieskey: ", self.series_key
+		print "Plot trace:", plot
+		print "Save trace:", save
+		if save:
+			try:
+				self.datafile
+			except AttributeError:
+				self.datafile = nplab.datafile.current()
+			dg = self.datafile.require_group(self.series_group)
+
+		
+		voltages, dt = self.card.capture(sample_freq=self.sample_freq, sample_count=self.sample_count)
+		vmean = np.mean(voltages)
+		vmax = np.max(voltages)
+		vmin = np.min(voltages)
+		vstd = np.std(voltages)
+		vpp = np.abs(vmax-vmin)
+
+		timestamp = str(datetime.datetime.now()).replace(' ', 'T')
+		attrs = {
+			
+			"device": "adlink9812",
+			"description": "Analog to digital converter",
+			"_units": "volts",
+			"sample_count": self.sample_count,
+			"frequency":self.sample_freq,
+			"dt": dt,
+			"vmean":vmean,
+			"vstdev": vstd,
+			"vmax":vmax,
+			"vmin":vmin,
+			"vpp":vpp,
+			"capture_timestamp": timestamp
+			}
+
+		if save:
+			dg.create_dataset(self.series_key,data=[voltages], attrs = attrs)
+			dg.file.flush()
+
+		#plot measurement on graph
+		if plot:
+			print voltages
+			self.plot_series(voltages=voltages, dt=dt, timestamp=timestamp)
+		
+		return
 
 if __name__ == "__main__":
 	
-	card = Adlink9812("C:\ADLINK\PCIS-DASK\Lib\PCI-Dask64.dll") #should error
-	print "pass"
+	#debug mode enabled - won't try to picj up card - will generate data
+	card = Adlink9812("C:\ADLINK\PCIS-DASK\Lib\PCI-Dask64.dll",debug=True)
+	app = get_qt_app()
+	ui = Adlink9812UI(card=card,debug =True)
+	ui.show()
+	sys.exit(app.exec_())
