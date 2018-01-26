@@ -99,7 +99,6 @@ class Adlink9812(Instrument):
 
 
 	def synchronous_analog_input_read(self,sample_freq, read_count):
-	
 		#register card
 		#load default configuration
 		configure_card(self.card_id)
@@ -151,9 +150,10 @@ class Adlink9812(Instrument):
 		6. Convert all data to volts and return
 
 		'''
+		
 		#AI_AsyncDblBufferMode - initialize Double Buffer Mode
-		buffModeErr = ctypes.c_int16(self.dll.AI_AsyncDblBufferMode(c_ushort(self.card_id),ctypes.c_bool(1)))
-		if verbose or buffModeErr.value != None:
+		buffModeErr = ctypes.c_int16(self.dll.AI_AsyncDblBufferMode(c_ushort(card_id),ctypes.c_bool(1)))
+		if verbose or buffModeErr.value != 0:
 			print "AI_AsyncDblBufferMode: Non-zero status code",buffModeErr.value
 
 		#card buffer
@@ -163,13 +163,18 @@ class Adlink9812(Instrument):
 		user_buffer_size = card_buffer_size/2 #half due to being full when buffer is read
 		nbuff = int(math.ceil(read_count/float(user_buffer_size)))
 		
-		uBs = [(c_double*user_buffer_size)()]*nbuff
+		# uBs = [(c_double*user_buffer_size)()]*nbuff
+		uBs = []
+		print uBs
+		# oBs = [(c_double*user_buffer_size)()]*nbuff
+		oBs = []
 		if verbose:
 			print "Number of user buffers:", nbuff
 
-		#AI_ContReadChannel
+		#AI_ContReadChanne
+
 		readErr = ctypes.c_int16(self.dll.AI_ContReadChannel(
-			c_ushort(self.card_id), 					#CardNumber
+			c_ushort(card_id), 					#CardNumber
 			c_ushort(channel),       			#Channel
 			c_ushort(adlink9812_constants.AD_B_1_V),		#AdRange
 			cardBuffer,									#Buffer
@@ -183,39 +188,48 @@ class Adlink9812(Instrument):
 
 		#AI_AsyncDblBufferHalfReader
 		#I16 AI_AsyncDblBufferHalfReady (U16 CardNumber, BOOLEAN *HalfReady,BOOLEAN *StopFlag)
-		halfReady = c_bool(0)
-		stopFlag = c_bool(0)
-
-		for count, uB in enumerate(uBs):
+		
+		for i in range(nbuff):
+			currentBuffer = (c_double*user_buffer_size)()
+			halfReady = c_bool(0)
+			stopFlag = c_bool(0)
 			while halfReady.value != True:
-
 				buffReadyErr = ctypes.c_int16(self.dll.AI_AsyncDblBufferHalfReady(
-					c_ushort(self.card_id),
+					c_ushort(card_id),
 					ctypes.byref(halfReady),
 					ctypes.byref(stopFlag))
 				)
-				if verbose:
-					print "buffReadErr:",buffReadyErr
+				if buffReadyErr.value!=0:
+					print "buffReadErr:",buffReadyErr.value
 					print "HalfReady:",halfReady.value
-				
+		
 			#AI_AsyncDblBufferTransfer
 			#I16 AI_AsyncDblBufferTransfer (U16 CardNumber, U16 *Buffer)
-			buffTransferErr = ctypes.c_int16(self.dll.AI_AsyncDblBufferTransfer(c_ushort(self.card_id), uB))
-			if verbose:
-				print "buffTransferErr:",buffTransferErr
+			buffTransferErr = ctypes.c_int16(self.dll.AI_AsyncDblBufferTransfer(c_ushort(card_id), ctypes.byref(currentBuffer)))
+			uBs.append(currentBuffer)
+			if buffTransferErr.value != 0:
+				print "buffTransferErr:",buffTransferErr.value
 
 		accessCnt = ctypes.c_int32(0)
-		clearErr = ctypes.c_int16(self.dll.AI_AsyncClear(self.card_id, ctypes.byref(accessCnt)))
+		clearErr = ctypes.c_int16(self.dll.AI_AsyncClear(card_id, ctypes.byref(accessCnt)))
 		if verbose:
 			print "AI_AsyncClear,AccessCnt:", accessCnt.value
 		
 		#concatenate user buffer onto existing numpy array
 		#reinitialize user buffer
-		oBs = [(c_double*user_buffer_size)() for i in range(nbuff)]
-		
+
 		for i in range(nbuff):
-			convert_to_volts(self.card_id, uBs[i],oBs[i],user_buffer_size)	
-	
+			oB = (c_double*user_buffer_size)()
+			convertErr = ctypes.c_int16(self.dll.AI_ContVScale(
+			c_ushort(card_id),				#CardNumber
+			c_ushort(adlink9812_constants.AD_B_1_V),	#AdRange
+			uBs[i], 					#DataBuffer   - array storing raw 16bit A/D values
+			oB, 					#VoltageArray - reference to array storing voltages
+			c_uint32(user_buffer_size) 			#Sample count - number of samples to be converted
+			))
+			oBs.append(oB)
+			if convertErr.value != 0:
+				print "AI_ContVScale: Non-zero status code:", convertErr.value
 		return np.concatenate(oBs)
 
 class Adlink9812UI(QtWidgets.QWidget, UiTools):
