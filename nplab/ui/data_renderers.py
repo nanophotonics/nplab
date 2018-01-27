@@ -1439,9 +1439,84 @@ class PumpProbeX_loops(DataRenderer, QtWidgets.QWidget):
             if 'sensitivity' in dataset.attrs.keys():
                 suitability = suitability + 20    
         return suitability
-                        
             
-add_renderer(PumpProbeX_loops)     
+add_renderer(PumpProbeX_loops)
+
+
+class AutocorrelationRenderer(FigureRendererPG):
+    """ A renderer for 1D datasets experessing them in a line graph using
+    pyqt graph. Allowing the user to interact with the graph i.e. zooming into 
+    selected region or performing transformations of the axis
+    """
+
+    @staticmethod
+    def autocorrelation(x,mode="fft"):
+        import scipy.signal
+        x=np.asarray(x)
+        n = len(x)
+        mean = x.mean()
+        if mode == "fft":
+            r = scipy.signal.correlate(x,x,mode="full",method="fft")[-n:]
+            outp = np.divide(r,np.multiply(mean**2,np.arange(n,0,-1)))
+            return outp
+        elif mode == "direct":
+            r = np.correlate(x, x, mode = 'full')[-n:]
+            outp =  np.divide(r,np.multiply(mean**2,np.arange(n,0,-1)))
+            return outp
+
+
+    def display_data(self):
+        if not hasattr(self.h5object, "values"):
+            # If we have only one item, treat it as a group containing that item.
+            self.h5object = {self.h5object.name: self.h5object}
+        icolour = 0    
+        self.figureWidget.addLegend(offset = (-1,1))
+        for h5object in self.h5object.values():
+            try:
+                if np.shape(h5object)[0] == 2 or np.shape(h5object)[1] == 2:
+                    Xdata = np.array(h5object)[0]
+                    Ydata = np.array(h5object)[1]
+                else:
+                    Ydata = np.array(h5object)
+                    Xdata = np.arange(len(Ydata))
+            except IndexError:
+                Ydata = np.array(h5object)
+                Xdata = np.arange(len(Ydata))
+
+            self.figureWidget.plot(x = np.log10(Xdata[1:]), y = AutocorrelationRenderer.autocorrelation(Ydata)[1:],name = h5object.name, pen =(icolour,len(self.h5object)))
+            icolour = icolour + 1
+            
+        labelStyle = {'font-size': '24pt'}
+        try:
+            self.figureWidget.setLabel('bottom', "$Log_\{10\}$({})".format(h5object.attrs['X label']), **labelStyle)
+        except:
+            self.figureWidget.setLabel('bottom', 'Log10(X axis)', **labelStyle)
+            
+        try:
+            self.figureWidget.setLabel('left', "ACF({})".format(h5object.attrs['Y label']), **labelStyle)
+        except:
+            self.figureWidget.setLabel('left', 'ACF(Y axis)', **labelStyle)
+
+    @classmethod
+    def is_suitable(cls, h5object):
+        if not hasattr(h5object, "values"):
+            # If we have only one item, treat it as a group containing that item.
+            h5object = {h5object.name: h5object}
+
+        for dataset in h5object.values():
+            # Check that all datasets selected are either 1D or Nx2 or 2xN
+            assert isinstance(dataset, h5py.Dataset) #we can only render datasets
+            assert(dataset.attrs["device"]=="adlink9812") #autocorrelation functions are only for the adlink9812 card
+            try:
+                assert len(dataset.shape) == 1
+            except:
+                assert len(dataset.shape) == 2
+                assert np.any(np.array(dataset.shape) == 2)
+
+        return 14
+        
+add_renderer(AutocorrelationRenderer)
+
 if __name__ == '__main__':
     import sys, h5py, os, numpy as np
 

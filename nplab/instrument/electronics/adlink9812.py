@@ -358,11 +358,12 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 			"vmax":vmax,
 			"vmin":vmin,
 			"vpp":vpp,
-			"capture_timestamp": timestamp
+			"X label": "Sample Index",
+			"Y label": "Voltage [V]"
 			}
 
 		if save:
-			dg.create_dataset(self.series_key,data=[voltages], attrs = attrs)
+			dg.create_dataset(self.series_key,data=voltages, attrs = attrs)
 			dg.file.flush()
 
 		#plot measurement on graph
