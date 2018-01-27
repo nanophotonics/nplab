@@ -1444,11 +1444,15 @@ add_renderer(PumpProbeX_loops)
 
 
 class AutocorrelationRenderer(FigureRendererPG):
-    """ A renderer for 1D datasets experessing them in a line graph using
-    pyqt graph. Allowing the user to interact with the graph i.e. zooming into 
-    selected region or performing transformations of the axis
+    """ A renderer for 1D datasets pushing them through the autocorrelation function prior to plotting. 
+    Also looks for metadata annotations in each dataset. In the case when the dataset attributes include field:
+        dt
+        frequency
+    The make_Xdata generates converts the 1D dataset into a 2D dataset by reconstructing the times at which the data was sampled and 
+    relabels the X-axis with the time. Lastly, before plotting the data is transformed to an equivalent of "semilogx" format in matplotlib
     """
 
+    #Computes autocorrelation of the data using FFT: O(nlogn). Direct computation of correlation is O(n^2) and so is slower
     @staticmethod
     def autocorrelation(x,mode="fft"):
         import scipy.signal
@@ -1464,38 +1468,75 @@ class AutocorrelationRenderer(FigureRendererPG):
             outp =  np.divide(r,np.multiply(mean**2,np.arange(n,0,-1)))
             return outp
 
-
+    #Tries to convert the array of indices on the X axis into time sample points by checking if dataset contains "dt" or "frequency" metadata annotations
+    @staticmethod
+    def make_Xdata(dataset,N):
+        #Pulls out metadata from the datasets in the case when the dataset is 1D
+        # reconstructs the sampling times, assuming equidistant - halves space requirements
+        Xdata = np.arange(N)
+        keys = ["dt", "frequency"]
+        for k in keys:
+            if k in dataset.attrs.keys():
+                if k == "dt":
+                    try:
+                        dt = float(dataset.attrs[k])
+                        return dt*Xdata,"Log10(Time) [s]"
+                    except: pass
+                elif k == "frequency":
+                    try:
+                        dt = 1.0/float(dataset.attrs[k])
+                        return dt*Xdata,"Log10(Time) [s]"
+                    except: pass
+            else:
+                return Xdata,"Log10(ArrayIndex)"
+        
     def display_data(self):
         if not hasattr(self.h5object, "values"):
             # If we have only one item, treat it as a group containing that item.
             self.h5object = {self.h5object.name: self.h5object}
         icolour = 0    
         self.figureWidget.addLegend(offset = (-1,1))
-        for h5object in self.h5object.values():
-            try:
-                if np.shape(h5object)[0] == 2 or np.shape(h5object)[1] == 2:
-                    Xdata = np.array(h5object)[0]
-                    Ydata = np.array(h5object)[1]
-                else:
-                    Ydata = np.array(h5object)
-                    Xdata = np.arange(len(Ydata))
-            except IndexError:
-                Ydata = np.array(h5object)
-                Xdata = np.arange(len(Ydata))
 
-            self.figureWidget.plot(x = np.log10(Xdata[1:]), y = AutocorrelationRenderer.autocorrelation(Ydata)[1:],name = h5object.name, pen =(icolour,len(self.h5object)))
+        #Default X and Y labels
+        Xlabel = 'Log10(X axis)'
+        Ylabel = 'ACF(Y axis)'
+        for dataset in self.h5object.values():
+
+            #Try to pull out axes label annotations from metadata + reformat them
+            try:
+                Xlabel = "Log10({0})".format(dataset.attrs['X label'])
+            except:
+                pass
+            try:
+                Ylabel = "ACF({0})".format(dataset.attrs['Y label'])
+            except:
+                pass
+            #Pull out data
+            try:
+                if np.shape(dataset)[0] == 2 or np.shape(dataset)[1] == 2:
+                    Xdata = np.array(dataset)[0]
+                    Ydata = np.array(dataset)[1] 
+                else:
+                    Ydata = np.array(dataset)
+                    #no xdata stores - generate our own
+                    Xdata,Xlabel = AutocorrelationRenderer.make_Xdata(dataset, len(Ydata))
+            except IndexError:
+                #no xdata stores - generate our own
+                Ydata = np.array(dataset)
+                Xdata,Xlabel = AutocorrelationRenderer.make_Xdata(dataset, len(Ydata))
+
+            #Final transform prior to plotting:
+            xs = np.log10(Xdata[1:])
+            ys = AutocorrelationRenderer.autocorrelation(Ydata)[1:]
+            #plot
+            self.figureWidget.plot(x = xs, y = ys,name = dataset.name, pen =(icolour,len(self.h5object)))
             icolour = icolour + 1
             
         labelStyle = {'font-size': '24pt'}
-        try:
-            self.figureWidget.setLabel('bottom', "$Log_\{10\}$({})".format(h5object.attrs['X label']), **labelStyle)
-        except:
-            self.figureWidget.setLabel('bottom', 'Log10(X axis)', **labelStyle)
-            
-        try:
-            self.figureWidget.setLabel('left', "ACF({})".format(h5object.attrs['Y label']), **labelStyle)
-        except:
-            self.figureWidget.setLabel('left', 'ACF(Y axis)', **labelStyle)
+        #set axes labels
+        self.figureWidget.setLabel('bottom', Xlabel, **labelStyle)
+        self.figureWidget.setLabel('left', Ylabel, **labelStyle)
+       
 
     @classmethod
     def is_suitable(cls, h5object):
@@ -1505,8 +1546,9 @@ class AutocorrelationRenderer(FigureRendererPG):
 
         for dataset in h5object.values():
             # Check that all datasets selected are either 1D or Nx2 or 2xN
-            assert isinstance(dataset, h5py.Dataset) #we can only render datasets
-            assert(dataset.attrs["device"]=="adlink9812") #autocorrelation functions are only for the adlink9812 card
+            assert isinstance(dataset, h5py.Dataset)
+            #autocorrelation functions are only for the adlink9812 card
+            assert(dataset.attrs["device"]=="adlink9812") 
             try:
                 assert len(dataset.shape) == 1
             except:
