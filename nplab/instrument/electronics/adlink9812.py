@@ -73,6 +73,13 @@ class Adlink9812(Instrument):
 			print "GetActualRate: Non-zero status code:", statusCode.value
 		return actual.value
 
+	def get_qt_ui(self):
+		return Adlink9812UI(card=self,debug = self.debug):
+
+	@staticmethod
+	def get_qt_ui_cls():
+		return Adlink9812UI
+
 	def configure_card(self):
 		#Configure card for recording
 		configErr = ctypes.c_int16(self.dkk.AI_9812_Config(
