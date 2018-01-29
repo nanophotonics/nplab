@@ -74,7 +74,7 @@ class Adlink9812(Instrument):
 		return actual.value
 
 	def get_qt_ui(self):
-		return Adlink9812UI(card=self,debug = self.debug):
+		return Adlink9812UI(card=self,debug = self.debug)
 
 	@staticmethod
 	def get_qt_ui_cls():
