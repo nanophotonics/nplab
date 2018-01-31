@@ -302,7 +302,11 @@ class HDF5TreeItem(object):
                 time_stamps = []
                 for value in self.data_file[self.name].values():
                     time_stamp_str = value.attrs['creation_timestamp']
-                    time_stamp_float = datetime.datetime.strptime(time_stamp_str,"%Y-%m-%dT%H:%M:%S.%f")
+                    try:
+                        time_stamp_float = datetime.datetime.strptime(time_stamp_str,"%Y-%m-%dT%H:%M:%S.%f")
+                    except ValueError:
+                        time_stamp_str =  time_stamp_str+'.0'
+                        time_stamp_float = datetime.datetime.strptime(time_stamp_str,"%Y-%m-%dT%H:%M:%S.%f")
                     time_stamps.append(time_stamp_float)
                 keys = np.array(keys)[np.argsort(time_stamps)]
             except KeyError:
