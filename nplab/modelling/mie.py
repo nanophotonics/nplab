@@ -198,7 +198,11 @@ def get_refractive_index(target_wavelength, url):
     global REFRACTIVE_INDEX
     if WAVELENGTHS == None or REFRACTIVE_INDEX == None:
 
-        gold_indices = requests.get(url)
+        import csv
+        response = requests.get(url)
+        reader = csv.reader(response._content)
+        for row in reader:
+            print row
         content = ((gold_indices._content).replace('\r','\n')).replace('\n\n\n',"\n").replace('\t',",")
         R = [v.split(",") for v in (content.split("\n"))]
         R=R[1:]
@@ -217,11 +221,11 @@ def get_refractive_index(target_wavelength, url):
             REFRACTIVE_INDEX = ns
     return np.interp(target_wavelength,WAVELENGTHS,REFRACTIVE_INDEX)
 def get_refractive_index_Au(target_wavelength):
-    url = "https://www.filmetrics.com/technology/refractive-index-database/download/Au"
+    url = "https://refractiveindex.info/data_csv.php?datafile=data/main/Au/Johnson.yml"
     return get_refractive_index(target_wavelength,url=url)
 
 def get_refractive_index_Ag(target_wavelength):
-    url = "https://www.filmetrics.com/technology/refractive-index-database/download/Ag"
+    url = "https://refractiveindex.info/data_csv.php?datafile=data/main/Ag/Johnson.yml"
     return get_refractive_index(target_wavelength,url=url)
 
 def calculate_scattering_cross_section(m,x,r,n_max):
@@ -270,6 +274,7 @@ def main3():
         Xs_ext = []
         for wavelength in wavelengths:
             n_particle = get_refractive_index_Au(wavelength/1e-9)
+            print "N:",n_particle
             x,m = make_rescaled_parameters(n_med=n_medium,n_particle=n_particle,r=r,wavelength=wavelength)
             
             print "X:{0},M:{1}".format(x,m)
