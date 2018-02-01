@@ -8,6 +8,7 @@ GUI which controls a Thorlabs camera
 
 import os
 import datetime
+import time
 from qtpy import QtCore, QtWidgets, uic
 from scipy.misc import imsave
 import pyqtgraph as pg
@@ -29,6 +30,10 @@ def get_camera_parameters(camera):
     camera_parameters['gain_boost'] = camera.gain_boost
     camera_parameters['auto_blacklevel'] = camera.auto_blacklevel
     camera_parameters['blacklevel_offset'] = camera.blacklevel_offset
+    try:
+        camera_parameters['gamma'] = camera.gamma
+    except:
+        print "WARNING: Can't read gamma value from the camera!!!"
     
     return camera_parameters
 
@@ -54,16 +59,10 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         self.splitter.setSizes([50,60000])
         
         # Disable stop video button
-        self.StopVideoPushButton.setEnabled(False)
-        
-        # Set starting parameters
-        self.file_path = ''
-        self.ExposureTimeNumberBox.setValue(3)
-        self.FramerateNumberBox.setValue(10)
-        self.GainNumberBox.setValue(0)
-        self.BlacklevelNumberBox.setValue(255)
+        self.StopVideoPushButton.setEnabled(False)     
       
         # Connect GUI elements
+        self.AutoExposurePushButton.clicked.connect(self.auto_exposure)
         self.TakeImagePushButton.clicked.connect(self.take_image)
         self.SaveImagePushButton.clicked.connect(self.save_image)
         self.NewFilePushButton.clicked.connect(self.new_hdf5_file)
@@ -101,9 +100,24 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         self.df = False
         self.new_hdf5_file()
 
-        # open camera and take image
+        # open camera
         print list_instruments()
         self.open_camera()
+        
+        # Set initial parameters
+        self.file_path = ''
+        self.ExposureTimeNumberBox.setValue(3)
+        self.FramerateNumberBox.setValue(10)
+        self.GainNumberBox.setValue(0)
+        self.GammaNumberBox.setValue(1)
+        self.BlacklevelNumberBox.setValue(255)       
+#        self.ROICheckBox.setChecked(True)
+#        self.ROIWidthCheckBox.setChecked(True)
+#        self.ROIHeightCheckBox.setChecked(True)
+#        self.ROIWidthNumberBox.setValue(700)
+#        self.ROIHeightNumberBox.setValue(50)
+        
+        # take image
         self.take_image()
 
     
@@ -132,6 +146,43 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         """Grab an image and display it."""
         image = self.grab_image()
         self.display_image(image)
+        return image
+
+    def get_max_grayscale(self, image):
+        max_grayscale = np.amax(image)
+        self.CurrentMaxGrayLabel.setText(str(max_grayscale))
+        return max_grayscale
+        
+    def auto_exposure(self):
+        min_gray = self.MinGrayNumberBox.value()
+        max_gray = self.MaxGrayNumberBox.value()
+        precision = self.ExposureTimePrecisionNumberBox.value()
+        self.set_auto_exposure(min_gray=min_gray, max_gray=max_gray, precision=precision)
+    
+    def set_auto_exposure(self, min_gray=200, max_gray=250, precision=1):
+        image = self.take_image()
+        max_image = self.get_max_grayscale(image)
+        okay = True
+        
+        while (max_image > max_gray or max_image < min_gray) and okay:            
+            current_exposure = float(self.CurrentExposureLabel.text())
+            
+            if max_image > max_gray:
+                print "REDUCE exposure time...\n"
+                new_exposure = current_exposure/2
+            elif max_image < min_gray:
+                print "INCREASE exposure time...\n"
+                new_exposure = current_exposure/max_image*max_gray*0.99
+                
+            self.ExposureTimeNumberBox.setValue(new_exposure)
+            image = self.take_image()
+            max_image = self.get_max_grayscale(image)
+            
+            previous_exposure = current_exposure
+            current_exposure = float(self.CurrentExposureLabel.text())
+            if np.abs(previous_exposure - current_exposure) < precision:
+                okay = False # make sure we're not trying forever
+
         
     def display_image(self, image):
         """Display the latest captured image."""
@@ -152,6 +203,10 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         self.CurrentGainBoostLabel.setText(str(camera_parameters['gain_boost']))
         self.CurrentAutoBlacklevelLabel.setText(str(camera_parameters['auto_blacklevel']))
         self.CurrentBlacklevelLabel.setText(str(camera_parameters['blacklevel_offset']))
+        try:
+            self.CurrentGammaLabel.setText(str(camera_parameters['gamma']))
+        except:
+            print "WARNING: Gamma not in camera parameters dictionary!!!"
         
             
     def set_capture_parameters(self):
@@ -174,6 +229,10 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         self.camera.auto_blacklevel = self.AutoBlacklevelCheckBox.checkState()
         self.camera.blacklevel_offset = int(self.BlacklevelNumberBox.value())         
         self.camera.gain_boost = self.GainBoostCheckBox.checkState()
+        try:
+            self.camera.gamma = int(self.GammaNumberBox.value())         
+        except:
+            print "WARNING: Can't set gamma!!!"
     
     def set_ROI(self, parameters_dict):
         """Read ROI coordinates from the GUI."""
@@ -210,18 +269,19 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         """Grab an image with the camera."""
         # set the desired capture parameters
         self.set_capture_parameters() # populate self.capture_parameters
-        # get the capture_timestamp
+        # get the capture_timestamp with millisecond precision
         # insert a T to match the creation_timestamp formatting
         self.attributes['capture_timestamp'] = str(datetime.datetime.now()).replace(' ', 'T')
         # grab the image
         image = self.camera.grab_image(**self.capture_parameters)
-        print 'Image grabbed.'
+        print 'Image grabbed.\n'
         # get camera parameters and display them on the GUI
         self.camera_parameters = get_camera_parameters(self.camera)
         # update the attributes dictionary
         self.attributes.update(self.capture_parameters)
         self.attributes.update(self.camera_parameters)
-        self.display_camera_parameters(self.camera_parameters)        
+        self.display_camera_parameters(self.camera_parameters)    
+        self.get_max_grayscale(image)
         return image
         
     def get_info(self):
@@ -252,7 +312,7 @@ class uc480(QtWidgets.QMainWindow, UiTools):
             # write data to the file
             dg.create_dataset("image_%d", data=image, attrs=self.attributes)
             dg.file.flush()
-            print "Image saved to the hdf5 file."
+            print "Image saved to the hdf5 file.\n"
             
         else:
             # user input to choose file name
@@ -332,7 +392,6 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         self.StopVideoPushButton.clicked.connect(self.LiveView.terminate)
         self.LiveView.finished.connect(self.terminated_live_view)
         # live view
-        print "Saving video..."
         self.live_view(save=True)
         
     def live_view(self, save=False):                
@@ -358,7 +417,9 @@ class uc480(QtWidgets.QMainWindow, UiTools):
 #        self.display_camera_parameters(self.attributes)                             
     
     def terminated_live_view(self):
-        print "Terminated live view."
+        print "Terminated live view.\n"
+        if self.LiveView.save:
+            self.LiveView.datagroup.file.flush() # flushing at the end
         self.LiveViewCheckBox.setEnabled(True)
         self.LiveViewCheckBox.setChecked(False)
         self.TakeImagePushButton.setEnabled(True)
@@ -392,6 +453,9 @@ class LiveViewThread(QtCore.QThread):
         self.set_video_parameters(video_parameters, timeout)
         self.camera.start_live_video(**self.video_parameters)
         
+        # start timer with microsecond precision
+        self.high_precision_time = HighPrecisionWallTime()
+        
         self.save = save
         if save:
             print "Saving video..."
@@ -406,28 +470,39 @@ class LiveViewThread(QtCore.QThread):
         """Continuously acquire frames."""
         while not self.isFinished():
             if self.camera.wait_for_frame(timeout=self.timeout):
-                # get the capture_timestamp
-                # insert a T to match the creation_timestamp formatting
-                self.attributes['capture_timestamp'] = str(datetime.datetime.now()).replace(' ', 'T')
+                # get the capture_time with microsecond precision
+                self.attributes['capture_time_sec'] = self.high_precision_time.sample()
+                
+                # TODO: both images and videos have both capture_timestamp and 
+                # capture_time_sec make sure they've only got the relevant one
+                
                 # capture the latest frame
                 image = self.camera.latest_frame()
                 if self.save:
+                    # save frame
                     self.save_frame(image)
-                    
-                # emit signals to the main gui
-                self.attributes_signal.emit(self.attributes)
-                self.display_signal.emit(image)
+                else:
+                    # emit signals to the main gui
+                    self.attributes_signal.emit(self.attributes)
+                    self.display_signal.emit(image) # crashes more often - maybe?
         
     def save_frame(self, image):
         """Save the frame to the hdf5 file."""
         # write data to the file
         self.datagroup.create_dataset("image_%d", data=image, attrs=self.attributes)
-        self.datagroup.file.flush()       
-#        print "Image saved to the hdf5 file."
 
+class HighPrecisionWallTime():
+    def __init__(self,):
+        self._wall_time_0 = time.time()
+        self._clock_0 = time.clock()
+
+    def sample(self,):
+        dc = time.clock()-self._clock_0
+        return self._wall_time_0 + dc
     
 if __name__ == '__main__':
     app = QtWidgets.QApplication([])
     camera = uc480()
     camera.show()
     camera.activateWindow()
+

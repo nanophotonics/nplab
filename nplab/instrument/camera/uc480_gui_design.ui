@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1957</width>
-    <height>1437</height>
+    <width>923</width>
+    <height>571</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -33,7 +33,7 @@
         </property>
         <item>
          <layout class="QGridLayout" name="gridLayout">
-          <item row="1" column="3">
+          <item row="0" column="2">
            <layout class="QGridLayout" name="gridLayout_5">
             <item row="0" column="0">
              <widget class="QLabel" name="Label_48">
@@ -60,7 +60,7 @@
             </item>
            </layout>
           </item>
-          <item row="2" column="3">
+          <item row="1" column="2">
            <layout class="QGridLayout" name="gridLayout_7">
             <item row="0" column="0">
              <widget class="QLabel" name="Label_49">
@@ -87,14 +87,14 @@
             </item>
            </layout>
           </item>
-          <item row="3" column="3">
+          <item row="2" column="2">
            <widget class="QLineEdit" name="FilePathLineEdit">
             <property name="enabled">
              <bool>true</bool>
             </property>
            </widget>
           </item>
-          <item row="2" column="1">
+          <item row="1" column="0">
            <widget class="QPushButton" name="StartVideoPushButton">
             <property name="sizePolicy">
              <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
@@ -107,7 +107,7 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="2">
+          <item row="0" column="1">
            <widget class="QPushButton" name="SaveImagePushButton">
             <property name="sizePolicy">
              <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
@@ -120,7 +120,7 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="2">
+          <item row="1" column="1">
            <widget class="QPushButton" name="StopVideoPushButton">
             <property name="sizePolicy">
              <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
@@ -133,7 +133,7 @@
             </property>
            </widget>
           </item>
-          <item row="3" column="2">
+          <item row="2" column="1">
            <widget class="QPushButton" name="NewFilePushButton">
             <property name="enabled">
              <bool>true</bool>
@@ -149,14 +149,7 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="0">
-           <widget class="QCheckBox" name="LiveViewCheckBox">
-            <property name="text">
-             <string>Live View </string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
+          <item row="0" column="0">
            <widget class="QPushButton" name="TakeImagePushButton">
             <property name="sizePolicy">
              <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
@@ -166,6 +159,13 @@
             </property>
             <property name="text">
              <string>Take Image</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QCheckBox" name="LiveViewCheckBox">
+            <property name="text">
+             <string>Live View </string>
             </property>
            </widget>
           </item>
@@ -202,6 +202,178 @@
              </layout>
             </item>
             <item>
+             <widget class="Line" name="line_9">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <layout class="QGridLayout" name="gridLayout_9">
+              <item row="0" column="3">
+               <widget class="QLabel" name="Label_39">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string>Max grayscale value:</string>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="2">
+               <widget class="QLabel" name="Label_38">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string>Current: </string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="3">
+               <widget class="QSpinBox" name="MinGrayNumberBox">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="maximum">
+                 <number>255</number>
+                </property>
+                <property name="value">
+                 <number>240</number>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="3">
+               <widget class="QSpinBox" name="MaxGrayNumberBox">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="maximum">
+                 <number>255</number>
+                </property>
+                <property name="value">
+                 <number>250</number>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="2">
+               <widget class="QLabel" name="Label_29">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string>Min allowed: </string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="2">
+               <widget class="QLabel" name="Label_30">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string>Max allowed: </string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="3">
+               <widget class="Line" name="line_10">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="3">
+               <widget class="QLabel" name="CurrentMaxGrayLabel">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>CurrentMaxGrayLabel</string>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="1">
+               <widget class="QDoubleSpinBox" name="ExposureTimePrecisionNumberBox">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="decimals">
+                 <number>5</number>
+                </property>
+                <property name="minimum">
+                 <double>0.000000000000000</double>
+                </property>
+                <property name="maximum">
+                 <double>99.000000000000000</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.010000000000000</double>
+                </property>
+                <property name="value">
+                 <double>0.010000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="0">
+               <widget class="QLabel" name="Label_33">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string>Exposure precision (ms): </string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0" rowspan="3" colspan="2">
+               <widget class="QPushButton" name="AutoExposurePushButton">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string>Auto Exposure</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
              <widget class="Line" name="line_8">
               <property name="orientation">
                <enum>Qt::Horizontal</enum>
@@ -210,8 +382,8 @@
             </item>
             <item>
              <layout class="QGridLayout" name="gridLayout_6">
-              <item row="7" column="0">
-               <widget class="QLabel" name="Label_17">
+              <item row="4" column="0">
+               <widget class="QLabel" name="Label_5">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
                   <horstretch>0</horstretch>
@@ -219,23 +391,17 @@
                  </sizepolicy>
                 </property>
                 <property name="text">
-                 <string>Auto black level: </string>
+                 <string>Master gain (1-4): </string>
                 </property>
                </widget>
               </item>
-              <item row="10" column="1">
-               <widget class="QDoubleSpinBox" name="TimeoutNumberBox">
-                <property name="decimals">
-                 <number>0</number>
-                </property>
-                <property name="minimum">
-                 <double>0.000000000000000</double>
-                </property>
+              <item row="6" column="1">
+               <widget class="QSpinBox" name="BlacklevelNumberBox">
                 <property name="maximum">
-                 <double>100000.000000000000000</double>
+                 <number>255</number>
                 </property>
                 <property name="value">
-                 <double>1000.000000000000000</double>
+                 <number>255</number>
                 </property>
                </widget>
               </item>
@@ -248,20 +414,7 @@
                  </sizepolicy>
                 </property>
                 <property name="text">
-                 <string>CurrentBlacklevelLabel</string>
-                </property>
-               </widget>
-              </item>
-              <item row="9" column="2">
-               <widget class="QLabel" name="CurrentFramerateLabel">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string>CurrentFramerateLabel</string>
+                 <string>Black level</string>
                 </property>
                </widget>
               </item>
@@ -278,17 +431,46 @@
                 </property>
                </widget>
               </item>
-              <item row="6" column="1">
-               <widget class="QSpinBox" name="BlacklevelNumberBox">
-                <property name="maximum">
-                 <number>255</number>
+              <item row="0" column="1">
+               <widget class="QLabel" name="Label_13">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
                 </property>
-                <property name="value">
-                 <number>255</number>
+                <property name="text">
+                 <string>Desired</string>
                 </property>
                </widget>
               </item>
-              <item row="9" column="1">
+              <item row="10" column="0">
+               <widget class="QLabel" name="Label_2">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string>Frame rate (fps): </string>
+                </property>
+               </widget>
+              </item>
+              <item row="7" column="0">
+               <widget class="QLabel" name="Label_17">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string>Auto black level: </string>
+                </property>
+               </widget>
+              </item>
+              <item row="10" column="1">
                <widget class="QSpinBox" name="FramerateNumberBox">
                 <property name="maximum">
                  <number>9999</number>
@@ -314,99 +496,24 @@
                 </property>
                </widget>
               </item>
-              <item row="0" column="1">
-               <widget class="QLabel" name="Label_13">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
+              <item row="11" column="1">
+               <widget class="QDoubleSpinBox" name="TimeoutNumberBox">
+                <property name="decimals">
+                 <number>0</number>
                 </property>
-                <property name="text">
-                 <string>Desired</string>
+                <property name="minimum">
+                 <double>0.000000000000000</double>
                 </property>
-               </widget>
-              </item>
-              <item row="9" column="0">
-               <widget class="QLabel" name="Label_2">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
+                <property name="maximum">
+                 <double>100000.000000000000000</double>
                 </property>
-                <property name="text">
-                 <string>Frame rate (fps): </string>
+                <property name="value">
+                 <double>1000.000000000000000</double>
                 </property>
                </widget>
               </item>
-              <item row="4" column="0">
-               <widget class="QLabel" name="Label_5">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string>Master gain (1-4): </string>
-                </property>
-               </widget>
-              </item>
-              <item row="5" column="1">
-               <widget class="QCheckBox" name="GainBoostCheckBox">
-                <property name="text">
-                 <string/>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="0">
-               <widget class="QLabel" name="Label">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string>Exposure time (ms): </string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="2">
-               <widget class="QLabel" name="CurrentExposureLabel">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="minimumSize">
-                 <size>
-                  <width>0</width>
-                  <height>0</height>
-                 </size>
-                </property>
-                <property name="text">
-                 <string>CurrentExposureLabel</string>
-                </property>
-               </widget>
-              </item>
-              <item row="10" column="0">
-               <widget class="QLabel" name="Label_3">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string>Timeout (ms):</string>
-                </property>
-               </widget>
-              </item>
-              <item row="5" column="2">
-               <widget class="QLabel" name="CurrentGainBoostLabel">
+              <item row="10" column="2">
+               <widget class="QLabel" name="CurrentFramerateLabel">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                   <horstretch>0</horstretch>
@@ -414,7 +521,30 @@
                  </sizepolicy>
                 </property>
                 <property name="text">
-                 <string>CurrentGainBoostLabel</string>
+                 <string>Frame rate</string>
+                </property>
+               </widget>
+              </item>
+              <item row="8" column="0">
+               <widget class="QLabel" name="Label_19">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string>Gamma: </string>
+                </property>
+               </widget>
+              </item>
+              <item row="8" column="1">
+               <widget class="QSpinBox" name="GammaNumberBox">
+                <property name="maximum">
+                 <number>10</number>
+                </property>
+                <property name="value">
+                 <number>1</number>
                 </property>
                </widget>
               </item>
@@ -431,51 +561,8 @@
                 </property>
                </widget>
               </item>
-              <item row="0" column="2">
-               <widget class="QLabel" name="Label_14">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string>Current</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="2">
-               <widget class="Line" name="line_6">
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="1">
-               <widget class="Line" name="line_4">
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
-               </widget>
-              </item>
-              <item row="8" column="1">
-               <widget class="QDoubleSpinBox" name="FramesNumberBox">
-                <property name="enabled">
-                 <bool>false</bool>
-                </property>
-                <property name="decimals">
-                 <number>0</number>
-                </property>
-                <property name="minimum">
-                 <double>1.000000000000000</double>
-                </property>
-                <property name="maximum">
-                 <double>10000.000000000000000</double>
-                </property>
-               </widget>
-              </item>
-              <item row="8" column="0">
-               <widget class="QLabel" name="Label_4">
+              <item row="11" column="0">
+               <widget class="QLabel" name="Label_3">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
                   <horstretch>0</horstretch>
@@ -483,33 +570,7 @@
                  </sizepolicy>
                 </property>
                 <property name="text">
-                 <string>Number of frames: </string>
-                </property>
-               </widget>
-              </item>
-              <item row="7" column="2">
-               <widget class="QLabel" name="CurrentAutoBlacklevelLabel">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string>CurrentAutoBlacklevelLabel</string>
-                </property>
-               </widget>
-              </item>
-              <item row="3" column="0">
-               <widget class="QLabel" name="Label_18">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string>Gain (0-100): </string>
+                 <string>Timeout (ms):</string>
                 </property>
                </widget>
               </item>
@@ -529,10 +590,75 @@
                 </property>
                </widget>
               </item>
-              <item row="7" column="1">
-               <widget class="QCheckBox" name="AutoBlacklevelCheckBox">
+              <item row="2" column="0">
+               <widget class="QLabel" name="Label">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string>Exposure time (ms): </string>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="2">
+               <widget class="QLabel" name="CurrentGainBoostLabel">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string>Gain boost</string>
+                </property>
+               </widget>
+              </item>
+              <item row="9" column="0">
+               <widget class="QLabel" name="Label_4">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string>Number of frames: </string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="0">
+               <widget class="QLabel" name="Label_18">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string>Gain (0-100): </string>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="1">
+               <widget class="QCheckBox" name="GainBoostCheckBox">
                 <property name="text">
                  <string/>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="2">
+               <widget class="QLabel" name="Label_14">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string>Current</string>
                 </property>
                </widget>
               </item>
@@ -545,7 +671,89 @@
                  </sizepolicy>
                 </property>
                 <property name="text">
-                 <string>CurrentMasterGainLabel</string>
+                 <string>Master gain</string>
+                </property>
+               </widget>
+              </item>
+              <item row="9" column="1">
+               <widget class="QDoubleSpinBox" name="FramesNumberBox">
+                <property name="enabled">
+                 <bool>false</bool>
+                </property>
+                <property name="decimals">
+                 <number>0</number>
+                </property>
+                <property name="minimum">
+                 <double>1.000000000000000</double>
+                </property>
+                <property name="maximum">
+                 <double>10000.000000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item row="7" column="1">
+               <widget class="QCheckBox" name="AutoBlacklevelCheckBox">
+                <property name="text">
+                 <string/>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="2">
+               <widget class="Line" name="line_6">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="2">
+               <widget class="QLabel" name="CurrentExposureLabel">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="text">
+                 <string>Exposure time</string>
+                </property>
+               </widget>
+              </item>
+              <item row="7" column="2">
+               <widget class="QLabel" name="CurrentAutoBlacklevelLabel">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string>Auto black level</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="Line" name="line_4">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+               </widget>
+              </item>
+              <item row="8" column="2">
+               <widget class="QLabel" name="CurrentGammaLabel">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string>Gamma</string>
                 </property>
                </widget>
               </item>
