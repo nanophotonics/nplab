@@ -1,6 +1,7 @@
 import requests
 import yaml
 import os, inspect
+import numpy as np
 
 
 
@@ -20,6 +21,8 @@ class RefractiveIndexInfoDatabase(object):
 			cls = self.__class__
 			data = cls.get_data(library)
 			data_dict = cls.make_dict(data)
+
+			#self test on start
 			cls.test_converse_reversibility(data)
 			dataset = cls.fetch_dataset_yaml(data[0])
 			print cls.extract_refractive_indices(dataset)
@@ -130,4 +133,48 @@ class RefractiveIndexInfoDatabase(object):
 					print "failed on: ({})".format(d)
 		return {"wavelength":wavelengths, "n": refractive_index}
 
-rfdb = RefractiveIndexInfoDatabase()
+	@classmethod
+	def refractive_index_generator(cls,label):
+
+		dataset_yaml = cls.fetch_dataset_yaml(label)
+		dataset = cls.extract_refractive_indices(dataset_yaml)
+
+		wavelengths = dataset["wavelength"]
+		min_wl = 1e-6*np.min(wavelengths) 
+		max_wl = 1e-6*np.max(wavelengths) 
+		
+		print "Min Wavelength in dataset:", min_wl
+		print "Max Wavelength in dataset:", max_wl
+		def generator(required_wavelength,scale="nm",debug=0):
+
+			assert(scale=="nm") #scale must be in nm - other values may be supported later if required
+			#Performs linear interpolation between values in dataset to generate refractive indices over wavelength range spanned by dataset
+			if required_wavelength < min_wl:
+				raise ValueError("Required wavelength: {0} below minimum in dataset: {1}".format(required_wavelength,min_wl))
+
+			elif required_wavelength > max_wl:
+				raise ValueError("Required wavelength: {0} above maximum in dataset: {1}".format(required_wavelength,max_wl))
+
+			else:
+				output_n = np.interp(required_wavelength*1e6,xp=dataset["wavelength"],fp=dataset["n"])
+				if debug > 0:
+					print "--- DEBUG Interpolation---"
+					print "Wavelen: {0}, Refractive_index: {1}".format(required_wavelength,output_n)
+				return output_n
+
+		return generator
+
+
+
+
+
+if __name__ == "__main__":
+	rfdb = RefractiveIndexInfoDatabase()
+	label = "main/Au/Yakubovsky-25nm.yml"
+	generator = rfdb.refractive_index_generator(label=label)
+
+	wls = np.linspace(500e-9,800e-9,300)
+	for w in wls:
+		print generator(required_wavelength=w,debug = 1)
+
+	print "Passed basic test"
