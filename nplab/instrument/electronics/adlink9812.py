@@ -9,6 +9,7 @@ from nplab.utils.gui import *
 from nplab.ui.ui_tools import *
 import nplab
 import datetime
+import matplotlib 
 import matplotlib.pyplot as plt 
 ### Steps of PCI-DASK applications:
 #
@@ -74,7 +75,7 @@ class Adlink9812(Instrument):
 		return actual.value
 
 	def get_qt_ui(self):
-		return Adlink9812UI(card=self,debug = self.debug):
+		return Adlink9812UI(card=self,debug = self.debug)
 
 	@staticmethod
 	def get_qt_ui_cls():
@@ -289,7 +290,6 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 		
 
 	def set_sample_freq(self):
-		print "Setting sample freq"
 		MHz = 1e6
 		try:
 			self.sample_freq = int(float(self.sample_freq_textbox.text())*MHz)
