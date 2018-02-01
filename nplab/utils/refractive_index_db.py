@@ -52,8 +52,11 @@ class RefractiveIndexInfoDatabase(object):
 	@classmethod
 	def make_dict(cls,data):
 		'''
-		Convert list of labels in A/B/C... format into a dictionary, tree nodes are either a list or a empty dictionary
+		Convert list of labels in A/B/C into a tree structured dict
+		Leaf nodes in tree are either lists of labels or are terminated in an empty dict
+
 		'''
+
 		#set up output dict
 		outp = dict()
 		#leys
@@ -77,6 +80,10 @@ class RefractiveIndexInfoDatabase(object):
 
 	@classmethod
 	def make_data(cls,iterable):
+		'''
+		Inverse of make_dict, converts from a tree structured dictionary to a list of labels in A/B/C format
+		'''
+
 		if type(iterable) == list:
 			if len(iterable) > 0:
 				return iterable
@@ -96,6 +103,14 @@ class RefractiveIndexInfoDatabase(object):
 	#for testing correct conversion of data --> dict --> data, must preserve all labels
 	@classmethod
 	def test_converse_reversibility(cls,data):
+
+		'''
+		Test code for correct implementation if inverse transformation make_data, make_dict
+
+		performs: data --> make_dict(data) --> make_data(make_dict(data)) --> data2
+		if operations are inverse then for all elements d1 in data there is a element d2 in data2 
+		'''
+
 		iterable = RefractiveIndexInfoDatabase.make_dict(data)
 		data2 = RefractiveIndexInfoDatabase.make_data(iterable)
 
@@ -107,6 +122,10 @@ class RefractiveIndexInfoDatabase(object):
 	
 	@classmethod
 	def fetch_dataset_yaml(cls,label):
+		'''
+		Gets, via HTTP, the yaml file containg hte dataset from the website
+		Returns a yaml structured list (yaml is superset of JSON)
+		'''
 		query_base_url = "https://refractiveindex.info/database/data/{0}"
 		url = query_base_url.format(label)
 		resp =  requests.get(url)
@@ -116,6 +135,9 @@ class RefractiveIndexInfoDatabase(object):
 
 	@classmethod
 	def extract_refractive_indices(cls,response_yaml):
+		'''
+		Extract the wavelengths and refractive indices from a yaml response
+		'''
 		data = (response_yaml["DATA"][0]["data"]).split("\n")
 		wavelengths = []
 		refractive_index = []
@@ -135,6 +157,11 @@ class RefractiveIndexInfoDatabase(object):
 
 	@classmethod
 	def refractive_index_generator(cls,label):
+		'''
+		Main method for use. Pulls data from website, transforms it into a dataset
+		Returns function that can be queried.
+		Function will interpolate between data within a certain range of wavelengths and will crash if required wavelength is outside of this range
+		'''
 
 		dataset_yaml = cls.fetch_dataset_yaml(label)
 		dataset = cls.extract_refractive_indices(dataset_yaml)
