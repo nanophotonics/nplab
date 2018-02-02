@@ -159,12 +159,14 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         precision = self.ExposureTimePrecisionNumberBox.value()
         self.set_auto_exposure(min_gray=min_gray, max_gray=max_gray, precision=precision)
     
-    def set_auto_exposure(self, min_gray=200, max_gray=250, precision=1):
+    def set_auto_exposure(self, min_gray=200, max_gray=250, precision=1, max_attempts=20):
         image = self.take_image()
         max_image = self.get_max_grayscale(image)
         okay = True
+        attempt = 0
         
-        while (max_image > max_gray or max_image < min_gray) and okay:            
+        while (max_image > max_gray or max_image < min_gray) and okay:
+            attempt += 1
             current_exposure = float(self.CurrentExposureLabel.text())
             
             if max_image > max_gray:
@@ -177,10 +179,14 @@ class uc480(QtWidgets.QMainWindow, UiTools):
             self.ExposureTimeNumberBox.setValue(new_exposure)
             image = self.take_image()
             max_image = self.get_max_grayscale(image)
-            
+                        
             previous_exposure = current_exposure
             current_exposure = float(self.CurrentExposureLabel.text())
+            print current_exposure
+            print max_image
             if np.abs(previous_exposure - current_exposure) < precision:
+                okay = False 
+            if attempt > max_attempts:
                 okay = False # make sure we're not trying forever
 
         
@@ -230,7 +236,8 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         self.camera.blacklevel_offset = int(self.BlacklevelNumberBox.value())         
         self.camera.gain_boost = self.GainBoostCheckBox.checkState()
         try:
-            self.camera.gamma = int(self.GammaNumberBox.value())         
+            self.camera.gamma = int(self.GammaNumberBox.value())
+            # TODO: some camera models don't have a gamma. account for this in a neater way than try/except
         except:
             print "WARNING: Can't set gamma!!!"
     
