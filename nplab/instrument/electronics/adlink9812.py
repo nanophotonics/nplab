@@ -83,7 +83,7 @@ class Adlink9812(Instrument):
 
 	def configure_card(self):
 		#Configure card for recording
-		configErr = ctypes.c_int16(self.dkk.AI_9812_Config(
+		configErr = ctypes.c_int16(self.dll.AI_9812_Config(
 			c_ushort(self.card_id),
 			c_ushort(adlink9812_constants.P9812_TRGMOD_SOFT), #Software trigger mode
 			c_ushort(adlink9812_constants.P9812_TRGSRC_CH0),  #Channel 0 
@@ -112,7 +112,7 @@ class Adlink9812(Instrument):
 		return 
 
 
-	def synchronous_analog_input_read(self,sample_freq, sample_count,verbose = False):
+	def synchronous_analog_input_read(self,sample_freq, sample_count,verbose = False,channel=0):
 		#Initialize Buffers
 		#databuffer for holding A/D samples + metadata bits
 		dataBuff = (c_ushort*sample_count)()
@@ -134,7 +134,7 @@ class Adlink9812(Instrument):
 			print "AI_ContReadChannel: Non-zero status code:", readErr.value
 
 		#Convert to volts
-		convert_to_volts(self.card_id, dataBuff,voltageOut,sample_count)
+		self.convert_to_volts(dataBuff,voltageOut,sample_count)
 		return np.asarray(voltageOut)
 
 	def asynchronous_double_buffered_analog_input_read(self,sample_freq,sample_count,card_buffer_size = 500000,verbose=False, channel = 0):
@@ -163,7 +163,7 @@ class Adlink9812(Instrument):
 		'''
 		
 		#AI_AsyncDblBufferMode - initialize Double Buffer Mode
-		buffModeErr = ctypes.c_int16(self.dll.AI_AsyncDblBufferMode(c_ushort(card_id),ctypes.c_bool(1)))
+		buffModeErr = ctypes.c_int16(self.dll.AI_AsyncDblBufferMode(c_ushort(self.card_id),ctypes.c_bool(1)))
 		if verbose or buffModeErr.value != 0:
 			print "AI_AsyncDblBufferMode: Non-zero status code",buffModeErr.value
 
@@ -185,7 +185,7 @@ class Adlink9812(Instrument):
 		#AI_ContReadChanne
 
 		readErr = ctypes.c_int16(self.dll.AI_ContReadChannel(
-			c_ushort(card_id), 					#CardNumber
+			c_ushort(selfcard_id), 					#CardNumber
 			c_ushort(channel),       			#Channel
 			c_ushort(adlink9812_constants.AD_B_1_V),		#AdRange
 			cardBuffer,									#Buffer
