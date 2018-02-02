@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>923</width>
-    <height>571</height>
+    <width>1270</width>
+    <height>1269</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -219,7 +219,7 @@
                  </sizepolicy>
                 </property>
                 <property name="text">
-                 <string>Max grayscale value:</string>
+                 <string>Brightest pixel value:</string>
                 </property>
                </widget>
               </item>
@@ -489,7 +489,7 @@
                  <double>0.000000000000000</double>
                 </property>
                 <property name="maximum">
-                 <double>99.000000000000000</double>
+                 <double>99999999.000000000000000</double>
                 </property>
                 <property name="singleStep">
                  <double>0.010000000000000</double>
