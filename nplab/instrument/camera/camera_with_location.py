@@ -470,15 +470,17 @@ class AcquireGridOfImages(ExperimentWithProgressBar):
         self.cwl = camera_with_location
         self.completion_function = completion_function
 
-    def prepare_to_run(self, n_tiles=None, data_group=None, *args, **kwargs):
+    def prepare_to_run(self, n_tiles=None, overlap_pixels = 250, data_group=None, *args, **kwargs):
         self.progress_maximum = n_tiles[0] * n_tiles[1]
+        self.overlap_pixels = overlap_pixels
         self.dest = self.cwl.create_data_group("tiled_image_%d")  if data_group is None else data_group
 
-    def run(self, n_tiles=(1,1), overlap_pixels = 250, autofocus_args=None):
+    def run(self, n_tiles=(1,1), autofocus_args=None):
         """Acquire a grid of images with the specified overlap."""
+
         cwl = self.cwl
         centre_image = cwl.color_image()
-        scan_step = np.array(centre_image.shape[:2]) - overlap_pixels
+        scan_step = np.array(centre_image.shape[:2]) - self.overlap_pixels
         self.log("Starting a {} scan with a step size of {}".format(n_tiles, scan_step))
 
         dest = self.dest
