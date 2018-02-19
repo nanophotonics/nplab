@@ -231,7 +231,8 @@ class CameraWithLocation(Instrument):
         
 
     def autofocus(self, dz=None, merit_function=af_merit_squared_laplacian,
-                  method="centre_of_mass", noise_floor=0.3,exposure_factor =1.0, update_progress=lambda p:p):
+                  method="centre_of_mass", noise_floor=0.3,exposure_factor =1.0,
+                  use_thumbnail = False, update_progress=lambda p:p):
         """Move to a range of Z positions and measure focus, then move to the best one.
 
         Arguments:
@@ -256,7 +257,11 @@ class CameraWithLocation(Instrument):
             self.stage.move(np.array([0, 0, z]) + here)
             self.settle()
             positions.append(self.stage.position)
-            powers.append(merit_function(self.color_image()))
+            if use_thumbnail is True:
+                image = self.thumb_image()
+            else:
+                image = self.color_image()
+            powers.append(merit_function(image))
             update_progress(step_num)
         powers = np.array(powers)
         positions = np.array(positions)
