@@ -594,6 +594,8 @@ class DataRenderer2or3DPG(DataRenderer, QtWidgets.QWidget):
             return -1
         if len(h5object.shape) == 3:
             return 31
+        if len(h5object.shape) == 4 and h5object.shape[3]==3:
+            return 31
         elif len(h5object.shape) == 2:
             return 21
         elif len(h5object.shape) > 3:
