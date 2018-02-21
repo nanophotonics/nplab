@@ -686,7 +686,7 @@ class Andor(Camera, AndorBase):
     #    Exposure = CameraParameter('Exposure', "The exposure time in s")
     #    AcquisitionMode = CameraParameter('AcquisitionMode')
     #    TriggerMode = CameraParameter('TriggerMode')
-    metadata_property_names = ('Exposure', 'AcquisitionMode', 'TriggerMode', 'background')
+    metadata_property_names = ('Exposure', 'AcquisitionMode', 'TriggerMode', 'background','x_axis')
 
     def __init__(self, settings_filepath=None, **kwargs):
         Camera.__init__(self)
