@@ -31,7 +31,7 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         uic.loadUi(ui_file, self)
         
         # maximise GUI window
-        self.showMaximized()
+#        self.showMaximized()
         
         # set initial tabs to display
         self.SettingsTabWidget.setCurrentIndex(0) 
@@ -83,7 +83,7 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         # set initial parameters
         self.file_path = ''
         self.ExposureTimeNumberBox.setValue(2)
-        self.FramerateNumberBox.setValue(160)
+        self.FramerateNumberBox.setValue(10)
         self.DisplayFramerateNumberBox.setValue(10)
         self.GainNumberBox.setValue(0)
         self.GammaNumberBox.setValue(1)
@@ -91,10 +91,10 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         self.ROICheckBox.setChecked(True)
         self.ROIWidthCheckBox.setChecked(True)
         self.ROIHeightCheckBox.setChecked(True)
-#        self.ROIWidthNumberBox.setValue(self.camera.max_width)
-#        self.ROIHeightNumberBox.setValue(self.camera.max_height)
-        self.ROIWidthNumberBox.setValue(700)
-        self.ROIHeightNumberBox.setValue(300)
+        self.ROIWidthNumberBox.setValue(self.camera.max_width)
+        self.ROIHeightNumberBox.setValue(self.camera.max_height)
+#        self.ROIWidthNumberBox.setValue(700)
+#        self.ROIHeightNumberBox.setValue(300)
         
         # take image with the initial parameters and calculate the best exposure
         self.auto_exposure()
