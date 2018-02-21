@@ -53,3 +53,25 @@ def convex_smooth(signal,weight, objective_type="quadratic"):
 	x_out =  np.asarray(x.value)
 	x_out = x_out.reshape(signal.shape)
 	return x_out, prob.value, prob.status
+
+
+if __name__ == "__main__":
+
+	import matplotlib.pyplot as plt 
+	import numpy as np
+
+	xs = np.linspace(0,2*np.pi,500)
+	noise = np.random.uniform(-0.4,0.4,xs.shape)
+	ys = np.sin(xs)
+	ys_corrupted = ys + noise
+
+	fig, ax = plt.subplots(1)
+	plt.plot(xs, ys, label="True signal")
+	plt.plot(xs, ys_corrupted, label="Noisy signal")
+
+	for weight in [1,10,100]:
+		ys_denoised,_,_ = convex_smooth(signal = ys_corrupted, weight = weight, objective_type="quadratic")
+		plt.plot(xs, ys_denoised, label="Recovered signal [Weight:{}]".format(weight))
+
+	plt.legend()
+	plt.show()
