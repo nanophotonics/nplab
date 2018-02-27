@@ -51,7 +51,7 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         self.StartVideoPushButton.clicked.connect(self.acquire_video)
         self.OpenCameraPushButton.clicked.connect(self.open_camera_button)
         self.CloseCameraPushButton.clicked.connect(self.close_camera)    
-        self.FindInstrumentsPushButton.clicked.connect(self.find_instruments)
+        self.FindCamerasPushButton.clicked.connect(self.find_cameras)
                         
         # create live view widget
         image_widget = pg.GraphicsLayoutWidget()
@@ -118,7 +118,7 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         # set the camera gui buttons
         self.reset_gui_with_camera()
         print 'Camera connection successful.\n'  
-        self.find_instruments()
+        self.find_cameras()
         
         # set camera width and height labels
         self.CameraWidthLabel.setText(str(self.camera.max_width))
@@ -161,12 +161,13 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         # close the databrowser gui
         if self.df_gui: self.df_gui.close()
     
-    def find_instruments(self):
-        """Find serial numbers of available instruments."""
+    def find_cameras(self):
+        """Find serial numbers of available cameras."""
         drivers = list_instruments()
         self.SerialComboBox.clear()
         for driver in drivers:
-            self.SerialComboBox.addItem(driver['serial'])
+            if driver['classname'] == 'UC480_Camera':
+                self.SerialComboBox.addItem(driver['serial'])
         try:
             serial = self.camera.serial
             index = self.SerialComboBox.findText(serial)
@@ -655,6 +656,7 @@ if __name__ == '__main__':
         print "Instrument driver:"
         print driver
         print
-        cameras.append(uc480(serial=driver['serial']))
-        cameras[-1].show()
-        cameras[-1].activateWindow()
+        if driver['classname'] == 'UC480_Camera':
+            cameras.append(uc480(serial=driver['serial']))
+            cameras[-1].show()
+            cameras[-1].activateWindow()
