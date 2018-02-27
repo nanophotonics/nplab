@@ -31,7 +31,7 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         uic.loadUi(ui_file, self)
         
         # maximise GUI window
-        self.showMaximized()
+#        self.showMaximized()
         
         # set initial tabs to display
         self.SettingsTabWidget.setCurrentIndex(0) 
@@ -51,7 +51,7 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         self.StartVideoPushButton.clicked.connect(self.acquire_video)
         self.OpenCameraPushButton.clicked.connect(self.open_camera_button)
         self.CloseCameraPushButton.clicked.connect(self.close_camera)    
-        self.FindInstrumentsPushButton.clicked.connect(self.find_instruments)
+        self.FindCamerasPushButton.clicked.connect(self.find_cameras)
                         
         # create live view widget
         image_widget = pg.GraphicsLayoutWidget()
@@ -83,7 +83,7 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         # set initial parameters
         self.file_path = ''
         self.ExposureTimeNumberBox.setValue(2)
-        self.FramerateNumberBox.setValue(160)
+        self.FramerateNumberBox.setValue(10)
         self.DisplayFramerateNumberBox.setValue(10)
         self.GainNumberBox.setValue(0)
         self.GammaNumberBox.setValue(1)
@@ -91,10 +91,10 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         self.ROICheckBox.setChecked(True)
         self.ROIWidthCheckBox.setChecked(True)
         self.ROIHeightCheckBox.setChecked(True)
-#        self.ROIWidthNumberBox.setValue(self.camera.max_width)
-#        self.ROIHeightNumberBox.setValue(self.camera.max_height)
-        self.ROIWidthNumberBox.setValue(700)
-        self.ROIHeightNumberBox.setValue(300)
+        self.ROIWidthNumberBox.setValue(self.camera.max_width)
+        self.ROIHeightNumberBox.setValue(self.camera.max_height)
+#        self.ROIWidthNumberBox.setValue(700)
+#        self.ROIHeightNumberBox.setValue(300)
         
         # take image with the initial parameters and calculate the best exposure
         self.auto_exposure()
@@ -118,7 +118,7 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         # set the camera gui buttons
         self.reset_gui_with_camera()
         print 'Camera connection successful.\n'  
-        self.find_instruments()
+        self.find_cameras()
         
         # set camera width and height labels
         self.CameraWidthLabel.setText(str(self.camera.max_width))
@@ -161,12 +161,13 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         # close the databrowser gui
         if self.df_gui: self.df_gui.close()
     
-    def find_instruments(self):
-        """Find serial numbers of available instruments."""
+    def find_cameras(self):
+        """Find serial numbers of available cameras."""
         drivers = list_instruments()
         self.SerialComboBox.clear()
         for driver in drivers:
-            self.SerialComboBox.addItem(driver['serial'])
+            if driver['classname'] == 'UC480_Camera':
+                self.SerialComboBox.addItem(driver['serial'])
         try:
             serial = self.camera.serial
             index = self.SerialComboBox.findText(serial)
@@ -449,7 +450,8 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         self.LiveView.live_view(video_parameters, 
                                       save=save,
                                       timeout=self.TimeoutNumberBox.value(),                                       
-                                      max_frames=self.MaxFramesNumberBox.value(),
+#                                      max_frames=self.MaxFramesNumberBox.value(),
+                                      max_frames=float('inf'),
                                       display_framerate=self.DisplayFramerateNumberBox.value(),
                                       )
         
@@ -655,6 +657,7 @@ if __name__ == '__main__':
         print "Instrument driver:"
         print driver
         print
-        cameras.append(uc480(serial=driver['serial']))
-        cameras[-1].show()
-        cameras[-1].activateWindow()
+        if driver['classname'] == 'UC480_Camera':
+            cameras.append(uc480(serial=driver['serial']))
+            cameras[-1].show()
+            cameras[-1].activateWindow()

@@ -470,7 +470,9 @@ class AcquireGridOfImages(ExperimentWithProgressBar):
         self.cwl = camera_with_location
         self.completion_function = completion_function
 
-    def prepare_to_run(self, n_tiles=None, overlap_pixels = 250, data_group=None, *args, **kwargs):
+    def prepare_to_run(self, n_tiles=None, overlap_pixels = 250,
+                       data_group=None,autofocus = False, *args, **kwargs):
+        self.autofocus = autofocus
         self.progress_maximum = n_tiles[0] * n_tiles[1]
         self.overlap_pixels = overlap_pixels
         self.dest = self.cwl.create_data_group("tiled_image_%d")  if data_group is None else data_group
@@ -491,6 +493,8 @@ class AcquireGridOfImages(ExperimentWithProgressBar):
             for y_index in y_indices:
                 for x_index in x_indices:
                     # Go to the grid point
+                    if self.autofocus == True:
+                        cwl.autofocus()
                     cwl.move(centre_image.pixel_to_location(np.array([x_index, y_index]) * scan_step)[:2])
                     # TODO: make autofocus update drift or something...
                     if autofocus_args is not None:
