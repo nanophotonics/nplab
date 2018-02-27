@@ -806,7 +806,7 @@
                  </sizepolicy>
                 </property>
                 <property name="text">
-                 <string>Max live/video frames: </string>
+                 <string>Max video frames: </string>
                 </property>
                </widget>
               </item>

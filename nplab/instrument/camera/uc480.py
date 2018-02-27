@@ -450,7 +450,8 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         self.LiveView.live_view(video_parameters, 
                                       save=save,
                                       timeout=self.TimeoutNumberBox.value(),                                       
-                                      max_frames=self.MaxFramesNumberBox.value(),
+#                                      max_frames=self.MaxFramesNumberBox.value(),
+                                      max_frames=float('inf'),
                                       display_framerate=self.DisplayFramerateNumberBox.value(),
                                       )
         
