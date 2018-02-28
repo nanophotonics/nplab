@@ -7,6 +7,7 @@ from nplab.instrument import Instrument
 from nplab.instrument.electronics import adlink9812_constants
 from nplab.utils.gui import *
 from nplab.ui.ui_tools import *
+from nplab.experiment.dynamic_light_scattering.signal_postprocessing import count_photons
 import nplab
 import datetime
 import matplotlib 
@@ -31,7 +32,6 @@ import matplotlib.pyplot as plt
 
 
 DATATYPE = c_ushort
-
 VERSION = 0.01
 
 
@@ -314,13 +314,16 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 	
 
 	def plot_series(self,voltages, dt, timestamp):
-		print voltages[0:10]
+		
 		times = self.card.get_times(dt, len(voltages))
-		fig,ax = plt.subplots(1)
-		ax.plot(times, voltages)
-		ax.set_xlabel("Time [s]")
-		ax.set_ylabel("Voltage [V]")
-		ax.set_title("Adlink9812 Capture, Timestamp: {0}".format(timestamp))
+		fig,ax1 = plt.subplots(2)
+		
+		photon_count = count_photons(voltage,count_threshold=0.5)
+		ax1.plot(times, voltages)
+		ax1.set_xlabel("Time [s]")
+		ax1.set_ylabel("Voltage [V]")
+		ax1.set_title("Adlink9812 Capture, Timestamp: {0}, Photons: {1}".format(timestamp,photon_count))
+		
 		plt.show()
 		return
 
