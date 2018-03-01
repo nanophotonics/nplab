@@ -9,7 +9,7 @@ from nplab.ui.ui_tools import UiTools
 import nplab.experiment.dynamic_light_scattering as dls
 import os
 app = get_qt_app()
-daq_card = Adlink9812("C:\ADLINK\PCIS-DASK\Lib\PCI-Dask64.dll",debug=False)
+daq_card = Adlink9812("C:\ADLINK\PCIS-DASK\Lib\PCI-Dask64.dll",debug=True)
 daq_card_ui = Adlink9812UI(card=daq_card,debug = False)
 
 instruments = {"adlink9812": daq_card}
