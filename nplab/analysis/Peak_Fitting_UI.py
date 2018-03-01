@@ -15,6 +15,8 @@ The output is a list. Each element represents one spectrum and has the form [Fit
 [Peak Centre, Peak Width, Peak Height, Peak Center,.......].
 
 To visualise the results, use View_Results(Array,x_axis,Start_Spectrum,End_Spectrum,Fit,Threshold=None). 
+
+If the fits display "crosstalk", use the function Reorder_Peaks(Fits).
 """
 
 
@@ -421,3 +423,129 @@ def View_Results(Array,x_axis,Start_Spectrum,End_Spectrum,Fit,Threshold=None):
 	pl.ylim([0,len(To_Show)])
 	
 	pl.show()
+
+def View_Results_Video(Array,x_axis,Start_Spectrum,End_Spectrum,Fit,Frame_Time=0.1):
+	To_Show=Array[Start_Spectrum:End_Spectrum]
+	
+	Peaks=[]
+	for i in Fit:
+		Peak=[]
+		n=0
+		while n<len(i[0]):
+			Peak.append(i[0][n])
+			n+=3
+		Peaks.append(Peak)
+	Peaks=np.array(Peaks)
+	Peaks=np.transpose(Peaks)
+
+	for i in range(len(To_Show)):
+		pl.plot(x_axis,To_Show[i],'k-')
+		for j in Peaks[i]:
+			if j is not None:
+				pl.plot([j,j],[0,np.max(To_Show[i])],'r-')
+		pl.show()
+		pl.pause(Frame_Time)
+		pl.clf()
+	pl.close()
+
+def Reorder_Peaks(Fits):
+	"""
+	Function to reorder the fits to minimise the crosstalk between adjacent peaks.
+	"""
+	Start=0
+	while Start<len(Fits) and None in Fits[Start][0]:
+		Start+=1
+	if Start==len(Fits):
+		print 'No fully sucessfull fits detected!'
+		return
+	else:
+		Results=[Fits[Start]]
+		Current=[]
+		for i in range(len(Fits[Start][0])/3):
+			Current.append(Fits[Start][0][i*3])
+		To_Sort=Start+1
+		while To_Sort<len(Fits):
+			print To_Sort
+			Sorting_Positions=[]
+			for i in range(len(Fits[To_Sort][0])/3):
+				Sorting_Positions.append(Fits[To_Sort][0][i*3])
+			Sorting_Order=range(len(Sorting_Positions))
+			Trigger=True
+			while Trigger is True:
+				Trigger=False
+				Pos1=0
+				while Pos1<len(Sorting_Order):
+					Pos2=Pos1+1
+					while Pos2<len(Sorting_Order):
+						Change=0
+						if Sorting_Positions[Sorting_Order[Pos1]] is not None:
+							Change+=abs(Current[Pos1]-Sorting_Positions[Sorting_Order[Pos1]])-abs(Current[Pos2]-Sorting_Positions[Sorting_Order[Pos1]])
+						if Sorting_Positions[Sorting_Order[Pos2]] is not None:
+							Change+=abs(Current[Pos2]-Sorting_Positions[Sorting_Order[Pos2]])-abs(Current[Pos1]-Sorting_Positions[Sorting_Order[Pos2]])
+				
+						if Change>0:
+							Temp=Sorting_Order[Pos1]
+							Sorting_Order[Pos1]=Sorting_Order[Pos2]
+							Sorting_Order[Pos2]=Temp
+							Trigger=True
+						Pos2+=1
+					Pos1+=1
+			Result=[[],[]]
+			for i in Sorting_Order:
+				Result[0]+=Fits[To_Sort][0][i*3:(i+1)*3]
+				Result[1]+=Fits[To_Sort][1][i*3:(i+1)*3]
+			Results.append(Result)
+			Current_new=[]
+			for i in range(len(Result[0])/3):
+				if Result[0][i*3] is not None:
+					Current_new.append(Result[0][i*3])
+				else:
+					Current_new.append(Current[i])
+			Current=Current_new
+			To_Sort+=1
+
+		Current=[]
+		for i in range(len(Fits[Start][0])/3):
+			Current.append(Fits[Start][0][i*3])
+		To_Sort=Start-1
+		while To_Sort>=0:
+			print To_Sort
+			Sorting_Positions=[]
+			for i in range(len(Fits[To_Sort][0])/3):
+				Sorting_Positions.append(Fits[To_Sort][0][i*3])
+			Sorting_Order=range(len(Sorting_Positions))
+			Trigger=True
+			while Trigger is True:
+				Trigger=False
+				Pos1=0
+				while Pos1<len(Sorting_Order):
+					Pos2=Pos1+1
+					while Pos2<len(Sorting_Order):
+						Change=0
+						if Sorting_Positions[Sorting_Order[Pos1]] is not None:
+							Change+=abs(Current[Pos1]-Sorting_Positions[Sorting_Order[Pos1]])-abs(Current[Pos2]-Sorting_Positions[Sorting_Order[Pos1]])
+						if Sorting_Positions[Sorting_Order[Pos2]] is not None:
+							Change+=abs(Current[Pos2]-Sorting_Positions[Sorting_Order[Pos2]])-abs(Current[Pos1]-Sorting_Positions[Sorting_Order[Pos2]])
+						
+						if Change>0:
+							Temp=Sorting_Order[Pos1]
+							Sorting_Order[Pos1]=Sorting_Order[Pos2]
+							Sorting_Order[Pos2]=Temp
+							Trigger=True
+						Pos2+=1
+					Pos1+=1
+			Result=[[],[]]
+			for i in Sorting_Order:
+				Result[0]+=Fits[To_Sort][0][i*3:(i+1)*3]
+				Result[1]+=Fits[To_Sort][1][i*3:(i+1)*3]
+			Results=[Result]+Results
+			Current_new=[]
+			for i in range(len(Result[0])/3):
+				if Result[0][i*3] is not None:
+					Current_new.append(Result[0][i*3])
+				else:
+					Current_new.append(Current[i])
+			Current=Current_new
+			To_Sort-=1
+
+	return Results
