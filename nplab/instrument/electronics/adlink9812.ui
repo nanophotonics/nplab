@@ -148,7 +148,7 @@
            </size>
           </property>
           <property name="text">
-           <string>2e6</string>
+           <string>1e4</string>
           </property>
          </widget>
         </item>
