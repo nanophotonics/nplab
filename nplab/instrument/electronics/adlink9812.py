@@ -37,7 +37,7 @@ VERSION = 0.01
 
 class Adlink9812(Instrument):
 
-	def __init__(self, dll_path="C:\ADLINK\PCIS-DASK\Lib\PCI-Dask64.dll",debug=False):
+	def __init__(self, dll_path="C:\ADLINK\PCIS-DASK\Lib\PCI-Dask64.dll",verbose=False,debug=False):
 		"""Initialize DLL and configure card"""
 		# super(Adlink9812,self).__init__()
 		self.debug = debug
@@ -185,7 +185,7 @@ class Adlink9812(Instrument):
 		#AI_ContReadChanne
 
 		readErr = ctypes.c_int16(self.dll.AI_ContReadChannel(
-			c_ushort(selfcard_id), 					#CardNumber
+			c_ushort(self.card_id), 					#CardNumber
 			c_ushort(channel),       			#Channel
 			c_ushort(adlink9812_constants.AD_B_1_V),		#AdRange
 			cardBuffer,									#Buffer
@@ -206,7 +206,7 @@ class Adlink9812(Instrument):
 			stopFlag = c_bool(0)
 			while halfReady.value != True:
 				buffReadyErr = ctypes.c_int16(self.dll.AI_AsyncDblBufferHalfReady(
-					c_ushort(card_id),
+					c_ushort(self.card_id),
 					ctypes.byref(halfReady),
 					ctypes.byref(stopFlag))
 				)
@@ -216,13 +216,13 @@ class Adlink9812(Instrument):
 		
 			#AI_AsyncDblBufferTransfer
 			#I16 AI_AsyncDblBufferTransfer (U16 CardNumber, U16 *Buffer)
-			buffTransferErr = ctypes.c_int16(self.dll.AI_AsyncDblBufferTransfer(c_ushort(card_id), ctypes.byref(currentBuffer)))
+			buffTransferErr = ctypes.c_int16(self.dll.AI_AsyncDblBufferTransfer(c_ushort(self.card_id), ctypes.byref(currentBuffer)))
 			uBs.append(currentBuffer)
 			if buffTransferErr.value != 0:
 				print "buffTransferErr:",buffTransferErr.value
 
 		accessCnt = ctypes.c_int32(0)
-		clearErr = ctypes.c_int16(self.dll.AI_AsyncClear(card_id, ctypes.byref(accessCnt)))
+		clearErr = ctypes.c_int16(self.dll.AI_AsyncClear(self.card_id, ctypes.byref(accessCnt)))
 		if verbose:
 			print "AI_AsyncClear,AccessCnt:", accessCnt.value
 		
@@ -232,7 +232,7 @@ class Adlink9812(Instrument):
 		for i in range(nbuff):
 			oB = (c_double*user_buffer_size)()
 			convertErr = ctypes.c_int16(self.dll.AI_ContVScale(
-			c_ushort(card_id),				#CardNumber
+			c_ushort(self.card_id),				#CardNumber
 			c_ushort(adlink9812_constants.AD_B_1_V),	#AdRange
 			uBs[i], 					#DataBuffer   - array storing raw 16bit A/D values
 			oB, 					#VoltageArray - reference to array storing voltages
@@ -254,7 +254,7 @@ class Adlink9812(Instrument):
 			print "---DEBUG MODE ENABLED---"
 			debug_out = (2.0*np.random.rand(sample_count))-1.0 
 			return debug_out,dt
-		elif sample_count < 200000:
+		elif sample_count > 100000:
 			return self.asynchronous_double_buffered_analog_input_read(sample_freq= sample_freq,sample_count = sample_count,verbose = verbose),dt
 		else:
 			return self.synchronous_analog_input_read(sample_freq= sample_freq,sample_count = sample_count,verbose = verbose),dt
@@ -264,13 +264,14 @@ class Adlink9812(Instrument):
 
 
 class Adlink9812UI(QtWidgets.QWidget, UiTools):
-	def __init__(self,card, parent=None,debug = False):
+	def __init__(self,card, parent=None,debug = False, verbose = False):
 		if not isinstance(card, Adlink9812):
 			raise ValueError("Object is not an instnace of the Adlink9812 Daq")
 		super(Adlink9812UI, self).__init__()
 		self.card = card 
 		self.parent = parent
 		self.debug = debug
+		self.verbose = verbose
 
 		#TODO - add adlink9812.ui file properly
 		uic.loadUi(os.path.join(os.path.dirname(__file__), 'adlink9812.ui'), self)
@@ -294,12 +295,16 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 		try:
 			self.sample_freq = int(float(self.sample_freq_textbox.text())*MHz)
 		except Exception,e:
-			print "Failed parsing sampling frequency to float:",self.sample_freq_w.text()
+			print "Failed parsing sampling frequency to float:",self.sample_freq_textbox.text()
+			return
 		return
 
 	def set_sample_count(self):
 		try:
-			self.sample_count = int(float(self.sample_count_textbox.text())*1000)
+
+			self.sample_count = int(float(self.sample_count_textbox.text()))
+			if self.verbose>0:
+				print "Sample Count: {0} [Counts]".format(self.sample_count)
 		except Exception,e:
 			print "Failed parsing sample count to int:",self.sample_freq_textbox.text()
 		return
@@ -343,7 +348,6 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 				self.datafile = nplab.datafile.current()
 			dg = self.datafile.require_group(self.series_group)
 
-		
 		voltages, dt = self.card.capture(sample_freq=self.sample_freq, sample_count=self.sample_count)
 		vmean = np.mean(voltages)
 		vmax = np.max(voltages)

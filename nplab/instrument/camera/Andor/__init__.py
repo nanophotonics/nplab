@@ -1202,7 +1202,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
             self.Andor._logger.info(
                 'The background and the current image are different shapes and therefore cannot be subtracted')
         try:
-            if (self.Andor._current_x_axis == None or 
+            if (self.Andor._current_x_axis is None or 
                 np.shape(self.Andor.CurImage)[-1] != np.shape(self.Andor._current_x_axis)[0]
                 or not np.all(self.Andor._current_x_axis)):
                 xvals = np.linspace(0, self.Andor.CurImage.shape[-1] - 1, self.Andor.CurImage.shape[-1])

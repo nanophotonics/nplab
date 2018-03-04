@@ -2,6 +2,14 @@
 <ui version="4.0">
  <class>Form</class>
  <widget class="QWidget" name="Form">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>382</width>
+    <height>303</height>
+   </rect>
+  </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
@@ -102,7 +110,7 @@
            </size>
           </property>
           <property name="text">
-           <string>1</string>
+           <string>20</string>
           </property>
          </widget>
         </item>
@@ -115,7 +123,7 @@
            </size>
           </property>
           <property name="text">
-           <string>Sample Count (kCounts)</string>
+           <string>Sample Count (Counts)</string>
           </property>
          </widget>
         </item>
@@ -140,7 +148,7 @@
            </size>
           </property>
           <property name="text">
-           <string>500</string>
+           <string>2e6</string>
           </property>
          </widget>
         </item>
@@ -184,7 +192,7 @@
            </size>
           </property>
           <property name="text">
-           <string>adlink9812</string>
+           <string>default_series</string>
           </property>
          </widget>
         </item>
@@ -247,7 +255,7 @@
            </size>
           </property>
           <property name="text">
-           <string>voltage_raw</string>
+           <string>voltage</string>
           </property>
          </widget>
         </item>
