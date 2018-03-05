@@ -3,12 +3,29 @@ import matplotlib.pyplot as plt
 import math
 import scipy.signal
 
-def signal_diff(voltage):
+def diff(voltage):
 	d_voltage = voltage[0:-1] - voltage[1:]
 	return d_voltage
 
 
+def signal_diff(voltages):
+	#Work with normalized voltages:
+	vmin = np.min(voltages)
+	rounded_voltages = (voltages-vmin) #subtract min
+	vmax = np.max(rounded_voltages)
+	rounded_voltages = rounded_voltages/vmax #divide by max
+
+	#NOW: voltages are on scale: [0,1]
+	#Round to nearest integer - lift/lower intermediate values
+	#	We want digital values, not intermediates for edges
+	rounded_voltages = np.rint(rounded_voltages)
+	#compute differences and return:
+	d_voltage = rounded_voltages[0:-1] - rounded_voltages[1:]
+	return d_voltage
+
 def threshold(voltages, count_threshold = 0.5):
+	raise ValueError("Deactivated")
+	count_threshold = 0.4
 	vmin = np.min(voltages)
 	vmax = np.max(voltages)
 	vspan = abs(vmax-vmin)
@@ -18,21 +35,23 @@ def threshold(voltages, count_threshold = 0.5):
 	#Assertions:
 	#	No consequtive +ve,+ve or -ve,-ve edges
 	#	+ve followed by -ve and -ve followed by +ve
+
+
+	
 	diff = signal_diff(voltages)
 
 	#threshold the absolute values of the pulses, relative to the fraction of the Vpp value
-	abs_threshold = np.absolute(diff) > count_threshold*vspan
 	
 	#Get signs of the pulses
 	#Expected outputs
 	# +1 - rising edge
 	# -1 - falling edge
 	#  0 - no edge
-	pulses = np.sign(diff*abs_threshold)
+	pulses = np.sign(diff)
 
-	assert(pulses.shape==diff.shape)
-	for i in xrange(len(pulses)): #DELETE LOOP
-		assert(pulses[i] in [-1,0,1])
+	# assert(pulses.shape==diff.shape)
+	# for i in xrange(len(pulses)): #DELETE LOOP
+	# 	assert(pulses[i] in [-1,0,1])
 
 	#Get indices of the pulse positions
 	nonzero_indices = np.flatnonzero(pulses)
@@ -48,9 +67,10 @@ def threshold(voltages, count_threshold = 0.5):
 	# 0 1 -1 1 0 0 -1 1 -1  0
 
 
-	for i in xrange(1,len(nonzero_indices)):
-		if pulses[nonzero_indices[i]]== pulses[nonzero_indices[i-1]]:
-			pulses[nonzero_indices[i]] == 0
+	# assert()
+	# for i in xrange(1,len(nonzero_indices)):
+		# if pulses[nonzero_indices[i]]== pulses[nonzero_indices[i-1]]:
+			# pulses[nonzero_indices[i]] == 0
 
 	#return absolute values of the pulses
 	return np.absolute(pulses)
@@ -60,8 +80,8 @@ def binning(thresholded, index_bin_width):
 
 	thresholded_len = len(thresholded)
 
-	for i in xrange(thresholded_len): #DELETE LOOP
-		assert(thresholded[i] in [0,1])
+	# for i in xrange(thresholded_len): #DELETE LOOP
+	# 	assert(thresholded[i] in [0,1]), "Threasholded:" thresholded[i]
 
 	#length of output [int]
 	outp_len = int(math.ceil(float(thresholded_len)/float(index_bin_width)))
