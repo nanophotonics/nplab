@@ -255,6 +255,7 @@ class uc480(QtWidgets.QMainWindow, UiTools):
     def get_camera_parameters(self):
         """Read parameter values from the camera."""
         camera_parameters = dict()
+        camera_parameters['serial'] = self.camera.serial
         camera_parameters['framerate'] = self.camera.framerate.magnitude
         camera_parameters['exposure_time'] = self.camera._get_exposure().magnitude
         camera_parameters['width'] = self.camera.width
@@ -412,7 +413,8 @@ class uc480(QtWidgets.QMainWindow, UiTools):
             self.LiveView.finished.connect(self.terminate_live_view)
             # live view
             print "Live view..."
-            self.start_live_view(save=False)                      
+            max_frames=float('inf')
+            self.start_live_view(save=False, max_frames=max_frames)                      
             
     def acquire_video(self):
         """Acquire video frames."""            
@@ -426,9 +428,10 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         self.StopVideoPushButton.clicked.connect(self.LiveView.terminate)
         self.LiveView.finished.connect(self.terminate_video_acquisition)
         # live view
-        self.start_live_view(save=True)        
+        max_frames=self.MaxFramesNumberBox.value()
+        self.start_live_view(save=True, max_frames=max_frames)        
         
-    def start_live_view(self, save=False):
+    def start_live_view(self, save=False, max_frames=100):
         """Start continuous image acquisition."""
         # enable/disable gui buttons
         self.TakeImagePushButton.setEnabled(False)
@@ -449,9 +452,8 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         # start live view
         self.LiveView.live_view(video_parameters, 
                                       save=save,
-                                      timeout=self.TimeoutNumberBox.value(),                                       
-#                                      max_frames=self.MaxFramesNumberBox.value(),
-                                      max_frames=float('inf'),
+                                      max_frames=max_frames,
+                                      timeout=self.TimeoutNumberBox.value(),                                      
                                       display_framerate=self.DisplayFramerateNumberBox.value(),
                                       )
         
