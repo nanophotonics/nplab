@@ -7,6 +7,7 @@ from nplab.instrument import Instrument
 from nplab.instrument.electronics import adlink9812_constants
 from nplab.utils.gui import *
 from nplab.ui.ui_tools import *
+from nplab.experiment.dynamic_light_scattering import dls_signal_postprocessing 
 import nplab
 import datetime
 import matplotlib 
@@ -31,7 +32,6 @@ import matplotlib.pyplot as plt
 
 
 DATATYPE = c_ushort
-
 VERSION = 0.01
 
 
@@ -254,6 +254,7 @@ class Adlink9812(Instrument):
 			print "---DEBUG MODE ENABLED---"
 			debug_out = (2.0*np.random.rand(sample_count))-1.0 
 			return debug_out,dt
+
 		elif sample_count > 100000:
 			return self.asynchronous_double_buffered_analog_input_read(sample_freq= sample_freq,sample_count = sample_count,verbose = verbose),dt
 		else:
@@ -276,19 +277,37 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 		#TODO - add adlink9812.ui file properly
 		uic.loadUi(os.path.join(os.path.dirname(__file__), 'adlink9812.ui'), self)
 
-		#bind widgets to functions
-		self.capture_button.clicked.connect(self.capture)
+		#daq_settings_layout
 		self.sample_freq_textbox.textChanged.connect(self.set_sample_freq)
 		self.sample_count_textbox.textChanged.connect(self.set_sample_count)
 		self.series_name_textbox.textChanged.connect(self.set_series_name)
-		self.series_key_textbox.textChanged.connect(self.set_series_key)
+		
+		#processing_stages_layout
+		self.threshold_textbox.textChanged.connect(self.set_threshold)
+		self.binning_textbox.textChanged.connect(self.set_bin_width)
 
+		#actions_layout
+		self.capture_button.clicked.connect(self.capture)
 
 		self.set_sample_freq()
 		self.set_sample_count()
 		self.set_series_name()
-		self.set_series_key()
-		
+		self.set_bin_width()
+		self.set_threshold()
+	
+	def set_threshold(self):
+		try:
+			self.difference_threshold = float(self.threshold_textbox.text())
+		except Exception, e:
+			print "Failed parsing difference_threshold: {0}".format(self.threshold_textbox.text())
+		return
+
+	def set_bin_width(self):
+		try:
+			self.bin_width = float(self.binning_textbox.text())
+		except Exception, e:
+			print "Failed parsing difference_threshold: {0}".format(self.binning_textbox.text())
+		return
 
 	def set_sample_freq(self):
 		MHz = 1e6
@@ -302,9 +321,13 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 	def set_sample_count(self):
 		try:
 
+
 			self.sample_count = int(float(self.sample_count_textbox.text()))
 			if self.verbose>0:
 				print "Sample Count: {0} [Counts]".format(self.sample_count)
+
+			self.sample_count = int(float(self.sample_count_textbox.text()))
+
 		except Exception,e:
 			print "Failed parsing sample count to int:",self.sample_freq_textbox.text()
 		return
@@ -313,21 +336,226 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 		self.series_group = self.series_name_textbox.text()
 		return
 
-	def set_series_key(self):
-		self.series_key = self.series_key_textbox.text()
-		return
-	
-
 	def plot_series(self,voltages, dt, timestamp):
-		print voltages[0:10]
+		
 		times = self.card.get_times(dt, len(voltages))
-		fig,ax = plt.subplots(1)
-		ax.plot(times, voltages)
-		ax.set_xlabel("Time [s]")
-		ax.set_ylabel("Voltage [V]")
-		ax.set_title("Adlink9812 Capture, Timestamp: {0}".format(timestamp))
+		fig, [ax1,ax2] = plt.subplots(2)
+		
+		threshold = 0.4
+
+		photon_count = dls_signal_postprocessing.count_photons(voltages,count_threshold=threshold)
+		ax1.plot(times, voltages)
+		ax1.set_xlabel("Time [s]")
+		ax1.set_ylabel("Voltage [V]")
+		ax1.set_title("Adlink9812 Capture, Timestamp: {0}, Photons: {1}".format(timestamp,photon_count))
+		
+		d_voltages = dls_signal_postprocessing.signal_diff(voltages)
+
+		vmin = np.min(voltages)
+		vmax = np.max(voltages)
+		vspan = abs(vmax-vmin)
+
+		voltages, dt = self.card.capture(sample_freq=self.sample_freq, sample_count=self.sample_count)
+
+		ax2.plot(times[0:len(d_voltages)],abs(d_voltages))
+		ax2.plot(times[0:len(d_voltages)],[threshold*vspan]*len(d_voltages),'r',label="count threshold")
+		ax2.set_xlabel("Time [s]")
+		ax2.set_ylabel("|$\Delta$Voltage| [V]")
+		ax2.legend()
+		ax2.set_title("Difference voltage plot".format(timestamp,photon_count))
+
+		plt.tight_layout()
 		plt.show()
 		return
+
+
+	def postprocess_raw(self,voltages,dt,save,plot,group,axes):
+
+		vmean = np.mean(voltages)
+		vmax = np.max(voltages)
+		vmin = np.min(voltages)
+		vstd = np.std(voltages)
+		vpp = np.abs(vmax-vmin)
+
+		print "---Raw---"
+		attrs = {
+			
+			"device": "adlink9812",
+			"type": "raw_voltage",
+			"_units": "volts",
+			"sample_count": self.sample_count,
+			"sampling_frequency":self.sample_freq,
+			"dt": dt,
+			"sampling_time_interval":dt*self.sample_count,
+			"vmean":vmean,
+			"vstdev": vstd,
+			"vmax":vmax,
+			"vmin":vmin,
+			"vpp":vpp,
+			"X label": "Sample Index",
+			"Y label": "Voltage [V]"
+			}
+
+		if save and self.raw_checkbox.isChecked():
+			print "Saving: Raw"
+			group.create_dataset("raw_voltage",data=voltages, attrs = attrs)
+			group.file.flush()
+
+		if plot and self.raw_checkbox.isChecked():
+			print "Plotting: Raw"
+			times = dt*np.arange(0,self.sample_count)
+			axes[-1].plot(times,voltages,'x')
+			axes[-1].set_xlabel("Time [s]")
+			axes[-1].set_ylabel("Voltage [V]")
+		print "---/Raw---"
+		return 
+
+	def postprocess_difference(self,voltages,dt,save,plot,group,axes):
+		#record/plot raw
+		self.postprocess_raw(voltages=voltages,dt=dt,save=save,plot=plot,group=group,axes=axes[0:-1])
+		
+		#compute rounded difference
+		rounded_diff = dls_signal_postprocessing.signal_diff(voltages)
+		#metaparameters
+		total_counts = np.sum(np.absolute(rounded_diff))
+		sample_time_interval = dt*self.sample_count
+		count_frequency = total_counts/float(sample_time_interval)
+
+		print "---Difference---"
+
+		attrs = attrs = {
+			
+			"device": "adlink9812",
+			"type": "difference",
+			"_units": "none",
+			"total_counts" : total_counts,
+			"sampling_time_interval":dt*self.sample_count,
+			"count_frequency" : count_frequency,
+			"X label": "Sample Index",
+			"Y label": "Normalized Voltage Difference [V]"
+			}
+		if save and self.difference_checkbox.isChecked():
+			print "Saving Difference stage"
+			group.create_dataset("diff_voltage",data=rounded_diff, attrs = attrs)
+			group.file.flush()
+
+		if plot and self.difference_checkbox.isChecked():
+			print "Plotting Difference stage"
+			times = dt*np.arange(0,self.sample_count-1)
+			axes[-1].plot(times,rounded_diff,'x')
+			axes[-1].set_xlabel("Time [s] (interval lower bound)")
+			axes[-1].set_ylabel("Voltage difference [V]")
+
+		print "Total Counts:", total_counts
+		print "Sampling Time Interval:", sample_time_interval
+		print "Count freuquency:", count_frequency
+
+		print "---/Difference---"
+
+		return rounded_diff
+
+	#####THRESHOLDING DEACTIVATED######
+	# def postprocess_threshold(self,voltages, dt, save, group):
+	# 	print "Thresholding step deactivated"
+	# 	thresholded = dls_signal_postprocessing.threshold(voltages=voltages)
+	# 	attrs = attrs = {
+			
+	# 		"device": "adlink9812",
+	# 		"type": "thresholded",
+	# 		"_units": "int",
+	# 		"sample_count": self.sample_count,
+	# 		"frequency":self.sample_freq,
+	# 		"dt": dt,
+	# 		"X label": "Sample Index",
+	# 		"Y label": "Thresholded pulses [Int]"
+	# 		}
+	# 	if save and self.threshold_checkbox.isChecked():
+	# 		print "Saving Threshold stage"
+	# 		group.create_dataset("thresholded_pulses",data=thresholded, attrs = attrs)
+	# 		group.file.flush()	
+
+		
+	# 	return thresholded
+
+	def post_process_binning(self,voltages,dt,save,plot,group,axes):
+		rounded_diff = self.postprocess_difference(voltages=voltages,dt=dt,save=save,plot=plot,group=group,axes=axes[0:-1])
+		
+		time_bin_width = self.bin_width
+		index_bin_width = int(math.ceil((float(time_bin_width)/float(dt))))
+
+		binned_counts = dls_signal_postprocessing.binning(thresholded=np.absolute(rounded_diff).astype(int),index_bin_width=index_bin_width)
+		time_bins = time_bin_width*np.arange(0,len(binned_counts))
+
+		binned_total_counts = np.sum(np.absolute(binned_counts))
+		binned_sample_time_interval = time_bins[-1]
+		binned_count_frequency = binned_total_counts/float(binned_sample_time_interval)
+
+		print "---Binning---"
+
+		attrs = attrs = {
+			
+			"device": "adlink9812",
+			"type": "binned_counts",
+			"_units": "count",
+			"time_bin_width":time_bin_width,
+			"index_bin_width":index_bin_width,
+			"binned_total_counts" : binned_total_counts ,
+			"binned_sample_time_interval": binned_sample_time_interval,
+			"binned_count_frequency": binned_count_frequency,
+			"X label": "Time [s] (time bins lower bound)",
+			"Y label": "Photon Count"
+			}
+
+		if save and self.binning_checkbox.isChecked():
+			print "Saving: Binning"
+			group.create_dataset("photon_count",data=[time_bins,binned_counts], attrs = attrs)
+			group.file.flush()
+
+		if plot and self.binning_checkbox.isChecked():
+			print "Plotting@ Binning"
+			axes[-1].plot(time_bins,binned_counts,'x-')
+			axes[-1].set_xlabel("Time [s] (time bin lower bound)")
+			axes[-1].set_ylabel("Photon Counts [count]")
+
+		print "---/Binning---"
+
+		return binned_counts, time_bins
+
+	def post_process_correlate(self,voltages,dt,save,plot,group,axes):
+		binned_counts,times = self.post_process_binning(voltages=voltages,dt=dt,save=save,plot=plot,group=group,axes=axes[0:-1])
+		
+		print "---Correlate---"
+		#compute originals values:
+		autocorrelation = dls_signal_postprocessing.autocorrelation(binned_counts)
+		time_bin_width = self.bin_width
+		#truncate delay time t=0
+		autocorrelation = autocorrelation[1:]
+		times = times[1:]
+
+		attrs = attrs = {
+			
+			"device": "adlink9812",
+			"type": "autocorrelation",
+			"_units": "none",
+			"X label": "Time [s]",
+			"Y label": "Intensity Autocorrelation g2 [no units]"
+			}
+		if save and self.correlate_checkbox.isChecked():
+			print "Saving Autocorrelation stage"
+			group.create_dataset("autocorrelation",data=[times,autocorrelation], attrs = attrs)
+			group.file.flush()
+
+		if plot and self.correlate_checkbox.isChecked():
+			axes[-1].semilogx(times,autocorrelation,'x-')
+			axes[-1].set_xlabel("Time [s]")
+			axes[-1].set_ylabel("Autocorrelation g2 [no units]")
+
+		print "---/Correlate---"
+
+
+		return times, autocorrelation
+
+		
 
 	def capture(self):
 		
@@ -338,7 +566,6 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 		print "SamplingFreq (Hz):", self.sample_freq
 		print "SampleCount (counts):", self.sample_count
 		print "SeriesName: ", self.series_group
-		print "Serieskey: ", self.series_key
 		print "Plot trace:", plot
 		print "Save trace:", save
 		if save:
@@ -347,40 +574,72 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 			except AttributeError:
 				self.datafile = nplab.datafile.current()
 			dg = self.datafile.require_group(self.series_group)
-
+		else:
+			dg = None
+		
+		#capture voltages
 		voltages, dt = self.card.capture(sample_freq=self.sample_freq, sample_count=self.sample_count)
-		vmean = np.mean(voltages)
-		vmax = np.max(voltages)
-		vmin = np.min(voltages)
-		vstd = np.std(voltages)
-		vpp = np.abs(vmax-vmin)
+		
+		checkboxes = [self.correlate_checkbox,self.binning_checkbox,self.difference_checkbox,self.raw_checkbox]
+		checked = np.sum([1 for checkbox in checkboxes if checkbox.isChecked()==True])
+		if checked < 2:
+			fig,axes = plt.subplots(checked)
+			if checked == 1:
+				axarr = [axes]
+			else:
+				axarr = axes
+		else:
+			fig,axes = plt.subplots(2,int(math.ceil(checked/2.0)))
 
-		timestamp = str(datetime.datetime.now()).replace(' ', 'T')
-		attrs = {
-			
-			"device": "adlink9812",
-			"description": "Analog to digital converter",
-			"_units": "volts",
-			"sample_count": self.sample_count,
-			"frequency":self.sample_freq,
-			"dt": dt,
-			"vmean":vmean,
-			"vstdev": vstd,
-			"vmax":vmax,
-			"vmin":vmin,
-			"vpp":vpp,
-			"X label": "Sample Index",
-			"Y label": "Voltage [V]"
-			}
-
-		if save:
-			dg.create_dataset(self.series_key,data=voltages, attrs = attrs)
-			dg.file.flush()
-
-		#plot measurement on graph
+			axarr = []
+			for i in range(len(axes)):
+				for j in range(len(axes[0])):
+					axarr.append(axes[i][j])
+		
+		times, autocorrelation = self.post_process_correlate(voltages=voltages,dt=dt,save=save,group=dg,plot=plot,axes = axarr)
 		if plot:
-			print voltages
-			self.plot_series(voltages=voltages, dt=dt, timestamp=timestamp)
+			plt.legend()
+			plt.tight_layout()
+			plt.show()
+	
+		#plot measurement on graph
+
+		# if plot:
+			
+		# 	fig, axes = plt.subplots(2,2)
+			
+
+		# 	sample_times =dt*np.arange(0,len(voltages))
+		# 	axarr[0].plot( sample_times,voltages,'x')
+		# 	axarr[0].set_xlabel("Time [s]")
+		# 	axarr[0].set_ylabel("Voltage [V]")
+
+		# 	axarr[1].plot(dt*np.arange(0,len(diff)),diff,'x')
+		# 	axarr[1].set_xlabel("Time [s] (interval lower bound)")
+		# 	axarr[1].set_ylabel("Voltage difference [V]")
+
+		# 	# axarr[2].plot(dt*np.arange(0,len(thresholded)),thresholded,'x-')
+		# 	# axarr[2].set_xlabel("Time [s] (interval lower bound)")
+		# 	# axarr[2].set_ylabel("Thresholded difference [values $\in \{0,1\}]$")
+
+		# 	axarr[2].plot(time_bins,binned,'x-')
+		# 	axarr[2].set_xlabel("Time [s] (time bin lower bound)")
+		# 	axarr[2].set_ylabel("Photon Counts [count]")
+			
+		# 	axarr[3].semilogx(times,autocorrelation,'x-')
+		# 	axarr[3].set_xlabel("Time [s]")
+		# 	axarr[3].set_ylabel("Autocorrelation g2 [no units]")
+
+		# 	plt.tight_layout()
+
+		# 	total_counts = np.sum(np.absolute(diff))
+		# 	T = np.max(sample_times)
+		# 	print "TOTAL COUNTS",total_counts
+		# 	print "Sampling Time:",T
+		# 	print "RATE:", float(total_counts)/float(T)
+		# 	plt.show()			
+			# print voltages
+			# self.plot_series(voltages=voltages, dt=dt, timestamp=timestamp)
 		
 		return
 
@@ -389,6 +648,6 @@ if __name__ == "__main__":
 	#debug mode enabled - won't try to picj up card - will generate data
 	card = Adlink9812("C:\ADLINK\PCIS-DASK\Lib\PCI-Dask64.dll",debug=True)
 	app = get_qt_app()
-	ui = Adlink9812UI(card=card,debug =True)
+	ui = Adlink9812UI(card=card,debug =False)
 	ui.show()
 	sys.exit(app.exec_())
