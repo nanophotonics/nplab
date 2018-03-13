@@ -125,7 +125,7 @@ def correct_spectrum(spectrum, reference):
     return spectrum/reference
 
 def truncate_spectrum(wavelengths, spectrum, start_wl = 450, finish_wl = 900):
-    #Truncates spectra to remove high and low end noise
+    #Truncates spectrum within a certain wavelength range. Useful for removing high and low-end noise
 
     for n, wl in enumerate(wavelengths):
         
@@ -145,7 +145,11 @@ def truncate_spectrum(wavelengths, spectrum, start_wl = 450, finish_wl = 900):
     spectrum_trunc = np.array(spectrum[start_index:finish_index])
     return np.array([wavelengths_trunc, spectrum_trunc])
 
-def baseline_als(y, lambd, p, iterations = 10):#Calculates baseline for data
+def baseline_als(y, lambd, p, iterations = 10):
+    '''Calculates baseline for data
+    lambd ~ 10^n
+    p ~10^(-m)'''
+    
     L = y.size
     D = sparse.csc_matrix(np.diff(np.eye(L), 2))
     w = np.ones(L)
@@ -156,7 +160,8 @@ def baseline_als(y, lambd, p, iterations = 10):#Calculates baseline for data
         w = p * (y > z) + (1-p) * (y < z)
     return z
 
-def butter_lowpass_filtfilt(data, cutoff = 1500, fs = 60000, order=5):#Smooths data without shifting it
+def butter_lowpass_filtfilt(data, cutoff = 1500, fs = 60000, order=5):
+    '''Smoothes data without shifting it'''
     nyq = 0.5 * fs
     normal_cutoff = cutoff / nyq
     b, a = butter(order, normal_cutoff, btype='low', analog=False)
@@ -164,35 +169,29 @@ def butter_lowpass_filtfilt(data, cutoff = 1500, fs = 60000, order=5):#Smooths d
     return y_filtered
 
 def detect_minima(y, neg_only = True, threshold = 0):
+    '''Finds and returns list of minima in a data set'''
     ind = False
-    #Finds and returns list of minima in a data set
-    y_sign = np.sign(y + threshold)
-    #print 'y sign:'
-    #print y_sign
-    dy = np.zeros(len(y))
-    #print 'len(y)', len(y)
-    dy[1:] = np.diff(y)
-    #print 'len(np.diff(y))', len(np.diff(y))
-    #print 'len(dy)', len(dy)
     
+    y_sign = np.sign(y + threshold)
+    dy = np.zeros(len(y))
+    dy[1:] = np.diff(y)
+
     if len(dy) > 1:
         dy[0] = dy[1]
         dy = np.sign(dy)
-        #print 'dy:'
-        #print dy
         d2y = np.zeros(len(y))
         d2y[1:] = np.diff(dy)
         d2y[0] = d2y[1]
         d2y = np.sign(d2y)
-        #print 'd2y:'
-        #print d2y
-    
-        if neg_only == True: #Finds only minima that exist below zero
+        
+        if neg_only == True: 
+            '''Finds only minima that exist below zero'''
             ind = np.nonzero((-y_sign + dy + d2y) == 3)
             ind = ind[0]
             ind = [int(i) for i in ind]
 
-        elif neg_only == False:#Finds all minima
+        elif neg_only == False:
+            '''Finds all minima'''
             ind = np.nonzero((dy + d2y) == 2)
             ind = ind[0]
             ind = [int(i) for i in ind]
@@ -200,7 +199,7 @@ def detect_minima(y, neg_only = True, threshold = 0):
         return ind
 
 def test_if_NPoM(x, y, lower = 0.1, upper = 2.5, NPoM_threshold = 1.9): 
-    #Filters out spectra that are obviously not from NPoMs
+    '''Filters out spectra that are obviously not from NPoMs'''
     
     is_NPoM = False #Guilty until proven innocent
 
@@ -235,7 +234,7 @@ def test_if_NPoM(x, y, lower = 0.1, upper = 2.5, NPoM_threshold = 1.9):
     return is_NPoM
   
 def take_derivs(y, x):
-    #numerically differentiates y wrt x twice and returns both derivatives
+    '''Numerically differentiates y wrt x twice and returns both derivatives'''
     #y, x = 1D array
     
     dy = np.diff(y)
@@ -249,6 +248,8 @@ def take_derivs(y, x):
     return first_derivative, second_derivative
 
 def remove_baseline(x, y, cutoff = 1500, fs = 60000, lambd = 10**6.7, p = 0.003, return_trunc = False):
+    '''Specifically designed for NPoM spectra'''
+    
     x_raw = x
     y_raw = y
         
@@ -313,41 +314,43 @@ def remove_baseline(x, y, cutoff = 1500, fs = 60000, lambd = 10**6.7, p = 0.003,
         return y_subtracted
 
 def norm_to_trans(x, y, cutoff = 1500, fs = 60000, lambd = 10**6.7, p = 0.003, plot = False, monitor_progress = False, baseline = True, return_peakpos = True):
-
+    '''Specifically for use with NPoM spectra'''
+    '''Finds the first shoulder in the spectrum after 500 nm and normalises the spectrum to the corresponding intensity'''
+    
     x_raw = x
     y_raw = y
     
     if baseline == True:
-        y_subtracted, x_trunc, y_trunc = remove_baseline(x_raw, y_raw, lambd = lambd, p = p, return_trunc = True)
+        y_subtracted, x_trunc, y_trunc = remove_baseline(x_raw, y_raw, lambd = lambd, p = p, return_trunc = True)#Baseline subtraction if requested
 
     else:
-        x_trunc, y_trunc = truncate_spectrum(x_raw, y_raw, start_wl = 450, finish_wl = 900)
+        x_trunc, y_trunc = truncate_spectrum(x_raw, y_raw, start_wl = 450, finish_wl = 900)#Otherwise just truncated to standard range
     
-    y_trunc_smooth = butter_lowpass_filtfilt(y_trunc, cutoff = cutoff, fs = fs)
-    first_deriv, second_deriv = take_derivs(y_trunc_smooth, x_trunc)
+    y_trunc_smooth = butter_lowpass_filtfilt(y_trunc, cutoff = cutoff, fs = fs)#Smooth data
+    first_deriv, second_deriv = take_derivs(y_trunc_smooth, x_trunc)#Take second derivative
     
-    peak_indices = detect_minima(second_deriv, neg_only = False)
+    peak_indices = detect_minima(second_deriv, neg_only = False)#Detect minima in second derivative to find spectral peaks/shoulders
     
-    x_peaks = [x_trunc[index] for index in peak_indices]
+    x_peaks = [x_trunc[index] for index in peak_indices]#Peak positions
     
     for n, peak_wl in enumerate(x_peaks):
         
         if peak_wl > 500:
-            trans_index = peak_indices[n]
+            trans_index = peak_indices[n]#Finds index of first peak after x=500 - most likely the transverse mode
             break
 
     trans_wl = x_trunc[trans_index]
-    trans_height = y_trunc_smooth[trans_index]
+    trans_height = y_trunc_smooth[trans_index] #Corresponding x and y values
 
-    if baseline == False:
+    if baseline == False: #Sets the spectral minimum to zero
         y_subtracted = y_raw - min(y_trunc_smooth)
         y_trunc = y_trunc - min(y_trunc_smooth)
     
     y_norm = y_subtracted / trans_height
-    y_trunc_norm = y_trunc / trans_height
+    y_trunc_norm = y_trunc / trans_height #Normalisation
 
     if return_peakpos == True:
-        return y_norm, trans_wl, x_trunc, y_trunc_norm   
+        return y_norm, trans_wl, x_trunc, y_trunc_norm#Returns transverse peak position along with normalised data, if requested
     
     else:
         return y_norm, x_trunc, y_trunc_norm
@@ -493,19 +496,13 @@ def find_fit_peaks(x, y, cutoff = 1500, fs = 60000, lambd = 10**6.7, baseline_p 
     
     all_metadata_keys = ['NPoM?',
                       'double_peak?',
-                      'transverse_mode_position_(init)',
-                      'transverse_mode_intensity_(init)',
                       'transverse_mode_position',
                       'transverse_mode_intensity',
-                      'coupled_mode_resonance_(fit)',
-                      'coupled_mode_intensity_(fit)',
-                      'coupled_mode_resonance_(spectrum)',
-                      'coupled_mode_height_(spectrum)',
-                      'intensity_ratio_2',
-                      'intensity_ratio_1',
+                      'coupled_mode_position,
+                      'coupled_mode_intensity',
+                      'intensity_ratio',
                       'raw_data',
                       'normalised_spectrum',
-                      'full_wavelengths',
                       'full_wavelengths',
                       'truncated_spectrum',
                       'smoothed_spectrum',
@@ -515,14 +512,15 @@ def find_fit_peaks(x, y, cutoff = 1500, fs = 60000, lambd = 10**6.7, baseline_p 
                       'final_components',
                       'final_params',                      
                       'truncated_wavelengths',
-                      'truncated_wavelengths',
                       'second_derivative']
     
     metadata = {key : 'N/A' for key in all_metadata_keys}
     metadata['raw_data'] = y_raw
     metadata['full_wavelengths'] = x_raw
     
-    is_NPoM_start = time.time()
+    '''Testing if NPoM'''      
+            
+    is_NPoM_start = time.time() #All these "time" functions are just for measuring time taken for each function, for debug purposes etc.
             
     is_NPoM = test_if_NPoM(x_raw, y_raw)
     
@@ -567,8 +565,6 @@ def find_fit_peaks(x, y, cutoff = 1500, fs = 60000, lambd = 10**6.7, baseline_p 
         if monitor_progress == 'time' or monitor_progress == True:
             print 'Normalised in %s seconds' % norm_to_trans_time
         
-        #print len(y_trunc), len(x_trunc)
-        
         trunc_start = time.time()
         
         x_trunc, y_trunc = truncate_spectrum(x_trunc, y_trunc, start_wl = x_trunc[0], finish_wl = 850)
@@ -579,7 +575,7 @@ def find_fit_peaks(x, y, cutoff = 1500, fs = 60000, lambd = 10**6.7, baseline_p 
         if monitor_progress == 'time' or monitor_progress == True:
             print 'Truncated in %s seconds' % trunc_time
         
-        metadata['transverse_mode_position_(init)'] = trans_peakpos
+        metadata['transverse_mode_position'] = trans_peakpos
         metadata['normalised_spectrum'] = y_raw_norm
         
         if monitor_progress == True:
@@ -601,14 +597,12 @@ def find_fit_peaks(x, y, cutoff = 1500, fs = 60000, lambd = 10**6.7, baseline_p 
         y = y_trunc
         x = x_trunc
         
-        metadata['smoothed_spectrum'] = y_smooth
-        metadata['truncated_spectrum'] = y_trunc
         metadata['truncated_wavelengths'] = x_trunc
         
         if monitor_progress == True:
             print '\nData smoothed'
 
-        #Differentiation
+        '''Differentiation'''
         
         deriv_start = time.time()
 
@@ -625,7 +619,7 @@ def find_fit_peaks(x, y, cutoff = 1500, fs = 60000, lambd = 10**6.7, baseline_p 
         if monitor_progress == True:
             print 'Derivatives taken'
 
-        #Peak detection in 2nd derivative:
+        '''Peak detection in 2nd derivative'''
             
         detect_minima_start = time.time()
 
@@ -641,30 +635,7 @@ def find_fit_peaks(x, y, cutoff = 1500, fs = 60000, lambd = 10**6.7, baseline_p 
         if monitor_progress == True:
             print '%s peaks detected' % (len(indices))
 
-        if plot == 'derivatives' or plot == 'both' or plot == 'all':
-            y_smooth_norm = np.array((y_smooth-y_smooth.min())/y_smooth.max() - 0.5)
-            first_derivative_norm = np.array(first_derivative)
-            #first_derivative_norm -= first_derivative_norm.min()
-            first_derivative_norm /= first_derivative_norm.max()
-            #first_derivative_norm -= 0.5
-            second_derivative_norm = np.array(second_derivative)
-            second_derivative_norm /= second_derivative_norm.max()
-
-            plt.figure(figsize = (10, 7))
-            #plt.plot(x, y0, 'k--', label = 'y=0')
-            #plt.plot(x, y0 + 1, 'k--')
-            #plt.plot(x, y0 + 2, 'k--')
-            #plt.plot(x, y0 + 3, 'k--')
-            plt.plot(x, y_smooth_norm, label = 'Smoothed Data')
-            plt.plot(x[:-1], first_derivative_norm + 1, label = 'First Derivative')
-            plt.plot(x[1:-1], second_derivative_norm + 2, label = 'Second Derivative')
-            plt.plot(x[indices], second_derivative_norm[indices] + 2, 'ko')
-            plt.xlim(450, 900)
-            plt.legend(loc = 0)
-            plt.tick_params(axis = 'y', labelleft = 'off')
-            plt.show()
-
-        '''Next bit performs the actual fitting'''
+        '''Next bit performs the actual fitting using Python's lmfit module'''
     
         if len(indices) != 0: #If peaks exist
             
@@ -719,11 +690,11 @@ def find_fit_peaks(x, y, cutoff = 1500, fs = 60000, lambd = 10**6.7, baseline_p 
             
             metadata['initial_guess'] = init
             
-            y_float16 = np.float16(y)
+            y_float16 = np.float16(y) #Reduces the number of decimal places in each data point to speed up fitting
             x_float16 = np.float16(x)
-                                      
-            out = gauss_model.fit(y_float16, pars, x=x_float16)#Performs the fit, based on initial guesses
-            #out = gauss_model.fit(y_smooth, pars, x=x)#Fit to smoothed data
+    
+            out = gauss_model.fit(y_float16, pars, x=x_float16)'''Performs the fit, based on initial guesses'''
+            #out = gauss_model.fit(y_smooth, pars, x=x) #Can fit to smoothed data instead if you like
             comps = out.eval_components(x=x_float16)
             metadata['final_components'] = comps
             
@@ -744,7 +715,6 @@ def find_fit_peaks(x, y, cutoff = 1500, fs = 60000, lambd = 10**6.7, baseline_p 
                 final_params[prefix[:-1]] = {}
 
                 for name in component_param_names:
-                    #print 'Name = ' + name
                     final_params[prefix[:-1]][name] = out.params[prefix + name].value
             
             metadata['lmfit_output'] = out
@@ -754,7 +724,8 @@ def find_fit_peaks(x, y, cutoff = 1500, fs = 60000, lambd = 10**6.7, baseline_p 
             
             is_double_start = time.time()       
                     
-            is_double, heights, centers = test_if_double(x, out.best_fit, final_params, doubles_threshold = doubles_threshold, min_dist = doubles_dist, monitor_progress = monitor_progress)            
+            is_double, peakHeights, peakCenters = test_if_double(x, out.best_fit, final_params, doubles_threshold = doubles_threshold, min_dist = doubles_dist, monitor_progress = monitor_progress)            
+            metadata['double_peak?'] = is_double
             
             is_double_end = time.time()
             is_double_time = is_double_end - is_double_start
@@ -772,14 +743,8 @@ def find_fit_peaks(x, y, cutoff = 1500, fs = 60000, lambd = 10**6.7, baseline_p 
                 
                 else:
                     print '\nSomething else'
-                
-                #print 'Peak positions:', centers
+
                 print 'Fitting complete'
-            
-            cm_peakpos = centers[np.array(heights).argmax()]
-            metadata['double_peak?'] = is_double
-            metadata['coupled_mode_resonance_(fit)'] = cm_peakpos
-            metadata['coupled_mode_intensity_(fit)'] = max(heights)
             
             if print_report == True:
                 print 'Fit report:\n'
@@ -792,7 +757,7 @@ def find_fit_peaks(x, y, cutoff = 1500, fs = 60000, lambd = 10**6.7, baseline_p 
                 plt.legend(loc = 0)
                 plt.xlabel('Wavelength (nm)')
                 plt.tick_params(axis = 'y', labelleft = 'off')
-                #plt.ylabel('Intensity')
+                plt.ylabel('Intensity')
                 plt.xlim(450, 1050)
                 plt.show()
 
@@ -835,69 +800,53 @@ def find_fit_peaks(x, y, cutoff = 1500, fs = 60000, lambd = 10**6.7, baseline_p 
                 plt.xlim(450, 900)
                 plt.show()
             
-            if is_double == False:               
+            if is_double == False:
+                '''Find CM and transverse peak heights/positions using fit data and smoothed spectrum'''
                 
-                trans_index = np.where(np.round(x) - np.round(trans_peakpos) == 0)[0][0]
-                trans_height = y_smooth[trans_index]
                 ySmoothPeakFind = truncate_spectrum(x, y_smooth, start_wl = 600, finish_wl = 850)
-                cm_full_height = ySmoothPeakFind[1].max()
-                cm_full_peakpos = ySmoothPeakFind[0][ySmoothPeakFind[1].argmax()]
+                cmHeight = ySmoothPeakFind[1].max()
+                cmPeakPos = ySmoothPeakFind[0][ySmoothPeakFind[1].argmax()]
                 
-                if int(cm_full_peakpos) == 600:
+                if int(cmPeakPos) == 600:
                     newMinimum = detect_minima(ySmoothPeakFind, neg_only = False)[0]
                     newMinWl = ySmoothPeakFind[0][newMinimum]
                     ySmoothPeakFind = truncate_spectrum(x, y_smooth, start_wl = newMinWl, finish_wl = 850)
-                    cm_full_height = ySmoothPeakFind[1].max()
-                    cm_full_peakpos = ySmoothPeakFind[0][ySmoothPeakFind[1].argmax()]
-    
+                    cmHeight = ySmoothPeakFind[1].max()
+                    cmPeakPos = ySmoothPeakFind[0][ySmoothPeakFind[1].argmax()]
+                
+                transShoulderPeakPos = trans_peakpos
+                transShoulderIndex = np.where(np.round(x) - np.round(trans_peakpos) == 0)[0][0]
+                transShoulderHeight = y_smooth[transShoulderIndex]
+
                 for prefix in [model.prefix for model in model_elements]:
-                    comp = final_params[prefix[:-1]]
+                    #prefix in the form 'gn_'
+                    comp = final_params[prefix[:-1]]#Shortened to 'gn' (no underscore) in our final_params dictionary
                     
-                    if comp['center'] > 500:
-                        trans_comp_peakpos = comp['center']                        
-                        trans_comp_height = comp['height']
-                        
-                        if trans_comp_height < trans_height/3.5:
-                            continue
-                            
-                        elif comp['center'] > 550:
-                            trans_comp_peakpos = trans_peakpos
-                            trans_comp_height = trans_height
-                            break
-                        
-                        else:
-                            break
-                
-                try:
-                    cm_index = np.where(np.round(x) - np.round(cm_peakpos) == 0)[0][0]
-                    cm_height = y_smooth[cm_index]
-                
-                except:
-                    cm_height = cm_full_height
-                    cm_peakpos = cm_full_peakpos
+                    if 500 < comp['center'] < 550:#Only wavelengths between 500 and 550 nm are considered
+                        transPeakPos = comp['center']     
+                        break #Stops after first peak between 500 and 550
                     
-                    if monitor_progress == True:
-                        print 'CM peak position out of range. CM height/peak position assigned to spectral maximum'
-                             
-                intensity_ratio_1 = cm_full_height/trans_height
-                intensity_ratio_2 = cm_full_height/trans_comp_height
+                    elif comp['center'] > 550:
+                        transPeakPos = transShoulderPeakPos#If no peaks are detected, initial transverse shoulder used as peak position
+                        break
                 
-                metadata['intensity_ratio_1'] = intensity_ratio_1
-                metadata['intensity_ratio_2'] = intensity_ratio_2
-                metadata['transverse_mode_position'] = trans_comp_peakpos
-                metadata['transverse_mode_intensity_(init)'] = trans_height
-                metadata['transverse_mode_intensity'] = trans_comp_height
-                metadata['coupled_mode_resonance_(spectrum)'] = cm_full_peakpos
-                metadata['coupled_mode_height_(spectrum)'] = cm_full_height
+                transHeight = y_smooth[abs(x - transPeakPos) == abs(x - transPeakPos).min()][0]
+                
+                intensityRatio = cmHeight/transHeight
+                
+                y_smooth /= transHeight
+                y_trunc /= transHeight
+                y_raw_norm /= transHeight
+                
+                metadata['smoothed_spectrum'] = y_smooth
+                metadata['truncated_spectrum'] = y_trunc
+                metadata['normalised_spectrum'] = y_raw_norm
+                metadata['intensity_ratio'] = intensityRatio
+                metadata['transverse_mode_position'] = transPeakPos
+                metadata['transverse_mode_intensity'] = transHeight
+                metadata['coupled_mode_position'] = cmPeakPos
+                metadata['coupled_mode_intensity'] = cmHeight
                 metadata['final_components'] = comps
-                
-                #y_raw_norm /= trans_comp_height
-                #y /= trans_comp_height
-                #y_smooth/= trans_comp_height
-                
-                #metadata['normalised_spectrum'] = y_raw_norm
-                #metadata['smoothed_spectrum'] = y_smooth
-                #metadata['truncated_spectrum'] = y
                 
                 if plot == 'all':
                     lim_frac = y_smooth.max()/10
@@ -906,41 +855,18 @@ def find_fit_peaks(x, y, cutoff = 1500, fs = 60000, lambd = 10**6.7, baseline_p 
                     plt.plot(x, y)
                     plt.plot(x, y_smooth)
                     plt.plot(x, [0] * len(x), '--')
-                    plt.plot([trans_peakpos] * 10, np.linspace(trans_height, cm_full_height, 10), 'k--')
-                    plt.plot(x, [cm_full_height] * len(x))
-                    plt.plot(x, [trans_height] * len(x))
-                    plt.title('Intensity Ratio 1: %s' % (intensity_ratio_1))
+                    plt.plot([transPeakPos] * 10, np.linspace(transHeight, cmHeight, 10), 'k--')
+                    plt.plot(x, [cmHeight] * len(x))
+                    plt.plot(x, [transHeight] * len(x))
+                    plt.title('Intensity Ratio: %s' % (intensityRatio))
                     plt.xlabel('Wavelength(nm)')
                     plt.ylabel('Intensity')
                     plt.ylim(-lim_frac/2, y_smooth.max() + lim_frac)
                     plt.xlim(450, 900)
                     plt.show()
-                    
-                    plt.plot(x_raw, y_raw_norm/trans_comp_height, lw = 0.5)
-                    plt.plot(x, y/trans_comp_height)
-                    plt.plot(x, y_smooth/trans_comp_height)
-                    plt.plot(x, [0] * len(x), '--')
-                    plt.plot([trans_comp_peakpos] * 10, np.linspace(trans_comp_height, cm_full_height/trans_comp_height, 10), 'k--')
-                    plt.plot(x, [cm_full_height/trans_comp_height] * len(x))
-                    plt.plot(x, [trans_comp_height/trans_comp_height] * len(x))
-                    plt.plot([cm_peakpos] * 10, np.linspace(0, cm_full_height, 10)/trans_comp_height, 'r--')
-                    plt.plot([cm_full_peakpos] * 10, np.linspace(0, cm_full_height, 10)/trans_comp_height, 'g--')
-                    
-                    for i in range(len(indices)):
-                        plt.plot(x, comps['g%s_' % (i)]/trans_comp_height, '--', linewidth = 0.4)
-                    
-                    plt.title('Intensity Ratio 2: %s' % (intensity_ratio_2))
-                    plt.xlabel('Wavelength(nm)')
-                    plt.ylabel('Intensity')
-                    plt.ylim(-lim_frac/2, (y_smooth/trans_comp_height).max() + lim_frac)
-                    plt.xlim(450, 900)
-                    plt.show()
-              
-                if abs(cm_full_peakpos - cm_peakpos) < 50:
-                    cm_peakpos = cm_full_peakpos
-            
+
             metadata['NPoM?'] = is_NPoM
-            return DF_Spectrum(y, final_params, is_NPoM, is_double, cm_peakpos, metadata)
+            return DF_Spectrum(y, final_params, is_NPoM, is_double, cmPeakPos, metadata)
         
         else:
             is_NPoM = False
@@ -1083,124 +1009,78 @@ def is_number(s):
 
 def collect_intensity_ratios(all_spectra, plot = True):
     
-    '''NEED TO SORT OUT PLOTS'''
-    
-    cmNames = ['Max']
-    transNames = ['Fit', 'Shoulder', 'Spectrum']
-    irNames = ['%s, %s' % (cmName, transName) for cmName, transName in itertools.product(cmNames, transNames)]
-    intensityRatios = {irName : [] for irName in irNames}
-    #print intensityRatios
     cmPeakPositions = []
+    intensityRatios = []
 
     spectra = sorted([spectrum for spectrum in all_spectra if spectrum[:8] == 'Spectrum'], key = lambda spectrum: int(spectrum[9:]))
     
     for spectrum in spectra:
         #print '\n', spectrum
         spectrum = all_spectra[spectrum]
-        cmPeakpos = spectrum.attrs['Coupled mode wavelength (from spectrum)']
-        irGroup = spectrum.create_group('Intensity ratios')
         
-        if spectrum.attrs['NPoM?'] == True and spectrum.attrs['Double Peak?'] == False and cmPeakpos != 'N/A':
+        try:
+            irGroup = spectrum.create_group('Intensity ratio')
+        
+        except:
+            del spectrum['Intensity ratio']
+            irGroup = spectrum.create_group('Intensity ratio')
+            
+        cmPeakPos = spectrum.attrs['Coupled mode wavelength']
+        intensityRatio = spectrum.attrs['Intensity ratio']
+        
+        if spectrum.attrs['NPoM?'] == True and spectrum.attrs['Double Peak?'] == False and cmPeakpos != 'N/A' and intensityRatio != 'N/A':
+            
             cmPeakPositions.append(cmPeakpos)
-            y_smooth = spectrum['Fit/Smoothed data'][()]
-            x = spectrum['Fit/Smoothed data'].attrs['wavelengths'][()]
-            
-            trans_height_fit = spectrum.attrs['Transverse mode intensity (from fit)']
-            trans_wl_fit = spectrum.attrs['Transverse mode wavelength (from fit)']
-            trans_height_shoulder = spectrum.attrs['Transverse mode intensity (from spectrum)']
-            trans_height_spectrum_pos = y_smooth[abs(x - trans_wl_fit) == abs(x - trans_wl_fit).min()][0]
-            trans_height_533 = y_smooth[abs(x - 533) == abs(x - 533).min()][0]
-            
-            transHeights = [trans_height_fit, trans_height_shoulder, trans_height_spectrum_pos]
-        
-            cm_height_fit = spectrum.attrs['Coupled mode intensity (from fit)']
-            cm_height_spectrum = spectrum.attrs['Coupled mode intensity (from spectrum)']
-            cm_wl_fit = spectrum.attrs['Coupled mode wavelength (from fit)']
-            cm_height_spectrum_pos = y_smooth[abs(x - cm_wl_fit) == abs(x - cm_wl_fit).min()][0]
-            
-            cmHeights = [cm_height_spectrum,]
-            
-            allVals = [cmPeakpos] + transHeights + cmHeights
-            irExists = True
-            
-            for val in allVals:
-                
-                if is_number(val) == False:
-                    irExists = False
-        
-            for (i, cmHeight), (j, transHeight) in itertools.product(enumerate(cmHeights), enumerate(transHeights)):
-                irName = '%s, %s' % (cmNames[i], transNames[j])
-                
-                try:
-                    intensityRatio = cmHeight / transHeight
-                    irGroup.attrs[irName] = intensityRatio
-                
-                except:
-                    irGroup.attrs[irName] = 'N/A'
-                
-                if irExists == True:
-                    intensityRatios[irName].append(intensityRatio)
-                        
-        else:
-            
-            for irName in irNames:
-                irName = '%s, %s' % (cmName, transName)
-                irGroup.attrs[irName] = 'N/A'
+            intensityRatios.append(intensityRatio)
                 
     if plot == True:
-        
-        imgs = {}
-        
-        for irName in irNames:
-            
-            y = np.array(intensityRatios[irName])
-            x = np.array(cmPeakPositions)
-            nbins=300
+                    
+        y = np.array(intensityRatios)
+        x = np.array(cmPeakPositions)
+        nbins=300
 
-            k = gaussian_kde([x, y])
-            xi, yi = np.mgrid[x.min():x.max():nbins*1j, y.min():y.max():nbins*1j]
-            zi = k(np.vstack([xi.flatten(), yi.flatten()]))
+        k = gaussian_kde([x, y])
+        xi, yi = np.mgrid[x.min():x.max():nbins*1j, y.min():y.max():nbins*1j]
+        zi = k(np.vstack([xi.flatten(), yi.flatten()]))
+        
+        zi_ordered = np.array(sorted(zi)[::-1])
+        zi_cum = np.cumsum(zi_ordered)
+        zi_total = sum(zi)
+        
+        index_50 = np.where(zi_cum > zi_total*0.9)[0][0]
+        
+        zi_50 = []
+        
+        for n, z_val in enumerate(zi):
             
-            zi_ordered = np.array(sorted(zi)[::-1])
-            zi_cum = np.cumsum(zi_ordered)
-            zi_total = sum(zi)
+            if z_val < zi_ordered[index_50]:
+                zi_50.append(0)
             
-            index_50 = np.where(zi_cum > zi_total*0.9)[0][0]
+            else:
+                zi_50.append(1)
             
-            zi_50 = []
+        zi_50 = np.array(zi_50)
+        zi_50[zi.argmax()] = 5
             
-            for n, z_val in enumerate(zi):
-                
-                if z_val < zi_ordered[index_50]:
-                    zi_50.append(0)
-                
-                else:
-                    zi_50.append(1)
-                
-            zi_50 = np.array(zi_50)
-            zi_50[zi.argmax()] = 5
-                
-            fig = plt.figure(figsize = (7, 7))
-            plt.contour(xi, yi, zi.reshape(xi.shape))#, colors = ('w', 'w', 'b', 'w', 'w', 'w', 'w'))
-            plt.contour(xi, yi, zi_50.reshape(xi.shape))#, colors = 'b', levels = [])
-            plt.xlim(600, 900)
-            plt.ylim(1, 7)
-            plt.xlabel('Coupled Mode Resonance (nm)', fontsize = 18)
-            plt.ylabel('Intensity Ratio', fontsize = 18)
-            plt.xticks(fontsize = 18)
-            plt.yticks(fontsize = 18)
-            plt.title(irName)
+        fig = plt.figure(figsize = (7, 7))
+        plt.contour(xi, yi, zi.reshape(xi.shape))#, colors = ('w', 'w', 'b', 'w', 'w', 'w', 'w'))
+        plt.contour(xi, yi, zi_50.reshape(xi.shape))#, colors = 'b', levels = [])
+        plt.xlim(600, 900)
+        plt.ylim(1, 7)
+        plt.xlabel('Coupled Mode Resonance (nm)', fontsize = 18)
+        plt.ylabel('Intensity Ratio', fontsize = 18)
+        plt.xticks(fontsize = 18)
+        plt.yticks(fontsize = 18)
+        plt.title('Intensity Ratios')
+        
+        fig.tight_layout()
+        fig.savefig('Intensity Ratios.png')
+        
+        img = Image.open('Intensity Ratios.png')
+        img = np.array(img)
+        img = img.transpose((1, 0, 2))
             
-            fig.tight_layout()
-            fig.savefig('%s Intensity Ratios.png' % (irName))
-            
-            img = Image.open('%s Intensity Ratios.png' % (irName))
-            img = np.array(img)
-            img = img.transpose((1, 0, 2))
-            
-            imgs[irName] = img
-            
-    return intensityRatios, cmPeakPositions, imgs
+    return intensityRatios, cmPeakPositions, img
 
 def plot_zstack(gSpectra):
     cmWlName = 'Coupled mode wavelength (from spectrum)'
@@ -1406,16 +1286,11 @@ if __name__ == '__main__':
             
             g.attrs['NPoM?'] = fitted_spectrum.metadata['NPoM?']
             g.attrs['Double Peak?'] = fitted_spectrum.metadata['double_peak?']
-            g.attrs['Transverse mode intensity (from spectrum)'] = fitted_spectrum.metadata['transverse_mode_intensity_(init)']
-            g.attrs['Transverse mode wavelength (from spectrum)'] = fitted_spectrum.metadata['transverse_mode_position_(init)']
-            g.attrs['Transverse mode intensity (from fit)'] = fitted_spectrum.metadata['transverse_mode_intensity']
-            g.attrs['Transverse mode wavelength (from fit)'] = fitted_spectrum.metadata['transverse_mode_position']
-            g.attrs['Coupled mode intensity (from spectrum)'] = fitted_spectrum.metadata['coupled_mode_height_(spectrum)']
-            g.attrs['Coupled mode wavelength (from spectrum)'] = fitted_spectrum.metadata['coupled_mode_resonance_(spectrum)']
-            g.attrs['Coupled mode intensity (from fit)'] = fitted_spectrum.metadata['coupled_mode_intensity_(fit)']
-            g.attrs['Coupled mode wavelength (from fit)'] = fitted_spectrum.metadata['coupled_mode_resonance_(fit)']            
-            g.attrs['Intensity ratio 1 (rough)'] = fitted_spectrum.metadata['intensity_ratio_1']
-            g.attrs['Intensity ratio 2 (realistic)'] = fitted_spectrum.metadata['intensity_ratio_2']
+            g.attrs['Transverse mode intensity'] = fitted_spectrum.metadata['transverse_mode_intensity']
+            g.attrs['Transverse mode wavelength)'] = fitted_spectrum.metadata['transverse_mode_position']
+            g.attrs['Coupled mode intensity'] = fitted_spectrum.metadata['coupled_mode_intensity']
+            g.attrs['Coupled mode wavelength'] = fitted_spectrum.metadata['coupled_mode_position']        
+            g.attrs['Intensity ratio'] = fitted_spectrum.metadata['intensity_ratio']
             
             g_raw = g.create_group('Raw/')
             
@@ -1447,7 +1322,6 @@ if __name__ == '__main__':
                 
                 for i in range(len(comps.keys())):
                     component = g_comps.create_dataset(str(i), data = comps['g%s_' % i])
-            
                     component_params = fitted_spectrum.metadata['final_params']['g%s' % i]
                     component.attrs['center'] = component_params['center']
                     component.attrs['height'] = component_params['height']
