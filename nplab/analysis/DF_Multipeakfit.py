@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Feb 01 13:21:40 2018
+First created on Thu Feb 01 13:21:40 2018
 
 @author: Charlie Readman
 """
@@ -16,6 +16,7 @@ import scipy.sparse.linalg as splu
 from scipy.signal import butter, filtfilt
 from lmfit.models import GaussianModel
 import time
+import itertools
 from PIL import Image
 from scipy.stats.kde import gaussian_kde
 
@@ -32,7 +33,38 @@ class DF_Spectrum(object):
         self.is_NPoM = is_NPoM #Whether or not the spectrum describes an NPoM (bool)
         self.is_double = is_double #Whether or not the spectrum contains a double coupled mode (bool)
         self.cm_peakpos = cm_peakpos #What it says on the tin (float)
-        self.metadata = metadata #All other relevant info (dictionary)
+        all_metadata_keys = ['NPoM?',
+                      'double_peak?',
+                      'transverse_mode_position_(init)',
+                      'transverse_mode_intensity_(init)',
+                      'transverse_mode_position',
+                      'transverse_mode_intensity',
+                      'coupled_mode_resonance_(fit)',
+                      'coupled_mode_intensity_(fit)',
+                      'coupled_mode_resonance_(spectrum)',
+                      'coupled_mode_height_(spectrum)',
+                      'intensity_ratio_2',
+                      'intensity_ratio_1',
+                      'raw_data',
+                      'normalised_spectrum',
+                      'full_wavelengths',
+                      'full_wavelengths',
+                      'truncated_spectrum',
+                      'smoothed_spectrum',
+                      'initial_guess',
+                      'best_fit',
+                      'residuals',
+                      'final_components',
+                      'final_params',                      
+                      'truncated_wavelengths',
+                      'truncated_wavelengths',
+                      'second_derivative']
+        
+        if metadata == 'N/A':
+            self.metadata = {key : 'N/A' for key in all_metadata_keys}        
+        
+        else:
+            self.metadata = metadata #All other relevant info (dictionary)
 
 def find_key(input_dict, value):
     return next((k for k, v in input_dict.items() if v == value), None)
@@ -124,12 +156,6 @@ def baseline_als(y, lambd, p, iterations = 10):#Calculates baseline for data
         w = p * (y > z) + (1-p) * (y < z)
     return z
 
-#def butter_lowpass(cutoff, fs, order=5):
-#    nyq = 0.5 * fs
-#    normal_cutoff = cutoff / nyq
-#    b, a = butter(order, normal_cutoff, btype='low', analog=False)
-#    return b, a
-
 def butter_lowpass_filtfilt(data, cutoff = 1500, fs = 60000, order=5):#Smooths data without shifting it
     nyq = 0.5 * fs
     normal_cutoff = cutoff / nyq
@@ -173,27 +199,39 @@ def detect_minima(y, neg_only = True, threshold = 0):
 
         return ind
 
-def test_if_NPoM(y, lower = 0.1, upper = 2, NPoM_threshold = 1.5): 
+def test_if_NPoM(x, y, lower = 0.1, upper = 2.5, NPoM_threshold = 1.9): 
     #Filters out spectra that are obviously not from NPoMs
+    
+    is_NPoM = False #Guilty until proven innocent
 
-    if np.sum(y) > lower and np.sum(y) < upper:
+    '''To be accepted as an NPoM, you must first pass three trials'''
+    
+    x = np.array(x)
+    y = np.array(y)
+    
+    [x_trunc, y_trunc] = truncate_spectrum(x, y)
+    [x_upper, y_upper] = truncate_spectrum(x, y, start_wl = 900, finish_wl = x.max())
+    
+    '''Trial the first: do you have a reasonable signal?'''
+    
+    if np.sum(y_trunc) > lower and np.sum(y_trunc) < upper:
         #If sum of all intensities lies outside a given range, it's probably not an NPoM
         #Can adjust range to suit system
-        first_half = y[:int(len(y)/2)]
-        second_half = y[int(len(y)/2):]
+        first_half = y_trunc[:int(len(y_trunc)/2)]
+        second_half = y_trunc[int(len(y_trunc)/2):]
     
-        #print np.sum(y)
+        '''Trial the second: do you slant in the correct direction?'''
 
         if np.sum(first_half) < np.sum(second_half) * NPoM_threshold:
             #NPoM spectra generally have greater total signal at longer wavelengths due to coupled mode
-            is_NPoM = True
+            
+            '''Trial the third: are you more than just noise?'''
+        
+            if np.sum(y_trunc) > np.sum(y_upper) / NPoM_threshold:
+                #If the sum of the noise after 900 nm is greater than that of the spectrum itself, it's probably crap
+                
+                is_NPoM = True
 
-        else:
-            is_NPoM = False
-    else:
-        is_NPoM = False
-    
-    #print np.sum(first_half), np.sum(second_half)
     return is_NPoM
   
 def take_derivs(y, x):
@@ -486,7 +524,7 @@ def find_fit_peaks(x, y, cutoff = 1500, fs = 60000, lambd = 10**6.7, baseline_p 
     
     is_NPoM_start = time.time()
             
-    is_NPoM = test_if_NPoM(y_raw)
+    is_NPoM = test_if_NPoM(x_raw, y_raw)
     
     is_NPoM_end = time.time()
     is_NPoM_time = is_NPoM_end - is_NPoM_start
@@ -801,9 +839,17 @@ def find_fit_peaks(x, y, cutoff = 1500, fs = 60000, lambd = 10**6.7, baseline_p 
                 
                 trans_index = np.where(np.round(x) - np.round(trans_peakpos) == 0)[0][0]
                 trans_height = y_smooth[trans_index]
-                cm_full_height = y_smooth.max()
-                cm_full_peakpos = x[y_smooth.argmax()]
+                ySmoothPeakFind = truncate_spectrum(x, y_smooth, start_wl = 600, finish_wl = 850)
+                cm_full_height = ySmoothPeakFind[1].max()
+                cm_full_peakpos = ySmoothPeakFind[0][ySmoothPeakFind[1].argmax()]
                 
+                if int(cm_full_peakpos) == 600:
+                    newMinimum = detect_minima(ySmoothPeakFind, neg_only = False)[0]
+                    newMinWl = ySmoothPeakFind[0][newMinimum]
+                    ySmoothPeakFind = truncate_spectrum(x, y_smooth, start_wl = newMinWl, finish_wl = 850)
+                    cm_full_height = ySmoothPeakFind[1].max()
+                    cm_full_peakpos = ySmoothPeakFind[0][ySmoothPeakFind[1].argmax()]
+    
                 for prefix in [model.prefix for model in model_elements]:
                     comp = final_params[prefix[:-1]]
                     
@@ -922,10 +968,12 @@ def reduce_noise(y, factor = 10):
 
 def make_histogram(spectra, start_wl = 450, end_wl = 900, no_of_bins = 80, plot = True, min_bin_factor = 4):
     
+    spectraNames = [spectrum for spectrum in spectra if spectrum[:8] == 'Spectrum']
+    
     bin_size = (end_wl - start_wl) / no_of_bins
     bins = np.linspace(start_wl, end_wl, num = no_of_bins)
     frequencies = np.zeros(len(bins))
-    spectra_binned = [[] for f in frequencies]
+    spectra_binned = [[] for freq in frequencies]
     x = spectra['Spectrum 0/Raw/Raw data'].attrs['wavelengths'][()]
     
     start_index = np.where(np.round(x) == np.round(start_wl))[0][0]
@@ -933,9 +981,13 @@ def make_histogram(spectra, start_wl = 450, end_wl = 900, no_of_bins = 80, plot 
     
     ydata_binned = [np.zeros(len(x)) for f in frequencies]
     
-    for n, spectrum in enumerate(spectra):
+    for n, spectrum in enumerate(spectraNames):
+        
+        #print spectrum
         
         for nn, bin_start in enumerate(bins):
+            
+            #print [attr for attr in spectra[spectrum].attrs]
             
             cm_peakpos = spectra[spectrum].attrs['Coupled mode wavelength (from spectrum)']
             #print cm_peakpos
@@ -1031,44 +1083,81 @@ def is_number(s):
 
 def collect_intensity_ratios(all_spectra, plot = True):
     
-    ir_1 = [all_spectra[spectrum].attrs['Intensity ratio 1 (rough)'] for spectrum in all_spectra]
-    ir_2 = [all_spectra[spectrum].attrs['Intensity ratio 2 (realistic)'] for spectrum in all_spectra]
-    cm_peakposes = [all_spectra[spectrum].attrs['Coupled mode wavelength (from spectrum)'] for spectrum in all_spectra]
+    '''NEED TO SORT OUT PLOTS'''
     
-    for n, ir in enumerate(ir_1):
-        
-        if is_number(ir) == False:
-            ir_1[n] = 'N/A'
-            ir_2[n] = 'N/A'
-            cm_peakposes[n] = 'N/A'
+    cmNames = ['Max']
+    transNames = ['Fit', 'Shoulder', 'Spectrum']
+    irNames = ['%s, %s' % (cmName, transName) for cmName, transName in itertools.product(cmNames, transNames)]
+    intensityRatios = {irName : [] for irName in irNames}
+    #print intensityRatios
+    cmPeakPositions = []
+
+    spectra = sorted([spectrum for spectrum in all_spectra if spectrum[:8] == 'Spectrum'], key = lambda spectrum: int(spectrum[9:]))
     
-    for n, ir in enumerate(ir_2):
+    for spectrum in spectra:
+        #print '\n', spectrum
+        spectrum = all_spectra[spectrum]
+        cmPeakpos = spectrum.attrs['Coupled mode wavelength (from spectrum)']
+        irGroup = spectrum.create_group('Intensity ratios')
         
-        if is_number(ir) == False:
-            ir_1[n] = 'N/A'
-            ir_2[n] = 'N/A'
-            cm_peakposes[n] = 'N/A'
+        if spectrum.attrs['NPoM?'] == True and spectrum.attrs['Double Peak?'] == False and cmPeakpos != 'N/A':
+            cmPeakPositions.append(cmPeakpos)
+            y_smooth = spectrum['Fit/Smoothed data'][()]
+            x = spectrum['Fit/Smoothed data'].attrs['wavelengths'][()]
             
-    for n, cm_peakpos in enumerate(cm_peakposes):
+            trans_height_fit = spectrum.attrs['Transverse mode intensity (from fit)']
+            trans_wl_fit = spectrum.attrs['Transverse mode wavelength (from fit)']
+            trans_height_shoulder = spectrum.attrs['Transverse mode intensity (from spectrum)']
+            trans_height_spectrum_pos = y_smooth[abs(x - trans_wl_fit) == abs(x - trans_wl_fit).min()][0]
+            trans_height_533 = y_smooth[abs(x - 533) == abs(x - 533).min()][0]
+            
+            transHeights = [trans_height_fit, trans_height_shoulder, trans_height_spectrum_pos]
         
-        if is_number(cm_peakpos) == False:
-            ir_1[n] = 'N/A'
-            ir_2[n] = 'N/A'
-            cm_peakposes[n] = 'N/A'
-    
-    ir_1 = np.array([a for a in ir_1 if a != 'N/A'])
-    ir_2 = np.array([a for a in ir_2 if a != 'N/A'])
-    cm_peakposes = np.array([a for a in cm_peakposes if a != 'N/A'])
-    
+            cm_height_fit = spectrum.attrs['Coupled mode intensity (from fit)']
+            cm_height_spectrum = spectrum.attrs['Coupled mode intensity (from spectrum)']
+            cm_wl_fit = spectrum.attrs['Coupled mode wavelength (from fit)']
+            cm_height_spectrum_pos = y_smooth[abs(x - cm_wl_fit) == abs(x - cm_wl_fit).min()][0]
+            
+            cmHeights = [cm_height_spectrum,]
+            
+            allVals = [cmPeakpos] + transHeights + cmHeights
+            irExists = True
+            
+            for val in allVals:
+                
+                if is_number(val) == False:
+                    irExists = False
+        
+            for (i, cmHeight), (j, transHeight) in itertools.product(enumerate(cmHeights), enumerate(transHeights)):
+                irName = '%s, %s' % (cmNames[i], transNames[j])
+                
+                try:
+                    intensityRatio = cmHeight / transHeight
+                    irGroup.attrs[irName] = intensityRatio
+                
+                except:
+                    irGroup.attrs[irName] = 'N/A'
+                
+                if irExists == True:
+                    intensityRatios[irName].append(intensityRatio)
+                        
+        else:
+            
+            for irName in irNames:
+                irName = '%s, %s' % (cmName, transName)
+                irGroup.attrs[irName] = 'N/A'
+                
     if plot == True:
         
         imgs = {}
         
-        for ir_ind, y in enumerate([ir_1, ir_2]):
-            x = cm_peakposes
+        for irName in irNames:
+            
+            y = np.array(intensityRatios[irName])
+            x = np.array(cmPeakPositions)
             nbins=300
 
-            k = gaussian_kde([x,y])
+            k = gaussian_kde([x, y])
             xi, yi = np.mgrid[x.min():x.max():nbins*1j, y.min():y.max():nbins*1j]
             zi = k(np.vstack([xi.flatten(), yi.flatten()]))
             
@@ -1100,17 +1189,51 @@ def collect_intensity_ratios(all_spectra, plot = True):
             plt.ylabel('Intensity Ratio', fontsize = 18)
             plt.xticks(fontsize = 18)
             plt.yticks(fontsize = 18)
+            plt.title(irName)
             
             fig.tight_layout()
-            fig.savefig('Intensity Ratios %s.png' % (ir_ind + 1))
+            fig.savefig('%s Intensity Ratios.png' % (irName))
             
-            img = Image.open('Intensity Ratios %s.png' % (ir_ind + 1))
+            img = Image.open('%s Intensity Ratios.png' % (irName))
             img = np.array(img)
             img = img.transpose((1, 0, 2))
             
-            imgs['ir_%s' % (ir_ind + 1)] = img
+            imgs[irName] = img
             
-    return ir_1, ir_2, cm_peakposes, imgs
+    return intensityRatios, cmPeakPositions, imgs
+
+def plot_zstack(gSpectra):
+    cmWlName = 'Coupled mode wavelength (from spectrum)'
+    spectra = [gSpectra[spectrum] for spectrum in gSpectra if spectrum[:8] == 'Spectrum' and gSpectra[spectrum].attrs[cmWlName] != 'N/A']
+    spectraSorted = sorted(spectra, key = lambda spectrum: spectrum.attrs[cmWlName])
+    yDataRaw = [spectrum['Raw/Raw data (normalised)'][()] for spectrum in spectraSorted if spectrum['Raw/Raw data (normalised)'] != 'N/A']
+    yDataRaw = np.array(yDataRaw)
+    wavelengths = spectra[0]['Raw/Raw data (normalised)'].attrs['wavelengths'][()]
+    yDataTrunc = np.array([truncate_spectrum(wavelengths, spectrum)[1] for spectrum in yDataRaw])
+    wavelengthsTrunc = truncate_spectrum(wavelengths, yDataRaw[0])[0]
+    
+    xStack = wavelengthsTrunc
+    yStack = range(len(yDataTrunc))
+    zStack = np.vstack(yDataTrunc)
+
+    fig = plt.figure(figsize = (9, 7))
+
+    plt.pcolormesh(xStack, yStack, zStack, cmap = 'inferno', vmin = 0, vmax = 4)
+    plt.xlim(450, 900)
+    plt.xlabel('Wavelength (nm)', fontsize = 14)
+    plt.ylabel('Spectrum #', fontsize = 14)
+    cbar = plt.colorbar()
+    cbar.set_ticks([])
+    cbar.set_label('Intensity (a.u.)', fontsize = 14)
+    plt.ylim(min(yStack), max(yStack))
+    plt.yticks(fontsize = 14)
+    plt.xticks(fontsize = 14)
+    
+    imgName = 'ZStack.png'
+    fig.savefig(imgName)
+    img = np.array(Image.open(imgName)).transpose((1, 0, 2))
+
+    return spectraSorted, img
         
 if __name__ == '__main__':
     
@@ -1135,8 +1258,18 @@ if __name__ == '__main__':
         exit
     
     summary_file = h5py.File(h5_filename, 'r') 
-    all_scans = summary_file['particleScanSummaries/'] 
-    scan_number = np.array([len(all_scans[scan]['spectra']) for scan in all_scans]).argmax()
+    all_scans = summary_file['particleScanSummaries/']
+    spectra_lengths = []
+    
+    for scan in all_scans:
+        
+        if len(all_scans[scan]) != 0:
+            spectra_lengths.append(len(all_scans[scan]['spectra']))
+        
+        else:
+            spectra_lengths.append(0)
+    
+    scan_number = np.array(spectra_lengths).argmax()
     
     if finish_spec == 0:
         spectra = summary_file['particleScanSummaries/scan%s/spectra' % scan_number][()][start_spec:]
@@ -1166,7 +1299,7 @@ if __name__ == '__main__':
     prep_end = time.time()
     prep_time = prep_end - prep_start
     
-    print 'All spectra cleared of NaNs and referenced in %s seconds\n' % prep_time
+    print '%s spectra cleared of NaNs and referenced in %s seconds\n' % (len(spectra_referenced), prep_time)
     
     '''Set initial fit parameters'''
     
@@ -1192,6 +1325,8 @@ if __name__ == '__main__':
             output_file = 'Multipeakfit_output_%s.h5' % n
     
     print '\nOutput file %s created' % output_file
+    
+    #print 'Requesting sample details'
 
     '''Start peak fit "for" loop'''
     
@@ -1202,6 +1337,7 @@ if __name__ == '__main__':
     
     fitted_spectra = []
     failed_spectra = []
+    failed_spectra_indices = []
     
     nummers = range(5, 101, 5)
     
@@ -1210,7 +1346,11 @@ if __name__ == '__main__':
     print '\n0% complete'
             
     with h5py.File(output_file, 'a') as f:
-    
+        
+        g_all = f.create_group('Fitted spectra/')
+        g_spectra_only = g_all.create_group('All spectra/')
+        #g_spectra_sorted = g_all.create_group('All spectra/')
+        
         for n, y in enumerate(y_full[:]):
             
             nn = n
@@ -1231,8 +1371,10 @@ if __name__ == '__main__':
                 fitted_spectra.append(fitted_spectrum)
             
             except:
-                failed_spectra.append(y)
-                print 'Spectrum %s fitting failed' % n
+                fitted_spectrum = DF_Spectrum(y, 'N/A', False, 'N/A', 'N/A', 'N/A')
+                failed_spectra.append(fitted_spectrum)
+                failed_spectra_indices.append(n)
+                print 'Spectrum %s failed' % n
             
             end_fit = time.time()
             
@@ -1243,8 +1385,25 @@ if __name__ == '__main__':
             '''Iterate through list of fitted spectra and populate HDF5 file'''
             
             group_time_start = time.time()
-
-            g = f.create_group('Fitted spectra/Spectrum %s/' % n)
+            
+            g = g_all.create_group('Spectrum %s/' % n)
+            
+            if fitted_spectrum.is_NPoM == True:
+                raw_data = fitted_spectrum.metadata['raw_data']
+                norm_data = fitted_spectrum.metadata['truncated_spectrum']
+                trunc_wl = fitted_spectrum.metadata['truncated_wavelengths']
+            
+            else:
+                raw_data = y
+                norm_index = np.where(np.round(x) - 533 < 0.5)[0][0]
+                norm_data = raw_data/raw_data[norm_index]
+                norm_data = truncate_spectrum(x, norm_data)
+                trunc_wl = norm_data[0]
+                norm_data = norm_data[1]
+            
+            main_norm_spec = g_spectra_only.create_dataset('Spectrum %s' % n, data = norm_data)
+            main_norm_spec.attrs['wavelengths'] = trunc_wl
+            
             g.attrs['NPoM?'] = fitted_spectrum.metadata['NPoM?']
             g.attrs['Double Peak?'] = fitted_spectrum.metadata['double_peak?']
             g.attrs['Transverse mode intensity (from spectrum)'] = fitted_spectrum.metadata['transverse_mode_intensity_(init)']
@@ -1260,7 +1419,7 @@ if __name__ == '__main__':
             
             g_raw = g.create_group('Raw/')
             
-            d_raw = g_raw.create_dataset('Raw data', data = fitted_spectrum.metadata['raw_data'])
+            d_raw = g_raw.create_dataset('Raw data', data = raw_data)
             d_raw.attrs['wavelengths'] = fitted_spectrum.metadata['full_wavelengths']
             
             d_raw_norm = g_raw.create_dataset('Raw data (normalised)', data = fitted_spectrum.metadata['normalised_spectrum'])
@@ -1269,7 +1428,7 @@ if __name__ == '__main__':
             g_fit = g.create_group('Fit/')
             
             d_raw_trunc = g_fit.create_dataset('Raw data (truncated, normalised)', data = fitted_spectrum.metadata['truncated_spectrum'])
-            d_raw_trunc.attrs['wavelengths'] = fitted_spectrum.metadata['truncated_wavelengths']
+            d_raw_trunc.attrs['wavelengths'] = main_norm_spec.attrs['wavelengths']
             
             d_smooth = g_fit.create_dataset('Smoothed data', data = fitted_spectrum.metadata['smoothed_spectrum'])
             d_smooth.attrs['wavelengths'] = d_raw_trunc.attrs['wavelengths']
@@ -1297,6 +1456,7 @@ if __name__ == '__main__':
                     component.attrs['fwhm'] = component_params['fwhm']
     
         x = x_full
+        g_all.attrs['Failed spectra indices'] = failed_spectra_indices
         
         print '100% complete'
         total_fit_end = time.time()
@@ -1306,6 +1466,16 @@ if __name__ == '__main__':
         secs = int(np.round(time_elapsed % 60))
         
         print '\n%s spectra fitted in %s min %s sec' % (nn + 1, mins, secs)
+        
+        print '\nPlotting Z stack...'
+        
+        spectraSorted, zStackImg = plot_zstack(f['Fitted spectra'])
+        zStack = f.create_dataset('Statistics/Z-Stack/Stack', data = zStackImg)
+        
+        #for sortedSpectrum in spectraSorted:
+        #    gSortedSpectrum = f.create_dataset(spectraSorted.attrs['Coupled mode wavelength (from spectrum)'])
+        
+                
         print '\nCombining spectra and plotting histogram...'
         frequencies, bins, ydata_binned, img = make_histogram(f['Fitted spectra'])
         
@@ -1330,22 +1500,15 @@ if __name__ == '__main__':
         
         print 'Plotting intensity ratios...'
         
-        ir_1, ir_2, cm_peakposes, imgs = collect_intensity_ratios(f['Fitted spectra'], plot = True)
+        intensityRatios, cmPeakPositions, imgs = collect_intensity_ratios(f['Fitted spectra'], plot = True)
         
         ir_g = f.create_group('Statistics/Intensity ratios')
-        d_cm_peakposes = ir_g.create_dataset('CM peak positions', data = cm_peakposes)
+        d_cm_peakposes = ir_g.create_dataset('CM peak positions', data = cmPeakPositions)
         
-        ir_g_1 = ir_g.create_group('1')
-        d_ir_1 = ir_g_1.create_dataset('Intensity ratios 1', data = ir_1)
-        d_ir_1.attrs['wavelengths'] = d_cm_peakposes
-        ir_g_1.create_dataset('Density map', data = imgs['ir_1'])
-        #ir_g_1.create_dataset('Density map (50%)', data = imgs['ir_1_50'])
-        
-        ir_g_2 = ir_g.create_group('2')            
-        d_ir_2 = ir_g_2.create_dataset('Intensity ratios 2', data = ir_2)
-        d_ir_2.attrs['wavelengths'] = d_cm_peakposes
-        ir_g_2.create_dataset('Density map', data = imgs['ir_2'])
-        #ir_g_2.create_dataset('Density map (50%)', data = imgs['ir_2_50'])
+        for irKey in intensityRatios:
+            ir_g.create_dataset(irKey, data = imgs[irKey])
+            ir_g[irKey].attrs['Intensity ratios'] = intensityRatios[irKey]
+            ir_g[irKey].attrs['Peak positions'] = cmPeakPositions
     
     absolute_end_time = time.time()
     time_elapsed = absolute_end_time - absolute_start_time
@@ -1362,7 +1525,7 @@ if __name__ == '__main__':
     elif len(failed_spectra) > len(fitted_spectra):
         print '\nHmmm... finished in %s min %s sec but with %s failures and only %s successful fits' % (mins, secs, len(failed_spectra), len(fitted_spectra))
     
-    elif len(fitted_spectra) > 5000:
+    elif mins > 30:
         print '\nM8 that took ages. How long was your experiment?? %s min %s sec' % (mins, secs)
     
     else:
