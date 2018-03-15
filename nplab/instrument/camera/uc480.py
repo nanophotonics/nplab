@@ -189,10 +189,21 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         
     def auto_exposure(self):
         """Get parameters from the gui and set auto exposure."""
+        
+        # get parameters from the gui
         min_gray = self.MinGrayNumberBox.value()
         max_gray = self.MaxGrayNumberBox.value()
         precision = self.ExposureTimePrecisionNumberBox.value()
+        
+        # disable live view
+        live_view_state = self.LiveViewCheckBox.checkState()
+        self.LiveViewCheckBox.setCheckState(False)
+        
+        # set auto exposure
         self.set_auto_exposure(min_gray=min_gray, max_gray=max_gray, precision=precision)
+    
+        # enable live view
+        self.LiveViewCheckBox.setCheckState(live_view_state)
     
     def set_auto_exposure(self, min_gray=200, max_gray=250, precision=1, max_attempts=10):
         """Determine the optimal exposure time."""
@@ -405,7 +416,7 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         """Continous image acquisition."""
         if self.LiveViewCheckBox.isChecked():                      
             # enable/disable gui buttons
-            self.StopVideoPushButton.setEnabled(False)          
+            self.StopVideoPushButton.setEnabled(False)
             # create thread
             self.LiveView = LiveViewThread(self.camera)
             # connect thread
@@ -421,7 +432,8 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         # enable/disable gui buttons          
         self.LiveViewCheckBox.setEnabled(False)
         self.StopVideoPushButton.setEnabled(True)
-        self.SaveImagePushButton.setEnabled(False)    
+        self.SaveImagePushButton.setEnabled(False)
+        self.AutoExposurePushButton.setEnabled(False)
         # create thread
         self.LiveView = LiveViewThread(self.camera)
         # connect thread
@@ -435,7 +447,6 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         """Start continuous image acquisition."""
         # enable/disable gui buttons
         self.TakeImagePushButton.setEnabled(False)
-        self.AutoExposurePushButton.setEnabled(False)
         self.StartVideoPushButton.setEnabled(False)
         self.OpenCameraPushButton.setEnabled(False)
         self.CloseCameraPushButton.setEnabled(False)
