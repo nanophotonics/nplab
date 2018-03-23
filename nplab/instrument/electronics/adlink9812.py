@@ -37,7 +37,7 @@ VERSION = 0.01
 
 class Adlink9812(Instrument):
 
-	def __init__(self, dll_path="C:\ADLINK\PCIS-DASK\Lib\PCI-Dask64.dll",debug=False):
+	def __init__(self, dll_path="C:\ADLINK\PCIS-DASK\Lib\PCI-Dask64.dll",verbose=False,debug=False):
 		"""Initialize DLL and configure card"""
 		# super(Adlink9812,self).__init__()
 		self.debug = debug
@@ -254,7 +254,8 @@ class Adlink9812(Instrument):
 			print "---DEBUG MODE ENABLED---"
 			debug_out = (2.0*np.random.rand(sample_count))-1.0 
 			return debug_out,dt
-		elif sample_count > 200000:
+
+		elif sample_count > 100000:
 			return self.asynchronous_double_buffered_analog_input_read(sample_freq= sample_freq,sample_count = sample_count,verbose = verbose),dt
 		else:
 			return self.synchronous_analog_input_read(sample_freq= sample_freq,sample_count = sample_count,verbose = verbose),dt
@@ -264,13 +265,14 @@ class Adlink9812(Instrument):
 
 
 class Adlink9812UI(QtWidgets.QWidget, UiTools):
-	def __init__(self,card, parent=None,debug = False):
+	def __init__(self,card, parent=None,debug = False, verbose = False):
 		if not isinstance(card, Adlink9812):
 			raise ValueError("Object is not an instnace of the Adlink9812 Daq")
 		super(Adlink9812UI, self).__init__()
 		self.card = card 
 		self.parent = parent
 		self.debug = debug
+		self.verbose = verbose
 
 		#TODO - add adlink9812.ui file properly
 		uic.loadUi(os.path.join(os.path.dirname(__file__), 'adlink9812.ui'), self)
@@ -312,12 +314,20 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 		try:
 			self.sample_freq = int(float(self.sample_freq_textbox.text())*MHz)
 		except Exception,e:
-			print "Failed parsing sampling frequency to float:",self.sample_freq_w.text()
+			print "Failed parsing sampling frequency to float:",self.sample_freq_textbox.text()
+			return
 		return
 
 	def set_sample_count(self):
 		try:
+
+
 			self.sample_count = int(float(self.sample_count_textbox.text()))
+			if self.verbose>0:
+				print "Sample Count: {0} [Counts]".format(self.sample_count)
+
+			self.sample_count = int(float(self.sample_count_textbox.text()))
+
 		except Exception,e:
 			print "Failed parsing sample count to int:",self.sample_freq_textbox.text()
 		return
@@ -345,6 +355,8 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 		vmax = np.max(voltages)
 		vspan = abs(vmax-vmin)
 
+		voltages, dt = self.card.capture(sample_freq=self.sample_freq, sample_count=self.sample_count)
+
 		ax2.plot(times[0:len(d_voltages)],abs(d_voltages))
 		ax2.plot(times[0:len(d_voltages)],[threshold*vspan]*len(d_voltages),'r',label="count threshold")
 		ax2.set_xlabel("Time [s]")
@@ -358,7 +370,7 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 
 
 	def postprocess_raw(self,voltages,dt,save,plot,group,axes):
-		
+
 		vmean = np.mean(voltages)
 		vmax = np.max(voltages)
 		vmin = np.min(voltages)

@@ -30,15 +30,9 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         ui_file = file_path + '\uc480_gui_design.ui'
         uic.loadUi(ui_file, self)
         
-        # maximise GUI window
-#        self.showMaximized()
-        
         # set initial tabs to display
         self.SettingsTabWidget.setCurrentIndex(0) 
-        
-        # set initial splitter sizes
-        self.splitter.setSizes([50,60000])
-        
+                
         # enable / disable push buttons
         self.reset_gui_without_camera()
       
@@ -53,22 +47,41 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         self.CloseCameraPushButton.clicked.connect(self.close_camera)    
         self.FindCamerasPushButton.clicked.connect(self.find_cameras)
                         
-        # create live view widget
-        image_widget = pg.GraphicsLayoutWidget()
-        self.replace_widget(self.verticalLayout, self.LiveViewWidget, image_widget)
-        view_box = image_widget.addViewBox(row=1,col=1)        
-        self.imv = pg.ImageItem()
-        self.imv.setOpts(axisOrder='row-major')
-        view_box.addItem(self.imv)
-        view_box.setAspectLocked(True)
+        # create the image widget
+        self.image_widget = pg.GraphicsLayoutWidget()
+        view_box = self.image_widget.addViewBox(row=0, col=0, lockAspect=True)        
+        # add image item
+        self.imv = pg.ImageItem(row=0, col=0)
+        self.imv.setOpts(axisOrder='row-major')               
+        view_box.addItem(self.imv)        
+        # add lines
+        pen = pg.mkPen(color='y', width=5)
+        self.vertical_line = pg.InfiniteLine(pos=600, angle=90, movable=True, pen=pen)
+        self.horizontal_line = pg.InfiniteLine(pos=500, angle=0, movable=True, pen=pen)
+        view_box.addItem(self.vertical_line)
+        view_box.addItem(self.horizontal_line)        
+        # add profile plots
+        self.horizontal_profile = self.image_widget.addPlot(row=1, col=0)
+        self.horizontal_profile.showGrid(x=True, y=True)
+        self.vertical_profile = self.image_widget.addPlot(row=0, col=1)
+        self.vertical_profile.showGrid(x=True, y=True)
+        self.vertical_profile.invertX(True)                        
+        # hide axis tick labels
+        for profile in [self.vertical_profile, self.horizontal_profile]:
+            for ax in ['left','right','top','bottom']:
+                profile.showAxis(ax)
+                profile.axes[ax]['item'].setStyle(showValues=False)
+        # set column widths
+        qGraphicsGridLayout = self.image_widget.ci.layout
+        qGraphicsGridLayout.setColumnStretchFactor(0, 3)
+        qGraphicsGridLayout.setRowStretchFactor(0, 3)                          
         
         # populate image format combobox
         self.ImageFormatComboBox.addItem('hdf5',0)
         self.ImageFormatComboBox.addItem('png',1)
         self.ImageFormatComboBox.addItem('tiff',2)
         self.ImageFormatComboBox.addItem('jpg',3)
-        self.ImageFormatComboBox.setCurrentIndex(0)    
-        
+        self.ImageFormatComboBox.setCurrentIndex(0)        
         # populate video format combobox
         self.VideoFormatComboBox.addItem('hdf5',0)
         self.VideoFormatComboBox.setCurrentIndex(0)    
@@ -120,6 +133,9 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         print 'Camera connection successful.\n'  
         self.find_cameras()
         
+        # set camera window title
+        self.image_widget.setWindowTitle(self.camera.serial + ' = uc480 camera serial no.' )
+        
         # set camera width and height labels
         self.CameraWidthLabel.setText(str(self.camera.max_width))
         self.CameraHeightLabel.setText(str(self.camera.max_height)) 
@@ -154,12 +170,16 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         
     def closeEvent(self, event):
         """This will happen when the GUI is closed."""
+        # stop live view
+        self.LiveViewCheckBox.setCheckState(False)
         # close the camera connection
         if self.camera: self.close_camera()
         # close the datafile
         if self.df: self.df.close()
         # close the databrowser gui
         if self.df_gui: self.df_gui.close()
+        # close the image widget
+        self.image_widget.close()
     
     def find_cameras(self):
         """Find serial numbers of available cameras."""
@@ -177,7 +197,7 @@ class uc480(QtWidgets.QMainWindow, UiTools):
     
     def take_image(self):
         """Grab an image and display it."""
-        image = self.grab_image()
+        image = self.grab_image()        
         self.display_image(image)
         return image
 
@@ -189,10 +209,21 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         
     def auto_exposure(self):
         """Get parameters from the gui and set auto exposure."""
+        
+        # get parameters from the gui
         min_gray = self.MinGrayNumberBox.value()
         max_gray = self.MaxGrayNumberBox.value()
         precision = self.ExposureTimePrecisionNumberBox.value()
+        
+        # disable live view
+        live_view_state = self.LiveViewCheckBox.checkState()
+        self.LiveViewCheckBox.setCheckState(False)
+        
+        # set auto exposure
         self.set_auto_exposure(min_gray=min_gray, max_gray=max_gray, precision=precision)
+    
+        # enable live view
+        self.LiveViewCheckBox.setCheckState(live_view_state)
     
     def set_auto_exposure(self, min_gray=200, max_gray=250, precision=1, max_attempts=10):
         """Determine the optimal exposure time."""
@@ -234,8 +265,38 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         """Display the latest captured image."""
         # make a copy of the data so it can be accessed when saving an image
         self.image = image
+        
         # set levels to [0,255] because otherwise it autoscales when plotting
-        self.imv.setImage(image, autoDownsample=True, levels=[0,255])   
+        self.imv.setImage(image, autoDownsample=True, levels=[0,255], border='w')   
+        
+        # make sure the line positions are within bounds
+        self.vertical_line.setBounds((0,image.shape[1]-1))
+        self.horizontal_line.setBounds((0,image.shape[0]-1))
+        
+        # get line positions from the gui
+        horizontal_line_position = int(self.horizontal_line.value())
+        vertical_line_position = int(self.vertical_line.value())
+        
+        # clear profile plots
+        self.horizontal_profile.clear()
+        self.vertical_profile.clear()
+        
+        # plot intensity profiles
+        if len(image.shape) == 3: # colour camera
+            c = ['r','g','b']            
+            for i in range(image.shape[2]):
+                pen = pg.mkPen(color=c[i], width=5)
+                self.horizontal_profile.plot(x=range(image.shape[1]), y=image[horizontal_line_position,:,i], pen=pen)
+                self.vertical_profile.plot(x=image[:,vertical_line_position,i], y=range(image.shape[0]), pen=pen)
+        else: # monochrome camera
+            pen = pg.mkPen(color='w', width=5)
+            self.horizontal_profile.plot(x=range(image.shape[1]), y=image[horizontal_line_position,:], pen=pen)
+            self.vertical_profile.plot(x=image[:,vertical_line_position], y=range(image.shape[0]), pen=pen)
+        self.horizontal_profile.setYRange(0,255)
+        self.vertical_profile.setXRange(0,255)
+
+        # show the image widget
+        self.image_widget.show()
     
     def display_camera_parameters(self, camera_parameters):
         """Display the current camera parameters on the GUI."""
@@ -255,6 +316,7 @@ class uc480(QtWidgets.QMainWindow, UiTools):
     def get_camera_parameters(self):
         """Read parameter values from the camera."""
         camera_parameters = dict()
+        camera_parameters['serial'] = self.camera.serial
         camera_parameters['framerate'] = self.camera.framerate.magnitude
         camera_parameters['exposure_time'] = self.camera._get_exposure().magnitude
         camera_parameters['width'] = self.camera.width
@@ -305,7 +367,7 @@ class uc480(QtWidgets.QMainWindow, UiTools):
                     'left':[self.ROILeftEdgeCheckBox, self.ROILeftEdgeNumberBox],
                     'right':[self.ROIRightEdgeCheckBox, self.ROIRightEdgeNumberBox],
                     'top':[self.ROITopEdgeCheckBox, self.ROITopEdgeNumberBox],
-                    'bottom':[self.ROIBottomEdgeCheckBox, self.ROIBottomEdgeNumberBox],
+                    'bot':[self.ROIBottomEdgeCheckBox, self.ROIBottomEdgeNumberBox],
                     'cx':[self.ROICentreXCheckBox, self.ROICentreXNumberBox],
                     'cy':[self.ROICentreYCheckBox, self.ROICentreYNumberBox],
                     }
@@ -404,7 +466,7 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         """Continous image acquisition."""
         if self.LiveViewCheckBox.isChecked():                      
             # enable/disable gui buttons
-            self.StopVideoPushButton.setEnabled(False)          
+            self.StopVideoPushButton.setEnabled(False)
             # create thread
             self.LiveView = LiveViewThread(self.camera)
             # connect thread
@@ -412,27 +474,30 @@ class uc480(QtWidgets.QMainWindow, UiTools):
             self.LiveView.finished.connect(self.terminate_live_view)
             # live view
             print "Live view..."
-            self.start_live_view(save=False)                      
+            max_frames=float('inf')
+            self.start_live_view(save=False, max_frames=max_frames)                      
             
     def acquire_video(self):
         """Acquire video frames."""            
         # enable/disable gui buttons          
         self.LiveViewCheckBox.setEnabled(False)
         self.StopVideoPushButton.setEnabled(True)
-        self.SaveImagePushButton.setEnabled(False)    
+        self.SaveImagePushButton.setEnabled(False)
+        self.AutoExposurePushButton.setEnabled(False)
         # create thread
         self.LiveView = LiveViewThread(self.camera)
         # connect thread
         self.StopVideoPushButton.clicked.connect(self.LiveView.terminate)
         self.LiveView.finished.connect(self.terminate_video_acquisition)
         # live view
-        self.start_live_view(save=True)        
+        max_frames=self.MaxFramesNumberBox.value()
+        self.start_live_view(save=True, max_frames=max_frames)        
         
-    def start_live_view(self, save=False):
-        """Start continuous image acquisition."""
+    def start_live_view(self, save=False, max_frames=100):
+        """Start continuous image acquisition."""     
+        
         # enable/disable gui buttons
         self.TakeImagePushButton.setEnabled(False)
-        self.AutoExposurePushButton.setEnabled(False)
         self.StartVideoPushButton.setEnabled(False)
         self.OpenCameraPushButton.setEnabled(False)
         self.CloseCameraPushButton.setEnabled(False)
@@ -449,9 +514,8 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         # start live view
         self.LiveView.live_view(video_parameters, 
                                       save=save,
-                                      timeout=self.TimeoutNumberBox.value(),                                       
-#                                      max_frames=self.MaxFramesNumberBox.value(),
-                                      max_frames=float('inf'),
+                                      max_frames=max_frames,
+                                      timeout=self.TimeoutNumberBox.value(),                                      
                                       display_framerate=self.DisplayFramerateNumberBox.value(),
                                       )
         
