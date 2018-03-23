@@ -47,8 +47,8 @@ if __name__ == '__main__':
     from nplab.utils.gui import *
     from nplab.instrument.shutter.thorlabs_sc10 import ThorLabsSC10
     app = get_qt_app()
-    shutter = ThorLabsSC10('COM12')
-    fianium = Fianium('COM14', shutter)
+    #shutter = ThorLabsSC10('COM12')
+    fianium = Fianium('COM1')
     ui = fianium.get_qt_ui()
     ui.show()
     sys.exit(app.exec_())

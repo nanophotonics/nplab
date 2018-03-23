@@ -589,12 +589,14 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 			else:
 				axarr = axes
 		else:
-			fig,axes = plt.subplots(2,int(math.ceil(checked/2.0)))
+			rows = 2
+			cols = int(math.ceil(checked/2.0))
+			fig,axes = plt.subplots(rows,cols,squeeze=True)
 
-			axarr = []
-			for i in range(len(axes)):
-				for j in range(len(axes[0])):
-					axarr.append(axes[i][j])
+			axarr = np.reshape(axes,rows*cols)
+			# for i in range(rows):
+			# 	for j in range(cols):
+			# 		axarr.append(axes[i,j])
 		
 		times, autocorrelation = self.post_process_correlate(voltages=voltages,dt=dt,save=save,group=dg,plot=plot,axes = axarr)
 		if plot:
