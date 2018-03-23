@@ -17,8 +17,8 @@ from scipy.signal import butter, filtfilt
 from lmfit.models import GaussianModel
 import time
 from PIL import Image
-from scipy.stats.kde import gaussian_kde
-import traceback
+from random import randint
+import scipy.optimize as spo
 
 if __name__ == '__main__':
     absolute_start_time = time.time()
@@ -165,6 +165,17 @@ def correctSpectrum(spectrum, reference):
 
     removeNaNs(reference)
     return spectrum/reference
+
+def printEnd():
+    print '%sDONE' % ('\n' * randint(0, 12))
+
+    print '%s%s%sv gud' % ('\t' * randint(0, 12), '\n' * randint(0, 5), ' ' * randint(0, 4))
+
+    print '%s%ssuch python' % ('\n' * randint(0, 5), ' ' * randint(0, 55))
+    print '%s%smany spectra' % ('\n' * randint(0, 5), ' ' * randint(10, 55))
+    print '%s%smuch fitting' % ('\n' * randint(0, 5), ' ' * randint(8, 55))
+    print '%s%swow' % ('\n' * randint(2, 5), ' ' * randint(5, 55))
+    print '\n' * randint(0, 7)
 
 def prepareData(spectra, wavelengths, reference):
     '''Removes NaN values from and references spectra'''
@@ -882,36 +893,36 @@ def fitNpomSpectrum(x, y, cutoff = 1500, fs = 60000, lambd = 10**6.7, baseline_p
                 plt.xlim(450, 900)
                 plt.show()
 
-            if is_double == False:
+            #if is_double == False:
 
-                tcMetadata = findTransAndCoupledMode(x, y_smooth, metadata['final_params'], transGuess = transShoulderPeakPos, plot = plot)
-                metadata.update(tcMetadata)
-                transHeight = metadata['transverse_mode_intensity']
+            tcMetadata = findTransAndCoupledMode(x, y_smooth, metadata['final_params'], transGuess = transShoulderPeakPos, plot = plot)
+            metadata.update(tcMetadata)
+            transHeight = metadata['transverse_mode_intensity']
 
-                y_smooth /= transHeight
-                y_trunc /= transHeight
-                y_raw_norm /= transHeight
+            y_smooth /= transHeight
+            y_trunc /= transHeight
+            y_raw_norm /= transHeight
 
-                metadata['smoothed_spectrum'] = y_smooth
-                metadata['truncated_spectrum'] = y_trunc
-                metadata['normalised_spectrum'] = y_raw_norm
+            metadata['smoothed_spectrum'] = y_smooth
+            metadata['truncated_spectrum'] = y_trunc
+            metadata['normalised_spectrum'] = y_raw_norm
 
-                if plot == 'all':
-                    lim_frac = y_smooth.max()/10
+            if plot == 'all':
+                lim_frac = y_smooth.max()/10
 
-                    plt.plot(x_raw, y_raw_norm, lw = 0.5)
-                    plt.plot(x, y)
-                    plt.plot(x, y_smooth)
-                    plt.plot(x, [0] * len(x), '--')
-                    plt.plot([metadata['transverse_mode_position']] * 10, np.linspace(transHeight, metadata['coupled_mode_intensity'], 10), 'k--')
-                    plt.plot(x, [metadata['coupled_mode_position']] * len(x))
-                    plt.plot(x, [transHeight] * len(x))
-                    plt.title('Intensity Ratio: %s' % (metadata['intensity_ratio']))
-                    plt.xlabel('Wavelength(nm)')
-                    plt.ylabel('Intensity')
-                    plt.ylim(-lim_frac/2, y_smooth.max() + lim_frac)
-                    plt.xlim(450, 900)
-                    plt.show()
+                plt.plot(x_raw, y_raw_norm, lw = 0.5)
+                plt.plot(x, y)
+                plt.plot(x, y_smooth)
+                plt.plot(x, [0] * len(x), '--')
+                plt.plot([metadata['transverse_mode_position']] * 10, np.linspace(transHeight, metadata['coupled_mode_intensity'], 10), 'k--')
+                plt.plot(x, [metadata['coupled_mode_position']] * len(x))
+                plt.plot(x, [transHeight] * len(x))
+                plt.title('Intensity Ratio: %s' % (metadata['intensity_ratio']))
+                plt.xlabel('Wavelength(nm)')
+                plt.ylabel('Intensity')
+                plt.ylim(-lim_frac/2, y_smooth.max() + lim_frac)
+                plt.xlim(450, 900)
+                plt.show()
 
         else:
             metadata['NPoM?'] = False
@@ -938,41 +949,53 @@ def reduceNoise(y, factor = 10):
     y = ySmooth + yNoise
     return y
 
-def make_histogram(x, spectra, start_wl = 450, end_wl = 900, no_of_bins = 80, plot = True, min_bin_factor = 4):
+def plotHistogram(outputFile, startWl = 450, endWl = 900, binNumber = 80, plot = True, minBinFactor = 5):
+
+    print '\nCombining spectra and plotting histogram...'
+    spectra = outputFile['Fitted spectra']
+
+    n = 0
+    x = spectra['Spectrum %s' % n]['Raw/Raw data (normalised)'].attrs['wavelengths']
+
+    while type(x) == str:
+        n += 1
+        x = spectra['Spectrum %s' % n]['Raw/Raw data (normalised)'].attrs['wavelengths']
 
     spectraNames = [spectrum for spectrum in spectra if spectrum[:8] == 'Spectrum']
-    #print spectraNames
-    #print spectraNames[0]
 
-    bin_size = (end_wl - start_wl) / no_of_bins
-    bins = np.linspace(start_wl, end_wl, num = no_of_bins)
+    binSize = (endWl - startWl) / binNumber
+    bins = np.linspace(startWl, endWl, num = binNumber)
     frequencies = np.zeros(len(bins))
 
-    start_index = np.where(np.round(x) == np.round(start_wl))[0][0]
-    end_index = np.where(np.round(x) == np.round(end_wl))[0][0]
+    startIndex = np.where(np.round(x) == np.round(startWl))[0][0]
+    endIndex = np.where(np.round(x) == np.round(endWl))[0][0]
 
-    ydata_binned = [np.zeros(len(x)) for f in frequencies]
+    yDataBinned = [np.zeros(len(x)) for f in frequencies]
 
     for n, spectrum in enumerate(spectraNames):
 
         #print spectrum
 
-        for nn, bin_start in enumerate(bins):
+        for nn, binStart in enumerate(bins):
 
             #print [attr for attr in spectra[spectrum].attrs]
 
-            cm_peakpos = spectra[spectrum].attrs['Coupled mode wavelength']
+            cmPeakPos = spectra[spectrum].attrs['Coupled mode wavelength']
             #print cm_peakpos
-            ydata = spectra[spectrum]['Raw/Raw data (normalised)']
+            yData = spectra[spectrum]['Raw/Raw data (normalised)']
 
-            if cm_peakpos != 'N/A' and cm_peakpos > bin_start and cm_peakpos < bin_start + bin_size and 600 < cm_peakpos < 849:
+            if cmPeakPos != 'N/A' and binStart < cmPeakPos < binStart + binSize and 600 < cmPeakPos < 850:
                 frequencies[nn] += 1
-                ydata_binned[nn] += ydata
+                yDataBinned[nn] += yData
 
-    for n, ydata_sum in enumerate(ydata_binned):
-        ydata_binned[n] /= frequencies[n]
+    for n, yDataSum in enumerate(yDataBinned):
+        yDataBinned[n] /= frequencies[n]
 
-    min_bin = max(frequencies)/min_bin_factor
+    if minBinFactor == 0:
+        min_bin = 0
+
+    else:
+        min_bin = max(frequencies)/minBinFactor
 
     fig = plt.figure(figsize = (8, 6))
 
@@ -989,15 +1012,25 @@ def make_histogram(x, spectra, start_wl = 450, end_wl = 900, no_of_bins = 80, pl
 
         ymax = 0
 
-        ydata_plot = [i for n, i in enumerate(ydata_binned) if frequencies[n] > min_bin]
+        yDataPlot = []
+        freqsPlot = []
+        binsPlot = []
 
-        for n, ydata_sum in enumerate(ydata_plot):
+        for n, yDatum in enumerate(yDataBinned):
 
-            color = cmap(256 - n*(256/len(ydata_plot)))
-            current_ymax = ydata_sum[start_index:end_index].max()
+            if frequencies[n] > min_bin:
+                yDataPlot.append(yDatum)
+                freqsPlot.append(frequencies[n])
+                binsPlot.append(bins[n])
 
-            y_smooth = reduceNoise(ydata_sum, factor = 7)
-            ax1.plot(x, y_smooth, lw = 0.7, color = color)
+        colors = [cmap(256 - n*(256/len(yDataPlot))) for n, yDataSum in enumerate(yDataPlot)][::-1]
+
+        for n, yDataSum in enumerate(yDataPlot):
+
+            current_ymax = yDataSum[startIndex:endIndex].max()
+
+            y_smooth = reduceNoise(yDataSum, factor = 7)
+            ax1.plot(x, y_smooth, lw = 0.7, color = colors[n])
 
             if current_ymax > ymax:
                 ymax = current_ymax
@@ -1007,9 +1040,9 @@ def make_histogram(x, spectra, start_wl = 450, end_wl = 900, no_of_bins = 80, pl
         ax1.tick_params(labelsize = 15)
         ax1.set_xlabel('Coupled Mode Peak Position (nm)', fontsize = 18)
         #ax1.set_xticks(range(500, 900, 50))
-
-        ax2.bar(bins, frequencies, width = 0.8*bin_size, color = 'grey', alpha = 0.9, linewidth = 0)
-        ax2.set_xlim(start_wl, end_wl)
+        ax2.bar(bins, frequencies, color = 'grey', width = 0.8*binSize, alpha = 0.8, linewidth = 0.6)
+        ax2.bar(binsPlot, freqsPlot, color = colors, width = 0.8*binSize, alpha = 0.4, linewidth = 1)
+        ax2.set_xlim(startWl, endWl)
         ax2.set_ylim(0, max(frequencies)*1.05)
         ax2.set_ylabel('Frequency', fontsize = 18, rotation = 270)
         ax2.yaxis.set_label_coords(1.11, 0.5)
@@ -1023,9 +1056,9 @@ def make_histogram(x, spectra, start_wl = 450, end_wl = 900, no_of_bins = 80, pl
         img = np.array(img)
         img = img.transpose((1, 0, 2))
 
-    return frequencies, bins, ydata_binned, img
+    return frequencies, bins, yDataBinned, img
 
-def histyfit(frequencies, bins):
+def histyFit(frequencies, bins):
 
     gauss_model = GaussianModel()
     pars = gauss_model.guess(frequencies, x = bins)
@@ -1047,7 +1080,117 @@ def is_number(s):
     except ValueError:
         return False
 
-def collect_intensity_ratios(all_spectra, plot = True):
+def createDensityArray(x, y, xBins = 20, yBins = 20):
+    array, xEdges, yEdges = np.histogram2d(x, y, [xBins, yBins])
+    xCentres=[]
+    yCentres=[]
+
+    for i in range(len(xEdges))[1:]:
+        xCentres.append(0.5 * (xEdges[i] + xEdges[i - 1]))
+
+    for i in range(len(yEdges))[1:]:
+        yCentres.append(0.5 * (yEdges[i] + yEdges[i - 1]))
+
+    return array, xCentres, yCentres
+
+def gaussian2D((x, y), height, xMean, yMean, xSigma, ySigma, cor):
+    x = np.array(x).astype(np.float64)
+    y = np.array(y).astype(np.float64)
+    exponent = (((x - xMean) / xSigma) ** 2)
+    exponent += (((y - yMean) / ySigma) ** 2)
+    exponent -= (2. * cor * (x - xMean) * (y - yMean)) / (xSigma * ySigma)
+    exponent /= (2 * (1 - (cor ** 2)))
+    output = height * np.exp(-1. * exponent)
+
+    return output
+
+def fitGauss2D(array, xCentres, yCentres):
+    x,y,z=[],[],[]
+
+    for i in range(len(yCentres)):
+        for j in range(len(xCentres)):
+            x.append(xCentres[j])
+            y.append(yCentres[i])
+            z.append(array[j][i])
+
+    xMean = np.sum(np.array(x) * np.array(z)) / np.sum(np.array(z))
+    xSigma =np.sum(abs(np.array(x) - xMean) * np.array(z)) / np.sum(np.array(z))
+    yMean = np.sum(np.array(y) * np.array(z)) / np.sum(np.array(z))
+    ySigma = np.sum(abs(np.array(y) -yMean) * np.array(z)) / np.sum(np.array(z))
+
+    try:
+        params = spo.curve_fit(gaussian2D, (x,y), z, [np.max(z), xMean, yMean, xSigma, ySigma, 0.])
+
+    except RuntimeError:
+        print 'Fit Failed!'
+
+        return None
+
+    params = [params[0], np.sqrt(np.diag(params[1]))]
+
+    return params
+
+def halfMaximumLine2D(fit, heightFraction, numberOfPoints, accuracy = 0.00000001):
+    radius = []
+    theta = np.linspace(0, 2 * np.pi, numberOfPoints)
+
+    cut = fit[0][0]*heightFraction
+
+    for i in theta:
+        r = 0.
+        step=1.
+        x = np.cos(i)
+        y = np.sin(i)
+
+        while step > accuracy:
+
+            while gaussian2D(((x * r + fit[0][1]), (y * r + fit[0][2])), * fit[0]) > cut:
+                r += step
+
+            r -= step
+            step *= 0.1
+
+        radius.append(r)
+
+    x=[]
+    y=[]
+
+    for i in range(len(radius)):
+        x.append(radius[i]*np.cos(theta[i]))
+        y.append(radius[i]*np.sin(theta[i]))
+
+    x = np.array(x) + fit[0][1]
+    y = np.array(y) + fit[0][2]
+
+    return x, y
+
+def containingRing(fit, xData, yData, fractionInside, numberOfPoints, accuracy = 0.00000001):
+    height = 1.
+    step = 1.
+
+    while step > accuracy:
+        numberInside = 0.
+
+        for i in range(len(xData)):
+            h = gaussian2D((xData[i], yData[i]), * fit[0])
+
+            if h >= height * fit[0][0]:
+                numberInside += 1
+
+        if numberInside/len(xData) < fractionInside:
+            height -= step
+
+        else:
+            height += step
+            step /= 10
+
+    return halfMaximumLine2D(fit, height, numberOfPoints)
+
+def plotIntensityRatios(outputFile, plot = True, xBins = 150, yBins = 120, ringFraction = 0.5):
+
+    print '\nPlotting intensity ratios...'
+
+    all_spectra = outputFile['Fitted spectra']
 
     cmPeakPositions = []
     intensityRatios = []
@@ -1061,7 +1204,7 @@ def collect_intensity_ratios(all_spectra, plot = True):
         cmPeakPos = spectrum.attrs['Coupled mode wavelength']
         intensityRatio = spectrum.attrs['Intensity ratio']
 
-        if spectrum.attrs['NPoM?'] == True and spectrum.attrs['Double Peak?'] == False and cmPeakPos != 'N/A' and intensityRatio != 'N/A':
+        if spectrum.attrs['NPoM?'] == True and spectrum.attrs['Double Peak?'] == False and cmPeakPos != 'N/A' and cmPeakPos < 849 and intensityRatio != 'N/A':
 
             cmPeakPositions.append(cmPeakPos)
             intensityRatios.append(intensityRatio)
@@ -1070,43 +1213,25 @@ def collect_intensity_ratios(all_spectra, plot = True):
 
         y = np.array(intensityRatios)
         x = np.array(cmPeakPositions)
-        nbins=300
 
-        k = gaussian_kde([x, y])
-        xi, yi = np.mgrid[x.min():x.max():nbins*1j, y.min():y.max():nbins*1j]
-        zi = k(np.vstack([xi.flatten(), yi.flatten()]))
+        array, xCentres, yCentres = createDensityArray(x, y, xBins = xBins, yBins = yBins)
+        fit2D = fitGauss2D(array, xCentres, yCentres)
 
-        zi_ordered = np.array(sorted(zi)[::-1])
-        zi_cum = np.cumsum(zi_ordered)
-        zi_total = sum(zi)
+        xMean = fit2D[0][1]
+        yMean = fit2D[0][2]
 
-        index_50 = np.where(zi_cum > zi_total*0.9)[0][0]
-
-        zi_50 = []
-
-        for n, z_val in enumerate(zi):
-
-            if z_val < zi_ordered[index_50]:
-                zi_50.append(0)
-
-            else:
-                zi_50.append(1)
-
-        zi_50 = np.array(zi_50)
-        zi_50[zi.argmax()] = 5
-
-        '''Need to sort out this plot business'''
+        xRing, yRing = containingRing(fit2D, x, y, ringFraction, 10000)
 
         fig = plt.figure(figsize = (7, 7))
-        plt.contour(xi, yi, zi.reshape(xi.shape))#, colors = ('w', 'w', 'b', 'w', 'w', 'w', 'w'))
-        plt.contour(xi, yi, zi_50.reshape(xi.shape))#, colors = 'b', levels = [])
-        plt.xlim(600, 900)
-        plt.ylim(1, 7)
-        plt.xlabel('Coupled Mode Resonance (nm)', fontsize = 18)
+
+        plt.plot(xRing, yRing, 'k-', lw = 2)
+        plt.plot([xMean], [yMean], 'ko', markersize = 10)
+        plt.ylim(0, 8)
         plt.ylabel('Intensity Ratio', fontsize = 18)
-        plt.xticks(fontsize = 18)
-        plt.yticks(fontsize = 18)
-        plt.title('Intensity Ratios', fontsize = 20)
+        plt.yticks(fontsize = 15)
+        plt.xlim(550, 900)
+        plt.xlabel('Coupled Mode Resonance', fontsize = 18)
+        plt.xticks(fontsize = 15)
 
         fig.tight_layout()
         fig.savefig('Intensity Ratios.png')
@@ -1115,18 +1240,22 @@ def collect_intensity_ratios(all_spectra, plot = True):
         img = np.array(img)
         img = img.transpose((1, 0, 2))
 
+    print 'Intensity ratios plotted'
+
     return intensityRatios, cmPeakPositions, img
 
-def plotStackedMap(gSpectra):
+def plotStackedMap(spectraSorted, imgName):
 
-    print '\nPlotting stacked spectral map...'
+    yDataRaw = [spectrum['Raw/Raw data (normalised)'][()] for spectrum in spectraSorted]
+    yDataRaw = np.array([spectrum for spectrum in yDataRaw if type(spectrum) != str])
 
-    cmWlName = 'Coupled mode wavelength'
-    spectra = [gSpectra[spectrum] for spectrum in gSpectra if spectrum[:8] == 'Spectrum' and gSpectra[spectrum].attrs[cmWlName] != 'N/A']
-    spectraSorted = sorted(spectra, key = lambda spectrum: spectrum.attrs[cmWlName])
-    yDataRaw = [spectrum['Raw/Raw data (normalised)'][()] for spectrum in spectraSorted if spectrum['Raw/Raw data (normalised)'] != 'N/A']
-    yDataRaw = np.array(yDataRaw)
-    wavelengths = spectra[0]['Raw/Raw data (normalised)'].attrs['wavelengths'][()]
+    n = 0
+    wavelengths = spectraSorted[n]['Raw/Raw data (normalised)'].attrs['wavelengths']
+
+    while type(wavelengths) == str:
+        n += 1
+        wavelengths = spectraSorted[n]['Raw/Raw data (normalised)'].attrs['wavelengths']
+
     yDataTrunc = np.array([truncateSpectrum(wavelengths, spectrum)[1] for spectrum in yDataRaw])
     wavelengthsTrunc = truncateSpectrum(wavelengths, yDataRaw[0])[0]
 
@@ -1147,13 +1276,157 @@ def plotStackedMap(gSpectra):
     plt.yticks(fontsize = 14)
     plt.xticks(fontsize = 14)
 
-    imgName = 'Stacked Map.png'
+
+    if imgName.endswith('.png'):
+        plt.title(imgName[:-4])
+
+    else:
+        plt.title(imgName)
+        imgName = '%s.png' % imgName
+
     fig.savefig(imgName)
     img = np.array(Image.open(imgName)).transpose((1, 0, 2))
 
-    print 'Stack plotted'
+    return img
 
-    return spectraSorted, img
+def plotAllStacks(outputFile):
+
+    print '\nPlotting stacked spectral maps...'
+
+    gSpectra = outputFile['Fitted spectra']
+    gStackOutput = outputFile.create_group('Statistics/Stacks')
+
+    '''By order of measurement'''
+
+    spectra = [spectrum for spectrum in gSpectra if spectrum[:8] == 'Spectrum']
+    spectraSorted = sorted(spectra, key = lambda spectrum: int(spectrum[9:]))
+    spectraSorted = [gSpectra[spectrum] for spectrum in spectraSorted]
+
+    gStackOutput.create_dataset('All', data = plotStackedMap(spectraSorted, 'Stack (all)'))
+
+    '''By CM wavelength'''
+
+    cmWlName = 'Coupled mode wavelength'
+    spectra = [gSpectra[spectrum] for spectrum in gSpectra if spectrum[:8] == 'Spectrum' and
+               gSpectra[spectrum].attrs[cmWlName] != 'N/A']
+    spectraSorted = sorted(spectra, key = lambda spectrum: spectrum.attrs[cmWlName])
+
+    gStackOutput.create_dataset('By C mode', data = plotStackedMap(spectraSorted, 'Stack (CM wavelength)'))
+
+    '''By TM wavelength'''
+
+    tmWlName = 'Transverse mode wavelength'
+
+    try:
+        spectra = [gSpectra[spectrum] for spectrum in gSpectra if spectrum[:8] == 'Spectrum' and
+               gSpectra[spectrum].attrs[tmWlName] != 'N/A']
+
+    except:
+        tmWlName = 'Transverse mode wavelength)'
+        spectra = [gSpectra[spectrum] for spectrum in gSpectra if spectrum[:8] == 'Spectrum' and
+               gSpectra[spectrum].attrs[tmWlName] != 'N/A']
+
+    spectraSorted = sorted(spectra, key = lambda spectrum: spectrum.attrs[tmWlName])
+
+    gStackOutput.create_dataset('By T mode', data = plotStackedMap(spectraSorted, 'Stack (TM wavelength)'))
+
+    '''By intensity ratio'''
+
+    irName = 'Intensity ratio'
+
+    spectra = [gSpectra[spectrum] for spectrum in gSpectra if spectrum[:8] == 'Spectrum' and
+               gSpectra[spectrum].attrs[irName] != 'N/A']
+    spectraSorted = sorted(spectra, key = lambda spectrum: spectrum.attrs[irName])
+
+    gStackOutput.create_dataset('By intensity ratio', data = plotStackedMap(spectraSorted, 'Stack (intensity ratio)'))
+
+    '''Doubles in order of measurement'''
+
+    spectra = [spectrum for spectrum in gSpectra if spectrum[:8] == 'Spectrum' and
+               gSpectra[spectrum].attrs['Double Peak?'] == True]
+
+    if len(spectra) > 0:
+
+        spectraSorted = sorted(spectra, key = lambda spectrum: int(spectrum[9:]))
+        spectraSorted = [gSpectra[spectrum] for spectrum in spectraSorted]
+
+        '''By order of measurement'''
+
+        gStackOutput.create_dataset('All doubles', data = plotStackedMap(spectraSorted, 'Stack (all doubles)'))
+
+        '''Doubles by CM wavelength'''
+
+        cmWlName = 'Coupled mode wavelength'
+        spectra = [gSpectra[spectrum] for spectrum in gSpectra if spectrum[:8] == 'Spectrum' and
+                   gSpectra[spectrum].attrs[cmWlName] != 'N/A' and gSpectra[spectrum].attrs['Double Peak?'] == True]
+        spectraSorted = sorted(spectra, key = lambda spectrum: spectrum.attrs[cmWlName])
+
+        gStackOutput.create_dataset('Doubles by C mode', data = plotStackedMap(spectraSorted, 'Stack (Doubles by CM wavelength)'))
+
+        '''Doubles by TM wavelength'''
+
+        tmWlName = 'Transverse mode wavelength'
+
+        try:
+            spectra = [gSpectra[spectrum] for spectrum in gSpectra if spectrum[:8] == 'Spectrum' and
+                   gSpectra[spectrum].attrs[tmWlName] != 'N/A' and gSpectra[spectrum].attrs['Double Peak?'] == True]
+
+        except:
+            tmWlName = 'Transverse mode wavelength)'
+
+        spectraSorted = sorted(spectra, key = lambda spectrum: spectrum.attrs[tmWlName])
+
+        gStackOutput.create_dataset('Doubles by T mode', data = plotStackedMap(spectraSorted, 'Stack (Doubles by TM wavelength)'))
+
+        '''Doubles by intensity ratio'''
+
+        irName = 'Intensity ratio'
+
+        spectra = [gSpectra[spectrum] for spectrum in gSpectra if spectrum[:8] == 'Spectrum' and
+                   gSpectra[spectrum].attrs[irName] != 'N/A' and gSpectra[spectrum].attrs['Double Peak?'] == True]
+        spectraSorted = sorted(spectra, key = lambda spectrum: spectrum.attrs[irName])
+
+        gStackOutput.create_dataset('Doubles by intensity ratio', data = plotStackedMap(spectraSorted, 'Stack (Doubles by intensity ratio)'))
+
+    else:
+        print 'No doubles to plot'
+
+    print 'Stacks plotted'
+
+def doStats(outputFile, minBinFactor = 5, stacks = True, hist = True, intensityRatios = True):
+
+    if 'Statistics' in outputFile:
+        del outputFile['Statistics']
+
+    if stacks == True:
+        plotAllStacks(outputFile)
+
+    if hist == True:
+        frequencies, bins, yDataBinned, histImg = plotHistogram(outputFile, minBinFactor = minBinFactor)
+
+        avg_resonance, stderr, fwhm = histyFit(frequencies, bins)
+
+        gHist = outputFile.create_group('Statistics/Histogram/')
+        gHist.attrs['Average resonance'] = avg_resonance
+        gHist.attrs['Error'] = stderr
+        gHist.attrs['FWHM'] = fwhm
+
+        dBins = gHist.create_dataset('Bins', data = bins)
+        dFreq = gHist.create_dataset('Frequencies', data = frequencies)
+        dFreq.attrs['wavelengths'] = dBins
+        gHist.create_dataset('Histogram', data = histImg)
+        gYDataBinned = gHist.create_group('Binned y data/')
+
+        for n, yDatum in enumerate(yDataBinned):
+            gYDataBinned.create_dataset('Bin %s data, peakpos = %s' % (n, bins[n]), data = yDatum)
+
+    if intensityRatios == True:
+
+        intensityRatios, cmPeakPositions, irImg = plotIntensityRatios(outputFile, plot = True)
+
+        d_ir = outputFile.create_dataset('Statistics/Intensity ratios', data = irImg)
+        d_ir.attrs['Intensity ratios'] = intensityRatios
+        d_ir.attrs['Peak positions'] = cmPeakPositions
 
 def fitAllSpectra(x, yData, startSpec, outputFile, monitor_progress = False, plot = False, raiseExceptions = False):
 
@@ -1245,7 +1518,7 @@ def fitAllSpectra(x, yData, startSpec, outputFile, monitor_progress = False, plo
         g.attrs['NPoM?'] = fitted_spectrum['NPoM?']
         g.attrs['Double Peak?'] = fitted_spectrum['double_peak?']
         g.attrs['Transverse mode intensity'] = fitted_spectrum['transverse_mode_intensity']
-        g.attrs['Transverse mode wavelength)'] = fitted_spectrum['transverse_mode_position']
+        g.attrs['Transverse mode wavelength'] = fitted_spectrum['transverse_mode_position']
         g.attrs['Coupled mode intensity'] = fitted_spectrum['coupled_mode_intensity']
         g.attrs['Coupled mode wavelength'] = fitted_spectrum['coupled_mode_position']
         g.attrs['Intensity ratio'] = fitted_spectrum['intensity_ratio']
@@ -1299,41 +1572,15 @@ def fitAllSpectra(x, yData, startSpec, outputFile, monitor_progress = False, plo
 
     print '\n%s spectra fitted in %s min %s sec' % (nn + 1, mins, secs)
 
-    spectraSorted, stackImg = plotStackedMap(outputFile['Fitted spectra'])
-    outputFile.create_dataset('Statistics/Stack/Stack', data = stackImg)
-
-    print '\nCombining spectra and plotting histogram...'
-    frequencies, bins, ydata_binned, img = make_histogram(x, outputFile['Fitted spectra'])
-
-    avg_resonance, stderr, fwhm = histyfit(frequencies, bins)
-
-    stats_g = outputFile.create_group('Statistics/Histogram/')
-    stats_g.attrs['Average resonance'] = avg_resonance
-    stats_g.attrs['Error'] = stderr
-    stats_g.attrs['FWHM'] = fwhm
-
-    d_bins = stats_g.create_dataset('Bins', data = bins)
-    d_freq = stats_g.create_dataset('Frequencies', data = frequencies)
-    d_freq.attrs['wavelengths'] = d_bins
-    stats_g.create_dataset('Histogram', data = img)
-    g_ydata_binned = stats_g.create_group('Binned y data/')
-
-    for n, y_datum in enumerate(ydata_binned):
-        g_ydata_binned.create_dataset('Bin %s data, peakpos = %s' % (n, bins[n]), data = y_datum)
-
-    print '\nPlotting intensity ratios...'
-
-    intensityRatios, cmPeakPositions, irImg = collect_intensity_ratios(outputFile['Fitted spectra'], plot = True)
-
-    d_ir = outputFile.create_dataset('Statistics/Intensity ratios', data = irImg)
-    d_ir.attrs['Intensity ratios'] = intensityRatios
-    d_ir.attrs['Peak positions'] = cmPeakPositions
+    doStats(outputFile)
 
     absolute_end_time = time.time()
     time_elapsed = absolute_end_time - absolute_start_time
 
     mins = int(time_elapsed / 60)
     secs = int(np.round(time_elapsed % 60))
+
+    printEnd()
 
     if len(failed_spectra) == 0:
         print '\nFinished in %s min %s sec. Smooth sailing.' % (mins, secs)
@@ -1351,18 +1598,26 @@ def fitAllSpectra(x, yData, startSpec, outputFile, monitor_progress = False, plo
         print '\nPhew... finished in %s min %s sec with only %s failures' % (mins, secs, len(failed_spectra))
 
 if __name__ == '__main__':
+    print 'Functions initialised'
 
-    print 'Functions initialised\n'
-    print 'Retrieving data...'
+    statsOnly = False
+    if statsOnly == False:
 
-    startSpec = 975
-    finishSpec = 990
+        print '\nRetrieving data...'
 
-    spectra, wavelengths, background, reference = retrieveData('summary', startSpec, finishSpec)
-    x, yData = prepareData(spectra, wavelengths, reference)
+        startSpec = 0
+        finishSpec = 0
 
-    outputFile = createOutputFile('MultiPeakFitOutput')
+        spectra, wavelengths, background, reference = retrieveData('summary', startSpec, finishSpec)
+        x, yData = prepareData(spectra, wavelengths, reference)
 
-    with h5py.File(outputFile, 'a') as f:
-        fitAllSpectra(x, yData, startSpec, f)
+        outputFile = createOutputFile('MultiPeakFitOutput')
 
+        with h5py.File(outputFile, 'a') as f:
+            fitAllSpectra(x, yData, startSpec, f)
+
+    elif statsOnly == True:
+        outputFile = 'MultiPeakFitOutputComplete.h5'
+
+        with h5py.File(outputFile, 'a') as f:
+            doStats(f, minBinFactor = 6, stacks = False, hist = True, intensityRatios = False)
