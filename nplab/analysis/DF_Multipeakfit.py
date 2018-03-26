@@ -1271,10 +1271,10 @@ def plotIntensityRatios(outputFile, plot = True, xBins = 150, yBins = 120, ringF
 
             img = 'N/A'
 
-        return intensityRatios, cmPeakPositions, img
-
     elif plot == False:
-        return intensityRatios, cmPeakPositions
+        img = 'N/A'
+
+    return intensityRatios, cmPeakPositions, img
 
 def plotStackedMap(spectraSorted, imgName = 'Stack', closeFigures = False):
 
