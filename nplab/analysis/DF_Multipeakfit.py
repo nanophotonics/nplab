@@ -77,6 +77,7 @@ def retrieveData(summaryFile, startSpec, finishSpec):
 
         except:
             print 'Summary file not found'
+            return
 
     allScans = summaryFile['particleScanSummaries/']
     spectraLengths = []
@@ -949,7 +950,7 @@ def reduceNoise(y, factor = 10):
     y = ySmooth + yNoise
     return y
 
-def plotHistogram(outputFile, startWl = 450, endWl = 900, binNumber = 80, plot = True, minBinFactor = 5):
+def plotHistogram(outputFile, startWl = 450, endWl = 900, binNumber = 80, plot = True, minBinFactor = 5, closeFigures = False):
 
     print '\nCombining spectra and plotting histogram...'
     spectra = outputFile['Fitted spectra']
@@ -1050,7 +1051,10 @@ def plotHistogram(outputFile, startWl = 450, endWl = 900, binNumber = 80, plot =
         ax2.tick_params(labelsize = 15)
 
         fig.tight_layout()
-        fig.savefig('Histogram.png')
+        fig.savefig('Histogram.png', bbox_inches = 'tight')
+
+        if closeFigures == True:
+            plt.close(fig)
 
         img = Image.open('Histogram.png')
         img = np.array(img)
@@ -1081,6 +1085,8 @@ def is_number(s):
         return False
 
 def createDensityArray(x, y, xBins = 20, yBins = 20):
+    '''Author: Jack Griffiths'''
+
     array, xEdges, yEdges = np.histogram2d(x, y, [xBins, yBins])
     xCentres=[]
     yCentres=[]
@@ -1094,6 +1100,8 @@ def createDensityArray(x, y, xBins = 20, yBins = 20):
     return array, xCentres, yCentres
 
 def gaussian2D((x, y), height, xMean, yMean, xSigma, ySigma, cor):
+    '''Author: Jack Griffiths'''
+
     x = np.array(x).astype(np.float64)
     y = np.array(y).astype(np.float64)
     exponent = (((x - xMean) / xSigma) ** 2)
@@ -1105,6 +1113,8 @@ def gaussian2D((x, y), height, xMean, yMean, xSigma, ySigma, cor):
     return output
 
 def fitGauss2D(array, xCentres, yCentres):
+    '''Author: Jack Griffiths'''
+
     x,y,z=[],[],[]
 
     for i in range(len(yCentres)):
@@ -1131,6 +1141,8 @@ def fitGauss2D(array, xCentres, yCentres):
     return params
 
 def halfMaximumLine2D(fit, heightFraction, numberOfPoints, accuracy = 0.00000001):
+    '''Author: Jack Griffiths'''
+
     radius = []
     theta = np.linspace(0, 2 * np.pi, numberOfPoints)
 
@@ -1165,6 +1177,8 @@ def halfMaximumLine2D(fit, heightFraction, numberOfPoints, accuracy = 0.00000001
     return x, y
 
 def containingRing(fit, xData, yData, fractionInside, numberOfPoints, accuracy = 0.00000001):
+    '''Author: Jack Griffiths'''
+
     height = 1.
     step = 1.
 
@@ -1186,7 +1200,7 @@ def containingRing(fit, xData, yData, fractionInside, numberOfPoints, accuracy =
 
     return halfMaximumLine2D(fit, height, numberOfPoints)
 
-def plotIntensityRatios(outputFile, plot = True, xBins = 150, yBins = 120, ringFraction = 0.5):
+def plotIntensityRatios(outputFile, plot = True, xBins = 150, yBins = 120, ringFraction = 0.5, closeFigures = False):
 
     print '\nPlotting intensity ratios...'
 
@@ -1211,85 +1225,111 @@ def plotIntensityRatios(outputFile, plot = True, xBins = 150, yBins = 120, ringF
 
     if plot == True:
 
-        y = np.array(intensityRatios)
-        x = np.array(cmPeakPositions)
+        try:
 
-        array, xCentres, yCentres = createDensityArray(x, y, xBins = xBins, yBins = yBins)
-        fit2D = fitGauss2D(array, xCentres, yCentres)
+            y = np.array(intensityRatios)
+            x = np.array(cmPeakPositions)
 
-        xMean = fit2D[0][1]
-        yMean = fit2D[0][2]
+            array, xCentres, yCentres = createDensityArray(x, y, xBins = xBins, yBins = yBins)
+            fit2D = fitGauss2D(array, xCentres, yCentres)
 
-        xRing, yRing = containingRing(fit2D, x, y, ringFraction, 10000)
+            xMean = fit2D[0][1]
+            yMean = fit2D[0][2]
 
-        fig = plt.figure(figsize = (7, 7))
+            xRing, yRing = containingRing(fit2D, x, y, ringFraction, 10000)
 
-        plt.plot(xRing, yRing, 'k-', lw = 2)
-        plt.plot([xMean], [yMean], 'ko', markersize = 10)
-        plt.ylim(0, 8)
-        plt.ylabel('Intensity Ratio', fontsize = 18)
-        plt.yticks(fontsize = 15)
-        plt.xlim(550, 900)
-        plt.xlabel('Coupled Mode Resonance', fontsize = 18)
-        plt.xticks(fontsize = 15)
+            fig = plt.figure(figsize = (7, 7))
 
-        fig.tight_layout()
-        fig.savefig('Intensity Ratios.png')
+            plt.plot(xRing, yRing, 'k-', lw = 2)
+            plt.plot([xMean], [yMean], 'ko', markersize = 10)
+            plt.ylim(0, 8)
+            plt.ylabel('Intensity Ratio', fontsize = 18)
+            plt.yticks(fontsize = 15)
+            plt.xlim(550, 900)
+            plt.xlabel('Coupled Mode Resonance', fontsize = 18)
+            plt.xticks(fontsize = 15)
 
-        img = Image.open('Intensity Ratios.png')
-        img = np.array(img)
-        img = img.transpose((1, 0, 2))
+            fig.tight_layout()
+            fig.savefig('Intensity Ratios.png', bbox_inches = 'tight')
 
-    print 'Intensity ratios plotted'
+            if closeFigures == True:
+                plt.close(fig)
 
-    return intensityRatios, cmPeakPositions, img
+            img = Image.open('Intensity Ratios.png')
+            img = np.array(img)
+            img = img.transpose((1, 0, 2))
 
-def plotStackedMap(spectraSorted, imgName):
+            print 'Intensity ratios plotted'
 
-    yDataRaw = [spectrum['Raw/Raw data (normalised)'][()] for spectrum in spectraSorted]
-    yDataRaw = np.array([spectrum for spectrum in yDataRaw if type(spectrum) != str])
+        except Exception as e:
 
-    n = 0
-    wavelengths = spectraSorted[n]['Raw/Raw data (normalised)'].attrs['wavelengths']
+            if len(spectra) <= 100:
+                print 'Data set too small. Intensity ratio plot failed'
 
-    while type(wavelengths) == str:
-        n += 1
+            else:
+                print 'Intensity ratio plot failed because %s' % str(e)
+
+            img = 'N/A'
+
+        return intensityRatios, cmPeakPositions, img
+
+    elif plot == False:
+        return intensityRatios, cmPeakPositions
+
+def plotStackedMap(spectraSorted, imgName = 'Stack', closeFigures = False):
+
+    try:
+        yDataRaw = [spectrum['Raw/Raw data (normalised)'][()] for spectrum in spectraSorted]
+        yDataRaw = np.array([spectrum for spectrum in yDataRaw if type(spectrum) != str])
+
+        n = 0
         wavelengths = spectraSorted[n]['Raw/Raw data (normalised)'].attrs['wavelengths']
 
-    yDataTrunc = np.array([truncateSpectrum(wavelengths, spectrum)[1] for spectrum in yDataRaw])
-    wavelengthsTrunc = truncateSpectrum(wavelengths, yDataRaw[0])[0]
+        while type(wavelengths) == str:
+            n += 1
+            wavelengths = spectraSorted[n]['Raw/Raw data (normalised)'].attrs['wavelengths']
 
-    xStack = wavelengthsTrunc
-    yStack = range(len(yDataTrunc))
-    zStack = np.vstack(yDataTrunc)
+        yDataTrunc = np.array([truncateSpectrum(wavelengths, spectrum)[1] for spectrum in yDataRaw])
+        wavelengthsTrunc = truncateSpectrum(wavelengths, yDataRaw[0])[0]
 
-    fig = plt.figure(figsize = (9, 7))
+        xStack = wavelengthsTrunc
+        yStack = range(len(yDataTrunc))
+        zStack = np.vstack(yDataTrunc)
 
-    plt.pcolormesh(xStack, yStack, zStack, cmap = 'inferno', vmin = 0, vmax = 4)
-    plt.xlim(450, 900)
-    plt.xlabel('Wavelength (nm)', fontsize = 14)
-    plt.ylabel('Spectrum #', fontsize = 14)
-    cbar = plt.colorbar()
-    cbar.set_ticks([])
-    cbar.set_label('Intensity (a.u.)', fontsize = 14)
-    plt.ylim(min(yStack), max(yStack))
-    plt.yticks(fontsize = 14)
-    plt.xticks(fontsize = 14)
+        fig = plt.figure(figsize = (9, 7))
 
+        plt.pcolormesh(xStack, yStack, zStack, cmap = 'inferno', vmin = 0, vmax = 4)
+        plt.xlim(450, 900)
+        plt.xlabel('Wavelength (nm)', fontsize = 14)
+        plt.ylabel('Spectrum #', fontsize = 14)
+        cbar = plt.colorbar()
+        cbar.set_ticks([])
+        cbar.set_label('Intensity (a.u.)', fontsize = 14)
+        plt.ylim(min(yStack), max(yStack))
+        plt.yticks(fontsize = 14)
+        plt.xticks(fontsize = 14)
 
-    if imgName.endswith('.png'):
-        plt.title(imgName[:-4])
+        if imgName.endswith('.png'):
+            plt.title(imgName[:-4])
 
-    else:
-        plt.title(imgName)
-        imgName = '%s.png' % imgName
+        else:
+            plt.title(imgName)
+            imgName = '%s.png' % imgName
 
-    fig.savefig(imgName)
-    img = np.array(Image.open(imgName)).transpose((1, 0, 2))
+        fig.savefig(imgName, bbox_inches = 'tight')
+
+        if closeFigures == True:
+                plt.close(fig)
+
+        img = np.array(Image.open(imgName)).transpose((1, 0, 2))
+
+    except Exception as e:
+        print 'Plotting of %s failed because %s' % (imgName, str(e))
+        img = 'N/A'
 
     return img
 
-def plotAllStacks(outputFile):
+def plotAllStacks(outputFile, closeFigures = False):
 
     print '\nPlotting stacked spectral maps...'
 
@@ -1302,7 +1342,8 @@ def plotAllStacks(outputFile):
     spectraSorted = sorted(spectra, key = lambda spectrum: int(spectrum[9:]))
     spectraSorted = [gSpectra[spectrum] for spectrum in spectraSorted]
 
-    gStackOutput.create_dataset('All', data = plotStackedMap(spectraSorted, 'Stack (all)'))
+    gStackOutput.create_dataset('All',
+                                data = plotStackedMap(spectraSorted, imgName = 'Stack (all)', closeFigures = closeFigures))
 
     '''By CM wavelength'''
 
@@ -1311,7 +1352,8 @@ def plotAllStacks(outputFile):
                gSpectra[spectrum].attrs[cmWlName] != 'N/A']
     spectraSorted = sorted(spectra, key = lambda spectrum: spectrum.attrs[cmWlName])
 
-    gStackOutput.create_dataset('By C mode', data = plotStackedMap(spectraSorted, 'Stack (CM wavelength)'))
+    gStackOutput.create_dataset('By C mode',
+                                data = plotStackedMap(spectraSorted, imgName = 'Stack (CM wavelength)', closeFigures = closeFigures))
 
     '''By TM wavelength'''
 
@@ -1328,7 +1370,8 @@ def plotAllStacks(outputFile):
 
     spectraSorted = sorted(spectra, key = lambda spectrum: spectrum.attrs[tmWlName])
 
-    gStackOutput.create_dataset('By T mode', data = plotStackedMap(spectraSorted, 'Stack (TM wavelength)'))
+    gStackOutput.create_dataset('By T mode',
+                                data = plotStackedMap(spectraSorted, imgName = 'Stack (TM wavelength)', closeFigures = closeFigures))
 
     '''By intensity ratio'''
 
@@ -1338,7 +1381,8 @@ def plotAllStacks(outputFile):
                gSpectra[spectrum].attrs[irName] != 'N/A']
     spectraSorted = sorted(spectra, key = lambda spectrum: spectrum.attrs[irName])
 
-    gStackOutput.create_dataset('By intensity ratio', data = plotStackedMap(spectraSorted, 'Stack (intensity ratio)'))
+    gStackOutput.create_dataset('By intensity ratio',
+                                data = plotStackedMap(spectraSorted, imgName = 'Stack (intensity ratio)', closeFigures = closeFigures))
 
     '''Doubles in order of measurement'''
 
@@ -1352,7 +1396,8 @@ def plotAllStacks(outputFile):
 
         '''By order of measurement'''
 
-        gStackOutput.create_dataset('All doubles', data = plotStackedMap(spectraSorted, 'Stack (all doubles)'))
+        gStackOutput.create_dataset('All doubles',
+                                    data = plotStackedMap(spectraSorted, imgName = 'Stack (all doubles)', closeFigures = closeFigures))
 
         '''Doubles by CM wavelength'''
 
@@ -1361,7 +1406,8 @@ def plotAllStacks(outputFile):
                    gSpectra[spectrum].attrs[cmWlName] != 'N/A' and gSpectra[spectrum].attrs['Double Peak?'] == True]
         spectraSorted = sorted(spectra, key = lambda spectrum: spectrum.attrs[cmWlName])
 
-        gStackOutput.create_dataset('Doubles by C mode', data = plotStackedMap(spectraSorted, 'Stack (Doubles by CM wavelength)'))
+        gStackOutput.create_dataset('Doubles by C mode',
+                                    data = plotStackedMap(spectraSorted, imgName = 'Stack (Doubles by CM wavelength)', closeFigures = closeFigures))
 
         '''Doubles by TM wavelength'''
 
@@ -1376,7 +1422,8 @@ def plotAllStacks(outputFile):
 
         spectraSorted = sorted(spectra, key = lambda spectrum: spectrum.attrs[tmWlName])
 
-        gStackOutput.create_dataset('Doubles by T mode', data = plotStackedMap(spectraSorted, 'Stack (Doubles by TM wavelength)'))
+        gStackOutput.create_dataset('Doubles by T mode',
+                                    data = plotStackedMap(spectraSorted, imgName = 'Stack (Doubles by TM wavelength)', closeFigures = closeFigures))
 
         '''Doubles by intensity ratio'''
 
@@ -1386,23 +1433,24 @@ def plotAllStacks(outputFile):
                    gSpectra[spectrum].attrs[irName] != 'N/A' and gSpectra[spectrum].attrs['Double Peak?'] == True]
         spectraSorted = sorted(spectra, key = lambda spectrum: spectrum.attrs[irName])
 
-        gStackOutput.create_dataset('Doubles by intensity ratio', data = plotStackedMap(spectraSorted, 'Stack (Doubles by intensity ratio)'))
+        gStackOutput.create_dataset('Doubles by intensity ratio',
+                                    data = plotStackedMap(spectraSorted, imgName = 'Stack (Doubles by intensity ratio)', closeFigures = closeFigures))
 
     else:
         print 'No doubles to plot'
 
     print 'Stacks plotted'
 
-def doStats(outputFile, minBinFactor = 5, stacks = True, hist = True, intensityRatios = True):
+def doStats(outputFile, minBinFactor = 5, stacks = True, hist = True, intensityRatios = True, closeFigures = False):
 
     if 'Statistics' in outputFile:
         del outputFile['Statistics']
 
     if stacks == True:
-        plotAllStacks(outputFile)
+        plotAllStacks(outputFile, closeFigures = closeFigures)
 
     if hist == True:
-        frequencies, bins, yDataBinned, histImg = plotHistogram(outputFile, minBinFactor = minBinFactor)
+        frequencies, bins, yDataBinned, histImg = plotHistogram(outputFile, minBinFactor = minBinFactor, closeFigures = closeFigures)
 
         avg_resonance, stderr, fwhm = histyFit(frequencies, bins)
 
@@ -1422,13 +1470,21 @@ def doStats(outputFile, minBinFactor = 5, stacks = True, hist = True, intensityR
 
     if intensityRatios == True:
 
-        intensityRatios, cmPeakPositions, irImg = plotIntensityRatios(outputFile, plot = True)
+        numberOfSpectra = len(outputFile['Fitted spectra'])
+        xBins = numberOfSpectra / 12
+        yBins = numberOfSpectra / 12
+
+        intensityRatios, cmPeakPositions, irImg = plotIntensityRatios(outputFile, plot = True, xBins = xBins, yBins = yBins, closeFigures = closeFigures)
 
         d_ir = outputFile.create_dataset('Statistics/Intensity ratios', data = irImg)
         d_ir.attrs['Intensity ratios'] = intensityRatios
         d_ir.attrs['Peak positions'] = cmPeakPositions
 
-def fitAllSpectra(x, yData, startSpec, outputFile, monitor_progress = False, plot = False, raiseExceptions = False):
+
+
+def fitAllSpectra(x, yData, outputFile, startSpec = 0, monitor_progress = False, plot = False, raiseExceptions = False, closeFigures = False):
+
+    absolute_start_time = time.time()
 
     '''Fits all spectra and populates h5 file with relevant output data. h5 file must be opened before the function and closed afterwards'''
 
@@ -1473,7 +1529,8 @@ def fitAllSpectra(x, yData, startSpec, outputFile, monitor_progress = False, plo
         if raiseExceptions == False:
 
             try:
-                fitted_spectrum = fitNpomSpectrum(x, y, detection_threshold = detection_threshold, doubles_threshold = doubles_threshold, doubles_dist = doubles_dist, monitor_progress = monitor_progress, plot = plot)
+                fitted_spectrum = fitNpomSpectrum(x, y, detection_threshold = detection_threshold, doubles_threshold = doubles_threshold,
+                                                  doubles_dist = doubles_dist, monitor_progress = monitor_progress, plot = plot)
                 fitted_spectra.append(fitted_spectrum)
                 fitError = 'N/A'
 
@@ -1488,7 +1545,8 @@ def fitAllSpectra(x, yData, startSpec, outputFile, monitor_progress = False, plo
                 print 'Spectrum %s failed' % n # because "%s"' % (n, e)
 
         elif raiseExceptions == True:
-            fitted_spectrum = fitNpomSpectrum(x, y, detection_threshold = detection_threshold, doubles_threshold = doubles_threshold, doubles_dist = doubles_dist, monitor_progress = monitor_progress, plot = plot)
+            fitted_spectrum = fitNpomSpectrum(x, y, detection_threshold = detection_threshold, doubles_threshold = doubles_threshold,
+                                              doubles_dist = doubles_dist, monitor_progress = monitor_progress, plot = plot)
             fitted_spectra.append(fitted_spectrum)
             fitError = 'N/A'
 
@@ -1572,7 +1630,7 @@ def fitAllSpectra(x, yData, startSpec, outputFile, monitor_progress = False, plo
 
     print '\n%s spectra fitted in %s min %s sec' % (nn + 1, mins, secs)
 
-    doStats(outputFile)
+    doStats(outputFile, closeFigures = closeFigures)
 
     absolute_end_time = time.time()
     time_elapsed = absolute_end_time - absolute_start_time
@@ -1596,6 +1654,8 @@ def fitAllSpectra(x, yData, startSpec, outputFile, monitor_progress = False, plo
 
     else:
         print '\nPhew... finished in %s min %s sec with only %s failures' % (mins, secs, len(failed_spectra))
+
+    print ''
 
 if __name__ == '__main__':
     print 'Functions initialised'
