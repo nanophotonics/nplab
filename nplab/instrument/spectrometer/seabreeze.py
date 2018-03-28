@@ -37,7 +37,6 @@ import threading
 from nplab.instrument import Instrument
 from nplab.utils.gui import QtCore, QtGui, QtWidgets, uic
 from nplab.instrument.spectrometer import Spectrometer, Spectrometers, SpectrometerControlUI, SpectrometerDisplayUI, SpectrometerUI
-import traitsui
 import os
 import h5py
 import inspect
@@ -56,7 +55,7 @@ website (http://downloads.oceanoptics.com/OEM/), and that its version matches
 your Python architecture (64 or 32 bit).  See the module help for more
 information"""
     try:
-        traitsui.message.error(explanation, "SeaBreeze Driver Missing", buttons=["OK"])
+        print explanation, "SeaBreeze Driver Missing"
     except Exception as e:
         print "uh oh, problem with the message..."
         print e
