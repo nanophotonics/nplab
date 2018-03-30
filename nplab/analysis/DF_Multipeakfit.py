@@ -489,9 +489,11 @@ def multiPeakFind(x, y, cutoff = 1500, fs = 60000, detection_threshold = 0, retu
 def multiPeakFit(x, y, indices, y_smooth = np.array([]), cutoff = 1500, fs = 60000, constrain_peakpos = False, return_all = False, monitor_progress = True):
     '''Performs the actual fitting (given a list of peak indices) using Python's lmfit module'''
     '''You can generate indices using multiPeakFind or input them manually'''
-    #x, y = 1D arrarys of same length
+    #x, y = 1D arrays of same length
     #indices = 1D array or list of integers, to be used as indices of x and y
     #y_smooth (optional). Include this to save time, otherwise the function will smooth the y data for you
+    #setting constrain_peakpos = True forces peaks to stay between the indices either side when fitting
+    #e.g. for indices of [7, 10, 14], the final centre position of the second peak (initial index = 10) must be between index 7 and 14
 
     fit_start = time.time()
     peakFitMetadata = {}
@@ -568,13 +570,18 @@ def multiPeakFit(x, y, indices, y_smooth = np.array([]), cutoff = 1500, fs = 600
         print '\nFit performed'
 
     final_params = {}
-    component_param_names = ['sigma', 'center', 'amplitude', 'fwhm', 'height']
+    component_param_names = ['sigma', 'center', 'amplitude', 'fwhm', 'height', 'wavelengths']
 
     for prefix in [model.prefix for model in model_elements]:
         final_params[prefix[:-1]] = {}
 
         for name in component_param_names:
-            final_params[prefix[:-1]][name] = out.params[prefix + name].value
+
+            if name != 'wavelengths':
+                final_params[prefix[:-1]][name] = out.params[prefix + name].value
+
+            elif name == 'wavelengths':
+                final_params[prefix[:-1]][name] = x
 
     peakFitMetadata['lmfit_output'] = out
     peakFitMetadata['best_fit'] = out.best_fit
@@ -604,7 +611,7 @@ def test_if_double(x, ySmooth, final_params, doubles_threshold = 0.5, min_dist =
 
     for n in range(len(final_params)):
 
-        if final_params['g%s' % (n)]['center'] > 600: #Excludes tranverse peak
+        if final_params['g%s' % (n)]['center'] > 575: #Excludes tranverse peak
             heights.append(final_params['g%s' % (n)]['height']) #Populates list of heights
             centers.append(final_params['g%s' % (n)]['center'])
             component_numbers.append(n)
@@ -697,7 +704,7 @@ def test_if_double(x, ySmooth, final_params, doubles_threshold = 0.5, min_dist =
     else:
         return is_double
 
-def findTransAndCoupledMode(x, y_smooth, fitParams, transGuess = 533, reNormalise = True, plot = False):
+def findTransAndCoupledMode(x, y_smooth, fitParams, transGuess = 533, transRange = [500, 550], plot = False):
 
     '''Finds CM and transverse peak heights/positions using fit data (dictionary) and smoothed spectrum'''
     '''Returns dictionary of relevant data'''
@@ -723,7 +730,7 @@ def findTransAndCoupledMode(x, y_smooth, fitParams, transGuess = 533, reNormalis
         #prefix in the form 'gn'
         comp = fitParams[prefix]#gives dictionary containing parameters of gaussian component
 
-        if 500 < comp['center'] < 550:#Only wavelengths between 500 and 550 nm are considered
+        if transRange[0] < comp['center'] < transRange[1]:#Only wavelengths between 500 and 550 nm are considered
             transPeakPos = comp['center']
             break #Stops after first peak between 500 and 550
 
@@ -1202,8 +1209,13 @@ def containingRing(fit, xData, yData, fractionInside, numberOfPoints, accuracy =
 
 def plotIntensityRatios(outputFile, plot = True, xBins = 150, yBins = 120, ringFraction = 0.5, closeFigures = False):
 
-    print '\nPlotting intensity ratios...'
+    if plot == True:
+        print '\nPlotting intensity ratios...'
 
+    else:
+        print '\n Gathering intensity ratios...'
+
+    img = 'N/A'
     all_spectra = outputFile['Fitted spectra']
 
     cmPeakPositions = []
@@ -1229,6 +1241,12 @@ def plotIntensityRatios(outputFile, plot = True, xBins = 150, yBins = 120, ringF
 
             y = np.array(intensityRatios)
             x = np.array(cmPeakPositions)
+
+            yFilt = np.array([i for n, i in enumerate(y) if 0 < i < 10 and x[n] < 848])
+            xFilt = np.array([x[n] for n, i in enumerate(y) if 0 < i < 10 and x[n] < 848])
+
+            x = xFilt
+            y = yFilt
 
             array, xCentres, yCentres = createDensityArray(x, y, xBins = xBins, yBins = yBins)
             fit2D = fitGauss2D(array, xCentres, yCentres)
@@ -1271,10 +1289,170 @@ def plotIntensityRatios(outputFile, plot = True, xBins = 150, yBins = 120, ringF
 
             img = 'N/A'
 
-    elif plot == False:
+    else:
         img = 'N/A'
+        print 'Intensity ratios gathered'
 
     return intensityRatios, cmPeakPositions, img
+
+def visualiseIntensityRatios(outputFile):
+
+    '''OutputFile = open h5py.File or nplab.datafile.DataFile object with read/write permission'''
+
+    allSpectra = outputFile['Fitted spectra']
+
+    for spectrum in sorted(allSpectra, key = lambda spectrum: int(spectrum[9:])):
+        specNumber = int(spectrum[9:])
+        spectrum = allSpectra[spectrum]
+        #gFit = spectrum['Fit']
+        intensityRatio = spectrum.attrs['Intensity ratio']
+
+        if intensityRatio != 'N/A':
+            y = spectrum['Raw/Raw data (normalised)'][()]
+            x = spectrum['Raw/Raw data (normalised)'].attrs['wavelengths'][()]
+            ySmooth = spectrum['Fit/Smoothed data'][()]
+            xTrunc = spectrum['Fit/Smoothed data'].attrs['wavelengths']
+            zeroLine = np.array([0] * len(xTrunc))
+            transHeight = spectrum.attrs['Transverse mode intensity']
+            transWl = spectrum.attrs['Transverse mode wavelength']
+            cmHeight = spectrum.attrs['Coupled mode intensity']
+            cmWl = spectrum.attrs['Coupled mode wavelength']
+            xTransVert = np.array([transWl] * 10)
+            yTransVert = np.linspace(transHeight, cmHeight, 10)
+            xCmVert = np.array([cmWl] * 10)
+            yCmVert = np.linspace(transHeight, cmHeight, 10)
+            transHoriz = np.array([transHeight] * len(xTrunc))
+            cmHoriz = np.array([cmHeight] * len(xTrunc))
+
+            if 'Intensity ratio measurement' in spectrum:
+                del spectrum['Intensity ratio measurement']
+
+            gIrVis = spectrum.create_group('Intensity ratio measurement')
+
+            dRaw = gIrVis.create_dataset('Raw', data = y)
+            dRaw.attrs['wavelengths'] = x
+            dSmooth = gIrVis.create_dataset('Smoothed', data = ySmooth)
+            dSmooth.attrs['wavelengths'] = xTrunc
+            dZero = gIrVis.create_dataset('Zero', data = zeroLine)
+            dZero.attrs['wavelengths'] = dSmooth.attrs['wavelengths']
+            dTransVert = gIrVis.create_dataset('Transverse mode position', data = yTransVert)
+            dTransVert.attrs['wavelengths'] = xTransVert
+            dCmVert = gIrVis.create_dataset('Coupled mode position', data = yCmVert)
+            dCmVert.attrs['wavelengths'] = xCmVert
+            dTransHoriz = gIrVis.create_dataset('Transverse mode height', data = transHoriz)
+            dTransHoriz.attrs['wavelengths'] = xTrunc
+            dCmHoriz = gIrVis.create_dataset('Coupled mode height', data = cmHoriz)
+            dCmHoriz.attrs['wavelengths'] = xTrunc
+
+            if '/All spectra/Spectra with peak heights/Spectrum %s' % specNumber in outputFile:
+                del outputFile['All spectra/Spectra with peak heights/Spectrum %s' % specNumber]
+
+            outputFile['All spectra/Spectra with peak heights/Spectrum %s' % specNumber] = gIrVis
+
+def updateTransAndCoupledMode(outputFile, transGuess = 533, transRange = [500, 550], reNormalise = True):
+
+    print '\nUpdating trans and coupled mode parameters'
+
+    gSpectra = outputFile['Fitted spectra']
+
+    allSpectra = sorted([spectrum for spectrum in outputFile['Fitted spectra']], key = lambda spectrum: int(spectrum[9:]))
+    allSpectra = [spectrum for spectrum in allSpectra if gSpectra[spectrum].attrs['NPoM?'] == True]
+
+    for spectrum in allSpectra:
+        spectrum = gSpectra[spectrum]
+        x = spectrum['Fit/Smoothed data'].attrs['wavelengths'][()]
+        y_smooth = np.array(spectrum['Fit/Smoothed data'][()])
+        fitComps = spectrum['Fit/Final components/']
+        fitParams = {'g%s' % n : {key : fitComps[n].attrs[key] for key in fitComps[n].attrs.keys() if key != 'wavelengths'} for n in fitComps}
+
+        tcMetadata = findTransAndCoupledMode(x, y_smooth, fitParams, transGuess = transGuess, transRange = transRange, plot = False)
+
+        spectrum.attrs['Transverse mode intensity'] = tcMetadata['transverse_mode_intensity']
+        spectrum.attrs['Transverse mode wavelength'] = tcMetadata['transverse_mode_position']
+        spectrum.attrs['Coupled mode intensity'] = tcMetadata['coupled_mode_intensity']
+        spectrum.attrs['Coupled mode wavelength'] = tcMetadata['coupled_mode_position']
+        spectrum.attrs['Intensity ratio'] = tcMetadata['intensity_ratio']
+
+        if reNormalise == True:
+
+            transHeight = tcMetadata['transverse_mode_intensity']
+
+            datasetsToUpdate = ['Fit/Best fit',
+                                'Fit/Final components',
+                                'Fit/Raw data (truncated, normalised)',
+                                'Fit/Smoothed data',
+                                'Raw/Raw data (normalised)']
+
+            for dataset in datasetsToUpdate:
+
+                if dataset == 'Fit/Final components':
+
+                    for comp in spectrum[dataset]:
+                        data = spectrum[dataset][comp] / transHeight
+                        del spectrum[dataset][comp]
+                        compDset = spectrum.create_dataset('%s/%s' % (dataset, comp), data = data)
+                        compDset.attrs['wavelengths'] = x
+
+                        '''May need to update component parameters also'''
+
+                        for key in fitParams['g%s' % comp].keys():
+                            compDset.attrs[key] = fitParams['g%s' % comp][key]
+
+                else:
+                    attrs = {key : spectrum[dataset].attrs[key] for key in spectrum[dataset].attrs.keys()}
+                    data = spectrum[dataset][()] / transHeight
+                    del spectrum[dataset]
+                    dSet = spectrum.create_dataset(dataset, data = data)
+
+                    for key in attrs:
+                        dSet.attrs[key] = attrs[key]
+
+    print 'Transverse and coupled mode updated'
+
+def plotInitStack(x, yData, imgName = 'Initial Stack', closeFigures = False):
+
+    yDataTrunc = [truncateSpectrum(wavelengths, spectrum)[1] for spectrum in yData]
+    xTrunc = truncateSpectrum(x, yData[0])[0]
+
+    transIndex = np.where(xTrunc == 533)[0][0]
+    yDataTrunc = np.array([spectrum / spectrum[transIndex] for spectrum in yDataTrunc])
+
+    xStack = xTrunc
+    yStack = range(len(yDataTrunc))
+    zStack = np.vstack(yDataTrunc)
+
+    fig = plt.figure(figsize = (9, 7))
+
+    plt.pcolormesh(xStack, yStack, zStack, cmap = 'inferno', vmin = 0, vmax = 4)
+    plt.xlim(450, 900)
+    plt.xlabel('Wavelength (nm)', fontsize = 14)
+    plt.ylabel('Spectrum #', fontsize = 14)
+    cbar = plt.colorbar()
+    cbar.set_ticks([])
+    cbar.set_label('Intensity (a.u.)', fontsize = 14)
+    plt.ylim(min(yStack), max(yStack))
+    plt.yticks(fontsize = 14)
+    plt.xticks(fontsize = 14)
+
+    if imgName.endswith('.png'):
+        plt.title(imgName[:-4])
+
+    else:
+        plt.title(imgName)
+        imgName = '%s.png' % imgName
+
+    fig.savefig(imgName, bbox_inches = 'tight')
+
+    if closeFigures == True:
+        plt.close(fig)
+
+    img = np.array(Image.open(imgName)).transpose((1, 0, 2))
+
+    #except Exception as e:
+    #    print 'Plotting of %s failed because %s' % (imgName, str(e))
+    #    img = 'N/A'
+
+    return img
 
 def plotStackedMap(spectraSorted, imgName = 'Stack', closeFigures = False):
 
@@ -1319,7 +1497,7 @@ def plotStackedMap(spectraSorted, imgName = 'Stack', closeFigures = False):
         fig.savefig(imgName, bbox_inches = 'tight')
 
         if closeFigures == True:
-                plt.close(fig)
+            plt.close(fig)
 
         img = np.array(Image.open(imgName)).transpose((1, 0, 2))
 
@@ -1476,11 +1654,12 @@ def doStats(outputFile, minBinFactor = 5, stacks = True, hist = True, intensityR
 
         intensityRatios, cmPeakPositions, irImg = plotIntensityRatios(outputFile, plot = True, xBins = xBins, yBins = yBins, closeFigures = closeFigures)
 
-        d_ir = outputFile.create_dataset('Statistics/Intensity ratios', data = irImg)
+        outputFile['Statistics/Intensity ratios'] = irImg
+        d_ir = outputFile['Statistics/Intensity ratios']
         d_ir.attrs['Intensity ratios'] = intensityRatios
         d_ir.attrs['Peak positions'] = cmPeakPositions
 
-
+        visualiseIntensityRatios(outputFile)
 
 def fitAllSpectra(x, yData, outputFile, startSpec = 0, monitor_progress = False, plot = False, raiseExceptions = False, closeFigures = False):
 
@@ -1509,7 +1688,7 @@ def fitAllSpectra(x, yData, outputFile, startSpec = 0, monitor_progress = False,
     print '\n0% complete'
 
     g_all = outputFile.create_group('Fitted spectra/')
-    g_spectra_only = outputFile.create_group('All spectra/')
+    g_spectra_only = outputFile.create_group('All spectra/Spectra')
 
     for n, y in enumerate(yData[:]):
 
@@ -1542,7 +1721,7 @@ def fitAllSpectra(x, yData, outputFile, startSpec = 0, monitor_progress = False,
                 failed_spectra_indices.append(n)
                 fitError = e
 
-                print 'Spectrum %s failed' % n # because "%s"' % (n, e)
+                print 'Spectrum %s failed because: \n\t"%s"' % (n, e)
 
         elif raiseExceptions == True:
             fitted_spectrum = fitNpomSpectrum(x, y, detection_threshold = detection_threshold, doubles_threshold = doubles_threshold,
@@ -1661,6 +1840,7 @@ if __name__ == '__main__':
     print 'Functions initialised'
 
     statsOnly = False
+
     if statsOnly == False:
 
         print '\nRetrieving data...'
@@ -1670,14 +1850,15 @@ if __name__ == '__main__':
 
         spectra, wavelengths, background, reference = retrieveData('summary', startSpec, finishSpec)
         x, yData = prepareData(spectra, wavelengths, reference)
+        initImg = plotInitStack(x, yData, imgName = 'Initial Stack', closeFigures = False)
 
         outputFile = createOutputFile('MultiPeakFitOutput')
 
         with h5py.File(outputFile, 'a') as f:
-            fitAllSpectra(x, yData, startSpec, f)
+            fitAllSpectra(x, yData, f, startSpec = startSpec, raiseExceptions = True)
 
     elif statsOnly == True:
         outputFile = 'MultiPeakFitOutputComplete.h5'
 
         with h5py.File(outputFile, 'a') as f:
-            doStats(f, minBinFactor = 6, stacks = False, hist = True, intensityRatios = False)
+            doStats(f, minBinFactor = 6, stacks = False, hist = True, intensityRatios = False, closeFigures = True)
