@@ -2,6 +2,7 @@ from nplab.utils import gui_generator
 import matplotlib 
 matplotlib.use('Qt4Agg')
 from nplab.instrument.electronics.adlink9812 import Adlink9812, Adlink9812UI
+from nplab.instrument.light_sources.fianium import Fianium
 from nplab import datafile
 from nplab.utils.gui_generator import GuiGenerator
 from nplab.utils.gui import *
@@ -11,7 +12,8 @@ import os
 app = get_qt_app()
 daq_card = Adlink9812("C:\ADLINK\PCIS-DASK\Lib\PCI-Dask64.dll",debug=False)
 daq_card_ui = Adlink9812UI(card=daq_card,debug = False)
+fianium = Fianium("COM4")
+instruments = {"adlink9812": daq_card, "fianium":fianium}
 
-instruments = {"adlink9812": daq_card}
 gui = GuiGenerator(instrument_dict=instruments, dock_settings_path=os.path.dirname(dls.__file__)+"/experiment_ui.npy", scripts_path=None, working_directory="~")
 app.exec_()
