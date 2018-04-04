@@ -12,8 +12,8 @@ import os
 app = get_qt_app()
 daq_card = Adlink9812("C:\ADLINK\PCIS-DASK\Lib\PCI-Dask64.dll",debug=False)
 daq_card_ui = Adlink9812UI(card=daq_card,debug = False)
-fianium = Fianium("COM4")
-instruments = {"adlink9812": daq_card, "fianium":fianium}
+# fianium = Fianium("COM4")
+instruments = {"adlink9812": daq_card}#, "fianium":fianium}
 
 gui = GuiGenerator(instrument_dict=instruments, dock_settings_path=os.path.dirname(dls.__file__)+"/experiment_ui.npy", scripts_path=None, working_directory="~")
 app.exec_()
