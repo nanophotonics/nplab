@@ -524,7 +524,7 @@ def multiPeakFit(x, y, indices, y_smooth = np.array([]), cutoff = 1500, fs = 600
             model_elements[0].set_param_hint('center', max = x[peak_end])
 
         for i in range(len(indices))[1:]:
-            component = GaussianModel(prefix = 'g%s_' % (i))
+            component = GaussianModel(prefix = 'g%_'s % (i))
             component.set_param_hint('amplitude', min = 0)
             component.set_param_hint('center', min = x.min(), max = 850) #Above 850 is v. noisy, so NO PEAKS ALLOWED
             model_elements.append(component) #Components list populated with appropriate number of gaussians to be calculated
@@ -1411,10 +1411,12 @@ def updateTransAndCoupledMode(outputFile, transGuess = 533, transRange = [500, 5
 
 def plotInitStack(x, yData, imgName = 'Initial Stack', closeFigures = False):
 
+    print 'Plotting initial stacked map'
+
     yDataTrunc = [truncateSpectrum(wavelengths, spectrum)[1] for spectrum in yData]
     xTrunc = truncateSpectrum(x, yData[0])[0]
 
-    transIndex = np.where(xTrunc == 533)[0][0]
+    transIndex = np.where(xTrunc > 533)[0][0]
     yDataTrunc = np.array([spectrum / spectrum[transIndex] for spectrum in yDataTrunc])
 
     xStack = xTrunc
@@ -1441,6 +1443,7 @@ def plotInitStack(x, yData, imgName = 'Initial Stack', closeFigures = False):
         plt.title(imgName)
         imgName = '%s.png' % imgName
 
+    plt.show()
     fig.savefig(imgName, bbox_inches = 'tight')
 
     if closeFigures == True:
@@ -1855,7 +1858,7 @@ if __name__ == '__main__':
         outputFile = createOutputFile('MultiPeakFitOutput')
 
         with h5py.File(outputFile, 'a') as f:
-            fitAllSpectra(x, yData, f, startSpec = startSpec, raiseExceptions = True)
+            fitAllSpectra(x, yData, f, startSpec = startSpec, raiseExceptions = False)
 
     elif statsOnly == True:
         outputFile = 'MultiPeakFitOutputComplete.h5'
