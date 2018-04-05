@@ -248,6 +248,7 @@ class StageUI(QtWidgets.QWidget, UiTools):
     @QtCore.Slot(str)
     def update_positions(self, axis=None):
         if axis is None:
+            print self.stage.axis_names
             for axis in self.stage.axis_names:
                 self.update_positions(axis=axis)
         else:

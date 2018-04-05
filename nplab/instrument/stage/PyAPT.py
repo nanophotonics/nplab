@@ -17,12 +17,41 @@ mcleung@stanford.edu
 DEBUG = True
 
 
+
+
+'''
+Installation Notes [Ilya Manyakin,im354m, 05/04/2018]
+
+    * Different DLLs are required for 32/64 bit versions:
+        Added 32/64bit versions in DLL/ folder of nplab
+
+    * Possible errors on 64bit machines:
+        * [Tested on NP-Delphinius,05/04/2018]:
+            * "Program can't start because mfc110.dll is missing"
+
+                This is a system DLL error. The DLL comes from installing "Microsoft Visual C++ Redistributable for Visual Studio 2012 Update 4"
+                Site for download [tested 05/04/2018]: https://www.microsoft.com/en-us/download/details.aspx?id=30679
+
+'''
+import os,platform 
 from ctypes import c_long, c_buffer, c_float, windll, pointer
 
-import os
-if DEBUG: print(os.getcwd())
+PARENT_DIR = os.path.dirname(os.path.abspath(__file__))
+if DEBUG: 
+    print "Current working directory: ",os.getcwd()
+    print "PyAPT.py file parent directory: ", PARENT_DIR
+    #determine system type by looking at python executable
+    #source: https://docs.python.org/2/library/platform.html
+    print "Platform architecture: ",platform.architecture() 
+        
 
+OS_TYPE = platform.architecture()[0]
+assert(OS_TYPE in ["32bit","64bit"]),"Cannot determine type of operating system from python executable"
+DLL_PATH = os.path.normpath('{0}/DLL/{1}/APT.dll'.format(PARENT_DIR,OS_TYPE))
 
+if DEBUG:
+    print "Word length of OS [32/64bit]", OS_TYPE
+    print "APT DLL path:", DLL_PATH
 
 class APTMotor():
     def __init__(self, SerialNum=None, HWTYPE=31):
@@ -43,7 +72,9 @@ class APTMotor():
         HWTYPE_BBD10X		44	// 1/2/3 Ch benchtop brushless DC servo driver
         '''
         self.Connected = False
-        self.aptdll = windll.LoadLibrary('APT.dll')
+
+        self.aptdll = windll.LoadLibrary(DLL_PATH)
+
         self.aptdll.EnableEventDlg(True)
         self.aptdll.APTInit()
         #print 'APT initialized'
@@ -92,6 +123,7 @@ class APTMotor():
         '''
         if DEBUG: print('initializeHardwareDevice serial', self.SerialNum)
         result = self.aptdll.InitHWDevice(self.SerialNum)
+
         if result == 0:
             self.Connected = True
             if DEBUG: print('initializeHardwareDevice connection SUCESS')

@@ -499,7 +499,7 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 				times, autocorrelation = self.postprocess(voltages= voltages,dt=dt, save=save, group = dg)
 				
 				if acs_array is None:
-					acs_array = np.zeros(shape=(self.averaging_runs, len(autocorrelation)))
+					acs_array = np.zeros(shape=(self.averaging_runs, len(autocorrelation)),dtype=np.float32)
 				
 				acs_array[i,:] = autocorrelation
 
