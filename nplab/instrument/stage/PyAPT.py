@@ -14,7 +14,7 @@ V1.1
 Michael Leung
 mcleung@stanford.edu
 """
-DEBUG = True
+DEBUG = False
 
 
 
@@ -299,7 +299,7 @@ class APTMotor():
             #raise Exception('Please connect first! Use initializeHardwareDevice')
         self.mRel(relDistance-self.blCorr)
         self.mRel(self.blCorr)
-        if DEBUG: print('mbRel SUCESS')
+        if DEBUG: print('mbRel SUCCESS')
         return True
 
     def mbAbs(self, absPosition):
@@ -314,7 +314,7 @@ class APTMotor():
             if DEBUG: print('backlash mAbs', absPosition - self.blCorr)
             self.mAbs(absPosition-self.blCorr)
         self.mAbs(absPosition)
-        if DEBUG: print('mbAbs SUCESS')
+        if DEBUG: print('mbAbs SUCCESS')
         return True
 
         ''' Miscelaneous '''
@@ -335,7 +335,7 @@ class APTMotor():
         self.Connected = False
 
 
-    def stop(self):
+    def stopMove(self):
         if DEBUG: print("Stopping stage:{}".format(self.SerialNum))
         if not self.Connected:
             raise Exception("Not connected to the stage")

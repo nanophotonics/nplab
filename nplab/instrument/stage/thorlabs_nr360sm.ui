@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>263</width>
-    <height>300</height>
+    <width>296</width>
+    <height>258</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -65,63 +65,43 @@
      <property name="bottomMargin">
       <number>10</number>
      </property>
-     <item row="9" column="0">
-      <widget class="QPushButton" name="load_config_button">
+     <item row="6" column="1">
+      <widget class="QLineEdit" name="zero_pos_textbox">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
        <property name="text">
-        <string>Load Config</string>
+        <string>0.0</string>
        </property>
       </widget>
      </item>
-     <item row="9" column="1">
-      <widget class="QLineEdit" name="load_config_textbox">
+     <item row="10" column="1">
+      <widget class="QLineEdit" name="save_config_textbox">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
        <property name="text">
         <string>~/stage-config.ini</string>
        </property>
       </widget>
      </item>
-     <item row="7" column="0">
+     <item row="10" column="0">
       <widget class="QPushButton" name="save_config_button">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
        <property name="text">
         <string>Save Config</string>
        </property>
       </widget>
      </item>
-     <item row="7" column="1">
-      <widget class="QLineEdit" name="save_config_textbox">
+     <item row="11" column="1">
+      <widget class="QLineEdit" name="load_config_textbox">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
        <property name="text">
         <string>~/stage-config.ini</string>
-       </property>
-      </widget>
-     </item>
-     <item row="5" column="0">
-      <widget class="QPushButton" name="zero_button">
-       <property name="text">
-        <string>Zero</string>
-       </property>
-      </widget>
-     </item>
-     <item row="5" column="1">
-      <widget class="QPushButton" name="move_button">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="minimumSize">
-        <size>
-         <width>130</width>
-         <height>0</height>
-        </size>
-       </property>
-       <property name="sizeIncrement">
-        <size>
-         <width>2</width>
-         <height>2</height>
-        </size>
-       </property>
-       <property name="text">
-        <string>Move</string>
        </property>
       </widget>
      </item>
@@ -134,7 +114,7 @@
         </size>
        </property>
        <property name="text">
-        <string>Rotation Speed[mm]</string>
+        <string>Rotation Speed[deg/s]</string>
        </property>
       </widget>
      </item>
@@ -240,6 +220,16 @@
        </property>
       </widget>
      </item>
+     <item row="11" column="0">
+      <widget class="QPushButton" name="load_config_button">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="text">
+        <string>Load Config</string>
+       </property>
+      </widget>
+     </item>
      <item row="4" column="1">
       <widget class="QLineEdit" name="rotation_speed_textbox">
        <property name="sizePolicy">
@@ -271,7 +261,53 @@
        </property>
       </widget>
      </item>
-     <item row="6" column="1">
+     <item row="6" column="0">
+      <widget class="QPushButton" name="zero_button">
+       <property name="text">
+        <string>Zero</string>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="0">
+      <widget class="QPushButton" name="move_button">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>130</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="sizeIncrement">
+        <size>
+         <width>2</width>
+         <height>2</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>Move</string>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="1">
+      <widget class="QComboBox" name="move_combo_box">
+       <item>
+        <property name="text">
+         <string>absolute</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>relative</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item row="7" column="0">
       <widget class="QPushButton" name="stop_button">
        <property name="text">
         <string>Stop</string>
