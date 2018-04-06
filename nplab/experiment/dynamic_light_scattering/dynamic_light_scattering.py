@@ -15,5 +15,6 @@ daq_card_ui = Adlink9812UI(card=daq_card,debug = False)
 # fianium = Fianium("COM4")
 instruments = {"adlink9812": daq_card}
 
+
 gui = GuiGenerator(instrument_dict=instruments, dock_settings_path=os.path.dirname(dls.__file__)+"/experiment_ui.npy", scripts_path=None, working_directory="~")
 app.exec_()

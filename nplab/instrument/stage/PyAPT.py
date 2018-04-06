@@ -54,7 +54,7 @@ if DEBUG:
     print "APT DLL path:", DLL_PATH
 
 class APTMotor():
-    def __init__(self, SerialNum=None, HWTYPE=31):
+    def __init__(self, SerialNum=None, HWTYPE=31,blacklash_correction=0.10,minimum_velocity=0.0,acceleration=5.0,max_velocity=10.0):
         '''
         HWTYPE_BSC001		11	// 1 Ch benchtop stepper driver
         HWTYPE_BSC101		12	// 1 Ch benchtop stepper driver
@@ -79,7 +79,7 @@ class APTMotor():
         self.aptdll.APTInit()
         #print 'APT initialized'
         self.HWType = c_long(HWTYPE)
-        self.blCorr = 0.10 #100um backlash correction
+        self.blCorr = blacklash_correction #100um backlash correction
         if SerialNum is not None:
             if DEBUG: print("Serial is", SerialNum)
             self.SerialNum = c_long(SerialNum)
@@ -88,6 +88,8 @@ class APTMotor():
 
         else:
             if DEBUG: print("No serial, please setSerialNumber")
+
+        self.setVelocityParameters(minVel=minimum_velocity, acc=acceleration, maxVel=max_velocity)
 
     def getNumberOfHardwareUnits(self):
         '''
@@ -331,3 +333,13 @@ class APTMotor():
         self.aptdll.APTCleanUp()
         if DEBUG: print('APT cleaned up')
         self.Connected = False
+
+
+    def stop(self):
+        if DEBUG: print("Stopping stage:{}".format(self.SerialNum))
+        if not self.Connected:
+            raise Exception("Not connected to the stage")
+        else:
+            self.aptdll.MOT_StopProfiled(self.SerialNum)
+            if DEBUG: print("Stopped")
+            return 

@@ -1,18 +1,39 @@
-import math
-import os
+import os,sys,math, numpy as np, matplotlib.pyplot as plt 
 import ctypes
 from ctypes import *
-import numpy as np
+
+import nplab
 from nplab.instrument import Instrument
 from nplab.instrument.electronics import adlink9812_constants
 from nplab.utils.gui import *
 from nplab.ui.ui_tools import *
 from nplab.experiment.dynamic_light_scattering import dls_signal_postprocessing 
-import nplab
+
 import datetime
 import matplotlib 
-import matplotlib.pyplot as plt 
 import scipy.stats
+import threading
+import logging
+import timeit
+
+#############################################################################
+# SETUP LOGGING
+#############################################################################
+LOGGERS = ["capture-logger", "adlink-logger"]
+
+#Make capture logger - outputs to UI while running
+ui_logger = logging.getLogger(LOGGERS[0])
+ui_logger.setLevel(logging.INFO)
+ch = logging.StreamHandler(sys.stdout)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+ch.setFormatter(formatter)
+ui_logger.addHandler(ch)
+
+
+#############################################################################
+#############################################################################
+
+
 ### Steps of PCI-DASK applications:
 #
 # Full documentation: ADLINK PCIS-DASK User's Manual
@@ -40,11 +61,15 @@ class Adlink9812(Instrument):
 
 	def __init__(self, dll_path="C:\ADLINK\PCIS-DASK\Lib\PCI-Dask64.dll",verbose=False,debug=False):
 		"""Initialize DLL and configure card"""
-		# super(Adlink9812,self).__init__()
+		super(Adlink9812,self).__init__()
 		self.debug = debug
+		if self.debug:
+			self.log(message="Instrument.Adlink9812: DEBUG MODE")
 		if not os.path.exists(dll_path):
 			if self.debug != True:
-				raise ValueError("Adlink DLL not found: {}".format(dll_path))
+				message= "Adlink DLL not found: {}".format(dll_path)
+				self.log(message=message)
+				raise ValueError(message)
 		else:
 			self.dll = CDLL(dll_path)
 			self.card_id = self.register_card()
@@ -58,13 +83,13 @@ class Adlink9812(Instrument):
 	def register_card(self,channel = 0):
 		outp = ctypes.c_int16(self.dll.Register_Card(adlink9812_constants.PCI_9812,c_ushort(channel)))
 		if outp.value < 0:
-			print "Register_Card: nonpositive value -> error code:", outp
+			self.log("Register_Card: nonpositive value -> error code:"+str(outp))
 		return outp.value
 
 	def release_card(self):
 		releaseErr = ctypes.c_int16(self.dll.Release_Card(self.card_id))
 		if releaseErr.value != 0:
-			print "Release_Card: Non-zero status code:", releaseErr.value
+			self.log(message="Release_Card: Non-zero status code:"+str(releaseErr.value))
 		return
 
 	def get_card_sample_rate(self,sampling_freq):
@@ -72,7 +97,7 @@ class Adlink9812(Instrument):
 		statusCode = ctypes.c_int16(DLL.GetActualRate(self.card_id,c_double(sampling_freq), byref(actual)))
 
 		if statusCode.value != 0:
-			print "GetActualRate: Non-zero status code:", statusCode.value
+			self.log(message="GetActualRate: Non-zero status code:"+str(statusCode.value))
 		return actual.value
 
 	def get_qt_ui(self):
@@ -95,7 +120,7 @@ class Adlink9812(Instrument):
 			))
 
 		if configErr.value != 0:
-			print "AI_9812_Config: Non-zero status code:", configErr.value
+			self.log(message="AI_9812_Config: Non-zero status code:"+str(configErr.value))
 		return
 
 
@@ -109,7 +134,7 @@ class Adlink9812(Instrument):
 			))
 
 		if convertErr.value != 0:
-			print "AI_ContVScale: Non-zero status code:", convertErr.value
+			self.log(message="AI_ContVScale: Non-zero status code:"+str(convertErr.value))
 		return 
 
 
@@ -132,7 +157,7 @@ class Adlink9812(Instrument):
 		))
 
 		if readErr.value != 0:
-			print "AI_ContReadChannel: Non-zero status code:", readErr.value
+			self.log(message="AI_ContReadChannel: Non-zero status code:"+str(readErr.value))
 
 		#Convert to volts
 		self.convert_to_volts(dataBuff,voltageOut,sample_count)
@@ -166,7 +191,7 @@ class Adlink9812(Instrument):
 		#AI_AsyncDblBufferMode - initialize Double Buffer Mode
 		buffModeErr = ctypes.c_int16(self.dll.AI_AsyncDblBufferMode(c_ushort(self.card_id),ctypes.c_bool(1)))
 		if verbose or buffModeErr.value != 0:
-			print "AI_AsyncDblBufferMode: Non-zero status code",buffModeErr.value
+			self.log(message="AI_AsyncDblBufferMode: Non-zero status code"+str(buffModeErr.value))
 
 		#card buffer
 		cardBuffer = (c_ushort*card_buffer_size)()
@@ -181,7 +206,7 @@ class Adlink9812(Instrument):
 		# oBs = [(c_double*user_buffer_size)()]*nbuff
 		oBs = []
 		if verbose:
-			print "Number of user buffers:", nbuff
+			self.log(message="Number of user buffers:"+str(nbuff))
 
 		#AI_ContReadChanne
 
@@ -196,7 +221,7 @@ class Adlink9812(Instrument):
 		))
 
 		if verbose or readErr.value != 0:
-			print "AI_ContReadChannel: Non-zero status code",readErr.value
+			self.log(message="AI_ContReadChannel: Non-zero status code"+str(readErr.value))
 
 		#AI_AsyncDblBufferHalfReader
 		#I16 AI_AsyncDblBufferHalfReady (U16 CardNumber, BOOLEAN *HalfReady,BOOLEAN *StopFlag)
@@ -212,20 +237,20 @@ class Adlink9812(Instrument):
 					ctypes.byref(stopFlag))
 				)
 				if buffReadyErr.value!=0:
-					print "buffReadErr:",buffReadyErr.value
-					print "HalfReady:",halfReady.value
+					self.log(message="buffReadErr:"+str(buffReadyErr.value))
+					self.log(message="HalfReady:"+str(halfReady.value))
 		
 			#AI_AsyncDblBufferTransfer
 			#I16 AI_AsyncDblBufferTransfer (U16 CardNumber, U16 *Buffer)
 			buffTransferErr = ctypes.c_int16(self.dll.AI_AsyncDblBufferTransfer(c_ushort(self.card_id), ctypes.byref(currentBuffer)))
 			uBs.append(currentBuffer)
 			if buffTransferErr.value != 0:
-				print "buffTransferErr:",buffTransferErr.value
+				self.log(message="buffTransferErr:"+str(buffTransferErr.value))
 
 		accessCnt = ctypes.c_int32(0)
 		clearErr = ctypes.c_int16(self.dll.AI_AsyncClear(self.card_id, ctypes.byref(accessCnt)))
 		if verbose:
-			print "AI_AsyncClear,AccessCnt:", accessCnt.value
+			self.log(message="AI_AsyncClear,AccessCnt:"+str(accessCnt.value))
 		
 		#concatenate user buffer onto existing numpy array
 		#reinitialize user buffer
@@ -241,7 +266,7 @@ class Adlink9812(Instrument):
 			))
 			oBs.append(oB)
 			if convertErr.value != 0:
-				print "AI_ContVScale: Non-zero status code:", convertErr.value
+				self.log(message="AI_ContVScale: Non-zero status code:"+str(convertErr.value))
 		return np.concatenate(oBs)
 
 	@staticmethod
@@ -250,9 +275,10 @@ class Adlink9812(Instrument):
 
 	def capture(self,sample_freq, sample_count,verbose = False):
 		assert(sample_freq <= int(2e7) and sample_freq > 1)
+		logging.getLogger(LOGGERS[0])
 		dt = 1.0/sample_freq
 		if self.debug:
-			print "---DEBUG MODE ENABLED---"
+			
 			debug_out = (2.0*np.random.rand(sample_count))-1.0 
 			return debug_out,dt
 
@@ -270,10 +296,15 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 		if not isinstance(card, Adlink9812):
 			raise ValueError("Object is not an instance of the Adlink9812 Daq")
 		super(Adlink9812UI, self).__init__()
+		# self.logger = logging.getLogger(LOGGERS[0])
 		self.card = card 
 		self.parent = parent
 		self.debug = debug
 		self.verbose = verbose
+		self.log = self.card.log
+
+		#Initialize the capture thread handle
+		self.capture_thread = None
 
 		#TODO - add adlink9812.ui file properly
 		uic.loadUi(os.path.join(os.path.dirname(__file__), 'adlink9812.ui'), self)
@@ -290,7 +321,7 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 
 
 		#actions_layout
-		self.capture_button.clicked.connect(self.capture)
+		self.capture_button.clicked.connect(self.threaded_capture)
 
 		self.set_sample_freq()
 		self.set_sample_count()
@@ -303,7 +334,7 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 		try:
 			self.averaging_runs = int(self.average_textbox.text())
 		except:
-			print "Failed parsing average_textbox value: {0}".format(self.average_textbox.text())
+			self.log(message="Failed parsing average_textbox value: {0}".format(self.average_textbox.text()))
 		return
 
 	# def set_threshold(self):
@@ -317,7 +348,7 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 		try:
 			self.bin_width = float(self.binning_textbox.text())
 		except Exception, e:
-			print "Failed parsing binning_threshold: {0}".format(self.binning_textbox.text())
+			self.log(message="Failed parsing binning_threshold: {0}".format(self.binning_textbox.text()))
 		return
 
 	def set_sample_freq(self):
@@ -325,7 +356,7 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 		try:
 			self.sample_freq = int(float(self.sample_freq_textbox.text())*MHz)
 		except Exception,e:
-			print "Failed parsing sample_freq_textbox value to float:",self.sample_freq_textbox.text()
+			self.log(message="Failed parsing sample_freq_textbox value to float:"+str(self.sample_freq_textbox.text()))
 			return
 		return
 
@@ -340,13 +371,12 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 			self.sample_count = int(float(self.sample_count_textbox.text()))
 
 		except Exception,e:
-			print "Failed parsing sample count to int:",self.sample_freq_textbox.text()
+			self.log(message="Failed parsing sample count to int:"+self.sample_freq_textbox.text())
 		return
 
 	def set_series_name(self):
 		self.series_group = self.series_name_textbox.text()
 		return
-
 
 	def save_data(self,data,datatype, group,metadata=None):
 		VALID_DATATYPES = ["raw_voltage", "voltage_difference", "photon_counts", "autocorrelation","autocorrelation_stdev","autocorrelation_skew"]
@@ -371,59 +401,15 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 			
 		else:
 			raise ValueError("adlink9812.save_data - Invalid datatype")
-		group.create_dataset(datatype,data=data, attrs = attrs)
+		group.create_dataset(datatype+"_%d",data=data, attrs = attrs)
 		group.file.flush()
 		return 
 
-	# def save_raw(self,voltages,dt, group):
-	# 	vmean = np.mean(voltages)
-	# 	vmax = np.max(voltages)
-	# 	vmin = np.min(voltages)
-	# 	vstd = np.std(voltages)
-	# 	vpp = np.abs(vmax-vmin)
-	# 	attrs = {
-			
-	# 		"device": "adlink9812",
-	# 		"type": "raw_voltage",
-	# 		"_units": "volts",
-	# 		"sample_count": self.sample_count,
-	# 		"sampling_frequency":self.sample_freq,
-	# 		"dt": dt,
-	# 		"sampling_time_interval":dt*self.sample_count,
-	# 		"vmean":vmean,
-	# 		"vstdev": vstd,
-	# 		"vmax":vmax,
-	# 		"vmin":vmin,
-	# 		"vpp":vpp,
-	# 		"X label": "Sample Index",
-	# 		"Y label": "Voltage [V]"
-	# 		}
-
-	# 	group.create_dataset("raw_voltage",data=voltages, attrs = attrs)
-	# 	group.file.flush()
-
-
-	# def save_difference(self,rounded_diff):
-
-	# 	total_counts = np.sum(np.absolute(rounded_diff))
-	# 	sample_time_interval = dt*self.sample_count
-	# 	count_frequency = total_counts/float(sample_time_interval)
-
-	# 	attrs = {
-	# 		"device": "adlink9812",
-	# 		"type": "difference",
-	# 		"_units": "none",
-	# 		"total_counts[stage:difference]" : total_counts,
-	# 		"total_sampling_time":dt*self.sample_count,
-	# 		"count_rate" : count_frequency,
-	# 		"X label": "Sample Index",
-	# 		"Y label": "Normalized Voltage Difference [V]"
-	# 		}
-	# 	print "Saving Difference stage"
-	# 	group.create_dataset("diff_voltage",data=rounded_diff, attrs = attrs)
-	# 	group.file.flush()
-
 	def postprocess(self,voltages,dt,save,group):
+
+		#initial system parameters
+		sample_count = len(voltages)
+		sample_time = dt*sample_count
 
 		#take difference of voltages
 		rounded_diff = dls_signal_postprocessing.signal_diff(voltages)
@@ -437,6 +423,9 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 		binned_counts = dls_signal_postprocessing.binning(thresholded=thresholded,index_bin_width=index_bin_width)
 		time_bins = time_bin_width*np.arange(0,len(binned_counts))
 
+		total_counts = np.sum(binned_counts)
+		count_rate = float(total_counts)/float(sample_time)
+		self.log("\tCounts: {0:.3g}, Rate:{1:.3g}".format(total_counts, count_rate))
 		#correlation
 		#note - truncating delay t=0, this is the zero frequency - not interesting
 		times = time_bins[1:]
@@ -462,14 +451,15 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 		plot = self.plot_checkbox.isChecked()
 		average = self.average_checkbox.isChecked()
 
-		print "-"*5+"Adlink 9812: Capture" + "-"*5
-		print "SamplingFreq (Hz):", self.sample_freq
-		print "SampleCount (counts):", self.sample_count
-		print "SeriesName: ", self.series_group
-		print "Plot trace:", plot
-		print "Save trace:", save
-		print "Averaging:", average
-			
+		message = '''
+ Capture started
+ SamplingFreq (Hz):{0}
+ SampleCount (counts):{1}
+ SeriesName:{2}
+ Plot trace:{3}
+ Save trace:{4}
+ Averaging:{5}'''.format(self.sample_freq,self.sample_count, self.series_group, plot,save,average)
+		self.log(message=message,level="info")
 
 		if save:
 			try:
@@ -486,15 +476,22 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 			times, autocorrelation = self.postprocess(voltages= voltages,dt=dt, save=save, group = dg)
 			acs_array = None  
 		elif average == True:
-			print "AVERAGING ENABLED - RESETTING CHECKED OPTIONS"
+			self.log(
+				message='''Averaging enabled - checkbox options reset:\n\traw_checkbox:{0} -> False\n\tdifference_checkbox {1} -> False\n\tbinning_checkbox {2} -> False'''.format(
+					self.raw_checkbox.isChecked(),
+					self.difference_checkbox.isChecked(),
+					self.binning_checkbox.isChecked()),
+				level="warn")
 			self.raw_checkbox.setChecked(False)
 			self.difference_checkbox.setChecked(False)
 			self.binning_checkbox.setChecked(False)
-			# self.correlate_checkbox.setChecked(False)
 
 			acs_array = None
 			for i in range(self.averaging_runs):
-				print "Averaging iteration: {0}".format(i)
+				start_time = timeit.default_timer()
+	
+				self.card.log(message="---Iteration:{0}".format(i))
+
 				voltages, dt = self.card.capture(sample_freq=self.sample_freq, sample_count=self.sample_count)
 				times, autocorrelation = self.postprocess(voltages= voltages,dt=dt, save=save, group = dg)
 				
@@ -503,6 +500,8 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 				
 				acs_array[i,:] = autocorrelation
 
+				exec_time =timeit.default_timer() - start_time
+				self.log(message="/--Iteration:{0} [T_exec:{1:.3g}]".format(i,exec_time))
 			#compute mean, stdev and skew for all data
 			mean_acs = np.mean(acs_array,axis=0)
 			assert(len(mean_acs) == len(times))
@@ -514,6 +513,13 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 			self.save_data(data=np.vstack((times, skew_acs)),datatype="autocorrelation_skew", group=dg,metadata={"averaged_data": "True"})
 
 		return 
+
+	def threaded_capture(self):
+		if isinstance(self.capture_thread, threading.Thread) and self.capture_thread.is_alive():
+			self.card.log(message="Capture already running!", level="info")
+			return
+		self.capture_thread = threading.Thread(target=self.capture)
+		self.capture_thread.start()
 
 if __name__ == "__main__":
 	
