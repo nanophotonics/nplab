@@ -268,7 +268,7 @@ class Adlink9812(Instrument):
 class Adlink9812UI(QtWidgets.QWidget, UiTools):
 	def __init__(self,card, parent=None,debug = False, verbose = False):
 		if not isinstance(card, Adlink9812):
-			raise ValueError("Object is not an instnace of the Adlink9812 Daq")
+			raise ValueError("Object is not an instance of the Adlink9812 Daq")
 		super(Adlink9812UI, self).__init__()
 		self.card = card 
 		self.parent = parent
