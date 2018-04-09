@@ -443,7 +443,7 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 		return total_counts, count_rate 
 
 
-	def capture(self):
+	def capture(self,metadata={}):
 		
 		save = self.save_checkbox.isChecked()
 		plot = self.plot_checkbox.isChecked()
@@ -470,7 +470,9 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 		
 		self.description = self.comment_textbox.document().toPlainText()
 		self.log(message="Description:{}".format(self.description))
-		self.base_metadata = {"description":self.description}
+
+		self.base_metadata = dict(metadata)
+		self.base_metadata.update({"description":self.description})
 
 		#Averaging run:
 		if average == False:
@@ -519,11 +521,11 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 
 		return 
 
-	def threaded_capture(self):
+	def threaded_capture(self,settings):
 		if isinstance(self.capture_thread, threading.Thread) and self.capture_thread.is_alive():
 			self.card.log(message="Capture already running!", level="info")
 			return
-		self.capture_thread = threading.Thread(target=self.capture)
+		self.capture_thread = threading.Thread(target=self.capture,args=(settings,))
 		self.capture_thread.start()
 
 if __name__ == "__main__":

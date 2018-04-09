@@ -16,6 +16,7 @@ class Thorlabs_NR360SM(Stage,APTMotor):
 		self.axis_names=["deg"]
 		self.zero_pos = 0.0
 		self.serial_num = SerialNum
+		self.ui = None
 
 
 
@@ -32,9 +33,10 @@ class Thorlabs_NR360SM(Stage,APTMotor):
 		increment - input from user   
 	'''
 
-	@staticmethod
-	def get_qt_ui_cls():
-		return Thorlabs_NR360SM_UI
+	def get_qt_ui(self):
+		if self.ui is None:
+			self.ui = Thorlabs_NR360SM_UI(stage=self) 
+		return self.ui
 	def move(self,pos,relative=False,axis=None, true_angle = False):
 		next_position = self.get_next_position(pos,relative=relative, true_angle=true_angle)
 		self.mbAbs(next_position)
@@ -138,7 +140,7 @@ class Thorlabs_NR360SM_UI(QtWidgets.QWidget, UiTools):
 
 	def set_angle_upper_bound(self):
 		try:
-			self.angle_upper_bound = float(self.angle_lower_bound_textbox.text())
+			self.angle_upper_bound = float(self.angle_upper_bound_textbox.text())
 		except: 
 			self.log("Unable to set angle UPPER bound",level="error")
 		return
@@ -175,21 +177,21 @@ class Thorlabs_NR360SM_UI(QtWidgets.QWidget, UiTools):
 		#TODO: set current angle textbox to zero
 		return 
 
-	def move_stage(self):
+	def move_stage(self,blocking = False):
 		
 		#get whether turn is relative
 		relative = (self.move_type == "relative")
 
 		#get true angle that we want to rotate to
-		true_next_angle = self.stage.get_next_position(self.next_angle,relative=relative, true_angle=True)
-		
+		true_next_angle = self.stage.get_next_position(self.new_angle,relative=relative, true_angle=True)
+		self.stage.log("True Next angle: {}".format(true_next_angle))
 		#test if angle is below lower bound - error if so
 		if true_next_angle < self.angle_lower_bound:
 			self.log("Target angle BELOW anglular LOWER bound",level="error")
 			return 
 		#test if angle is above upper bound - error if so
 		elif true_next_angle > self.angle_upper_bound:
-			self.log("Target angle ABOVE anglular UPPER bound",level="error")
+			self.stage.log("Target angle {0} ABOVE anglular UPPER bound {1}".format(true_next_angle,self.angle_upper_bound),level="error")
 		#otherwise - move, if not already moving
 		else:
 			if isinstance(self.move_thread, threading.Thread) and self.move_thread.is_alive():
@@ -197,6 +199,8 @@ class Thorlabs_NR360SM_UI(QtWidgets.QWidget, UiTools):
 				return
 			self.move_thread = threading.Thread(target=self.stage.move,args=(self.new_angle,relative))
 			self.move_thread.start()
+			if blocking == True:
+				self.move_thread.join()
 		return
 
 	def stop_stage(self):
