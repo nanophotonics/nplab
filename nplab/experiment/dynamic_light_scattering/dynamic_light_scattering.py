@@ -138,7 +138,14 @@ class DynamicLightScatteringUI(QtWidgets.QWidget, UiTools):
 app = get_qt_app()
 adc = Adlink9812("C:\ADLINK\PCIS-DASK\Lib\PCI-Dask64.dll",debug=True)
 
-experiment = DynamicLightScattering(instruments = {"adc":adc})
-instruments = {"adlink9812": adc, "configmanager":experiment}
+# sample_rotation_stage = Thorlabs_NR360SM(SerialNum=90810016,HWType=22)
+# config_loader = DynamicLightScattering(instruments = {"adc":adc,"sample_rotation_stage":sample_rotation_stage})
+# instruments = {"adlink9812": adc, "config":config_loader, "stage":sample_rotation_stage}
+
+
+config_loader = DynamicLightScattering(instruments = {"adc":adc})
+instruments = {"adlink9812": adc, "config":config_loader}
+
+
 gui = GuiGenerator(instrument_dict=instruments, dock_settings_path=os.path.join(os.path.dirname(__file__),"experiment_ui.npy"), scripts_path=None, working_directory="~")
 app.exec_()
