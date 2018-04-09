@@ -17,27 +17,44 @@ class Thorlabs_NR360SM(Stage,APTMotor):
 		self.zero_pos = 0.0
 		self.serial_num = SerialNum
 
-	def move(self,pos,relative=False,axis=None):
-		if relative == True:
-			current_pos = self.get_position()[0]
-			self.move(pos=pos+current_pos,relative=False)
-		else:
-			try:
-				self.mbAbs(pos+self.zero_pos)
-			except:
-				print "Warning: Thorlabs_NR360SM.move() raised exception!"
-		return
+
 
 	def __del__(self):
 		self.cleanUpAPT()
+	
+	'''
+	@param true_angle - angle reported by the stage itself
+	@zero - zero set by this class
 
-	def get_position(self,axis=None,true_angle=False):
+	next_angle = (+zero) (+current) + increment
+		(+zero) if true_angle == False
+		(+current) if relative == True
+		increment - input from user   
+	'''
+
+	@staticmethod
+	def get_qt_ui_cls():
+		return Thorlabs_NR360SM_UI
+	def move(self,pos,relative=False,axis=None, true_angle = False):
+		next_position = self.get_next_position(pos,relative=relative, true_angle=true_angle)
+		self.mbAbs(next_position)
+		return
+
+	def get_next_position(self,pos,relative=False, true_angle = False):
+		next_position = pos
+		if relative == True:
+			current_pos = self.get_position(true_angle=true_angle)[0]
+			next_position = next_position + current_pos
+		return next_position
+
+	def get_position(self,axis=None, true_angle=False):
 		
 		#if interested in true angle reported by the stage
 		if true_angle == True:
 			return [self.getPos()]
 		#if interested in angle relative to current zero of device
 		else:
+			#subtract zero from the current position
 			relative_angle = self.getPos()-self.zero_pos
 			while relative_angle < 0.0:
 				relative_angle = relative_angle + 360.0
@@ -84,6 +101,9 @@ class Thorlabs_NR360SM_UI(QtWidgets.QWidget, UiTools):
 		self.serial_num_textbox.setText(str(self.stage.serial_num))
 		self.new_angle_textbox.textChanged.connect(self.set_new_angle)
 		self.rotation_speed_textbox.textChanged.connect(self.set_rotation_speed)
+		self.angle_lower_bound_textbox.textChanged.connect(self.set_angle_lower_bound)
+		self.angle_upper_bound_textbox.textChanged.connect(self.set_angle_upper_bound)
+
 		self.zero_button.clicked.connect(self.set_zero)
 		self.move_button.clicked.connect(self.move_stage)
 		self.save_config_button.clicked.connect(self.save_config)
@@ -91,10 +111,14 @@ class Thorlabs_NR360SM_UI(QtWidgets.QWidget, UiTools):
 		self.move_combo_box.currentIndexChanged.connect(self.set_move_type)
 		self.stop_button.clicked.connect(self.stop_stage)
 
+
+
 		#initialize values
 		self.set_rotation_speed()
 		self.set_new_angle()
 		self.set_move_type()
+		self.set_angle_lower_bound()
+		self.set_angle_upper_bound()
 
 	#What to do on close
 	def closeEvent(self,event):
@@ -104,6 +128,21 @@ class Thorlabs_NR360SM_UI(QtWidgets.QWidget, UiTools):
 		if self.debug > 0: print "Widget closed - clean up DONE!"
 		event.accept()
 		return
+
+	def set_angle_lower_bound(self):
+		try:
+			self.angle_lower_bound = float(self.angle_lower_bound_textbox.text())
+		except: 
+			self.log("Unable to set angle LOWER bound",level="error")
+		return  
+
+	def set_angle_upper_bound(self):
+		try:
+			self.angle_upper_bound = float(self.angle_lower_bound_textbox.text())
+		except: 
+			self.log("Unable to set angle UPPER bound",level="error")
+		return
+
 
 	def set_move_type(self):
 		self.move_type = self.move_combo_box.currentText()
@@ -137,12 +176,27 @@ class Thorlabs_NR360SM_UI(QtWidgets.QWidget, UiTools):
 		return 
 
 	def move_stage(self):
-		if isinstance(self.move_thread, threading.Thread) and self.move_thread.is_alive():
-			self.stage.log(message="Already moving!", level="info")
-			return
+		
+		#get whether turn is relative
 		relative = (self.move_type == "relative")
-		self.move_thread = threading.Thread(target=self.stage.move,args=(self.new_angle,relative))
-		self.move_thread.start()
+
+		#get true angle that we want to rotate to
+		true_next_angle = self.stage.get_next_position(self.next_angle,relative=relative, true_angle=True)
+		
+		#test if angle is below lower bound - error if so
+		if true_next_angle < self.angle_lower_bound:
+			self.log("Target angle BELOW anglular LOWER bound",level="error")
+			return 
+		#test if angle is above upper bound - error if so
+		elif true_next_angle > self.angle_upper_bound:
+			self.log("Target angle ABOVE anglular UPPER bound",level="error")
+		#otherwise - move, if not already moving
+		else:
+			if isinstance(self.move_thread, threading.Thread) and self.move_thread.is_alive():
+				self.stage.log(message="Already moving!", level="info")
+				return
+			self.move_thread = threading.Thread(target=self.stage.move,args=(self.new_angle,relative))
+			self.move_thread.start()
 		return
 
 	def stop_stage(self):

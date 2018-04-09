@@ -65,27 +65,7 @@
      <property name="bottomMargin">
       <number>10</number>
      </property>
-     <item row="6" column="1">
-      <widget class="QLineEdit" name="zero_pos_textbox">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-       <property name="text">
-        <string>0.0</string>
-       </property>
-      </widget>
-     </item>
-     <item row="10" column="1">
-      <widget class="QLineEdit" name="save_config_textbox">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-       <property name="text">
-        <string>~/stage-config.ini</string>
-       </property>
-      </widget>
-     </item>
-     <item row="10" column="0">
+     <item row="12" column="0">
       <widget class="QPushButton" name="save_config_button">
        <property name="enabled">
         <bool>false</bool>
@@ -95,8 +75,18 @@
        </property>
       </widget>
      </item>
-     <item row="11" column="1">
-      <widget class="QLineEdit" name="load_config_textbox">
+     <item row="8" column="1">
+      <widget class="QLineEdit" name="zero_pos_textbox">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="text">
+        <string>0.0</string>
+       </property>
+      </widget>
+     </item>
+     <item row="12" column="1">
+      <widget class="QLineEdit" name="save_config_textbox">
        <property name="enabled">
         <bool>false</bool>
        </property>
@@ -105,16 +95,13 @@
        </property>
       </widget>
      </item>
-     <item row="4" column="0">
-      <widget class="QLabel" name="label_8">
-       <property name="minimumSize">
-        <size>
-         <width>50</width>
-         <height>0</height>
-        </size>
+     <item row="13" column="1">
+      <widget class="QLineEdit" name="load_config_textbox">
+       <property name="enabled">
+        <bool>false</bool>
        </property>
        <property name="text">
-        <string>Rotation Speed[deg/s]</string>
+        <string>~/stage-config.ini</string>
        </property>
       </widget>
      </item>
@@ -159,6 +146,19 @@
        </property>
       </widget>
      </item>
+     <item row="4" column="0">
+      <widget class="QLabel" name="label_8">
+       <property name="minimumSize">
+        <size>
+         <width>50</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>Rotation Speed[deg/s]</string>
+       </property>
+      </widget>
+     </item>
      <item row="2" column="0">
       <widget class="QLabel" name="label_6">
        <property name="minimumSize">
@@ -169,37 +169,6 @@
        </property>
        <property name="text">
         <string>New Angle [deg]</string>
-       </property>
-      </widget>
-     </item>
-     <item row="2" column="1">
-      <widget class="QLineEdit" name="new_angle_textbox">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-         <horstretch>2</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="minimumSize">
-        <size>
-         <width>130</width>
-         <height>0</height>
-        </size>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>80</width>
-         <height>16777215</height>
-        </size>
-       </property>
-       <property name="sizeIncrement">
-        <size>
-         <width>5</width>
-         <height>5</height>
-        </size>
-       </property>
-       <property name="text">
-        <string>0.0</string>
        </property>
       </widget>
      </item>
@@ -220,7 +189,7 @@
        </property>
       </widget>
      </item>
-     <item row="11" column="0">
+     <item row="13" column="0">
       <widget class="QPushButton" name="load_config_button">
        <property name="enabled">
         <bool>false</bool>
@@ -261,14 +230,59 @@
        </property>
       </widget>
      </item>
-     <item row="6" column="0">
+     <item row="2" column="1">
+      <widget class="QLineEdit" name="new_angle_textbox">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+         <horstretch>2</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>130</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>80</width>
+         <height>16777215</height>
+        </size>
+       </property>
+       <property name="sizeIncrement">
+        <size>
+         <width>5</width>
+         <height>5</height>
+        </size>
+       </property>
+       <property name="text">
+        <string>0.0</string>
+       </property>
+      </widget>
+     </item>
+     <item row="7" column="1">
+      <widget class="QComboBox" name="move_combo_box">
+       <item>
+        <property name="text">
+         <string>absolute</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>relative</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item row="8" column="0">
       <widget class="QPushButton" name="zero_button">
        <property name="text">
         <string>Zero</string>
        </property>
       </widget>
      </item>
-     <item row="5" column="0">
+     <item row="7" column="0">
       <widget class="QPushButton" name="move_button">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -293,24 +307,44 @@
        </property>
       </widget>
      </item>
-     <item row="5" column="1">
-      <widget class="QComboBox" name="move_combo_box">
-       <item>
-        <property name="text">
-         <string>absolute</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>relative</string>
-        </property>
-       </item>
-      </widget>
-     </item>
-     <item row="7" column="0">
+     <item row="9" column="0">
       <widget class="QPushButton" name="stop_button">
        <property name="text">
         <string>Stop</string>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="0">
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>Angle Lower Bound</string>
+       </property>
+      </widget>
+     </item>
+     <item row="6" column="0">
+      <widget class="QLabel" name="label_4">
+       <property name="text">
+        <string>Angle Upper Bound </string>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="1">
+      <widget class="QLineEdit" name="angle_lower_bound_textbox">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="text">
+        <string>0.0</string>
+       </property>
+      </widget>
+     </item>
+     <item row="6" column="1">
+      <widget class="QLineEdit" name="angle_upper_bound_textbox">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="text">
+        <string>173.0</string>
        </property>
       </widget>
      </item>

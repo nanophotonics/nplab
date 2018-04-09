@@ -16,24 +16,6 @@ import threading
 import logging
 import timeit
 
-#############################################################################
-# SETUP LOGGING
-#############################################################################
-LOGGERS = ["capture-logger", "adlink-logger"]
-
-#Make capture logger - outputs to UI while running
-ui_logger = logging.getLogger(LOGGERS[0])
-ui_logger.setLevel(logging.INFO)
-ch = logging.StreamHandler(sys.stdout)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-ch.setFormatter(formatter)
-ui_logger.addHandler(ch)
-
-
-#############################################################################
-#############################################################################
-
-
 ### Steps of PCI-DASK applications:
 #
 # Full documentation: ADLINK PCIS-DASK User's Manual
@@ -75,10 +57,16 @@ class Adlink9812(Instrument):
 			self.card_id = self.register_card()
 			self.configure_card()
 
+		self.ui = None
+
 	def __del__(self):
 		'''Deregister the card on object deletion'''
 		self.release_card()
 
+	def get_qt_ui(self):
+		if self.ui is None:
+			self.ui = Adlink9812UI(card=self)
+		return self.ui
 
 	def register_card(self,channel = 0):
 		outp = ctypes.c_int16(self.dll.Register_Card(adlink9812_constants.PCI_9812,c_ushort(channel)))
@@ -99,13 +87,6 @@ class Adlink9812(Instrument):
 		if statusCode.value != 0:
 			self.log(message="GetActualRate: Non-zero status code:"+str(statusCode.value))
 		return actual.value
-
-	def get_qt_ui(self):
-		return Adlink9812UI(card=self,debug = self.debug)
-
-	@staticmethod
-	def get_qt_ui_cls():
-		return Adlink9812UI
 
 	def configure_card(self):
 		#Configure card for recording
@@ -306,7 +287,6 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 		#Initialize the capture thread handle
 		self.capture_thread = None
 
-		#TODO - add adlink9812.ui file properly
 		uic.loadUi(os.path.join(os.path.dirname(__file__), 'adlink9812.ui'), self)
 
 		#daq_settings_layout
@@ -322,6 +302,7 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 
 		#actions_layout
 		self.capture_button.clicked.connect(self.threaded_capture)
+		self.count_rate_button.clicked.connect(self.current_count_rate)
 
 		self.set_sample_freq()
 		self.set_sample_count()
@@ -405,7 +386,10 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 		group.file.flush()
 		return 
 
-	def postprocess(self,voltages,dt,save,group):
+	def postprocess(self,voltages,dt,save,group,metadata):
+
+		attributes = dict(metadata)
+
 
 		#initial system parameters
 		sample_count = len(voltages)
@@ -432,18 +416,34 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 		autocorrelation = dls_signal_postprocessing.autocorrelation(binned_counts)[1:]
 
 		#save data
+		attributes.update({"averaged_data": "False"})
 		stages = [
-		("raw_voltage", self.raw_checkbox.isChecked(), voltages,{"averaged_data": "False"}),
-		("voltage_difference", self.difference_checkbox.isChecked(), rounded_diff,{"averaged_data": "False"}),
-		("photon_counts", self.binning_checkbox.isChecked(), np.vstack((time_bins,binned_counts)),{"averaged_data": "False"}),
-		("autocorrelation", self.correlate_checkbox.isChecked(), np.vstack((times, autocorrelation)),{"averaged_data": "False"})
+		("raw_voltage", self.raw_checkbox.isChecked(), voltages,attributes),
+		("voltage_difference", self.difference_checkbox.isChecked(), rounded_diff,attributes),
+		("photon_counts", self.binning_checkbox.isChecked(), np.vstack((time_bins,binned_counts)),attributes),
+		("autocorrelation", self.correlate_checkbox.isChecked(), np.vstack((times, autocorrelation)),attributes)
 		]
-
-		for (datatype, checked, data,metadata) in stages:
+		for (datatype, checked, data,mdata) in stages:
 			if save == True and checked == True:
-				self.save_data(datatype=datatype,data=data, group=group,metadata=metadata)
-				
+				self.save_data(datatype=datatype,data=data, group=group,metadata=mdata)
 		return times, autocorrelation
+
+
+	def current_count_rate(self):
+		#measure for 0.05s for sampling photon count
+
+		#fixed values of sampling - we want to keep things easy
+		frequency = 2e7 #20MHz
+		sample_count = int(1e6) #0.05s  
+		voltages, dt = self.card.capture(sample_freq=frequency, sample_count=sample_count)
+		sample_time = dt*sample_count
+		#convert rounded difference to integers
+		thresholded = np.absolute(dls_signal_postprocessing.signal_diff(voltages)).astype(int)
+		total_counts = np.sum(thresholded)
+		count_rate = total_counts/sample_time
+		self.log("Total Counts: {0} [counts], Rate: {1} [counts/s]".format(int(total_counts), count_rate))
+		return total_counts, count_rate 
+
 
 	def capture(self):
 		
@@ -470,10 +470,14 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 		else:
 			dg = None
 		
+		self.description = self.comment_textbox.document().toPlainText()
+		self.log(message="Description:{}".format(self.description))
+		self.base_metadata = {"description":self.description}
+
 		#Averaging run:
 		if average == False:
 			voltages, dt = self.card.capture(sample_freq=self.sample_freq, sample_count=self.sample_count)
-			times, autocorrelation = self.postprocess(voltages= voltages,dt=dt, save=save, group = dg)
+			times, autocorrelation = self.postprocess(voltages= voltages,dt=dt, save=save, group = dg,metadata=self.base_metadata)
 			acs_array = None  
 		elif average == True:
 			self.log(
@@ -493,7 +497,7 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 				self.card.log(message="---Iteration:{0}".format(i))
 
 				voltages, dt = self.card.capture(sample_freq=self.sample_freq, sample_count=self.sample_count)
-				times, autocorrelation = self.postprocess(voltages= voltages,dt=dt, save=save, group = dg)
+				times, autocorrelation = self.postprocess(voltages= voltages,dt=dt, save=save, group = dg,metadata=self.base_metadata)
 				
 				if acs_array is None:
 					acs_array = np.zeros(shape=(self.averaging_runs, len(autocorrelation)),dtype=np.float32)
@@ -508,9 +512,12 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 			stdev_acs = np.std(acs_array,axis=0)
 			skew_acs = scipy.stats.skew(acs_array,axis=0)
 
-			self.save_data(data=np.vstack((times, mean_acs)),datatype="autocorrelation", group=dg,metadata={"averaged_data": "True"})
-			self.save_data(data=np.vstack((times, stdev_acs)),datatype="autocorrelation_stdev", group=dg,metadata={"averaged_data": "True"})
-			self.save_data(data=np.vstack((times, skew_acs)),datatype="autocorrelation_skew", group=dg,metadata={"averaged_data": "True"})
+
+			averaged_metadata=dict(self.base_metadata)
+			averaged_metadata.update({"averaged_data": "True"})
+			self.save_data(data=np.vstack((times, mean_acs)),datatype="autocorrelation", group=dg,metadata=averaged_metadata)
+			self.save_data(data=np.vstack((times, stdev_acs)),datatype="autocorrelation_stdev", group=dg,metadata=averaged_metadata)
+			self.save_data(data=np.vstack((times, skew_acs)),datatype="autocorrelation_skew", group=dg,metadata=averaged_metadata)
 
 		return 
 
