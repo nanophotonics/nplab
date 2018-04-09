@@ -294,7 +294,7 @@ class Adlink9812(Instrument):
 class Adlink9812UI(QtWidgets.QWidget, UiTools):
 	def __init__(self,card, parent=None,debug = False, verbose = False):
 		if not isinstance(card, Adlink9812):
-			raise ValueError("Object is not an instnace of the Adlink9812 Daq")
+			raise ValueError("Object is not an instance of the Adlink9812 Daq")
 		super(Adlink9812UI, self).__init__()
 		# self.logger = logging.getLogger(LOGGERS[0])
 		self.card = card 
@@ -496,7 +496,7 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 				times, autocorrelation = self.postprocess(voltages= voltages,dt=dt, save=save, group = dg)
 				
 				if acs_array is None:
-					acs_array = np.zeros(shape=(self.averaging_runs, len(autocorrelation)))
+					acs_array = np.zeros(shape=(self.averaging_runs, len(autocorrelation)),dtype=np.float32)
 				
 				acs_array[i,:] = autocorrelation
 
