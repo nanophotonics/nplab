@@ -256,7 +256,6 @@ class Adlink9812(Instrument):
 
 	def capture(self,sample_freq, sample_count,verbose = False):
 		assert(sample_freq <= int(2e7) and sample_freq > 1)
-		logging.getLogger(LOGGERS[0])
 		dt = 1.0/sample_freq
 		if self.debug:
 			
@@ -277,7 +276,6 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 		if not isinstance(card, Adlink9812):
 			raise ValueError("Object is not an instance of the Adlink9812 Daq")
 		super(Adlink9812UI, self).__init__()
-		# self.logger = logging.getLogger(LOGGERS[0])
 		self.card = card 
 		self.parent = parent
 		self.debug = debug

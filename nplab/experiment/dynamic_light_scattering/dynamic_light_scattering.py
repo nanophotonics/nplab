@@ -10,6 +10,7 @@ from nplab.utils.gui import *
 from nplab.ui.ui_tools import UiTools
 import nplab.experiment.dynamic_light_scattering as dls
 import os
+import threading
 import json
 
 class DynamicLightScattering(Instrument):
@@ -18,7 +19,7 @@ class DynamicLightScattering(Instrument):
 
 	def __init__(self, instruments):
 		self.instruments = instruments
-		super(DynamicLightScattering,self).__init__()
+		Instrument.__init__(self,)
 		self.ui = None
 		for k in instruments.keys():
 			assert(k in DynamicLightScattering.DEVICE_KEYS)
@@ -123,15 +124,15 @@ class DynamicLightScatteringUI(QtWidgets.QWidget, UiTools):
 
 	def run_experiment(self):
 		try:
-			self.experiment.run_experiment(self.run_path)
-		except:
+		t = threading.Thread(target=self.experiment.run_experiment, args=(self.run_path,))
+		t.start()
+		except Exception,e:
 			self.experiment.log("Error when running experiment - have you written the path?",level="error")
+			self.experiment.log(e)
 		return
 
 	def set_run_config_path(self):
 		self.run_path = self.run_config_textbox.text()
-
-
 
 
 app = get_qt_app()
