@@ -1,0 +1,28 @@
+[
+	{
+		"sample_count": "1000",
+		"series_name": "sample-config-test",
+		"raw": "True",
+		"difference": "False",
+		"binning": "True",
+		"correlate": "False",
+		"average": "True",
+		"plot": "False",
+		"save": "True",
+		"average_count": "50",
+		"binning_size": "1e-6"
+	},
+	{
+		"sample_count": "1000",
+		"series_name": "sample-config-test-2",
+		"raw": "True",
+		"difference": "False",
+		"binning": "True",
+		"correlate": "False",
+		"average": "True",
+		"plot": "False",
+		"save": "True",
+		"average_count": "5",
+		"binning_size": "1e-6"
+	}
+]

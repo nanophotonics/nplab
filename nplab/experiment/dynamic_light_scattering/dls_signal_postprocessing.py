@@ -74,7 +74,13 @@ def threshold(voltages, count_threshold = 0.5):
 
 	#return absolute values of the pulses
 	return np.absolute(pulses)
-	
+
+def binwidth_time_to_index(time_bin_width, dt):
+	return int(math.ceil((float(time_bin_width)/float(dt))))
+def binned_data_len(input_length, bin_width):
+	#return length of binned array of original length: input_length and bin_width (as array index)
+	return int(math.ceil(float(input_length)/float(bin_width)))
+
 def binning(thresholded, index_bin_width):
 	#length of input thresholded array of 0s and 1s
 
@@ -84,7 +90,7 @@ def binning(thresholded, index_bin_width):
 	# 	assert(thresholded[i] in [0,1]), "Threasholded:" thresholded[i]
 
 	#length of output [int]
-	outp_len = int(math.ceil(float(thresholded_len)/float(index_bin_width)))
+	outp_len = binned_data_len(thresholded_len, index_bin_width)
 	output = np.zeros(outp_len)
 	for i in xrange(outp_len):
 		output[i] = np.sum(np.absolute(thresholded[i*index_bin_width:min(thresholded_len,(i+1)*index_bin_width)]))
