@@ -3,6 +3,7 @@ import matplotlib
 matplotlib.use('Qt4Agg')
 from nplab.instrument import Instrument
 from nplab.instrument.electronics.adlink9812 import Adlink9812, Adlink9812UI
+from nplab.instrument.stage.Thorlabs_NR360SM import Thorlabs_NR360SM
 from nplab.instrument.light_sources.fianium import Fianium
 from nplab import datafile
 from nplab.utils.gui_generator import GuiGenerator
@@ -53,9 +54,8 @@ class DynamicLightScattering(Instrument):
 			self.sample_rotation_stage_ui = self.sample_rotation_stage.get_qt_ui()
 
 			self.textboxes.update({"new_angle" : self.sample_rotation_stage_ui.new_angle_textbox})
-			# self.textboxes.update({"zero_angle": self.sample_rotation_stage.})
 			self.textboxes.update({"rotation_speed": self.sample_rotation_stage_ui.rotation_speed_textbox})
-			self.fields.update({"zero_angle",self.sample_rotation_stage.zero})
+			self.fields.update({"zero_angle":self.sample_rotation_stage.zero_pos})
 
 		checkbox_keys = self.checkboxes.keys()
 		textbox_keys = self.textboxes.keys()
@@ -77,21 +77,18 @@ class DynamicLightScattering(Instrument):
 	def set_checkboxes(self,settings):
 		for s in settings.keys():
 			if s in self.checkboxes.keys():
-				print "set_checkboxes",s
 				on = bool(settings[s])
 				self.checkboxes[s].setChecked(on)
 				
 	def set_textboxes(self,settings):
 		for s in settings.keys():
 			if s in self.textboxes.keys():
-				print "set_textboxes",s
 				self.textboxes[s].setText(settings[s])
 		return
 
 	def set_fields(self,settings):
 		for s in settings.keys():
 			if s in self.fields.keys():
-				print "set_fields",s
 				self.fields[s] = settings[s]
 
 	def run_experiment(self,path,debug=False):
@@ -99,15 +96,15 @@ class DynamicLightScattering(Instrument):
 		f = file(path,'r')
 		steps = json.loads(f.read())
 		self.log("STAGES:"+str(len(steps)))
-		for settings in steps:
+		for i,settings in enumerate(steps):
+			self.log("Settings {0}:\n{1}".format(i,settings))
 			self.set_checkboxes(settings)
 			self.set_textboxes(settings)
 			self.set_fields(settings)
 
 			if self.sample_rotation_stage_ui is not None:
-				self.sample_rotation_stage_ui.move()
-			
-			self.adc_ui.threaded_capture()
+				self.sample_rotation_stage_ui.move_stage(blocking=True)
+			self.adc_ui.threaded_capture(settings={"experiment_settings":settings})
 			self.adc_ui.capture_thread.join()
 		
 class DynamicLightScatteringUI(QtWidgets.QWidget, UiTools):
@@ -117,15 +114,15 @@ class DynamicLightScatteringUI(QtWidgets.QWidget, UiTools):
 		super(DynamicLightScatteringUI, self).__init__()
 		self.experiment = experiment
 		uic.loadUi(os.path.join(os.path.dirname(__file__), 'dynamic_light_scattering_experiment.ui'), self)
-	
+
 		self.run_config_textbox.textChanged.connect(self.set_run_config_path)
 		self.run_config_button.clicked.connect(self.run_experiment)
 
 
 	def run_experiment(self):
 		try:
-		t = threading.Thread(target=self.experiment.run_experiment, args=(self.run_path,))
-		t.start()
+			t = threading.Thread(target=self.experiment.run_experiment, args=(self.run_path,))
+			t.start()
 		except Exception,e:
 			self.experiment.log("Error when running experiment - have you written the path?",level="error")
 			self.experiment.log(e)
@@ -138,13 +135,13 @@ class DynamicLightScatteringUI(QtWidgets.QWidget, UiTools):
 app = get_qt_app()
 adc = Adlink9812("C:\ADLINK\PCIS-DASK\Lib\PCI-Dask64.dll",debug=True)
 
-# sample_rotation_stage = Thorlabs_NR360SM(SerialNum=90810016,HWType=22)
-# config_loader = DynamicLightScattering(instruments = {"adc":adc,"sample_rotation_stage":sample_rotation_stage})
-# instruments = {"adlink9812": adc, "config":config_loader, "stage":sample_rotation_stage}
+sample_rotation_stage = Thorlabs_NR360SM(SerialNum=90810016,HWType=22)
+config_loader = DynamicLightScattering(instruments = {"adc":adc,"sample_rotation_stage":sample_rotation_stage})
+instruments = {"adlink9812": adc, "config":config_loader, "stage":sample_rotation_stage}
 
 
-config_loader = DynamicLightScattering(instruments = {"adc":adc})
-instruments = {"adlink9812": adc, "config":config_loader}
+# config_loader = DynamicLightScattering(instruments = {"adc":adc})
+# instruments = {"adlink9812": adc, "config":config_loader}
 
 
 gui = GuiGenerator(instrument_dict=instruments, dock_settings_path=os.path.join(os.path.dirname(__file__),"experiment_ui.npy"), scripts_path=None, working_directory="~")
