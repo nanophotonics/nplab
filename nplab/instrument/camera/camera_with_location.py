@@ -485,7 +485,7 @@ class AcquireGridOfImages(ExperimentWithProgressBar):
 
     def run(self, n_tiles=(1,1), autofocus_args=None):
         """Acquire a grid of images with the specified overlap."""
-
+        self.update_progress(0)
         cwl = self.cwl
         centre_image = cwl.color_image()
         scan_step = np.array(centre_image.shape[:2]) - self.overlap_pixels
