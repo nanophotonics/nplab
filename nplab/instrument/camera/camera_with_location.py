@@ -27,6 +27,7 @@ from nplab.utils.gui import QtCore, QtGui, QtWidgets
 import cv2
 #import cv2.cv
 from scipy import ndimage
+from scipy.signal import argrelextrema
 from nplab.ui.ui_tools import QuickControlBox, UiTools
 from nplab.utils.notified_property import DumbNotifiedProperty
 import time
@@ -270,11 +271,16 @@ class CameraWithLocation(Instrument):
             threshold = powers.min() + (powers.max() - powers.min()) * noise_floor
             weights = powers - threshold
             weights[weights < 0] = 0.  # zero out any negative values
+            indices_of_maxima = argrelextrema(np.pad(weights, (1, 1), 'minimum'), np.greater)[0]-1
+            number_of_maxima = indices_of_maxima.size
             if (np.sum(weights) == 0):
-                print "Warning, something went wrong and all the autofocus scores were identical!"
-                new_position = positions[powers.argmax(), :] #Fall back on the maximum if something fails
-            else:
+                print "Warning, something went wrong and all the autofocus scores were identical! Returning to initial position."
+                new_position = here # Return to initial position if something fails
+            elif (number_of_maxima == 1) and not (indices_of_maxima[0] == 0 or indices_of_maxima[-1] == (weights.size-1)):
                 new_position = np.dot(weights, positions) / np.sum(weights)
+            else:
+                print("Warning, a maximum autofocus score could not be found. Returning to initial position.")
+                new_position = here
         elif method == "parabola":
             coefficients = np.polyfit(z, powers, deg=2)  # fit a parabola
             root = -coefficients[1] / (2 * coefficients[
