@@ -1842,9 +1842,9 @@ def fitAllSpectra(x, yData, outputFile, startSpec = 0, monitor_progress = False,
 if __name__ == '__main__':
     print 'Functions initialised'
 
-    statsOnly = False
+    method = 'All'
 
-    if statsOnly == False:
+    if method == 'All':
 
         print '\nRetrieving data...'
 
@@ -1860,8 +1860,18 @@ if __name__ == '__main__':
         with h5py.File(outputFile, 'a') as f:
             fitAllSpectra(x, yData, f, startSpec = startSpec, raiseExceptions = False)
 
-    elif statsOnly == True:
+    elif method == 'Stats':
         outputFile = 'MultiPeakFitOutputComplete.h5'
 
         with h5py.File(outputFile, 'a') as f:
             doStats(f, minBinFactor = 6, stacks = False, hist = True, intensityRatios = False, closeFigures = True)
+
+    elif method == 'Stack':
+        print '\nRetrieving data...'
+
+        startSpec = 0
+        finishSpec = 0
+
+        spectra, wavelengths, background, reference = retrieveData('summary', startSpec, finishSpec)
+        x, yData = prepareData(spectra, wavelengths, reference)
+        initImg = plotInitStack(x, yData, imgName = 'Initial Stack', closeFigures = False)
