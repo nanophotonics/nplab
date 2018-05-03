@@ -425,8 +425,7 @@ class OceanOpticsControlUI(SpectrometerControlUI):
         self.tec_temperature.setText(str(self.spectrometer.tec_temperature))
 
 
-# example code:
-if __name__ == "__main__":
+def main():
     from nplab.instrument.spectrometer import Spectrometers
     import sys
     from nplab.utils.gui import get_qt_app
@@ -458,3 +457,7 @@ if __name__ == "__main__":
             shutdown_seabreeze()  # reset things if we've had errors
             print "The spectrometer did not close cleanly. SeaBreeze has been reset."
 # to alter max/min: s.spectrum_plot.value_mapper.range.high=0.01
+
+# example code:
+if __name__ == "__main__":
+    main()
