@@ -1046,7 +1046,7 @@ def plotHistogram(outputFile, startWl = 450, endWl = 900, binNumber = 80, plot =
         ax1.set_ylim(-0.1, ymax*1.2)
         ax1.set_ylabel('Normalised Intensity', fontsize = 18)
         ax1.tick_params(labelsize = 15)
-        ax1.set_xlabel('Coupled Mode Peak Position (nm)', fontsize = 18)
+        ax1.set_xlabel('Wavelength (nm)', fontsize = 18)
         #ax1.set_xticks(range(500, 900, 50))
         ax2.bar(bins, frequencies, color = 'grey', width = 0.8*binSize, alpha = 0.8, linewidth = 0.6)
         ax2.bar(binsPlot, freqsPlot, color = colors, width = 0.8*binSize, alpha = 0.4, linewidth = 1)
@@ -1858,10 +1858,10 @@ if __name__ == '__main__':
         outputFile = createOutputFile('MultiPeakFitOutput')
 
         with h5py.File(outputFile, 'a') as f:
-            fitAllSpectra(x, yData, f, startSpec = startSpec, raiseExceptions = False)
+            fitAllSpectra(x, yData, f, startSpec = startSpec, raiseExceptions = False, closeFigures = True)
 
     elif method == 'Stats':
-        outputFile = 'MultiPeakFitOutputComplete.h5'
+        outputFile = 'MultiPeakfitOutput.h5'
 
         with h5py.File(outputFile, 'a') as f:
             doStats(f, minBinFactor = 6, stacks = False, hist = True, intensityRatios = False, closeFigures = True)
