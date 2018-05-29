@@ -21,6 +21,8 @@ def single_pulse_MPE(wavelength,pulse_width = 100E-15,divergence = 1.1):
     elif wavelength > 450 and wavelength<600:
         c3 = 10.0**(0.02*(wavelength-450))
     elif wavelength>700 and wavelength<1050:
+        c4 = 10.0**(0.002*(wavelength-700))
+    elif wavelength>1050 and wavelength<1400:
         c4 = 5
     if wavelength>400 and wavelength<1400:
         if divergence<1.5:
