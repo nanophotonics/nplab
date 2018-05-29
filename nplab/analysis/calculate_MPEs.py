@@ -74,7 +74,7 @@ def single_pulse_MPE(wavelength,pulse_width = 100E-15,divergence = 1.1):
         
 def power_at_dist(power,distance):
     '''power at a distance from a scattering point '''
-    surface_area = 4.0*np.pi*distance**2
+    surface_area = 2.0*np.pi*distance**2
     return power/surface_area
 
 def calculate_MPEs(wavelength,pulse_width = 100E-15,divergence = 1.1,frequency = 80E6):
@@ -89,7 +89,7 @@ def calculate_MPEs(wavelength,pulse_width = 100E-15,divergence = 1.1,frequency =
         num_pulses= (10*frequency)
         mpe_average = mpe_average/num_pulses
     mpe_train = mpe_single*num_pulses**(-0.25)
-    return mpe_single, mpe_average, mpe_train
+    return np.array((mpe_single, mpe_average, mpe_train))*frequency
            
         
             
