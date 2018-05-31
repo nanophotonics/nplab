@@ -1753,6 +1753,7 @@ def plotInitStack(x, yData, imgName = 'Initial Stack', closeFigures = False):
     print 'Plotting initial stacked map'
 
     stackStartTime = time.time()
+    wavelengths = x
 
     yDataTrunc = [truncateSpectrum(wavelengths, spectrum)[1] for spectrum in yData]
     xTrunc = truncateSpectrum(x, yData[0])[0]
