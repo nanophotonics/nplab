@@ -178,12 +178,9 @@ class GridScan(ScanningExperiment, TimedScan):
         """Scans a grid, applying a function at each position."""
         self.abort_requested = False
         axes, size, step, init = (axes[::-1], size[::-1], step[::-1], init[::-1])
-<<<<<<< HEAD
-        grid = self.init_grid(axes, size, step, init)
-=======
         scan_axes = self.init_grid(axes, size, step, init)
         print scan_axes
->>>>>>> 09c0ed729f630a8ee6f062a8c2b95199ddc61cf5
+
         self.open_scan()
         # get the indices of points along each of the scan axes for use with snaking over array
         pnts = [range(axis.size) for axis in grid]
@@ -195,12 +192,9 @@ class GridScan(ScanningExperiment, TimedScan):
         self.status = 'acquiring data'
         self.acquiring.set()
         scan_start_time = time.time()
-<<<<<<< HEAD
-        for k in pnts[0]:  # outer most/ fastest scanning axis
-=======
+
         for k in pnts[0]:  # outer most axis
             self.indices = list(self.indices)
->>>>>>> 09c0ed729f630a8ee6f062a8c2b95199ddc61cf5
             self.indices[0] = k # Make sure indices is always up-to-date, for the drift compensation
             if self.abort_requested:
                 break
@@ -211,12 +205,10 @@ class GridScan(ScanningExperiment, TimedScan):
             for j in pnts[1]:# second fastes scanning axis
                 if self.abort_requested:
                     break
-<<<<<<< HEAD
-                self.move(grid[1][j], axes[1])
-=======
+
                 self.move(scan_axes[1][j], axes[1])
                 self.indices = list(self.indices)
->>>>>>> 09c0ed729f630a8ee6f062a8c2b95199ddc61cf5
+
                 self.indices[1] = j
                 if len(axes) == 3:  # for 3d grid (volume) scans
                     self.middle_loop_start()

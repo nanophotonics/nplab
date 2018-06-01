@@ -209,7 +209,7 @@ class LinearScanUI(QtWidgets.QWidget, UiTools):
             self.linear_scanner.stop = float(value)
 #        elif sender == self.step:
 #            self.linear_scanner.step = float(value)
-        elif sender == self.num_steps:
+        elif sender == self.step:
             self.linear_scanner.num_steps = float(value)
 
     def update_parameters(self):
