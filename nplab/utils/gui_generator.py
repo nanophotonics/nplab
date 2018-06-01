@@ -49,10 +49,10 @@ class GuiGenerator(QtWidgets.QMainWindow,UiTools):
         for instr in self.instr_dict:
             self._open_one_gui(instr)
 
-        self.terminalWindow = None
-        self.menuTerminal()
-        self._addActionViewMenu('Terminal')
-        
+     #   self.terminalWindow = None
+    #    self.menuTerminal()
+    #    self._addActionViewMenu('Terminal')
+
         self.script_menu = None
         if scripts_path is not None:
             self.scripts_path = scripts_path
@@ -157,7 +157,7 @@ class GuiGenerator(QtWidgets.QMainWindow,UiTools):
     def _setupSignals(self):
         self.actionExit.triggered.connect(self.close)
         self.actionNightMode.triggered.connect(self.toggleNightMode)
-        self.actionTerminal.triggered.connect(self.menuTerminal)
+    #    self.actionTerminal.triggered.connect(self.menuTerminal)
         self.actionShowBrowser.triggered.connect(self.toggle_browser)
         self.actionNewExperiment.triggered.connect(self.menuNewExperiment)
         self.actionSaveExperiment.triggered.connect(self.menuSaveExperiment)
@@ -200,7 +200,7 @@ class GuiGenerator(QtWidgets.QMainWindow,UiTools):
                 caption="Create new dock settings file",
                 directory=self.working_directory,
     #            options=qtgui.QFileDialog.DontConfirmOverwrite,
-            )[0]
+            )
 
 
         np.save(self.dock_settings_path,dock_state)
@@ -214,7 +214,7 @@ class GuiGenerator(QtWidgets.QMainWindow,UiTools):
             self.dock_settings_path = QtWidgets.QFileDialog.getOpenFileName(
                 caption="Select Existing Data File",
                 directory=self.working_directory,
-            )[0]        
+            )
         try:
             loaded_state = np.load(self.dock_settings_path)
             loaded_state=loaded_state[()]
@@ -239,6 +239,7 @@ class GuiGenerator(QtWidgets.QMainWindow,UiTools):
         self.allWidgets['HDF5'].treeWidget.model.refresh_tree()
 
     def menuTerminal(self):
+        pass
         from nplab.utils import terminal
 
         if self.terminalWindow is None:
