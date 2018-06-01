@@ -25,7 +25,7 @@ class RefractiveIndexInfoDatabase(object):
 			#self test on start
 			cls.test_converse_reversibility(data)
 			dataset = cls.fetch_dataset_yaml(data[0])
-			print cls.extract_refractive_indices(dataset)
+#			print cls.extract_refractive_indices(dataset)
 
 	@classmethod
 	def get_data(cls,it):
@@ -170,8 +170,8 @@ class RefractiveIndexInfoDatabase(object):
 		min_wl = 1e-6*np.min(wavelengths) 
 		max_wl = 1e-6*np.max(wavelengths) 
 		
-		print "Min Wavelength in dataset:", min_wl
-		print "Max Wavelength in dataset:", max_wl
+#		print "Min Wavelength in dataset:", min_wl
+#		print "Max Wavelength in dataset:", max_wl
 		def generator(required_wavelength,scale="nm",debug=0):
 
 			assert(scale=="nm") #scale must be in nm - other values may be supported later if required
