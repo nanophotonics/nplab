@@ -2,13 +2,12 @@ __author__ = 'alansanders, chrisgrosse'
 
 import ctypes
 from ctypes import byref, c_int, c_uint
-from nplab.instrument import Instrument
-from nplab.instrument.stage import Stage, StageUI
+#from nplab.instrument import Instrument
+from nplab.instrument.stage import PiezoStage, StageUI, PiezoStageUI
 import os
 from nplab.utils.gui import *
 from nplab.utils.gui import uic
 from nplab.ui.ui_tools import UiTools
-from nplab.utils.formatting import engineering_format
 
 
 try:
@@ -63,7 +62,7 @@ class SmaractError(Exception): #?? why two different types of errors: MCSError a
         print "SmarAct error: %s" % msg
 
 
-class SmaractMCS(Stage):
+class SmaractMCS(PiezoStage):
     """
     Smaract MCS controller interface for SmarAct stages.
 
@@ -91,7 +90,7 @@ class SmaractMCS(Stage):
         # outBuffer holds the locator strings, separated by '\n'
         # bufferSize holds the number of bytes written to outBuffer
         if cls.check_status(mcsc.SA_FindSystems("", outBuffer, byref(bufferSize))):
-            print 'buffer size:', bufferSize
+#            print 'buffer size:', bufferSize
             print 'buffer:', ctypes.string_at(outBuffer)
         return ctypes.string_at(outBuffer)
 
@@ -107,8 +106,11 @@ class SmaractMCS(Stage):
         self.levels = [0 for ch in range(self.num_ch)]
         self.voltages = [0 for ch in range(self.num_ch)]
         self.scan_positions = [0 for ch in range(self.num_ch)]
-        self.min_voltage = [0, 0, 0, 0, 0, 0]
-        self.max_voltage = [100, 100, 100, 100, 100, 100]
+        self.min_voltage = [0 for ch in range(self.num_ch)]
+        self.max_voltage = [100 for ch in range(self.num_ch)]
+        self.min_voltage_levels = [0 for ch in range(self.num_ch)]
+        self.max_voltage_levels = [4095 for ch in range(self.num_ch)]
+
 
     ### ====================== ###
     ### Initialization methods ###
@@ -436,7 +438,7 @@ class SmaractMCS(Stage):
 
     ### primary methods that provide diret interface to MCS main controller
 
-    def get_scanner_position(self, axis=None):
+    def get_piezo_position(self, axis=None):
         """
         Get the scanning position of the stage or of a specified axis.
         :param axis:
@@ -451,14 +453,22 @@ class SmaractMCS(Stage):
             position = 1e-9*10.*voltage
             return position
 
-    def get_scanner_level(self, axis):
-        ch = c_int(int(axis))
-        level = c_int()
-        self.check_open_status()
-        mcsc.SA_GetVoltageLevel_S(self.handle, ch, byref(level))
-        return level.value
+    def get_piezo_level(self, axis=None):
+        """
+        Get the voltage levels (0-4095) of the specified piezo axis
+        """
+        if axis is None:
+            return [self.get_piezo_level(axis) for axis in self.axis_names]
+        else:
+            if axis not in self.axis_names:
+                raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
+            ch = c_int(int(axis))
+            level = c_int()
+            self.check_open_status()
+            mcsc.SA_GetVoltageLevel_S(self.handle, ch, byref(level))
+            return level.value
 
-    def set_scanner_level(self, level, axis, speed=4095, relative=False):
+    def set_piezo_level(self, level, axis, speed=4095, relative=False):
         """
         Scan up to 100V
         level: 0 - 100 V, 0 - 4095
@@ -476,7 +486,7 @@ class SmaractMCS(Stage):
             self.check_status(mcsc.SA_ScanMoveAbsolute_S(self.handle, ch, level, speed))
         self.wait_until_stopped(ch)
 
-    def multi_set_scanner_level(self, levels, axes, speeds, relative=False):
+    def multi_set_piezo_level(self, levels, axes, speeds, relative=False):
         self.check_open_status()
         levels = [c_int(int(level)) for level in levels]
         axes = [c_int(int(axis)) for axis in axes]
@@ -492,47 +502,52 @@ class SmaractMCS(Stage):
 
     ### additional useful methods to control the piezo scanners
 
-    def set_scanner_level_rel(self, diff, axis, speed=4095):
+    def set_piezo_level_rel(self, diff, axis, speed=4095):
         """
         Scan up to 50V
         diff: -100 - 100 V, -4095 - 4095
         speed: 4095 s - 1 us for full 4095 voltage range, 1 - 4,095,000,000
         """
-        self.set_scanner_level(diff, axis, speed, relative=True)
+        self.set_piezo_level(diff, axis, speed, relative=True)
 
-    def set_voltage(self, axis, voltage, speed=4095000000, relative=False):
+    def get_piezo_voltage(self, ch):
+        level = self.get_piezo_level(ch)
+        voltage = self.level_to_voltage(level)
+        return voltage
+
+    def set_piezo_voltage(self, axis, voltage, speed=4095000000, relative=False):
         """
         Scan to 50V
         level: 0 - 100 V, 0 - 4095
         speed: 4095 s - 1 us for full 4095 voltage range, 1 - 4,095,000,000
         """
         level = self.voltage_to_level(voltage)
-        self.set_scanner_level(level, axis, speed, relative)
+        self.set_piezo_level(level, axis, speed, relative)
 
-    def set_rel_voltage(self, axis, voltage_diff, speed):
+    def set_piezo_voltage_rel(self, axis, voltage_diff, speed):
         """
         Scan to 50V
         level: 0 - 100 V, 0 - 4095
         speed: 4095 s - 1 us for full 4095 voltage range, 1 - 4,095,000,000
         """
         diff = self.voltage_to_level(voltage_diff)
-        self.set_scanner_level(diff, axis, speed, relative=True)
+        self.set_piezo_level(diff, axis, speed, relative=True)
 
-    def move_scanner_to_position(self, position, axis, speed, relative=False):
+    def set_piezo_position(self, position, axis, speed, relative=False):
         level = self.position_to_level(1e9*position)
-        self.set_scanner_level(level, axis, speed, relative)
+        self.set_piezo_level(level, axis, speed, relative)
 
-    def move_scanner_rel_to_position(self, axis, step, speed):
+    def set_piezo_position_rel(self, axis, step, speed):
         diff = self.position_to_level(1e9*step)
-        self.set_scanner_level(diff, axis, speed, relative=True)
+        self.set_piezo_level(diff, axis, speed, relative=True)
 
-    def multi_set_voltage(self, voltages, axes, speeds, relative=False):
+    def multi_set_piezo_voltage(self, voltages, axes, speeds, relative=False):
         levels = [self.voltage_to_level(v) for v in voltages]
-        self.multi_set_scanner_level(levels, axes, speeds, relative)
+        self.multi_set_piezo_level(levels, axes, speeds, relative)
 
-    def multi_move_scanner_to_position(self, positions, axes, speeds, relative=False):
+    def multi_set_piezo_position(self, positions, axes, speeds, relative=False):
         levels = [self.position_to_level(1e9*p) for p in positions]
-        self.multi_set_scanner_level(levels, axes, speeds, relative)
+        self.multi_set_piezo_level(levels, axes, speeds, relative)
 
     def position_to_level(self, position):
         # 1.5 um per 100 V, position can be between 0 and 1500 nm
@@ -554,18 +569,14 @@ class SmaractMCS(Stage):
         position = voltage * 10.
         return position
 
-    def get_voltage(self, ch):
-        level = self.get_scanner_level(ch)
-        voltage = self.level_to_voltage(level)
-        return voltage
-
     def get_qt_ui(self):
         return SmaractMCSUI(self)
 
     ### Useful Properties ###
     num_ch = property(get_num_channels)
     position = property(get_position)
-    scan_position = property(get_scanner_position)
+    piezo_levels = property(get_piezo_level)
+    piezo_position = property(get_piezo_position)
 
 
 class SmaractStageUI(StageUI):
@@ -578,28 +589,39 @@ class SmaractStageUI(StageUI):
         self.stage.move(dir*self.step_size[index], axis=axis, relative=True)
         self.update_ui[int].emit(axis)
 
-class SmaractScanStageUI(StageUI):
+class SmaractScanStageUI(PiezoStageUI):
     def __init__(self, stage):
-        super(SmaractScanStageUI, self).__init__(stage, stage_step_max=100e-6)
+        super(SmaractScanStageUI, self).__init__(stage)
 
     def move_axis_relative(self, index, axis, dir=1):
         if axis in [1,2,4,5]:
             dir *= -1
-        self.stage.move_scanner_to_position(dir*self.step_size[index], axis=axis, speed=4095, relative=True)
+        self.stage.set_piezo_position(dir*self.step_size[index], axis=axis, speed=4095, relative=True)
         self.update_ui[int].emit(axis)
 
     @QtCore.Slot(int)
     @QtCore.Slot(str)
     def update_positions(self, axis=None):
+        piezo_levels = self.stage.piezo_levels
         if axis is None:
-            current_position = self.stage.scan_position
-            for i in range(len(self.positions)):
-                p = engineering_format(current_position[i], base_unit='m', digits_of_precision=3)
-                self.positions[i].setText(p)
+            for i in range(len(self.position_widgets)):
+                self.position_widgets[i].xy_widget.setValue(piezo_levels[i*3],self.stage.max_voltage_levels[i*3+1]-piezo_levels[i*3+1])
+                self.position_widgets[i].z_bar.setValue(self.stage.max_voltage_levels[i*3+2]-piezo_levels[i*3+2])
+
+#            current_position = self.stage.scan_position
+#            for i in range(len(self.positions)):
+#                p = engineering_format(current_position[i], base_unit='m', digits_of_precision=3)
+#                self.positions[i].setText(p)
         else:
-            i = self.stage.axis_names.index(axis)
-            p = engineering_format(self.stage.scan_position[i], base_unit='m', digits_of_precision=3)
-            self.positions[i].setText(p)
+            if axis % 3 == 0:
+                self.position_widgets[axis/3].xy_widget.setValue(piezo_levels[axis],self.stage.max_voltage_levels[axis+1]-piezo_levels[axis+1])
+            elif axis % 3 == 1:
+                self.position_widgets[axis/3].xy_widget.setValue(piezo_levels[axis-1],self.stage.max_voltage_levels[axis]-piezo_levels[axis])
+            else:
+                self.position_widgets[axis/3].z_bar.setValue(self.stage.max_voltage_levels[axis]-piezo_levels[axis])
+#            i = self.stage.axis_names.index(axis)
+#            p = engineering_format(self.stage.scan_position[i], base_unit='m', digits_of_precision=3)
+#            self.positions[i].setText(p)
 
 
 class SmaractMCSUI(QtWidgets.QWidget, UiTools):
@@ -619,14 +641,17 @@ class SmaractMCSUI(QtWidgets.QWidget, UiTools):
 if __name__ == '__main__':
     # print SA_OK
     system_id = SmaractMCS.find_mcs_systems()
-    stage = SmaractMCS(system_id)
+
+    stage1 = SmaractMCS(system_id)
+    stage1.show_gui(blocking=False)
+
     #print stage.position
     #print stage.get_position()
     #print stage.get_position(0)
 
-    import sys
-    from nplab.utils.gui import get_qt_app
-    app = get_qt_app()
-    ui = stage.get_qt_ui()
-    ui.show()
-    sys.exit(app.exec_())
+#    import sys
+#    from nplab.utils.gui import get_qt_app
+#    app = get_qt_app()
+#    ui = stage.get_qt_ui()
+#    ui.show()
+#    sys.exit(app.exec_())

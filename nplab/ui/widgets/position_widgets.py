@@ -2,7 +2,7 @@ __author__ = 'chrisgrosse'
 
 
 import sys
-from qtpy.QtWidgets import QWidget, QGridLayout
+from qtpy.QtWidgets import QWidget, QGridLayout, QHBoxLayout
 from qtpy import QtCore
 from qtpy.QtCore import Qt
 from qtpy.QtGui import QPainter, QColor, QPen
@@ -75,32 +75,49 @@ class PositionBarWidget(QWidget):
 class XYPositionWidget(pg.PlotWidget):
 
     def __init__(self, xrange_nm, yrange_nm):
-        super(XYPositionWidget, self).__init__()
+        super(XYPositionWidget, self).__init__(background=None)
         self.setXRange(0,xrange_nm)
         self.setYRange(0,yrange_nm)
-#        self.setGeometry(400, 50, 400, 400)
-        self.setBackground(background=None)
+        self.init_plot()
+        self.crosshair = CrossHair('r')
+        self.addItem(self.crosshair)
+        self.crosshair.crosshair_size=0.05*xrange_nm
+#        self.crosshair.CrossHairMoved.connect(self.mouseMoved)
+        self.pos = []
+        self.unit = 'pxl'
 
+    def init_plot(self):
+
+#        self.setGeometry(400, 50, 400, 400)
+#        self.setBackground(background=None)
 #        data = np.zeros((100,100))
 #        img = pg.ImageItem(image=data)
 #        self.addItem(img)
         self.showAxis('right',show=True)
         self.showAxis('top',show=True)
+        self.getAxis('left').setPen('k')
+        self.getAxis('bottom').setPen('k')
+        self.getAxis('right').setPen('k')
+        self.getAxis('top').setPen('k')
+        self.getAxis('top').showLabel(show=False)
+        self.getAxis('right').setStyle(showValues=False)
+        self.getAxis('top').setStyle(showValues=False)
+        self.getAxis('left').setStyle(showValues=False)
+        self.getAxis('bottom').setStyle(showValues=False)
         self.setMouseEnabled(x=False,y=False)
         self.setMinimumSize(150,100)
         self.show()
 
-        self.crosshair = CrossHair('r')
-        self.addItem(self.crosshair)
-        self.crosshair.crosshair_size=0.05*xrange_nm
-        self.crosshair.CrossHairMoved.connect(self.mouseMoved)
-        self.unit = 'pxl'
+
+    def setValue(self, new_x, new_y):
+        return self.crosshair.setPos(new_x, new_y)
 
 
     def pxl_to_unit(self, pxl):
         return pxl
 
     def mouseMoved(self):
+        self.pos = self.crosshair.pos()
         x1 = self.crosshair.pos()[0]
         y1 = self.crosshair.pos()[1]
 #        xu1, yu1 = self.pxl_to_unit((x1, y1))
@@ -135,7 +152,6 @@ class CrossHair(pg.GraphicsObject):
             self.setPos(*map(int, self.pos()))
         else:
             self.setPos(self.startPos + ev.pos() - ev.buttonDownPos())
-
         self.CrossHairMoved.emit()
 
 
@@ -145,16 +161,23 @@ class CrossHair(pg.GraphicsObject):
 """
 class XYZPositionWidget(QWidget):
 
-    def __init__(self,xrange_nm, yrange_nm, zrange_nm):
+    def __init__(self,xrange_nm, yrange_nm, zrange_nm, show_xy_pos=True,
+                 show_z_pos=True):
         super(XYZPositionWidget, self).__init__()
-        self.z_bar = PositionBarWidget(0,zrange_nm)
-        self.xy_widget = XYPositionWidget(xrange_nm, yrange_nm)
-        grid = QGridLayout()
-        grid.addWidget(self.xy_widget, 0,0)
-        grid.addWidget(self.z_bar, 0,1)
-
-        self.setLayout(grid)
-        self.setGeometry(100, 100, 220, 200)
+        layout = QHBoxLayout()
+        if show_xy_pos:
+            self.xy_widget = XYPositionWidget(xrange_nm, yrange_nm)
+            layout.addWidget(self.xy_widget)
+        if show_z_pos:
+            self.z_bar = PositionBarWidget(0,zrange_nm)
+            layout.addWidget(self.z_bar)
+        self.setLayout(layout)
+#       grid = QGridLayout()
+#        grid.addWidget(self.xy_widget, 0,0)
+#        grid.addWidget(self.z_bar, 0,1)
+#        self.setLayout(grid)
+#        self.setMinimumSize(150,100)
+#        self.setGeometry(100, 100, 220, 200)
 
 
 
@@ -164,7 +187,7 @@ if __name__ == '__main__':
 
     app = QtGui.QApplication(sys.argv)  # create PyQt application object
     pg.setConfigOption('foreground','k')
-    xyz_widget = XYZPositionWidget(200,200,100)
+    xyz_widget = XYZPositionWidget(200,200,100,show_xy_pos=False)
     xyz_widget.show()
 
 

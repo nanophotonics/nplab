@@ -2,6 +2,8 @@ __author__ = 'alansanders, chrisgrosse'
 
 from nplab.instrument.visa_instrument import VisaInstrument
 from nplab.instrument.stage import Stage, StageUI
+
+#StageUI
 import time
 import numpy as np
 from functools import partial
@@ -63,6 +65,7 @@ class PIStage(VisaInstrument, Stage):
         self.axis_names = ('a', 'b')
         self.positions = [0 for ch in xrange(3)]
         self._stage_id = None
+        self.unit ='m'
         #self.startup()
 
     def move(self, pos, axis=None, relative=False):
@@ -72,8 +75,8 @@ class PIStage(VisaInstrument, Stage):
             self.set_axis_param(self.move_axis, pos, axis)
 
     def move_axis(self, pos, axis, relative=False):
-        if not self.get_loop_mode(axis): # check whether servo-control mode is on
-            self.set_loop_mode(1,axis)
+#        if not self.get_loop_mode(axis): # check whether servo-control mode is on
+#            self.set_loop_mode(1,axis)
         if relative:
             self.write('mvr {0}{1}'.format(axis, 1e6*pos))
         else:
@@ -88,21 +91,44 @@ class PIStage(VisaInstrument, Stage):
         self.write('#24')
 
     def get_position(self, axis=None):
+        return self.get_piezo_position(axis=axis)
+
+    def get_piezo_position(self, axis=None):
+        if axis not in self.axis_names and not axis == None:
+            raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
         txt = self.get_axis_param(lambda axis: 1e-6*float(self.float_query('pos? {0}'.format(axis))), axis)
         self.check_status()
         return txt
-    position = property(fget=get_position, doc="Current position of the stage")
 
-    def get_voltage(self, axis=None):
+    def set_piezo_position(self, pos, axis, relative=False):
+        if axis == None:
+           if relative:
+            self.set_axis_param(partial(self.move_axis, relative=True), pos, axis)
+        else:
+            self.set_axis_param(self.move_axis, pos, axis)
+        return self.check_status()
+
+
+    def get_piezo_voltage(self, axis=None):
+        if axis not in self.axis_names and not axis == None:
+            raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
         txt = self.get_axis_param(lambda axis: self.float_query('vol? {0}'.format(axis)),axis)
         self.check_status()
         return txt
-    def set_voltage(self, axis, voltage):
+
+
+    def set_piezo_voltage(self, voltage, axis):
         if self.get_loop_mode(axis): # servo-control mode needs to be switched off to set voltage!
             self.set_loop_mode(0,axis)
         self.set_axis_param(lambda value, axis: self.write('sva {0}{1}'.format(axis, voltage)), voltage, axis)
         self.check_status()
-    piezo_voltages = property(fget=get_voltage, fset=set_voltage, doc="Current voltage of the stage")
+
+    def get_piezo_level(self, axis=None):
+        return self.get_piezo_voltage(axis)
+
+    def set_piezo_level(self, level, axis):
+        return self.set_piezo_voltage(level, axis)
+
 
     def check_status(self):
         error_code = self.query('err?')
@@ -231,6 +257,10 @@ class PIStage(VisaInstrument, Stage):
     def get_qt_ui(self):
         return StageUI(self, stage_step_min=0.1e-9, stage_step_max=100e-6)
 
+    ### Useful Properties ###
+    piezo_voltages = property(fget=get_piezo_voltage, fset=set_piezo_voltage, doc="Current voltage of the stage")
+    piezo_position = property(get_position)
+    piezo_levels = property(get_piezo_level)
 
 
 class PIStageViaArduino(PIStage):
@@ -268,14 +298,30 @@ class PIStageViaArduino(PIStage):
         t0 = time.clock()
         while self.arduino.pi_message == None:
             if time.clock()-t0 > 1:
-                err = "PI stage does not respond!"
-                raise ValueError(err)
+                err = "PI stage timeout. PI stage does not respond!"
+                print err
+                break
+                #raise ValueError(err)
 #        print 'response took:', time.clock()-t0
         answer = self.arduino.pi_message
+        print "query answer:", answer
         self.arduino.pi_message = None
         return answer
 
 
+#    def check_status(self):
+#        self.arduino.pi_error = None
+#        self.write('err?')
+#        t0 = time.clock()
+#        error_code = self.arduino.pi_error
+#        while  error_code == None:
+#            if time.clock()-t0 > 1:
+#                err = "PI stage does not respond!"
+#                raise ValueError(err)
+#        if error_code != '0':
+#            raise PIStageError(error_code)
+#        else: print "no PI stage errors."
+#        return error_code
 
 
 
