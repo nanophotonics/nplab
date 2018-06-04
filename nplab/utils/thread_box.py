@@ -9,6 +9,8 @@ from nplab.utils.notified_property import NotifiedProperty
 import inspect
 import nplab.datafile as df
 import threading
+import numpy as np
+from nplab.utils.gui import QtWidgets, QtGui, QtCore
 from nplab.utils.thread_utils import locked_action, background_action, background_actions_running
 class ThreadBox3000(QuickControlBox):
     '''A gui/threading utility for running a function in a thread with a simple control window '''
@@ -133,5 +135,11 @@ class ThreadBox3000(QuickControlBox):
         self.construct_payload()()
     def get_qt_ui(self):
         return self
-
+    
+if __name__ == '__main__':
+    def print_hello(spade = '1'):
+        print spade
+    from nplab.utils.gui import get_qt_app
+    app = get_qt_app()    
+    thread_box = ThreadBox3000(print_hello)
         
