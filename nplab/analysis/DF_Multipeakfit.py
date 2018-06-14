@@ -2601,10 +2601,9 @@ if __name__ == '__main__':
 
     startSpec = 0
     finishSpec = 0
+    #Set to 0 if you want to analyse all spectra
 
     if method == 'All':
-
-        #Set to 0 if you want to analyse all spectra
 
         print '\nRetrieving data...'
 
@@ -2615,7 +2614,7 @@ if __name__ == '__main__':
         outputFile = createOutputFile('MultiPeakFitOutput')
 
         with h5py.File(outputFile, 'a') as f:
-            fitAllSpectra(x, yData, f, startSpec = startSpec, raiseExceptions = False, closeFigures = True, fukkit = True, simpleFit = True)
+            fitAllSpectra(x, yData, f, startSpec = startSpec, raiseExceptions = False, closeFigures = True, fukkit = True, simpleFit = False)
 
     elif method == 'Stats':
         outputFile = 'MultiPeakFitOutput_0.h5'
