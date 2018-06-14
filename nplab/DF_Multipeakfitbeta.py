@@ -70,12 +70,7 @@ class DF_Spectrum(object):
 def retrieveData(summaryFile, startSpec, finishSpec, attrsOnly = False):
 
     '''Retrieves data from summary file'''
-
-    if attrsOnly == False:
-        print '\nRetrieving data...'
-
-    else:
-        print '\nRetrieving sample preparation info'
+    print '\nRetrieving data...'
 
     try:
         summaryFile = h5py.File('%s.h5' % summaryFile, 'r')
@@ -116,14 +111,12 @@ def retrieveData(summaryFile, startSpec, finishSpec, attrsOnly = False):
 
     summaryFile.close()
 
+    print '\t%s spectra retrieved from particleScanSummaries/scan%s' % (max(spectraLengths), scanNumber)
 
     if attrsOnly == True:
-        print '\tInfo retrieved from particleScanSummaries/scan%s' % scanNumber
-        print '\t\t%s spectra in total' % max(spectraLengths)
         return summaryAttrs
 
     else:
-        print '\t%s spectra retrieved from particleScanSummaries/scan%s' % (max(spectraLengths), scanNumber)
         return spectra, wavelengths, background, reference, summaryAttrs
 
 def findKey(inputDict, value):
@@ -1148,7 +1141,7 @@ def reduceNoise(y, factor = 10):
     y = ySmooth + yNoise
     return y
 
-def plotHistogram(outputFile, histName = 'Histogram', startWl = 450, endWl = 987, binNumber = 80, plot = True,
+def plotHistogram(outputFile, histName = 'Histogram', startWl = 450, endWl = 900, binNumber = 80, plot = True,
                   minBinFactor = 5, closeFigures = False, which = 'all', plotTitle = ''):
 
     rootDir = os.getcwd()
@@ -1206,6 +1199,10 @@ def plotHistogram(outputFile, histName = 'Histogram', startWl = 450, endWl = 987
     binSize = (endWl - startWl) / binNumber
     bins = np.linspace(startWl, endWl, num = binNumber)
     frequencies = np.zeros(len(bins))
+
+    startIndex = np.where(np.round(x) == np.round(startWl))[0][0]
+    endIndex = np.where(np.round(x) == np.round(endWl))[0][0]
+
     yDataBinned = [np.zeros(len(x)) for f in frequencies]
     yDataRawBinned = [np.zeros(len(x)) for f in frequencies]
     binnedSpectraList = {binStart : [] for binStart in bins}
@@ -1251,6 +1248,8 @@ def plotHistogram(outputFile, histName = 'Histogram', startWl = 450, endWl = 987
         ax2.set_zorder(0)
         ax1.patch.set_visible(False)
 
+        yMax = 0
+
         yDataPlot = []
         freqsPlot = []
         binsPlot = []
@@ -1266,14 +1265,15 @@ def plotHistogram(outputFile, histName = 'Histogram', startWl = 450, endWl = 987
 
         for n, yDataSum in enumerate(yDataPlot):
 
+            currentYMax = yDataSum[startIndex:endIndex].max()
+
             ySmooth = reduceNoise(yDataSum, factor = 7)
-            currentYMax = truncateSpectrum(x, ySmooth)[1].max()
+            ax1.plot(x, ySmooth, lw = 0.7, color = colors[n])
 
-            if currentYMax < 10:
+            if currentYMax > yMax:
+                yMax = currentYMax
 
-                ax1.plot(x, ySmooth, lw = 0.7, color = colors[n])
-
-        ax1.set_ylim(-0.1, 10)
+        ax1.set_ylim(-0.1, yMax*1.2)
         ax1.set_ylabel('Normalised Intensity', fontsize = 18)
         ax1.tick_params(labelsize = 15)
         ax1.set_xlabel('Wavelength (nm)', fontsize = 18)
@@ -1536,10 +1536,9 @@ def plotIntensityRatios(outputFile, plot = True, xBins = 150, yBins = 120, ringF
 
             fig, ax = plt.subplots(figsize = (9, 9))
 
-            ax.scatter(xFilt, yFilt, marker = '+', color = 'r', s = 3)
             ax = sns.kdeplot(xFilt, yFilt, shade=True, ax=ax, gridsize=200, cmap='Reds', cbar = True,
-                             shade_lowest = False, linewidth = 20, alpha = 0.6, clim=(0.5, 1))
-
+                             shade_lowest = False, linewidth = 20, alpha = 0.5, clim=(0.5, 1))
+            ax.scatter(xFilt, yFilt, marker = '+', s = 3)
             ax.set_ylim(0, 10)
             ax.set_ylabel('Intensity Ratio', fontsize = 18)
             ax.tick_params(which = 'both', labelsize = 15)
@@ -2015,13 +2014,13 @@ def sortSpectra(outputFile, replace = False, method = 'basic', npomLower = 0.1, 
     if replace == False and method == 'basic':
 
         if 'NPoMs' in gAll:
-            print '\tSpectra already sorted'
+            print 'Spectra already sorted'
             return
 
     elif method == 'full' or replace == True:
 
         if method == 'full' and replace == False:
-            print '\tFull sorting in place. Data will be overwritten'
+            print 'Full sorting in place. Data will be overwritten'
 
         try:
 
@@ -2098,7 +2097,7 @@ def sortSpectra(outputFile, replace = False, method = 'basic', npomLower = 0.1, 
     timeElapsed = specSortEnd - specSortStart
     print '\tSpectra sorted in %s seconds' % timeElapsed
 
-def plotHistAndFit(outputFile, which = 'all', plotTitle = '', startWl = 450, endWl = 987, binNumber = 80, plot = True,
+def plotHistAndFit(outputFile, which = 'all', plotTitle = '', startWl = 450, endWl = 900, binNumber = 80, plot = True,
                   minBinFactor = 5, closeFigures = False):
 
     frequencies, bins, yDataBinned, yDataRawBinned, binnedSpectraList, histyWl, histImg = plotHistogram(outputFile,
@@ -2412,8 +2411,6 @@ def peakAverages(outputFile, singleBin = False, peakPos = 0):
     '''If singleBin = False, function averages peak data from all NPoM spectra'''
     '''If True, specify wavelength and function will average peak data from all spectra contained in that histogram bin'''
 
-    peakAvgStart = time.time()
-
     print '\nCollecting peak averages'
 
     allNpoms = outputFile['All spectra/NPoMs/All NPoMs']
@@ -2525,10 +2522,7 @@ def peakAverages(outputFile, singleBin = False, peakPos = 0):
 
             npomList.attrs.update(attrAvgs)
 
-    peakAvgEnd = time.time()
-    timeElapsed = peakAvgEnd - peakAvgStart
-
-    print '\tPeak averages collected in %s seconds' % timeElapsed
+    print '\tPeak averages collected'
 
 def analyseRepresentative(outputFile):
     print '\nCollecting representative spectrum info'
@@ -2544,7 +2538,6 @@ def analyseRepresentative(outputFile):
         biggestBin = binNames[binPops.argmax()]
         print '\t%s' % histName
         print '\t\tBin with largest population:', biggestBin
-        avgBin = False
 
         for binName in gBins:
             binStart = gBins[binName].attrs['Bin start (nm)']
@@ -2561,34 +2554,30 @@ def analyseRepresentative(outputFile):
 
         for n, binName in enumerate(binStyles):
 
-            if binName != False:
+            representativeSpectrum = gBins[binName]['Sum']
+            ySmooth = butterLowpassFiltFilt(representativeSpectrum)
+            x = representativeSpectrum.attrs['wavelengths']
+            cmRegMinWl = cmPeakPos - 25
+            cmRegMaxWl = cmPeakPos + 25
+            cmRegion = truncateSpectrum(x, ySmooth, cmRegMinWl, cmRegMaxWl)
+            cmHeightRaw = cmRegion[1].max()
+            repSpecNorm = representativeSpectrum / cmHeightRaw
+            weirdHeight = gBins[binName].attrs['Weird peak intensity (raw)(average)']
+            weirdHeight /= cmHeightRaw
 
-                representativeSpectrum = gBins[binName]['Sum']
-                ySmooth = butterLowpassFiltFilt(representativeSpectrum)
-                x = representativeSpectrum.attrs['wavelengths']
-                repMetadata = analyseNpomPeaks(x, representativeSpectrum)
-                cmRegMinWl = cmPeakPos - 25
-                cmRegMaxWl = cmPeakPos + 25
-                cmRegion = truncateSpectrum(x, ySmooth, cmRegMinWl, cmRegMaxWl)
-                cmHeightRaw = cmRegion[1].max()
-                repSpecNorm = representativeSpectrum / cmHeightRaw
-                weirdHeight = gBins[binName].attrs['Weird peak intensity (raw)(average)']
-                weirdHeight /= cmHeightRaw
+            try:
+               del outputFile['Statistics/Representative spectrum (%s, %s)' % (analStyles[n], histName)]
 
-                try:
-                   del outputFile['Statistics/Representative spectrum (%s, %s)' % (analStyles[n], histName)]
+            except:
+                pass
 
-                except:
-                    pass
-
-                dRep = outputFile['Statistics'].create_dataset('Representative spectrum (%s, %s)' % (analStyles[n], histName), data = repSpecNorm)
-                dRep.attrs['Bin number'] = binName
-                dRep.attrs['wavelengths'] = x
-                dRep.attrs['Raw'] = representativeSpectrum[()]
-                dRep.attrs['Weird peak height (norm to CM)'] = weirdHeight
-                dRepAttrs = {key : gBins[binName].attrs[key] for key in gBins[binName].attrs.keys()}
-                dRep.attrs.update(dRepAttrs)
-                dRep.attrs.update(repMetadata)
+            dRep = outputFile['Statistics'].create_dataset('Representative spectrum (%s, %s)' % (analStyles[n], histName), data = repSpecNorm)
+            dRep.attrs['Bin number'] = binName
+            dRep.attrs['wavelengths'] = gBins[binName]['Sum'].attrs['wavelengths']
+            dRep.attrs['Raw'] = representativeSpectrum[()]
+            dRep.attrs['Weird peak height (raw)'] = gBins[binName].attrs['Weird peak intensity (raw)(average)']
+            dRep.attrs['Weird peak height (norm to TM)'] = gBins[binName].attrs['Weird peak intensity (norm)(average)']
+            dRep.attrs['Weird peak height (norm to CM)'] = weirdHeight
 
     print '\tRepresentative spectrum info collected'
 
@@ -2730,7 +2719,7 @@ def doStats(outputFile, minBinFactor = 5, sortSpec = True, replaceWhenSorting = 
     print '\nStats done'
 
 def fitAllSpectra(x, yData, outputFile, summaryAttrs = {}, startSpec = 0, monitorProgress = False, plot = False,
-                  raiseExceptions = False, closeFigures = False, fukkit = False, simpleFit = True, stats = True):
+                  raiseExceptions = False, closeFigures = False, fukkit = False, simpleFit = True):
 
     absoluteStartTime = time.time()
 
@@ -2908,8 +2897,7 @@ def fitAllSpectra(x, yData, outputFile, summaryAttrs = {}, startSpec = 0, monito
 
     print '\n%s spectra fitted in %s min %s sec' % (nn + 1, mins, secs)
 
-    if stats == True:
-        doStats(outputFile, closeFigures = closeFigures, doubBools = False)
+    doStats(outputFile, closeFigures = closeFigures, doubBools = False)
 
     absoluteEndTime = time.time()
     timeElapsed = absoluteEndTime - absoluteStartTime
@@ -2945,8 +2933,6 @@ if __name__ == '__main__':
     summaryNameFormat = 'summary'
     outputNameFormat = 'MultiPeakFitOutput'
 
-    '''The options below are for post-fitting analysis'''
-
     minBinFactor = 6 #Factor for displaying averaged spectra in histogram. e.g. 6 => only spectra from bins with > 1/6 the population of largest bin will be plotted
     sortSpec = True #Re-sorts spectra into correspoinging groups
     replaceWhenSorting = True #If false and spectra have already been sorted, command will be ignored
@@ -2975,7 +2961,7 @@ if __name__ == '__main__':
 
         with h5py.File(outputFile, 'a') as f:
             fitAllSpectra(x, yData, f, summaryAttrs = summaryAttrs, startSpec = startSpec, raiseExceptions = raiseExceptions, closeFigures = closeFigures,
-                          fukkit = True, simpleFit = True, stats = True)
+                          fukkit = True, simpleFit = True)
 
     elif method == 'Stats':
 
