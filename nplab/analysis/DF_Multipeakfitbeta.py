@@ -249,6 +249,14 @@ def truncateSpectrum(wavelengths, spectrum, startWl = 450, finishWl = 900):
     startIndex = abs(wavelengths - startWl).argmin()
     finishIndex = abs(wavelengths - finishWl).argmin()
 
+    if startIndex > finishIndex:
+        ind1 = finishIndex
+        ind2 = startIndex
+        startIndex = ind1
+        finishIndex = ind2
+        print startIndex
+        print finishIndex
+
     wavelengthsTrunc = np.array(wavelengths[startIndex:finishIndex])
     spectrumTrunc = np.array(spectrum[startIndex:finishIndex])
     return np.array([wavelengthsTrunc, spectrumTrunc])
