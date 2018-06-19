@@ -51,6 +51,7 @@ class ProScan(serial.SerialInstrument, stage.Stage):
         
         self.use_si_units = use_si_units
         self.axis_names = ('x', 'y', 'z')
+        
     def move_rel(self, dx, block=True):
         """Make a relative move by dx microns/metres (see move)"""
         return self.move(dx, relative=True, block=block)
