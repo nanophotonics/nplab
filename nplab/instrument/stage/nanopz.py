@@ -10,6 +10,24 @@ from nplab.instrument.stage import Stage
 import serial
 import time
 
+
+
+ERROR_CODE = {'0': 'No error',
+              '2': 'Driver fault (thermal shut down)',
+              '6': 'Unknown command',
+              '7': 'Parameter out of range',
+              '8': 'No motor connected',
+              '26': 'Positive software limit detected',
+              '27': 'Negative software limit detected',
+              '38': 'Command parameter missing',
+              '50': 'Communication overflow',
+              '213': 'Motor not enabled',
+              '214': 'Invalid axis',
+              '226': 'Command not allowed during motion',
+              '227': 'Command not allowed',
+              '240': 'Jog wheel over speed'
+              }
+
 class NanoPZ(si.SerialInstrument,Stage):
     def __init__(self, port=None,controllerNOM ="1"):
         self.port_settings = {
@@ -97,21 +115,6 @@ class NanoPZ(si.SerialInstrument,Stage):
             print "The upper Limit must be greater than 0, current upper limit = ",self.query("{0}SR?".format(self.controllerNOM))
 
 
-ERROR_CODE = {'0': 'No error',
-              '2': 'Driver fault (thermal shut down)',
-              '6': 'Unknown command',
-              '7': 'Parameter out of range',
-              '8': 'No motor connected',
-              '26': 'Positive software limit detected',
-              '27': 'Negative software limit detected',
-              '38': 'Command parameter missing',
-              '50': 'Communication overflow',
-              '213': 'Motor not enabled',
-              '214': 'Invalid axis',
-              '226': 'Command not allowed during motion',
-              '227': 'Command not allowed',
-              '240': 'Jog wheel over speed'
-              }
         
 if __name__ == '__main__':
     teststage = NanoPZ(port = "COM25")
