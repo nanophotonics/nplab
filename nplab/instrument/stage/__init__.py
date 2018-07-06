@@ -194,8 +194,9 @@ class StageUI(QtWidgets.QWidget, UiTools):
             self.update_ui[int].emit(axis)
 
     def zero_all_axes(self, axes):
-        for axis in axes:
-            self.move_axis_absolute(0, axis)
+        pass
+#        for axis in axes:
+#            self.move_axis_absolute(0, axis)
 
     def create_axes_layout(self, default_step=1e-6, stack_multiple_stages='horizontal'):
 
@@ -239,7 +240,7 @@ class StageUI(QtWidgets.QWidget, UiTools):
                 zero_button.resize(icon_size)
                 n = len(self.stage.axis_names) - i if len(self.stage.axis_names) - i < 3 else 3
                 axes_set = self.stage.axis_names[i:i + n]
-                zero_button.clicked.connect(partial(self.zero_all_axes, axes_set))
+#                zero_button.clicked.connect(partial(self.zero_all_axes, axes_set))
                 layout.addWidget(zero_button, 1, 1)
 
             step_size_select = QtWidgets.QComboBox(self)
