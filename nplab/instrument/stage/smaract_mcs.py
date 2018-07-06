@@ -11,14 +11,14 @@ from nplab.ui.ui_tools import UiTools
 
 
 try:
-    mcsc = ctypes.cdll.MCSControl
+    mcsc = ctypes.cdll.MCSControl # load C library from MCSControl.h
 except:
     raise Warning("MCSControl dll not found")
 
 file_dir = os.path.dirname(os.path.realpath(__file__))
 
 
-def get_enums():
+def get_enums(): # get status return values from MCSControl.h
     with open(os.path.join(file_dir, 'MCSControl.h'), 'r') as f:
         lines = [line.strip().split(' ') for line in f.readlines() if line.startswith('#define')]
         enums = {}
@@ -589,6 +589,288 @@ class SmaractStageUI(StageUI):
         self.stage.move(dir*self.step_size[index], axis=axis, relative=True)
         self.update_ui[int].emit(axis)
 
+
+
+from nplab.instrument.serial_instrument import SerialInstrument
+import serial
+
+class MCSSerialError(Exception):
+    def __init__(self, error_msg):
+        self.channel = error_msg[0]
+        self.error_code = error_msg[1]
+        self.error = {}
+        self.error['0'] = 'No Error'
+        self.error['1'] = 'Syntax Error'
+        self.error['2'] = 'Invalid Command Error'
+        self.error['3'] = 'Overflow Error'
+        self.error['4'] = 'Parse Error'
+        self.error['5'] = 'Too Few Parameters Error'
+        self.error['6'] = 'Too Many Parameters Error'
+        self.error['7'] = 'Invalid Parameter Error'
+        self.error['8'] = 'Wrong Mode Error'
+        self.error['129'] = 'No Sensor Present Error'
+        self.error['140'] = 'Sensor Disabled Error'
+        self.error['141'] = 'Command Overridden Error'
+        self.error['142'] = 'End Stop Reached Error'
+        self.error['143'] = 'Wrong Sensor Type Error'
+        self.error['144'] = 'Could Not Find Reference Mark Error'
+        self.error['145'] = 'Wrong End Effector Type Error'
+        self.error['146'] = 'Movement Locked Error'
+        self.error['147'] = 'Range Limit Reached Error'
+        self.error['148'] = 'Physical Position Unknown Error'
+        self.error['150'] = 'Command Not Processable Error'
+        self.error['151'] = 'Waiting For Trigger Error'
+        self.error['152'] = 'Command ot Triggeral Error'
+        self.error['153'] = 'Command Queue Full Error'
+        self.error['154'] = 'Invalid Component Error'
+        self.error['155'] = 'Invalid Sub Component Error'
+        self.error['156'] = 'Invalid Property Error'
+        self.error['157'] = 'Permission Denied Error'
+
+    def __str__(self):
+        if self.channel == '-1':
+            return "[%s] %s" % (self.error_code, self.error[self.error_code])
+        else:
+            return "[%s]: %s for channel %s" % (self.error_code, self.error[self.error_code], self.channel)
+
+
+
+
+class SmaractMCSSerial(SerialInstrument,PiezoStage):
+    """
+    RS232 Smaract MCS controller interface for SmarAct stages.
+
+    Check SmarAct's "MCS ASCII Programming Interface" Guide for mor information
+    general command structure: <inital_character><command name>[param][,param]...<termination_character>
+    with command names are a combination of uppercase letters and parameters
+    given as decimal values which can be positive or negative
+
+    """
+    port_settings = dict(baudrate=9600,
+                        bytesize=serial.EIGHTBITS,
+                        parity=serial.PARITY_NONE,
+                        stopbits=serial.STOPBITS_ONE,
+                        timeout=1, #wait at most one second for a response
+                        writeTimeout=1, #similarly, fail if writing takes >1s
+                        xonxoff=False, rtscts=False, dsrdtr=False,
+                    )
+    def __init__(self,port):
+        self.initial_character = ':'
+        self.termination_character = '\n'
+        super(SmaractMCSSerial, self).__init__(port=port)
+        self._num_ch = None
+#        self.axis_names = tuple(i for i in range(self.num_ch))
+#        self.positions = [0 for ch in range(self.num_ch)]
+#        self.levels = [0 for ch in range(self.num_ch)]
+#        self.voltages = [0 for ch in range(self.num_ch)]
+#        self.scan_positions = [0 for ch in range(self.num_ch)]
+#        self.min_voltage = [0 for ch in range(self.num_ch)]
+#        self.max_voltage = [100 for ch in range(self.num_ch)]
+#        self.min_voltage_levels = [0 for ch in range(self.num_ch)]
+#        self.max_voltage_levels = [4095 for ch in range(self.num_ch)]
+
+        # necessary to open the serial port? Or done automatically during class initialisation?
+
+    """
+        overwrite query() from message_bus_instrumennt class to implement error detection
+    """
+    def query(self,queryString,multiline=False,termination_line=None,timeout=None):
+        """
+        original query() from message_bus_instrumennt class overwritten to
+        implement error detection
+        """
+        with self.communications_lock:
+            self.flush_input_buffer()
+            self.write(queryString) # intial and termination character are added in write()
+            if self.ignore_echo == True: # Needs Implementing for a multiline read!
+                first_line = self.readline(timeout).strip()
+                if first_line == queryString:
+                    return self.check_for_error(self.readline(timeout).strip())
+                else:
+                    print 'This command did not echo!!!'
+                    return first_line
+
+            if termination_line is not None:
+                multiline = True
+            if multiline:
+                return self.check_for_error(self.read_multiline(termination_line))
+            else:
+                return self.check_for_error(self.readline(timeout).strip())
+
+
+
+    def check_for_error(self,response):
+        if response[1] == "E" and not response[-1] == "0":
+            raise MCSSerialError(response[2:].split(','))
+        else:
+            return response
+
+
+    """ =======================
+        Initialisation commands
+        =======================
+    """
+    def get_communication_mode(self):
+        mode = self.query("GCM")
+        if mode[-1] == '0':
+            print "synchronous communication mode"
+        elif mode[-1] == '1':
+            print "asynchronous communication mode"
+        return int(mode[-1])
+
+    def set_communication_mode(self,mode):
+        if mode == "sync" or mode == "synchronous" or mode == "0":
+            self.write("SCM0")
+        elif mode == "async" or mode == "asynchronous" or mode == "1":
+            self.write("SCM1")
+        else:
+            raise ValueError("No valid communication mode. Possible modes are: 'sync' or 'async'.")
+
+    def get_channel_type(self,ch):
+        response = self.query("GCT"+str(ch))
+        return int(response[-1])
+
+    def get_interface_version(self):
+        response = self.query("GIV")[3:].split(',')
+        print "versionHigh:", response[0]
+        print "versionLow:", response[1]
+        print "versionUpdate:", response[2]
+        return response
+
+    def get_num_channels(self):
+        if self._num_ch is not None:
+            return self._num_ch
+        self._num_ch = int(self.query("GNC")[2:])
+        return self._num_ch
+
+    def get_system_id(self):
+        return str(self.query("GSI")[3:])
+
+    def reset(self):
+        acknowledgment = self.query("R")
+        if acknowledgment == ":E-1,0":
+            print "SmarAct MCS reset succesfully"
+            return True
+        else:
+            print "SmarAct MCS reset failled"
+            return False
+
+
+    """ ========================================
+        speed, accelaration and sensor settings
+        ========================================
+    """
+    def get_acceleration(self, ch):
+        """
+        returns the acceleration of a given channel used for closed-loop
+        commands in um*s^-2 (linear positioner) or mdegree*s^-2 (roatry positioner).
+        A returned value of 0 means that the acceleration control is deactivated
+        """
+        response = self.query("GCLA"+str(ch))
+        return int(response[response.index(",")+1:])
+
+    def set_acceleration(self, ch, acceleration):
+        '''
+        sets the acceleration of a given channel used for closed-loop
+        commands in um*s^-2 (linear positioner) or mdegree*s^-2 (roatry positioner).
+        The valid range is 0 .. 10,000,000. A value of 0 deactivates the
+        acceleration control feature.
+        '''
+        self.write("SCLA"+str(ch)+","+acceleration)
+
+
+#
+#
+#
+#
+#    def set_sensor_power_mode(self, mode):
+#        modes = {0: SA_SENSOR_DISABLED, 1: SA_SENSOR_ENABLED, 2: SA_SENSOR_POWERSAVE}
+#        self.check_open_status()
+#        self.check_status(mcsc.SA_SetSensorEnabled_S(self.handle, modes[mode]))
+#
+#    def set_low_vibration_mode(self, ch, enable):
+#        ch = c_int(int(ch))
+#        values = {0: SA_DISABLED, 1: SA_ENABLED}
+#        self.check_open_status()
+#        self.check_status(mcsc.SA_SetChannelProperty_S(self.handle, ch,
+#                                                       mcsc.SA_EPK(SA_GENERAL, SA_LOW_VIBRATION, SA_OPERATION_MODE),
+#                                                       values[enable]))
+#
+#    def get_acceleration(self, ch):
+#        ch = c_int(int(ch))
+#        acceleration = c_int()
+#        self.check_open_status()
+#        mcsc.SA_GetClosedLoopMoveAcceleration_S(self.handle, ch, byref(acceleration))
+#        return acceleration.value
+#
+#    def set_acceleration(self, ch, acceleration):
+#        '''
+#        units are um/s/s.
+#        '''
+#        ch = c_int(int(ch))
+#        acceleration = c_int(int(acceleration))
+#        self.check_open_status()
+#        mcsc.SA_SetClosedLoopMoveAcceleration_S(self.handle, ch, acceleration)
+#
+#    def get_speed(self, ch):
+#        ch = c_int(int(ch))
+#        speed = c_int()
+#        self.check_open_status()
+#        self.check_status(mcsc.SA_GetClosedLoopMoveSpeed_S(self.handle, ch,
+#                                                           byref(speed)))
+#        return speed.value
+#
+#    def set_speed(self, ch, speed):
+#        '''
+#        units are nm/s, max is 1e8. A value of 0 deactivates speed control
+#        (defaults to max.).
+#        '''
+#        ch = c_int(int(ch))
+#        speed = c_int(int(speed))
+#        self.check_open_status()
+#        self.check_status(mcsc.SA_SetClosedLoopMoveSpeed_S(self.handle, ch,
+#                                                           speed))
+#
+#    def get_frequency(self, ch):
+#        ch = c_int(int(ch))
+#        frequency = c_int()
+#        self.check_open_status()
+#        self.check_status(mcsc.SA_GetClosedLoopMaxFrequency_S(self.handle, ch,
+#                                                              byref(frequency)))
+#        return frequency.value
+#
+#    def set_frequency(self, ch, frequency):
+#        '''
+#        units are nm/s, min is 50, max is 18,500. A value of 0 deactivates speed control
+#        (defaults to max.).
+#        '''
+#        ch = c_int(int(ch))
+#        frequency = c_int(int(frequency))
+#        self.check_open_status()
+#        self.check_status(mcsc.SA_SetClosedLoopMaxFrequency_S(self.handle, ch,
+#
+
+
+
+
+
+#    def set_sensor_power_mode(self, mode):
+#        modes = {0: SA_SENSOR_DISABLED, 1: SA_SENSOR_ENABLED, 2: SA_SENSOR_POWERSAVE}
+#        self.check_open_status()
+#        self.check_status(mcsc.SA_SetSensorEnabled_S(self.handle, modes[mode]))
+#
+#    def set_low_vibration_mode(self, ch, enable):
+#        ch = c_int(int(ch))
+#        values = {0: SA_DISABLED, 1: SA_ENABLED}
+#        self.check_open_status()
+#        self.check_status(mcsc.SA_SetChannelProperty_S(self.handle, ch,
+#                                                       mcsc.SA_EPK(SA_GENERAL, SA_LOW_VIBRATION, SA_OPERATION_MODE),
+#                                                       values[enable]))
+
+
+
+
+
 class SmaractScanStageUI(PiezoStageUI):
     def __init__(self, stage):
         super(SmaractScanStageUI, self).__init__(stage)
@@ -639,11 +921,15 @@ class SmaractMCSUI(QtWidgets.QWidget, UiTools):
 
 
 if __name__ == '__main__':
-    # print SA_OK
-    system_id = SmaractMCS.find_mcs_systems()
 
-    stage1 = SmaractMCS(system_id)
-    stage1.show_gui(blocking=False)
+    smaract = SmaractMCSSerial('COM3')
+
+
+    # print SA_OK
+#    system_id = SmaractMCS.find_mcs_systems()
+#
+#    stage1 = SmaractMCS(system_id)
+#    stage1.show_gui(blocking=False)
 
     #print stage.position
     #print stage.get_position()
