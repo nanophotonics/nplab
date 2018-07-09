@@ -2,7 +2,9 @@ from __future__ import division
 import numpy as np
 import requests
 import matplotlib.pyplot as plt
-
+from scipy.special import riccati_jn,riccati_yn
+from nplab.utils.refractive_index_db import RefractiveIndexInfoDatabase
+from mpl_toolkits.mplot3d import Axes3D
 
 #Initialized after first request
 WAVELENGTHS = None
@@ -12,6 +14,12 @@ print "starting"
 Adapted from: https://github.com/scottprahl/miepython
 
 '''
+
+rfdb = RefractiveIndexInfoDatabase()
+water = "main/H2O/Hale.yml"
+gold = "main/Au/Yakubovsky-25nm.yml"
+water_refractive_index = rfdb.refractive_index_generator(label=water)
+gold_refractive_index = rfdb.refractive_index_generator(label=gold)
 
 
 def Lentz_Dn(z, N):
@@ -38,7 +46,6 @@ def Lentz_Dn(z, N):
 
     return -N/z+runratio
 
-
 def D_downwards(z, N):
     """ Compute the logarithmic derivative of all Ricatti-Bessel functions
         This returns the Ricatti-Bessel function of orders 0 to N for an
@@ -50,7 +57,6 @@ def D_downwards(z, N):
         last_D =  n/z - 1.0/(last_D+n/z)
         D[n-1] = last_D
     return D
-
 
 def D_upwards(z, N):
     """ Compute the logarithmic derivative of all Ricatti-Bessel functions
@@ -64,7 +70,6 @@ def D_upwards(z, N):
         D[n] = 1/(n/z-D[n-1])-n/z
     return D
 
-
 def D_calc(m, x, N):
     """ Compute the logarithmic derivative of the Ricatti-Bessel function at all
         orders (from 0 to N) with argument z
@@ -75,7 +80,6 @@ def D_calc(m, x, N):
     else:
         return D_downwards(z, N)
 
-from scipy.special import riccati_jn,riccati_yn
 def calculate_a_b_coefficients(m,x,n_max):
     n = 2*n_max
 
@@ -119,9 +123,10 @@ from scipy.special import jv, yv
 def Mie_ab(m,x,n_max):
     #  http://pymiescatt.readthedocs.io/en/latest/forward.html#Mie_ab
     mx = m*x
-    nmax = np.round(2+x+4*(x**(1/3)))
+    nmax = np.real(np.round(2+x+4*(x**(1/3))))
     nmx = np.round(max(nmax,np.abs(mx))+16)
-    n = np.arange(1,nmax+1)
+    # print "NMAX:", nmax
+    n = np.arange(1,np.real(nmax)+1)
     nu = n + 0.5
 
     sx = np.sqrt(0.5*np.pi*x)
@@ -201,9 +206,11 @@ def get_refractive_index(target_wavelength, url):
         import csv
         response = requests.get(url)
         reader = csv.reader(response._content)
-        for row in reader:
-            print row
-        content = ((gold_indices._content).replace('\r','\n')).replace('\n\n\n',"\n").replace('\t',",")
+        # for row in reader:
+        #     print row
+        print response._content
+        # content = ((response._content).replace('\r','\n')).replace('\n\n\n',"\n").replace('\t',",").replace("\n\n","\n")
+        print content
         R = [v.split(",") for v in (content.split("\n"))]
         R=R[1:]
 
@@ -219,13 +226,21 @@ def get_refractive_index(target_wavelength, url):
                 pass
             WAVELENGTHS = wavelengths
             REFRACTIVE_INDEX = ns
+    print target_wavelength
+    print WAVELENGTHS
+    print REFRACTIVE_INDEX
     return np.interp(target_wavelength,WAVELENGTHS,REFRACTIVE_INDEX)
+
 def get_refractive_index_Au(target_wavelength):
     url = "https://refractiveindex.info/data_csv.php?datafile=data/main/Au/Johnson.yml"
     return get_refractive_index(target_wavelength,url=url)
 
 def get_refractive_index_Ag(target_wavelength):
     url = "https://refractiveindex.info/data_csv.php?datafile=data/main/Ag/Johnson.yml"
+    return get_refractive_index(target_wavelength,url=url)
+
+def get_refractive_index_water(target_wavelength):
+    url = "https://refractiveindex.info/data_csv.php?datafile=data/main/H2O/Hale.yml"
     return get_refractive_index(target_wavelength,url=url)
 
 def calculate_scattering_cross_section(m,x,r,n_max):
@@ -243,9 +258,11 @@ def calculate_scattering_cross_section(m,x,r,n_max):
         total = total + (2*N+1)*(a2[n]+b2[n])
     return ((2*np.pi)/k**2)*total
 
+
+
 def calculate_extinction_cross_section(m,x,r,n_max):
     k = x/r
-    a,b = Mie_ab(m, x,n_max)
+    a,b = Mie_ab(m, x, n_max)
     
 
     a2,b2 = np.absolute(a)**2,np.absolute(b)**2
@@ -357,7 +374,6 @@ def main2():
     ax2.legend()
     plt.show()
     
-
 def main():
     wavelength = 633.0e-9
     n_particle = get_refractive_index_Au(wavelength/1e-9)
@@ -405,5 +421,32 @@ def main():
         # plt.show()
         plt.savefig("C:\Users\im354\Pictures\Mie\particle_{}.png".format(r/1e-9))
 
+def scattering_cross_section(radius,wavelength):
+
+    n_particle = gold_refractive_index(required_wavelength=wavelength)
+    n_med = water_refractive_index(required_wavelength=wavelength)
+    x,m = make_rescaled_parameters(n_med=n_med,n_particle=n_particle,r=radius,wavelength=wavelength)
+    output = calculate_scattering_cross_section(m=np.asarray([m]),x=np.asarray([x]),r=np.asarray([radius]),n_max=40) 
+    return output
+
+def main4():
+    wavelength_range = np.asarray([1e-9*wl for wl in np.linspace(450,800,350)])
+    radius_range = np.asarray([r*1e-9 for r in np.linspace(100,120,40)])
+    x,y= np.meshgrid(radius_range,wavelength_range,indexing="xy")
+    f = np.vectorize(scattering_cross_section)
+    z = f(x,y)
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')
+    zmin = np.min(z)
+    surf = ax.plot_wireframe(x, y, z/zmin)
+    plt.xlabel("Radius")
+    plt.ylabel("Wavelength")
+    plt.title("Normalized scattering cross section\n Normalization: z/z_min, z_min = {}".format(zmin))
+
+    ratio_low = scattering_cross_section(radius = 120e-9,wavelength=450e-9)/scattering_cross_section(radius = 100e-9,wavelength=450e-9)
+    ratio_high = scattering_cross_section(radius = 120e-9,wavelength=580e-9)/scattering_cross_section(radius = 100e-9,wavelength=580e-9)
+    print "RATIO LOW: ", ratio_low
+    print "RATIO High: ", ratio_high
+    plt.show()
 if __name__ == "__main__":
-    main3()
+    main4()
