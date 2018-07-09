@@ -164,6 +164,32 @@ class SmaractMCS(PiezoStage):
             ch = c_int(i)
             self.check_status(mcsc.SA_SetStepWhileScan_S(self.handle, ch, SA_NO_STEP_WHILE_SCAN))
 
+
+
+    def get_sensor_type(self, ch):
+        """
+        returns the sensor type for a given channel ch
+        For a list of sensor types see MCS Programmer's Guide
+        """
+        ch = c_int(int(ch))
+        sensor_type = c_int()
+        self.check_open_status()
+        mcsc.SA_GetSensorType_S(self.handle, ch, byref(sensor_type))
+        return sensor_type.value
+
+
+
+    def set_sensor_type(self, ch, sensor_type):
+        """
+        sets the sensor type for a given channel ch
+        For a list of sensor types see MCS Programmer's Guide
+        """
+        ch = c_int(int(ch))
+        sensor_type = c_int(int(sensor_type))
+        self.check_open_status()
+        mcsc.SA_SetSensorType_S(self.handle, ch, sensor_type)
+
+
     def set_sensor_power_mode(self, mode):
         modes = {0: SA_SENSOR_DISABLED, 1: SA_SENSOR_ENABLED, 2: SA_SENSOR_POWERSAVE}
         self.check_open_status()
@@ -294,6 +320,56 @@ class SmaractMCS(PiezoStage):
         num_ch = self.get_num_channels()
         for i in range(num_ch):
             self.find_references_ch(i)
+
+
+    """ =============================
+        position of rotary positioner
+        =============================
+    """
+    def move_angle_absolute(self, ch, angle, revolution, holdTime):
+        """
+        ch: positioner channel
+        angle: absolute angle to move in micro degrees: 0 .. 359,999,999
+        revolution: absolute revolution to move: -32,768 .. 32,767
+        holdTime: time in milliseconds the angle is actively hold after reaching target: 0 .. 60,000
+        with 0 deactivating feature and 60,000 is infinite/until manually stopped
+        """
+        ch = c_uint32(int(ch))
+        angle = c_uint32(int(angle))
+        revolution = c_int32(int(angle))
+        holdTime = c_uint32(int(holdTime))
+        self.check_open_status()
+        mcsc.SA_GoToAngleAbolute_S(self.handle, ch, angle, revolution, holdTime)
+
+
+    def move_angle_relative(self, ch, angle, revolution, holdTime):
+        """
+        ch: positioner channel
+        angle: relative angle to move in micro degrees: -359,999,999 .. 359,999,999
+        revolution: relative revolution to move: -32,768 .. 32,767
+        holdTime: time in milliseconds the angle is actively hold after reaching target: 0 .. 60,000
+        with 0 deactivating feature and 60,000 is infinite/until manually stopped
+        """
+        ch = c_uint32(int(ch))
+        angle = c_int32(int(angle))
+        revolution = c_int32(int(angle))
+        holdTime = c_uint32(int(holdTime))
+        self.check_open_status()
+        mcsc.SA_GoToAngleRelative_S(self.handle, ch, angle, revolution, holdTime)
+
+    def get_angle(self,ch):
+        """
+        returns the absolute angle and revolutions of the given positioner channel ch
+        """
+        ch = c_uint32(int(ch))
+        angle = c_uint32()
+        revolution = c_int32()
+        self.check_open_status()
+        mcsc.SA_GetAngle_S(self.handle, byref(angle), byref(revolution))
+        return [angle.value, revolution.value]
+
+
+
 
     ### ==================================================== ###
     ### Methods to read-out position and move to a specific  ###
@@ -777,6 +853,57 @@ class SmaractMCSSerial(SerialInstrument,PiezoStage):
         acceleration control feature.
         '''
         self.write("SCLA"+str(ch)+","+acceleration)
+
+    def get_sensor_type(self, ch):
+        """
+        returns the sensor type for a given channel ch
+        For a list of sensor types see MCS ASCII Programming Interface documentation
+        """
+        return self.query("GST"+str(ch))
+
+
+    def set_sensor_type(self, ch, sensor_type):
+        """
+        sets the sensor type for a given channel ch
+        For a list of sensor types see MCS ASCII Programming Interface documentation
+        """
+        self.write("SST"+str(ch)+","+str(sensor_type))
+
+
+
+    """ =============================
+        position of rotary positioner
+        =============================
+    """
+    def move_angle_absolute(self, ch, angle, revolution, holdTime):
+        """
+        ch: positioner channel
+        angle: absolute angle to move in micro degrees: 0 .. 359,999,999
+        revolution: absolute revolution to move: -32,768 .. 32,767
+        holdTime: time in milliseconds the angle is actively hold after reaching target: 0 .. 60,000
+        with 0 deactivating feature and 60,000 is infinite/until manually stopped
+        """
+        self.write("MAA"+str(ch)+","+str(angle)+","+str(revolution)+","+str(holdTime))
+
+    def move_angle_relative(self, ch, angle, revolution, holdTime):
+        """
+        ch: positioner channel
+        angle: relative angle to move in micro degrees: -359,999,999 .. 359,999,999
+        revolution: relative revolution to move: -32,768 .. 32,767
+        holdTime: time in milliseconds the angle is actively hold after reaching target: 0 .. 60,000
+        with 0 deactivating feature and 60,000 is infinite/until manually stopped
+        """
+        self.write("MAR"+str(ch)+","+str(angle)+","+str(revolution)+","+str(holdTime))
+
+    def get_angle(self,ch):
+        """
+        returns the absolute angle and revolutions of the given positioner channel ch
+        """
+        response = self.query("GA")[3:].split(',')
+        print "angle in microdegree:", response[0]
+        print "revolutions:", response[1]
+        return response
+
 
 
 #
