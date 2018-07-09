@@ -485,7 +485,7 @@ def set_current_group(selected_object):
     except AttributeError:
         _current_group = current()
 
-def open_file(set_current = True,mode = 'a'):
+def open_file(set_current_bool = True,mode = 'a'):
     """Open an existing data file"""
     global _current_datafile
     try:  # we try to pop up a Qt file dialog
@@ -503,7 +503,7 @@ def open_file(set_current = True,mode = 'a'):
         if len(fname) > 0:
             print fname
             if set_current == True:
-                set_current(fname, mode=mode)
+                set_current_bool(fname, mode=mode)
             else:
                 return DataFile(fname,mode = mode )
         else:
