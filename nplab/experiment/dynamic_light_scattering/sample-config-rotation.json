@@ -1,0 +1,68 @@
+[
+	{
+		"sample_count": "2000000",
+		"series_name": "sample-10deg",
+		"raw": "True",
+		"difference": "False",
+		"binning": "True",
+		"correlate": "False",
+		"average": "False",
+		"plot": "False",
+		"save": "True",
+		"average_count": "3",
+		"binning_size": "1e-6",
+		"new_angle": "10",
+		"rotation_speed": "10",
+		"zero_angle" : "0"
+	},
+	{
+		"sample_count": "2000000",
+		"series_name": "sample-30deg",
+		"raw": "True",
+		"difference": "False",
+		"binning": "True",
+		"correlate": "False",
+		"average": "False",
+		"plot": "False",
+		"save": "True",
+		"average_count": "5",
+		"binning_size": "1e-6",
+		"new_angle": "30",
+		"rotation_speed": "10",
+		"zero_angle" : "0"
+	},
+
+	{
+		"sample_count": "2000000",
+		"series_name": "sample-110deg",
+		"raw": "True",
+		"difference": "False",
+		"binning": "True",
+		"correlate": "False",
+		"average": "False",
+		"plot": "False",
+		"save": "True",
+		"average_count": "5",
+		"binning_size": "1e-6",
+		"new_angle": "110",
+		"rotation_speed": "15",
+		"zero_angle" : "0"
+	},
+
+	{
+		"sample_count": "2000000",
+		"series_name": "sample-110deg",
+		"raw": "True",
+		"difference": "False",
+		"binning": "True",
+		"correlate": "False",
+		"average": "False",
+		"plot": "False",
+		"save": "True",
+		"average_count": "5",
+		"binning_size": "1e-6",
+		"new_angle": "0",
+		"rotation_speed": "20",
+		"zero_angle" : "0"
+	}
+]

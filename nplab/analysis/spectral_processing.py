@@ -39,3 +39,7 @@ def process_datafile_spectrum(h5object):
         if h5object.attrs['absorption_enabled']:
             Data = np.log10(1/np.array(Data))
     return Data
+
+def wavelength2wavenumber(wavelengths,laser_wavelength):
+    """Input in nm output in cm^-1 """
+    return 1.0/(laser_wavelength*1E-7)-(1.0/(wavelengths*1E-7))

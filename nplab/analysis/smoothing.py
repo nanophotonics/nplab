@@ -11,7 +11,7 @@ def init_problem(n):
 		D[i][i-1] = -1
 	return x, D
 
-def convex_smooth(signal,weight, objective_type="quadratic"):
+def convex_smooth(signal,weight, objective_type="quadratic",normalise = True):
 	'''Smoothing signal based on weight parameter
 		@param signal - your 1D signal
 		@param weight - the strength of your smoothing. 0 for no smoothing 
@@ -22,7 +22,10 @@ def convex_smooth(signal,weight, objective_type="quadratic"):
 	'''
 
 	#you can't add noise to your data
-	assert(weight >= 0) 
+	signal = np.array(signal,dtype=float)
+	assert(weight >= 0)
+	signal_max = np.max(signal)
+	if normalise==True: signal=signal/signal_max
 
 	#initialize the problem)
 	dims = signal.shape[0]
@@ -48,10 +51,10 @@ def convex_smooth(signal,weight, objective_type="quadratic"):
 	prob = cvx.Problem(objective)
 	#solve
 	prob.solve()
-
 	#return answer
 	x_out =  np.asarray(x.value)
 	x_out = x_out.reshape(signal.shape)
+	if normalise==True: x_out=x_out*signal_max
 	return x_out, prob.value, prob.status
 
 
@@ -61,16 +64,15 @@ if __name__ == "__main__":
 	import numpy as np
 
 	xs = np.linspace(0,2*np.pi,500)
-	noise = np.random.uniform(-0.4,0.4,xs.shape)
-	ys = np.sin(xs)
+	noise = np.random.uniform(-0.4,0.4,xs.shape)*100000.0
+	ys = np.sin(xs)*100000.0
 	ys_corrupted = ys + noise
 
 	fig, ax = plt.subplots(1)
 	plt.plot(xs, ys, label="True signal")
-	plt.plot(xs, ys_corrupted, label="Noisy signal")
-
+	plt.plot(xs, ys_corrupted, label="Noisy signal");print ys_corrupted.shape,type(ys_corrupted)
 	for weight in [1,10,100]:
-		ys_denoised,_,_ = convex_smooth(signal = ys_corrupted, weight = weight, objective_type="quadratic")
+		ys_denoised,_,_ = convex_smooth(signal = ys_corrupted, weight = weight, objective_type="quadratic",normalise = True)
 		plt.plot(xs, ys_denoised, label="Recovered signal [Weight:{}]".format(weight))
 
 	plt.legend()

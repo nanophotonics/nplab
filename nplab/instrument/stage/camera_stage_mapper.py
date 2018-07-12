@@ -8,7 +8,6 @@ import nplab.instrument.camera
 import nplab.instrument.stage
 from nplab.instrument import Instrument
 import cv2
-import cv2.cv
 from scipy import ndimage
 from traits.api import HasTraits, Button, Float, Int, Property, Range, Array, on_trait_change, Instance
 from traitsui.api import View, VGroup, Item

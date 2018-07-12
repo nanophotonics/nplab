@@ -111,7 +111,25 @@ def wrap_h5py_item(item):
         return Group(item.id)
     else:
         return item  # for now, don't bother wrapping datasets
-
+        
+def sort_by_timestamp(hdf5_group):
+    """a quick function for sorting hdf5 groups (or files or dictionarys...) by timestamp """
+    keys = hdf5_group.keys()
+    try:
+        time_stamps = []
+        for value in hdf5_group.values():
+            time_stamp_str = value.attrs['creation_timestamp']
+            try:
+                time_stamp_float = datetime.datetime.strptime(time_stamp_str,"%Y-%m-%dT%H:%M:%S.%f")
+            except ValueError:
+                time_stamp_str =  time_stamp_str+'.0'
+                time_stamp_float = datetime.datetime.strptime(time_stamp_str,"%Y-%m-%dT%H:%M:%S.%f")
+            time_stamps.append(time_stamp_float)
+        keys = np.array(keys)[np.argsort(time_stamps)]
+    except KeyError:
+        keys.sort(key=split_number_from_name)
+    items_lists = [[key,hdf5_group[key]] for key in keys]
+    return items_lists
 class Group(h5py.Group, ShowGUIMixin):
     """HDF5 Group, a collection of datasets and subgroups.
 
@@ -285,7 +303,10 @@ class Group(h5py.Group, ShowGUIMixin):
     def basename(self):
         """Return the last part of self.name, i.e. just the final component of the path."""
         return self.name.rsplit("/", 1)[-1]
-
+        
+    def timestamp_sorted_items(self):
+        """Return a sorted list of items """
+        return sort_by_timestamp(self)
 
 class DataFile(Group):
     """Represent an HDF5 file object.
@@ -464,7 +485,7 @@ def set_current_group(selected_object):
     except AttributeError:
         _current_group = current()
 
-def open_file(set_current = True,mode = 'a'):
+def open_file(set_current_bool = True,mode = 'a'):
     """Open an existing data file"""
     global _current_datafile
     try:  # we try to pop up a Qt file dialog
@@ -482,7 +503,7 @@ def open_file(set_current = True,mode = 'a'):
         if len(fname) > 0:
             print fname
             if set_current == True:
-                set_current(fname, mode=mode)
+                set_current_bool(fname, mode=mode)
             else:
                 return DataFile(fname,mode = mode )
         else:
