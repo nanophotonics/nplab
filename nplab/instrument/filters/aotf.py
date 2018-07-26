@@ -123,17 +123,21 @@ class AOTF(serial.SerialInstrument):
 			AOTF_Write("cal tuning 2 1.46"); AOTF_Read()
 			End
 		'''
-		return
-		#LOADING THIS CALIBRATION MAKES THE AOTF STOP WORKING???? 
+
 		r = self.query("cal tuning 0 397.46")
 		print "Calibration step1:",r
 		r = self.query("cal tuning 1 -1.2232")
 		print "Calibration step2:",r
-		r = self.query("cal tuning 2 1.46")
+		r = self.query("cal tuning 2 1.4658e-3")
 		print "Calibration step3:",r
-		r = self.query("cal save")
+		r = self.query("cal tuning 3 -6.15e-7")
 		print "Calibration step4:",r
+		r = self.query("cal save")
+		print "Calibration step5:",r
 
+		return
+		#LOADING THIS CALIBRATION MAKES THE AOTF STOP WORKING???? 
+		
 
 		'''
 		#DEFAULT CALIBRATION FROM AOTF CONTROLLER SOFTWARE

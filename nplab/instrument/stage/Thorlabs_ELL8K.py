@@ -128,7 +128,6 @@ class Thorlabs_ELL8K_UI(QtWidgets.QWidget, UiTools):
 			raise ValueError("Object is not an instance of the Thorlabs_ELL8K Stage")
 		super(Thorlabs_NR360SM_UI, self).__init__()
 		self.setAttribute(QtCore.Qt.WA_DeleteOnClose, True)
-
 		#set ref to stage object
 		self.stage = stage
 		self.parent = parent

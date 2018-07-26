@@ -249,6 +249,12 @@ def truncateSpectrum(wavelengths, spectrum, startWl = 450, finishWl = 900):
     startIndex = abs(wavelengths - startWl).argmin()
     finishIndex = abs(wavelengths - finishWl).argmin()
 
+    if startIndex > finishIndex:
+        ind1 = finishIndex
+        ind2 = startIndex
+        startIndex = ind1
+        finishIndex = ind2
+
     wavelengthsTrunc = np.array(wavelengths[startIndex:finishIndex])
     spectrumTrunc = np.array(spectrum[startIndex:finishIndex])
     return np.array([wavelengthsTrunc, spectrumTrunc])
@@ -1316,8 +1322,9 @@ def histyFit(frequencies, bins):
     resonance = out.params['center'].value
     stderr = out.params['center'].stderr
     fwhm = out.params['fwhm'].value
+    sigma = out.params['sigma'].value
 
-    return resonance, stderr, fwhm
+    return resonance, stderr, fwhm, sigma
 
 def isNumber(s):
     try:
@@ -2107,11 +2114,12 @@ def plotHistAndFit(outputFile, which = 'all', plotTitle = '', startWl = 450, end
                                                               closeFigures = closeFigures, which = which)
 
     try:
-        avgResonance, stderr, fwhm = histyFit(frequencies, bins)
+        avgResonance, stderr, fwhm, sigma = histyFit(frequencies, bins)
         gHist = outputFile.create_group('Statistics/Histogram/%s' % which)
         gHist.attrs['Average resonance'] = avgResonance
         gHist.attrs['Error'] = stderr
         gHist.attrs['FWHM'] = fwhm
+        gHist.attrs['Standard deviation'] = sigma
 
         dBins = gHist.create_dataset('Bins', data = bins)
         dFreq = gHist.create_dataset('Frequencies', data = frequencies)
