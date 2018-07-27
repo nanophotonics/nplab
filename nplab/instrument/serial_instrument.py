@@ -98,7 +98,10 @@ class SerialInstrument(MessageBusInstrument):
                 if self.ser.outWaiting()>0: self.ser.flushOutput() #ensure there's nothing waiting
             except AttributeError:
                 if self.ser.out_waiting>0: self.ser.flushOutput() #ensure there's nothing waiting
-            self.ser.write(query_string+self.termination_character)
+            if self.initial_character !=None:
+                self.ser.write(self.initial_character+query_string+self.termination_character)
+            else:
+                self.ser.write(query_string+self.termination_character)
 
     def flush_input_buffer(self):
         """Make sure there's nothing waiting to be read, and clear the buffer if there is."""
