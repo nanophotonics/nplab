@@ -7,6 +7,7 @@ from nplab.utils.gui import QtCore, QtGui, QtWidgets, get_qt_app, uic
 from collections import deque
 
 from nplab.ui.ui_tools import UiTools
+import nplab.datafile as df
 from nplab.datafile import DataFile
 from nplab.utils.notified_property import NotifiedProperty, DumbNotifiedProperty, register_for_property_changes
 import h5py
@@ -55,6 +56,12 @@ class Spectrometer(Instrument):
         self.stored_references = {}
         self.stored_backgrounds = {}
         self.reference_ID = 0
+        self.spectra_to_save = 0
+        self.spectra_saved = 0
+        self.spectra_buffer = np.zeros(0)
+        self.data_file = df.current()
+        self.curr_scan=None
+
 
     def __del__(self):
         try:
