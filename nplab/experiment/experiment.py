@@ -16,6 +16,7 @@ from nplab.utils.notified_property import NotifiedProperty, DumbNotifiedProperty
 from collections import deque
 import numpy as np
 import threading
+import warnings
 
 class ExperimentStopped(Exception):
     """An exception raised to stop an experiment running in a background thread."""
@@ -33,13 +34,33 @@ class Experiment(Instrument):
     latest_data = DumbNotifiedProperty(doc="The last dataset/group we acquired")
     log_messages = DumbNotifiedProperty(doc="Log messages from the latest run")
     log_to_console = False
+    experiment_can_be_safely_aborted = False # set to true if you want to suppress warnings about ExperimentStopped
     
     def __init__(self):
         """Create an instance of the Experiment class"""
         super(Experiment, self).__init__()
         self._stop_event = threading.Event()
+        self._finished_event = threading.Event()
+        self._experiment_thread = None
         self.log_messages = ""
-    
+
+    def prepare_to_run(self, *args, **kwargs):
+        """This method is always run in the foreground thread before run()
+
+        Use this method if you might need to pop up a GUI, for example.  The
+        most common use of this would be to create a data group or to ensure
+        the current data file exists - doing that in run() could give rise
+        to nasty threading problems.  By default, it does nothing.
+
+        The arguments are passed through from start() to here, so you should
+        either use or ignore them as appropriate.  These are the same args
+        as are passed to run(), so if one of the two functions requires an
+        argument you should make sure the other won't fail if the same
+        argument is passed to it (simple rule: accept *args, **kwargs in
+        both, in addition to any arguments you might have).
+        """
+        pass
+
     def run(self, *args, **kwargs):
         """This method should be the meat of the experiment (needs overriden).
         
@@ -51,8 +72,15 @@ class Experiment(Instrument):
         results in real time.  You can also use `self.log()` to output text
         describing the experiment's progress; this may be picked up and 
         displayed graphically or in the console.
+
+        The arguments are passed through from start() to here, so you should
+        either use or ignore them as appropriate.  These are the same args
+        as are passed to run(), so if one of the two functions requires an
+        argument you should make sure the other won't fail if the same
+        argument is passed to it (simple rule: accept *args, **kwargs in
+        both, in addition to any arguments you might have).
         """
-        raise NotImplementedError()
+        NotImplementedError("The run() method of an Experiment must be overridden!")
         
     def wait_or_stop(self, timeout, raise_exception=True):
         """Wait for the specified time in seconds.  Stop if requested.
@@ -84,17 +112,26 @@ class Experiment(Instrument):
         """
         self.log_messages = ""
         self._stop_event.clear()
+        self._finished_event.clear()
         self.run(*args, **kwargs)
+        self._finished_event.set()
         
-    def start(self):
+    def start(self, *args, **kwargs):
         """Start the experiment running in a background thread.  See run_in_background."""
         assert self.running == False, "Can't start the experiment when it is already running!"
-        self.run_in_background()
+        self.prepare_to_run(*args, **kwargs)
+        self._experiment_thread = self.run_in_background(*args, **kwargs)
         
-    def stop(self):
+    def stop(self, join=False):
         """Stop the experiment running, if supported.  May take a little while."""
         self._stop_event.set()
-        
+        if join:
+            try:
+                self._experiment_thread.join()
+            except ExperimentStopped as e:
+                if not self.experiment_can_be_safely_aborted:
+                    raise e
+
     @property
     def running(self):
         """Whether the experiment is currently running in the background."""

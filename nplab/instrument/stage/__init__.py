@@ -297,6 +297,7 @@ class StageUI(QtWidgets.QWidget, UiTools):
         if axis not in self.stage.axis_names:
             axis = None
         if axis is None:
+            print self.stage.axis_names
             for axis in self.stage.axis_names:
                 self.update_positions(axis=axis)
         else:

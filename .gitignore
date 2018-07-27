@@ -62,3 +62,4 @@ docs/nplab.*.rst
 # user specified files
 *.xml
 *.iml
+.DS_Store

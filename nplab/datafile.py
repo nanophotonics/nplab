@@ -111,7 +111,25 @@ def wrap_h5py_item(item):
         return Group(item.id)
     else:
         return item  # for now, don't bother wrapping datasets
-
+        
+def sort_by_timestamp(hdf5_group):
+    """a quick function for sorting hdf5 groups (or files or dictionarys...) by timestamp """
+    keys = hdf5_group.keys()
+    try:
+        time_stamps = []
+        for value in hdf5_group.values():
+            time_stamp_str = value.attrs['creation_timestamp']
+            try:
+                time_stamp_float = datetime.datetime.strptime(time_stamp_str,"%Y-%m-%dT%H:%M:%S.%f")
+            except ValueError:
+                time_stamp_str =  time_stamp_str+'.0'
+                time_stamp_float = datetime.datetime.strptime(time_stamp_str,"%Y-%m-%dT%H:%M:%S.%f")
+            time_stamps.append(time_stamp_float)
+        keys = np.array(keys)[np.argsort(time_stamps)]
+    except KeyError:
+        keys.sort(key=split_number_from_name)
+    items_lists = [[key,hdf5_group[key]] for key in keys]
+    return items_lists
 class Group(h5py.Group, ShowGUIMixin):
     """HDF5 Group, a collection of datasets and subgroups.
 
@@ -285,7 +303,10 @@ class Group(h5py.Group, ShowGUIMixin):
     def basename(self):
         """Return the last part of self.name, i.e. just the final component of the path."""
         return self.name.rsplit("/", 1)[-1]
-
+        
+    def timestamp_sorted_items(self):
+        """Return a sorted list of items """
+        return sort_by_timestamp(self)
 
 class DataFile(Group):
     """Represent an HDF5 file object.
@@ -294,7 +315,8 @@ class DataFile(Group):
     change in the future...
     """
 
-    def __init__(self, name, mode=None, save_version_info=True, *args, **kwargs):
+    def __init__(self, name, mode=None, save_version_info=True,
+                 update_current_group = True, *args, **kwargs):
         """Open or create an HDF5 file.
 
         :param name: The filename/path of the HDF5 file to open or create, or an h5py File object
@@ -326,7 +348,7 @@ class DataFile(Group):
             self.attrs.create("version_info_%04d" % n, str(nplab.utils.version.version_info_string()))
             #except:
             #    print "Error: could not save version information"
-
+        self.update_current_group = update_current_group
 
     def flush(self):
         self.file.flush()
@@ -417,18 +439,27 @@ def set_current(datafile, **kwargs):
     """Set the current datafile, specified by either an HDF5 file object or a filepath"""
     global _current_datafile
     if isinstance(datafile, h5py.Group):
-        _current_datafile = datafile
+        _current_datafile = DataFile(datafile)
+        return _current_datafile
     else:
         print "opening file: ", datafile
         try:
             _current_datafile = DataFile(datafile, **kwargs)  # open a new datafile
+            return _current_datafile
         except Exception as e:
             print "problem opening file:"
             print e
             print "trying with mode=r+"
             kwargs['mode'] = 'r+'  # dirty hack to work around mode=a not working
             _current_datafile = DataFile(datafile, **kwargs)
-            
+
+def set_temporary_current_datafile():
+    """Create a temporary datafile, for testing purposes."""
+    nplab.log("WARNING: using a temporary file")
+    print("WARNING: using a file in memory as the current datafile.  DATA WILL NOT BE SAVED.")
+    df = h5py.File("temporary_file.h5", driver='core', backing_store=False)
+    return set_current(df)
+
 def close_current():
     """Close the current datafile"""
     if _current_datafile is not None:
@@ -454,7 +485,7 @@ def set_current_group(selected_object):
     except AttributeError:
         _current_group = current()
 
-def open_file(set_current = True,mode = 'a'):
+def open_file(set_current_bool = True,mode = 'a'):
     """Open an existing data file"""
     global _current_datafile
     try:  # we try to pop up a Qt file dialog
@@ -472,7 +503,7 @@ def open_file(set_current = True,mode = 'a'):
         if len(fname) > 0:
             print fname
             if set_current == True:
-                set_current(fname, mode=mode)
+                set_current_bool(fname, mode=mode)
             else:
                 return DataFile(fname,mode = mode )
         else:

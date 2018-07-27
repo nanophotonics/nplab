@@ -10,7 +10,7 @@ Created on Fri Apr 10 08:43:56 2015
 # - accessoires
 # - output slit
 # - Shutter
-#write a GUI
+
 
 
 from ctypes import *
@@ -29,7 +29,9 @@ class Shamrock(Instrument):
         
         tekst = c_char()        
         error = self.dll.ShamrockInitialize(byref(tekst))
+        
         self.current_shamrock = 0 #for more than one Shamrock this has to be varied, see ShamrockGetNumberDevices
+        self.center_wavelength = 0.0
 
     def verbose(self, error, function=''):
         self.log( "[%s]: %s" %(function, error),level = 'info')
@@ -150,6 +152,7 @@ class Shamrock(Instrument):
     def SetWavelength(self,centre_wl):
         error = self.dll.ShamrockSetWavelength(self.current_shamrock,c_float(centre_wl))
         self.verbose(ERROR_CODE[error], sys._getframe().f_code.co_name)
+
     center_wavelength = NotifiedProperty(GetWavelength,SetWavelength)  
       
     def AtZeroOrder(self):

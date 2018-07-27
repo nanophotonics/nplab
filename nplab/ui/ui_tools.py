@@ -225,6 +225,17 @@ class QuickControlBox(QtWidgets.QGroupBox, UiTools):
         checkbox.setObjectName(name + "_checkbox")
         checkbox.setText(title)
         self.layout().addRow("", checkbox)
+        
+    def add_combobox(self, name,options, title=None):
+        if title is None:
+            title = name.title()
+        combobox = QtWidgets.QComboBox()
+        for option in options:
+            combobox.addItem(option)
+
+        self.controls[name] = combobox
+        combobox.setObjectName(name + "_combobox")
+        self.layout().addRow(title, combobox)
 
 auto_connectable_controls = {}
 
@@ -319,7 +330,7 @@ auto_connectable_controls['plaintextedit'] = {
     }
 auto_connectable_controls['spinbox'] = {
     'qt_type': QtWidgets.QSpinBox,
-    'suffices': ["_spinbox","SpinBox","_spin"],
+    'suffices': ["_spinbox","SpinBox","_spin",'_spinBox'],
     'control_change_handler': control_change_handler(),
     'control_change_slot_name': 'valueChanged',
     'property_change_handler': property_change_handler("value", int),
@@ -330,4 +341,11 @@ auto_connectable_controls['doublespinbox'] = {
     'control_change_handler': control_change_handler(),
     'control_change_slot_name': 'valueChanged',
     'property_change_handler': property_change_handler("value", float),
+    }
+auto_connectable_controls['combobox'] = {
+    'qt_type': QtWidgets.QComboBox,
+    'suffices': ["_Combobox","_combobox","combobox","_comboBox","comboBox","ComboBox"],
+    'control_change_handler': control_change_handler(),
+    'control_change_slot_name': 'currentIndexChanged',
+    'property_change_handler': property_change_handler("currentIndex", int),
     }
