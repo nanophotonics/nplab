@@ -1,6 +1,6 @@
 __author__ = 'alansanders, chrisgrosse'
 
-import ctypes
+import ctypes, time
 from ctypes import byref, c_int, c_uint
 #from nplab.instrument import Instrument
 from nplab.instrument.stage import PiezoStage, StageUI, PiezoStageUI
@@ -735,15 +735,16 @@ class SmaractMCSSerial(SerialInstrument,PiezoStage):
         self.termination_character = '\n'
         super(SmaractMCSSerial, self).__init__(port=port)
         self._num_ch = None
-#        self.axis_names = tuple(i for i in range(self.num_ch))
-#        self.positions = [0 for ch in range(self.num_ch)]
-#        self.levels = [0 for ch in range(self.num_ch)]
-#        self.voltages = [0 for ch in range(self.num_ch)]
-#        self.scan_positions = [0 for ch in range(self.num_ch)]
-#        self.min_voltage = [0 for ch in range(self.num_ch)]
-#        self.max_voltage = [100 for ch in range(self.num_ch)]
-#        self.min_voltage_levels = [0 for ch in range(self.num_ch)]
-#        self.max_voltage_levels = [4095 for ch in range(self.num_ch)]
+        self.unit="m"
+        self.axis_names = tuple(i for i in range(self.num_ch))
+        self.positions = [0 for ch in range(self.num_ch)]
+        self.levels = [0 for ch in range(self.num_ch)]
+        self.voltages = [0 for ch in range(self.num_ch)]
+        self.scan_positions = [0 for ch in range(self.num_ch)]
+        self.min_voltage = [0 for ch in range(self.num_ch)]
+        self.max_voltage = [100 for ch in range(self.num_ch)]
+        self.min_voltage_levels = [0 for ch in range(self.num_ch)]
+        self.max_voltage_levels = [4095 for ch in range(self.num_ch)]
 
         # necessary to open the serial port? Or done automatically during class initialisation?
 
@@ -777,6 +778,7 @@ class SmaractMCSSerial(SerialInstrument,PiezoStage):
 
     def check_for_error(self,response):
         if response[1] == "E" and not response[-1] == "0":
+            print response
             raise MCSSerialError(response[2:].split(','))
         else:
             return response
@@ -801,6 +803,13 @@ class SmaractMCSSerial(SerialInstrument,PiezoStage):
             self.write("SCM1")
         else:
             raise ValueError("No valid communication mode. Possible modes are: 'sync' or 'async'.")
+
+    def set_baud_rate(self,baudrate):
+        """
+        the baud rate is stored to non-volatile memory and loaded on future power ups
+        valid range for baudrate: 9,600 .. 115,200
+        """
+        self.write("CB"+str(baudrate))
 
     def get_channel_type(self,ch):
         response = self.query("GCT"+str(ch))
@@ -831,6 +840,88 @@ class SmaractMCSSerial(SerialInstrument,PiezoStage):
             print "SmarAct MCS reset failled"
             return False
 
+    def check_status(self, ch):
+        """
+        Checks the status of a given positioner channel
+        """
+        response=self.query("GS"+str(ch))
+        return int(response[response.index(",")+1:])
+
+    def wait_until_stopped(self, ch):
+        while self.check_status(ch)!=0:
+            print "sleep"
+            time.sleep(1)
+
+    """ =====================
+        Calibaration methods
+        =====================
+    """
+
+    def calibrate_system(self):
+#        print 'calibrating system..'
+        self.set_sensor_power_mode(1)
+        num_ch = self.get_num_channels()
+        for ch in range(num_ch):
+            print "calibrating channel",ch, ".."
+            self.write("CS"+str(ch))
+            self.wait_until_stopped(ch)
+
+    def get_safe_direction(self,ch):
+        """
+        returns the safe dirction for a given channel ch, with 0 being forward
+        and 1 being backward
+        """
+        response = self.query("GSD"+str(ch))
+        return int(response[response.index(",")+1:])
+
+
+    def set_safe_directions(self):
+        """
+        Vertical channels should all move upwards (i.e. 0).
+        The left channel should move left (i.e. 1) while the
+        right channel should move right (0). The remaining
+        two forward channels should move backwards away from the objective
+        (1).
+
+        Note that this function is currently based on the tip experiment arrangement.
+        """
+        safe_directions = [1,1,0,0,1,0]
+        for ch, value in enumerate(safe_directions):
+            self.write("SSD"+str(ch)+","+str(value))
+        return safe_directions
+
+
+    def find_references_ch(self, ch):
+        print 'finding reference for ch', ch
+        self.set_sensor_power_mode(1)
+        safe_directions = self.set_safe_directions()
+        self.write("FRM"+str(ch)+","+str(safe_directions[ch])+",0,1")
+        self.wait_until_stopped(ch)
+
+    def find_references(self):
+        num_ch = self.get_num_channels()
+        for i in range(num_ch):
+            self.find_references_ch(i)
+
+
+    def set_position(self, ch, position):
+        """
+        defines the current position to have a specific value; the measuring
+        scale is shifted accordingly
+        """
+        self.write("SP"+str(ch)+","+str(position))
+
+
+    def physical_position_known(self, ch):
+        response = self.query("GPPK"+str(ch))
+        if response[response.index(",")+1:] =="1":
+            return True
+        elif response[response.index(",")+1:] =="0":
+            return False
+        else:
+            raise ValueError('Unknown return value')
+
+
 
     """ ========================================
         speed, accelaration and sensor settings
@@ -846,20 +937,49 @@ class SmaractMCSSerial(SerialInstrument,PiezoStage):
         return int(response[response.index(",")+1:])
 
     def set_acceleration(self, ch, acceleration):
-        '''
+        """
         sets the acceleration of a given channel used for closed-loop
         commands in um*s^-2 (linear positioner) or mdegree*s^-2 (roatry positioner).
         The valid range is 0 .. 10,000,000. A value of 0 deactivates the
         acceleration control feature.
-        '''
-        self.write("SCLA"+str(ch)+","+acceleration)
+        """
+        self.write("SCLA"+str(ch)+","+str(acceleration))
+
+    def get_speed(self,ch):
+        """
+        returns the speed used for closed-loop commands for a given channel.
+        For linear positioners units are: nm/s, for rotary positioners microdegree/s
+        A value of 0 means the speed control is deactivated.
+        """
+        response = self.query("GCLS"+str(ch))
+        return int(response[response.index(",")+1:])
+
+    def set_speed(self,ch,speed):
+        """
+        sets the speed used for closed-loop commands for a given channel.
+        For linear positioners units are: nm/s, for rotary positioners microdegree/s
+        A value of 0 means the speed control is being deactivated.
+        The valid range is: 0.. 100,000,000
+        """
+        self.write("SCLS"+str(ch)+","+str(int(speed)))
+
+    def set_frequency(self, ch,frequency):
+        """
+        sets the maximum frequency used for closed-loop commands for a given channel.
+        The valid range is 50.. 18,500 Hz
+        """
+        if frequency <50 or frequency > 18500:
+            raise ValueError("The valid range for the maximum frequency is 50.. 18,500 Hz")
+        else:
+            self.write("SCLF"+str(ch)+","+str(int(frequency)))
 
     def get_sensor_type(self, ch):
         """
         returns the sensor type for a given channel ch
         For a list of sensor types see MCS ASCII Programming Interface documentation
         """
-        return self.query("GST"+str(ch))
+        response = self.query("GST"+str(ch))
+        return int(response[response.index(",")+1:])
 
 
     def set_sensor_type(self, ch, sensor_type):
@@ -869,6 +989,94 @@ class SmaractMCSSerial(SerialInstrument,PiezoStage):
         """
         self.write("SST"+str(ch)+","+str(sensor_type))
 
+    def get_sensor_power_mode(self):
+        """
+        returns the power mode for all positioner channels. Modes can be:
+        0: sensors disabled
+        1: sensors enabled
+        2: power saving mode
+        """
+        response = self.query("GSE")
+        return int(response[3:])
+
+
+    def set_sensor_power_mode(self, mode):
+        """
+        sets the power mode for all positioner channels. Modes can be:
+        0: sensors disabled
+        1: sensors enabled
+        2: power saving mode
+        """
+        if mode not in [0,1,2]:
+            raise ValueError("No valid sensor mode! Valid modes are: 0 (disabled), 1 (enabled), 2 (powersafe)")
+        else:
+            self.write("SSE"+str(mode))
+
+
+    def set_low_vibration_mode(self, ch, enable):
+        raise ValueError("The low vibration mode is not supported by this controller!")
+        # self.write("GCP"+str(ch)+",16908289")
+
+    def get_low_vibration_mode(self,ch):
+        raise ValueError("The low vibration mode is not supported by this controller!")
+#        self.write("SCP"+str(ch)+","+str(sensor_type))
+
+
+
+
+    ### ==================================================== ###
+    ### Methods to read-out position and move to a specific  ###
+    ### position via slip-stick motion and piezo movement    ###
+    ## ===================================================== ###
+
+    def get_position(self, axis=None):
+        """
+        Get the position of the stage or of a specified axis.
+        :param axis:
+        :return:
+        """
+        if axis is None:
+            return [self.get_position(axis) for axis in self.axis_names]
+        else:
+            if axis not in [0,1,2,3,4,5]:  #self.axis_names:
+                raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
+            else:
+                response = self.query("GP"+str(axis))
+                return 1e-9*float(response[response.index(",")+1:])
+
+
+    def move(self, position, axis, relative=False, holdTime=0):
+        """
+        Move the stage to the requested position. The function should block all further
+        actions until the stage has finished moving.
+        :param position: units of m (SI units, converted to nm in the method)
+        :param axis: integer channel index
+        :param relative:
+        :return:
+        """
+        if axis not in [0,1,2,3,4,5]: #self.axis_names:
+            raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
+        position *= 1e9
+        if relative:
+            send_string = "MPR"+str(axis)+","+str(int(position))+","+str(holdTime)
+            return self.query(send_string)
+        else:
+            send_string = "MPA"+str(axis)+","+str(int(position))+","+str(holdTime)
+            return self.query(send_string)
+        self.wait_until_stopped(axis)
+
+    def stop(self, axis=None):
+        """
+        stops any ongoing movement of the positioner
+        """
+        if axis is None: # stop movement of all positioner
+            axes= [0,1,2,3,4,5] #c_int(int(axis)) for axis in self.axis_names]
+            for ch in axes:
+                self.write("S"+str(ch))
+        elif axis not in [0,1,2,3,4,5]: # self.axis_names: # wrong positioner name
+            raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
+        else:  # just stop movement of specified positioner
+            self.write("S"+str(ch))
 
 
     """ =============================
@@ -906,95 +1114,120 @@ class SmaractMCSSerial(SerialInstrument,PiezoStage):
 
 
 
-#
-#
-#
-#
-#    def set_sensor_power_mode(self, mode):
-#        modes = {0: SA_SENSOR_DISABLED, 1: SA_SENSOR_ENABLED, 2: SA_SENSOR_POWERSAVE}
-#        self.check_open_status()
-#        self.check_status(mcsc.SA_SetSensorEnabled_S(self.handle, modes[mode]))
-#
-#    def set_low_vibration_mode(self, ch, enable):
-#        ch = c_int(int(ch))
-#        values = {0: SA_DISABLED, 1: SA_ENABLED}
-#        self.check_open_status()
-#        self.check_status(mcsc.SA_SetChannelProperty_S(self.handle, ch,
-#                                                       mcsc.SA_EPK(SA_GENERAL, SA_LOW_VIBRATION, SA_OPERATION_MODE),
-#                                                       values[enable]))
-#
-#    def get_acceleration(self, ch):
-#        ch = c_int(int(ch))
-#        acceleration = c_int()
-#        self.check_open_status()
-#        mcsc.SA_GetClosedLoopMoveAcceleration_S(self.handle, ch, byref(acceleration))
-#        return acceleration.value
-#
-#    def set_acceleration(self, ch, acceleration):
-#        '''
-#        units are um/s/s.
-#        '''
-#        ch = c_int(int(ch))
-#        acceleration = c_int(int(acceleration))
-#        self.check_open_status()
-#        mcsc.SA_SetClosedLoopMoveAcceleration_S(self.handle, ch, acceleration)
-#
-#    def get_speed(self, ch):
-#        ch = c_int(int(ch))
-#        speed = c_int()
-#        self.check_open_status()
-#        self.check_status(mcsc.SA_GetClosedLoopMoveSpeed_S(self.handle, ch,
-#                                                           byref(speed)))
-#        return speed.value
-#
-#    def set_speed(self, ch, speed):
-#        '''
-#        units are nm/s, max is 1e8. A value of 0 deactivates speed control
-#        (defaults to max.).
-#        '''
-#        ch = c_int(int(ch))
-#        speed = c_int(int(speed))
-#        self.check_open_status()
-#        self.check_status(mcsc.SA_SetClosedLoopMoveSpeed_S(self.handle, ch,
-#                                                           speed))
-#
-#    def get_frequency(self, ch):
-#        ch = c_int(int(ch))
-#        frequency = c_int()
-#        self.check_open_status()
-#        self.check_status(mcsc.SA_GetClosedLoopMaxFrequency_S(self.handle, ch,
-#                                                              byref(frequency)))
-#        return frequency.value
-#
-#    def set_frequency(self, ch, frequency):
-#        '''
-#        units are nm/s, min is 50, max is 18,500. A value of 0 deactivates speed control
-#        (defaults to max.).
-#        '''
-#        ch = c_int(int(ch))
-#        frequency = c_int(int(frequency))
-#        self.check_open_status()
-#        self.check_status(mcsc.SA_SetClosedLoopMaxFrequency_S(self.handle, ch,
-#
+    ### ==================================== ###
+    ### Method to control slip-stick motion ###
+    ### ==================================== ###
+
+    def slip_stick_move(self, axis, steps=1, amplitude=1800, frequency=100):
+        """
+        this method perforems a burst of slip-stick coarse motion steps.
+
+        :param axis: chanel index of selected SmarAct stage
+        :param steps: number and direction of steps, ranging between -30,000 .. 30,000
+                      with 0 stopping the positioner and +/-30,000 perfomes unbounded
+                      move, which is strongly riscouraged!
+        :param amplitude: voltage amplitude of the pulse send to the piezo,
+                          ranging from 0 .. 4,095 with 0 corresponding to 0 V
+                          and 4,095 corresponding to 100 V, a value of 2047
+                          roughly leads to a 500 nm step
+        :param frequency: frequency the steps are performed with in Hz, ranging
+                          from 1 .. 18,500
+        """
+        if axis not in self.axis_names:
+            raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
+        self.write("MST"+str(axis)+","+str(steps)+","+str(amplitude)+","+str(frequency))
 
 
+    ### ===================================== ###
+    ### Methods to control the piezo scanners ###
+    ### ===================================== ###
+
+    def get_piezo_level(self, axis=None):
+        """
+        Get the voltage levels (0-4095) of the specified piezo axis
+        """
+        if axis is None:
+            return [self.get_piezo_level(axis) for axis in self.axis_names]
+        else:
+            if axis not in self.axis_names:
+                raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
+            response = self.query("GVL"+str(axis))
+            return int(response[response.index(",")+1:])
+
+    def set_piezo_level(self, level, axis, speed=4095000000, relative=False):
+        """
+        Scan up to 100V
+        level: 0 - 4095 (equals 0 .. 100 V)
+        speed: 0.. 4,095,000,0000 => 12 bit increments per second, for value of 1: full range scan takes 4095 seconds, at full speed scan is done in 1 micro second
+        """
+        if axis not in self.axis_names:
+            raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
+        if relative:
+            self.write("MSCR"+str(axis)+","+str(level)+","+str(speed))
+        else:
+            self.write("MSCA"+str(axis)+","+str(level)+","+str(speed))
+        self.wait_until_stopped(axis)
+
+    def multi_set_piezo_level(self, levels, axes, speeds, relative=False):
+        for i in range(len(axes)):
+            self.set_piezo_level(levels[i],axes[i],speed[i],relative)
 
 
+    ### additional useful methods to control the piezo scanners
+    def get_piezo_voltage(self, axis):
+        level = self.get_piezo_level(axis)
+        voltage = self.level_to_voltage(level)
+        return voltage
 
-#    def set_sensor_power_mode(self, mode):
-#        modes = {0: SA_SENSOR_DISABLED, 1: SA_SENSOR_ENABLED, 2: SA_SENSOR_POWERSAVE}
-#        self.check_open_status()
-#        self.check_status(mcsc.SA_SetSensorEnabled_S(self.handle, modes[mode]))
-#
-#    def set_low_vibration_mode(self, ch, enable):
-#        ch = c_int(int(ch))
-#        values = {0: SA_DISABLED, 1: SA_ENABLED}
-#        self.check_open_status()
-#        self.check_status(mcsc.SA_SetChannelProperty_S(self.handle, ch,
-#                                                       mcsc.SA_EPK(SA_GENERAL, SA_LOW_VIBRATION, SA_OPERATION_MODE),
-#                                                       values[enable]))
+    def set_piezo_voltage(self, axis, voltage, speed=4095000000, relative=False):
+        """
+        level: 0 - 100 V, 0 - 4095
+        speed: 4095 s - 1 us for full 4095 voltage range, 1 - 4,095,000,000
+        """
+        level = self.voltage_to_level(voltage)
+        self.set_piezo_level(level, axis, speed, relative)
+
+    def set_piezo_position(self, position, axis, speed, relative=False):
+        level = self.position_to_level(1e9*position)
+        self.set_piezo_level(level, axis, speed, relative)
 
 
+    def multi_set_piezo_voltage(self, voltages, axes, speeds, relative=False):
+        levels = [self.voltage_to_level(v) for v in voltages]
+        self.multi_set_piezo_level(levels, axes, speeds, relative)
+
+    def multi_set_piezo_position(self, positions, axes, speeds, relative=False):
+        levels = [self.position_to_level(1e9*p) for p in positions]
+        self.multi_set_piezo_level(levels, axes, speeds, relative)
+
+    def position_to_level(self, position):
+        # 1.5 um per 100 V, position can be between 0 and 1500 nm
+        voltage = position / 15.
+        level = int(self.voltage_to_level(voltage))
+        return level
+
+    def voltage_to_level(self, voltage):
+        level = voltage * 4095. / 100.
+        level = round(level)
+        return level
+
+    def level_to_voltage(self, level):
+        voltage = 100. * level / 4095.
+        return voltage
+
+    def level_to_position(self, level):
+        voltage = self.level_to_voltage(level)
+        position = voltage * 10.
+        return position
+
+    def get_qt_ui(self):
+        return SmaractMCSUI(self)
+
+
+    ### Useful Properties ###
+    num_ch = property(get_num_channels)
+    position = property(get_position)
+    piezo_levels = property(get_piezo_level)
 
 
 
@@ -1035,7 +1268,7 @@ class SmaractScanStageUI(PiezoStageUI):
 
 class SmaractMCSUI(QtWidgets.QWidget, UiTools):
     def __init__(self, mcs, parent=None):
-        assert isinstance(mcs, SmaractMCS), "system must be a Smaract MCS"
+        assert isinstance(mcs, SmaractMCS) or isinstance(mcs, SmaractMCSSerial) , "system must be a Smaract MCS"
         super(SmaractMCSUI, self).__init__()
         self.mcs = mcs
         uic.loadUi(os.path.join(os.path.dirname(__file__), 'smaract_mcs.ui'), self)
@@ -1049,7 +1282,7 @@ class SmaractMCSUI(QtWidgets.QWidget, UiTools):
 
 if __name__ == '__main__':
 
-    smaract = SmaractMCSSerial('COM3')
+    smaract = SmaractMCSSerial('COM10')
 
 
     # print SA_OK
