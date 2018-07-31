@@ -51,7 +51,6 @@ class MessageBusInstrument(nplab.instrument.Instrument):
     blocked for a long time.  The lock is reentrant so there's no issue with
     acquiring it twice.
     """
-    initial_character = None
     termination_character = "\n" #: All messages to or from the instrument end with this character.
     termination_line = None #: If multi-line responses are recieved, they must end with this string
     ignore_echo = False
@@ -110,7 +109,7 @@ class MessageBusInstrument(nplab.instrument.Instrument):
         """
         with self.communications_lock:
             self.flush_input_buffer()
-            self.write(queryString+self.termination_character)
+            self.write(queryString)
             if self.ignore_echo == True: # Needs Implementing for a multiline read!
                 first_line = self.readline(timeout).strip()
                 if first_line == queryString:
