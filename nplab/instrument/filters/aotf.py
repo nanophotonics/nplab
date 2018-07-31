@@ -4,7 +4,7 @@ import nplab.instrument.serial_instrument as serial
 class AOTF(serial.SerialInstrument):
 
 	termination_character = "\n"
-	termination_line = "END"
+	termination_line = "\r"
 
 	port_settings = dict(baudrate=38400,bytesize=serial.EIGHTBITS,
                         parity=serial.PARITY_NONE,
@@ -23,12 +23,14 @@ class AOTF(serial.SerialInstrument):
 		Function AOTF_ModMax()
 		AOTF_Write("dau en") # Enable microcontroller to manipulate the Daughter Board controls
 		'''
+		
+		r = self.query("dau en")
+		print "Daughter Board control enable, response:",r
+		
 		self.set_default_calibration()
 		
 		# self.aotf_off()
-		r = self.query("dau en")
-		print "Daughter Board control enable, response:",r
-		# self.query("dau dac * 16383")
+		self.query("dau dac * 16383")
 
 
 		# Macro AOTF_setup()
