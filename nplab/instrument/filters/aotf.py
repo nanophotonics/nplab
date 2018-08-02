@@ -168,17 +168,72 @@ class AOTF(serial.SerialInstrument):
 		#enabling channel - requires
 		self.set_amplitude(channel,0)
 
-#SuperContinuum Color Modulation:
-#	MIN: mod dac * 0
-#	MAX: mod dac * 16383
+
+import partial
+class AOTF_UI(QtWidgets.QWidget, UiTools):
+	def __init__(self,device, parent=None,debug = False, verbose = False):
+		if not isinstance(device, AOTF):
+			raise ValueError("Object is not an instance of the AOTF Class")
+		super(AOTF_UI, self).__init__()
+		
+		uic.loadUi(os.path.join(os.path.dirname(__file__), 'aotf.ui'), self)
+
+		#aotf:
+		self.aotf = device 
+		
+		self.wavelength_textboxes = [self.chn1_wl,self.chn2_wl,self.chn3_wl,self.chn4_wl,self.chn5_wlself.chn6_wl,self.chn7_wl,self.chn8_wl]
+		self.power_textboxes = [self.chn1_pwr,self.chn2_pwr,self.chn3_pwr,self.chn4_pwr,self.chn5_pwr,self.chn6_pwr,self.chn7_pwr,self.chn8_pwr]
+		self.active = [self.chn1_toggle,self.chn2_toggle,self.chn3_toggle,self.chn4_toggle,self.chn5_toggle,self.chn6_toggle,self.chn7_toggle,self.chn8_toggle]
+
+		for wl in self.wavelength_textboxes:
+			self.wl.textChanged.connect(self.set_wavelength)
+
+		for pwr in self.power_textboxes:
+			self.pwr.textChanged.connect(self.set_power)
+
+		
+		self.off_btn.clicked.connect(self.set_off)
+		self.on_btn.clicked.connect(self.set_on)
+
+
+
+		self.settings = [(0,0)]*8
+
+	def set_wavelength(self):
+		for i,wl_textbox in enumerate(self.wavelength_textboxes):
+			wavelength = float(self.wl_textbox.text())
+			self.settings[i][0] = wavelength
+		return
+
+	def set_power(self):
+		for i,pwr_textbox in enumerate(self.power_textboxes):
+			power = int(self.wl_textbox.text())
+			self.settings[i][1] = power
+		return
+
+	def set_on(self):
+		channel_is_on = [bool(a.isChecked()) for a in self.active]
+		for i,is_on in enumerate(channel_is_on):
+			if is_on == True:
+				wl = self.settings[i][0]
+				pwr = self.settings[i][1]
+				aotf.enable_channel_by_wavelength(i,wl,pwr)
+			else:
+				aotf.disable_channel(i)
+		return
+
+	def set_off(self):
+		self.aotf.aotf_off()
+		return 
+
+
+
+	
 
 
 if __name__ == "__main__":
 	from nplab.instrument.light_sources.fianium import Fianium
-	f = Fianium("COM4")
-
-	f.get_dac()
-	f.set_dac(600)
+	
 
 	from nplab.instrument.filters.aotf import AOTF
 	a = AOTF("COM7")
