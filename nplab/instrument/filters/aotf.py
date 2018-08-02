@@ -1,5 +1,8 @@
 import numpy as np 
 import nplab.instrument.serial_instrument as serial 
+from nplab.ui.ui_tools import *
+from nplab.utils.gui import *
+
 
 class AOTF(serial.SerialInstrument):
 
@@ -169,7 +172,6 @@ class AOTF(serial.SerialInstrument):
 		self.set_amplitude(channel,0)
 
 
-import partial
 class AOTF_UI(QtWidgets.QWidget, UiTools):
 	def __init__(self,device, parent=None,debug = False, verbose = False):
 		if not isinstance(device, AOTF):
@@ -181,42 +183,53 @@ class AOTF_UI(QtWidgets.QWidget, UiTools):
 		#aotf:
 		self.aotf = device 
 		
-		self.wavelength_textboxes = [self.chn1_wl,self.chn2_wl,self.chn3_wl,self.chn4_wl,self.chn5_wlself.chn6_wl,self.chn7_wl,self.chn8_wl]
+		self.wavelength_textboxes = [self.chn1_wl,self.chn2_wl,self.chn3_wl,self.chn4_wl,self.chn5_wl,self.chn6_wl,self.chn7_wl,self.chn8_wl]
 		self.power_textboxes = [self.chn1_pwr,self.chn2_pwr,self.chn3_pwr,self.chn4_pwr,self.chn5_pwr,self.chn6_pwr,self.chn7_pwr,self.chn8_pwr]
 		self.active = [self.chn1_toggle,self.chn2_toggle,self.chn3_toggle,self.chn4_toggle,self.chn5_toggle,self.chn6_toggle,self.chn7_toggle,self.chn8_toggle]
 
 		for wl in self.wavelength_textboxes:
-			self.wl.textChanged.connect(self.set_wavelength)
+			wl.textChanged.connect(self.set_wavelength)
 
 		for pwr in self.power_textboxes:
-			self.pwr.textChanged.connect(self.set_power)
+			pwr.textChanged.connect(self.set_power)
 
 		
 		self.off_btn.clicked.connect(self.set_off)
 		self.on_btn.clicked.connect(self.set_on)
+		self.settings = [[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]]
 
-
-
-		self.settings = [(0,0)]*8
+		self.set_wavelength()
+		self.set_power()
 
 	def set_wavelength(self):
-		for i,wl_textbox in enumerate(self.wavelength_textboxes):
-			wavelength = float(self.wl_textbox.text())
-			self.settings[i][0] = wavelength
+		try:
+			for i in range(len(self.wavelength_textboxes)):
+				wavelength = float(self.wavelength_textboxes[i].text())
+				self.settings[i][0] = wavelength
+			print self.settings
+		except ValueError as e:
+			print e
+
 		return
 
 	def set_power(self):
-		for i,pwr_textbox in enumerate(self.power_textboxes):
-			power = int(self.wl_textbox.text())
-			self.settings[i][1] = power
+		try:
+			for i in range(len(self.power_textboxes)):
+				power = int(self.power_textboxes[i].text())
+				self.settings[i][1] = power
+		except ValueError as e:
+			print e
 		return
 
 	def set_on(self):
+		print self.settings
 		channel_is_on = [bool(a.isChecked()) for a in self.active]
+		print channel_is_on
 		for i,is_on in enumerate(channel_is_on):
 			if is_on == True:
 				wl = self.settings[i][0]
 				pwr = self.settings[i][1]
+				print "wavelength:", wl
 				aotf.enable_channel_by_wavelength(i,wl,pwr)
 			else:
 				aotf.disable_channel(i)
@@ -232,10 +245,10 @@ class AOTF_UI(QtWidgets.QWidget, UiTools):
 
 
 if __name__ == "__main__":
-	from nplab.instrument.light_sources.fianium import Fianium
-	
-
 	from nplab.instrument.filters.aotf import AOTF
-	a = AOTF("COM7")
-	a.enable_channel_by_wavelength(1,633.0,16383)
-	
+	aotf = AOTF("COM4")
+
+	app = get_qt_app()
+	ui = AOTF_UI(device=aotf,debug =False)
+	ui.show()
+	sys.exit(app.exec_())	

@@ -13,7 +13,7 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <widget class="QWidget" name="">
+  <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
      <x>40</x>
@@ -56,7 +56,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QRadioButton" name="chn1_toggle">
+         <widget class="QCheckBox" name="chn1_toggle">
           <property name="text">
            <string>Active</string>
           </property>
@@ -88,7 +88,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QRadioButton" name="chn2_toggle">
+         <widget class="QCheckBox" name="chn2_toggle">
           <property name="text">
            <string>Active</string>
           </property>
@@ -120,7 +120,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QRadioButton" name="chn3_toggle">
+         <widget class="QCheckBox" name="chn3_toggle">
           <property name="text">
            <string>Active</string>
           </property>
@@ -152,7 +152,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QRadioButton" name="chn4_toggle">
+         <widget class="QCheckBox" name="chn4_toggle">
           <property name="text">
            <string>Active</string>
           </property>
@@ -184,7 +184,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QRadioButton" name="chn5_toggle">
+         <widget class="QCheckBox" name="chn5_toggle">
           <property name="text">
            <string>Active</string>
           </property>
@@ -209,14 +209,14 @@
          </widget>
         </item>
         <item>
-         <widget class="QLineEdit" name="lineEdit_22">
+         <widget class="QLineEdit" name="chn6_pwr">
           <property name="text">
            <string>8000</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QRadioButton" name="chn6_toggle">
+         <widget class="QCheckBox" name="chn6_toggle">
           <property name="text">
            <string>Active</string>
           </property>
@@ -248,7 +248,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QRadioButton" name="chn7_toggle">
+         <widget class="QCheckBox" name="chn7_toggle">
           <property name="text">
            <string>Active</string>
           </property>
@@ -266,21 +266,21 @@
          </widget>
         </item>
         <item>
-         <widget class="QLineEdit" name="ch8_wl">
+         <widget class="QLineEdit" name="chn8_wl">
           <property name="text">
-           <string>700.0</string>
+           <string>690.0</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QLineEdit" name="ch8_pwr">
+         <widget class="QLineEdit" name="chn8_pwr">
           <property name="text">
            <string>8000</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QRadioButton" name="ch8_toggle">
+         <widget class="QCheckBox" name="chn8_toggle">
           <property name="text">
            <string>Active</string>
           </property>
@@ -310,21 +310,6 @@
     </item>
    </layout>
   </widget>
-  <zorder>chn1_toggle</zorder>
-  <zorder>chn1_pwr</zorder>
-  <zorder>chn1_wl</zorder>
-  <zorder>label</zorder>
-  <zorder>layoutWidget</zorder>
-  <zorder>label_3</zorder>
-  <zorder>layoutWidget_2</zorder>
-  <zorder>layoutWidget_3</zorder>
-  <zorder>layoutWidget_4</zorder>
-  <zorder>layoutWidget_5</zorder>
-  <zorder>layoutWidget_6</zorder>
-  <zorder>layoutWidget_7</zorder>
-  <zorder>label_14</zorder>
-  <zorder>on_btn</zorder>
-  <zorder>off_btn</zorder>
  </widget>
  <resources/>
  <connections/>
