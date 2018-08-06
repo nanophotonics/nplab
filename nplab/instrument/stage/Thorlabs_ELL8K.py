@@ -363,7 +363,56 @@ class Thorlabs_ELL8K(SerialInstrument,Stage):
         response = self.query_device("mr{0}".format(pulses_hex))
         return self.__decode_position_response(response)
 
+class Thorlabs_ELL8K_UI(QtWidgets.QWidget, UiTools):
+
+    def __init__(self,stage, parent=None,debug = 0):
+        if not isinstance(stage, Thorlabs_ELL8K):
+            raise ValueError("Object is not an instance of the Thorlabs_ELL8K Stage")
+        super(Thorlabs_ELL8K_UI, self).__init__()
+        self.stage = stage #this is the actual rotation stage
+        self.parent = parent
+        self.debug =  debug
+
+        uic.loadUi(os.path.join(os.path.dirname(__file__), 'thorlabs_ell8k.ui'), self)
+
+        self.move_relative_btn.clicked.connect(self.move_relative)
+        self.move_absolute_btn.clicked.connect(self.move_absolute)
+        self.move_home_btn.clicked.connect(self.move_home)
+        self.current_angle_btn.clicked.connect(self.update_current_angle)
+    
+        
+        
+    def move_relative(self):
+        try:
+            angle = float(self.move_relative_textbox.text())
+        except ValueError as e:
+            print e
+            return 
+        self.stage.move(pos=angle,relative=True)
+
+
+    def move_absolute(self):
+        try:
+            angle = float(self.move_absolute_textbox.text())
+        except ValueError as e:
+            print e
+            return 
+        self.stage.move(pos=angle,relative=False)
+
+    def move_home(self):
+        self.stage.move_home()
+
+    def update_current_angle(self):
+        angle = self.stage.get_position()
+        self.current_angle_value.setText(str(angle))
+                
+
+
+
 def test_stage():
+    '''
+    Run from main to test stage
+    '''
     debug = False
     s = Thorlabs_ELL8K("COM8",debug=debug)
     print "Status",s.get_device_status()
@@ -385,8 +434,17 @@ def test_stage():
     s.move(angle,relative=False)
     print "350==", s.get_position()
 
-  
+def test_ui():
+    '''
+    Run from main to test ui + stage
+    '''
+    s = Thorlabs_ELL8K("COM8")
+    app = get_qt_app()
+    ui = Thorlabs_ELL8K_UI(stage=s)
+    ui.show()
+    sys.exit(app.exec_())
+
 if __name__ == "__main__":
-    test_stage()
+    print "pass"
 
     
