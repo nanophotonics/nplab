@@ -137,6 +137,19 @@ def removeNaNs(spectrum):
     #Works like list.sort() rather than sorted(list), i.e. manipulates array directly rather than returning a new one
     '''A bit clunky; will rewrite at some point'''
 
+    nans = False
+
+    for i in spectrum:
+
+        if not np.isfinite(i):
+            nans = True
+
+        else:
+            continue
+
+    if nans == False:
+        return spectrum
+
     i = -1
 
     if not np.isfinite(spectrum[i]) == True:
