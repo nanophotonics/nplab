@@ -14,6 +14,7 @@ from nplab.utils.gui import *
 from nplab.utils.gui import uic
 from nplab.ui.ui_tools import UiTools
 import nplab.ui
+from nplab.ui.widgets.position_widgets import XYZPositionWidget
 import inspect
 from functools import partial
 from nplab.utils.formatting import engineering_format
@@ -120,6 +121,46 @@ class Stage(Instrument):
     # TODO: stored dictionary of 'bookmarked' locations for fast travel
 
 
+class PiezoStage(Stage):
+
+    def __init__(self):
+        super(PiezoStage, self).__init__()
+
+    def get_piezo_level(self, axis=None):
+        """ Returns the voltage levels of the specified piezo axis. """
+        raise NotImplementedError("You must override get_piezo_leveln in a Stage subclass.")
+        if axis is None:
+            return [self.get_scanner_level(axis) for axis in self.axis_names]
+        else:
+            if axis not in self.axis_names:
+                raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
+
+    def set_piezo_level(self, level, axis):
+        """ Sets the voltage levels of the specified piezo axis. """
+        raise NotImplementedError("You must override set_piezo_level in a Stage subclass.")
+        if axis not in self.axis_names:
+            raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
+
+    def get_piezo_voltage(self, axis):
+        """ Returns the voltage of the specified piezo axis. """
+        raise NotImplementedError("You must override get_piezo_voltage in a Stage subclass.")
+
+    def set_piezo_voltage(self, axis, voltage):
+        """ Sets the voltage of the specified piezo axis. """
+        raise NotImplementedError("You must override set_piezo_voltage in a Stage subclass.")
+
+    def get_piezo_position(self, axis=None):
+        """ Returns the position of the specified piezo axis. """
+        raise NotImplementedError("You must override get_piezo_position in a Stage subclass.")
+
+    def set_piezo_position(self, axis=None):
+        """ Sets the position of the specified piezo axis. """
+        raise NotImplementedError("You must override set_piezo_position in a Stage subclass.")
+
+
+
+
+
 class StageUI(QtWidgets.QWidget, UiTools):
     update_ui = QtCore.Signal([int], [str])
 
@@ -128,13 +169,11 @@ class StageUI(QtWidgets.QWidget, UiTools):
         super(StageUI, self).__init__()
         self.stage = stage
         #self.setupUi(self)
-        uic.loadUi(os.path.join(os.path.dirname(__file__), 'stage.ui'), self)
         self.step_size_values = step_size_dict(stage_step_min, stage_step_max,unit = self.stage.unit)
         self.step_size = [self.step_size_values[self.step_size_values.keys()[0]] for axis in stage.axis_names]
-        self.create_axes_layout(default_step)
         self.update_ui[int].connect(self.update_positions)
         self.update_ui[str].connect(self.update_positions)
-        self.update_pos_button.clicked.connect(partial(self.update_positions, None))
+        self.create_axes_layout(default_step)
         self.update_positions()
 
     def move_axis_absolute(self, position, axis):
@@ -145,18 +184,24 @@ class StageUI(QtWidgets.QWidget, UiTools):
             self.update_ui[int].emit(axis)
 
     def move_axis_relative(self, index, axis, dir=1):
+        print axis,'move rel axis'
         self.stage.move(dir * self.step_size[index], axis=axis, relative=True)
         if type(axis) == str:
+            print axis
             #    axis = QtCore.QString(axis)
             self.update_ui[str].emit(axis)
         elif type(axis) == int:
             self.update_ui[int].emit(axis)
 
     def zero_all_axes(self, axes):
-        for axis in axes:
-            self.move_axis_absolute(0, axis)
+        pass
+#        for axis in axes:
+#            self.move_axis_absolute(0, axis)
 
     def create_axes_layout(self, default_step=1e-6, stack_multiple_stages='horizontal'):
+
+        uic.loadUi(os.path.join(os.path.dirname(__file__), 'stage.ui'), self)
+        self.update_pos_button.clicked.connect(partial(self.update_positions, None))
         path = os.path.dirname(os.path.realpath(nplab.ui.__file__))
         icon_size = QtCore.QSize(12, 12)
         self.positions = []
@@ -176,6 +221,8 @@ class StageUI(QtWidgets.QWidget, UiTools):
             set_position_button.resize(icon_size)
             set_position_button.clicked.connect(self.button_pressed)
             self.set_position_buttons.append(set_position_button)
+            # for each stage axis add a label, a field for the current position,
+            # a field to set a new position and a button to set a new position ..
             self.info_layout.addWidget(QtWidgets.QLabel(str(ax), self), i % 3, col)
             self.info_layout.addWidget(position, i % 3, col + 1)
             self.info_layout.addWidget(set_position, i % 3, col + 2)
@@ -193,7 +240,7 @@ class StageUI(QtWidgets.QWidget, UiTools):
                 zero_button.resize(icon_size)
                 n = len(self.stage.axis_names) - i if len(self.stage.axis_names) - i < 3 else 3
                 axes_set = self.stage.axis_names[i:i + n]
-                zero_button.clicked.connect(partial(self.zero_all_axes, axes_set))
+#                zero_button.clicked.connect(partial(self.zero_all_axes, axes_set))
                 layout.addWidget(zero_button, 1, 1)
 
             step_size_select = QtWidgets.QComboBox(self)
@@ -247,6 +294,8 @@ class StageUI(QtWidgets.QWidget, UiTools):
     # @QtCore.pyqtSlot('QString')
     @QtCore.Slot(str)
     def update_positions(self, axis=None):
+        if axis not in self.stage.axis_names:
+            axis = None
         if axis is None:
             print self.stage.axis_names
             for axis in self.stage.axis_names:
@@ -265,6 +314,145 @@ def step_size_dict(smallest, largest, mantissas=[1, 2, 5],unit = 'm'):
     log_range = np.arange(np.floor(np.log10(smallest)), np.floor(np.log10(largest)) + 1)
     steps = [m * 10 ** e for e in log_range for m in mantissas if smallest <= m * 10 ** e <= largest]
     return OrderedDict((engineering_format(s, unit), s) for s in steps)
+
+
+class PiezoStageUI(StageUI):
+
+    def __init__(self, stage, parent=None, stage_step_min=1e-9,
+                 stage_step_max=1e-3, default_step=1e-8,show_xy_pos=True,
+                 show_z_pos=True):
+        self.show_xy_pos = show_xy_pos
+        self.show_z_pos = show_z_pos
+        assert isinstance(stage, Stage), "instrument must be a Stage"
+        super(PiezoStageUI, self).__init__(stage, parent, stage_step_min, stage_step_max, default_step)
+
+
+    def create_axes_layout(self, default_step=1e-8, stack_multiple_stages='horizontal'):
+        uic.loadUi(os.path.join(os.path.dirname(__file__), 'piezo_stage.ui'), self)
+        path = os.path.dirname(os.path.realpath(nplab.ui.__file__))
+        icon_size = QtCore.QSize(12, 12)
+        self.position_widgets = []
+        self.xy_positions = []
+        self.set_positions = []
+        self.set_position_buttons = []
+        for i, ax in enumerate(self.stage.axis_names):
+            col = 4 * (i / 3)
+            if i % 3 == 0:
+                # absolute position for different stages consisting of 3 axes
+                position_widget = XYZPositionWidget(self.stage.max_voltage_levels[i/3],
+                                                    self.stage.max_voltage_levels[i/3+1],
+                                                    self.stage.max_voltage_levels[i/3+2],
+                                                    show_xy_pos=self.show_xy_pos,
+                                                    show_z_pos=self.show_z_pos)
+                if self.show_xy_pos:
+                    xy_position = position_widget.xy_widget.crosshair
+                    xy_position.CrossHairMoved.connect(self.crosshair_moved)
+                    self.xy_positions.append(xy_position)
+
+                self.position_widgets.append(position_widget)
+
+                self.info_layout.addWidget(position_widget, 0, col,3,1)
+
+                # position control elements for different stages consisting of 3 axes, arranged in a grid layout
+                group = QtWidgets.QGroupBox('stage {0}'.format(1 + (i / 3)), self)
+                layout = QtWidgets.QGridLayout()
+                layout.setSpacing(3)
+                group.setLayout(layout)
+                self.axes_layout.addWidget(group, 0, i / 3)
+                zero_button = QtWidgets.QPushButton('', self)
+                zero_button.setIcon(QtGui.QIcon(os.path.join(path, 'zero.png')))
+                zero_button.setIconSize(icon_size)
+                zero_button.resize(icon_size)
+                n = len(self.stage.axis_names) - i if len(self.stage.axis_names) - i < 3 else 3
+                #axes_set = self.stage.axis_names[i:i + n]
+                #zero_button.clicked.connect(partial(self.zero_all_axes, axes_set))
+                layout.addWidget(zero_button, 1, 1)
+
+            set_position = QtWidgets.QLineEdit('0', self)   # text field to set position
+            set_position.setMinimumWidth(40)
+            set_position.setReadOnly(True)
+            self.set_positions.append(set_position)
+            set_position_button = QtWidgets.QPushButton('', self)
+            set_position_button.setIcon(QtGui.QIcon(os.path.join(path, 'go.png')))
+            set_position_button.setIconSize(icon_size)
+            set_position_button.resize(icon_size)
+            set_position_button.clicked.connect(self.button_pressed)
+            self.set_position_buttons.append(set_position_button)
+            # for each stage axis add a label, a field for the current position,
+            # a field to set a new position and a button to set a new position ..
+            self.info_layout.addWidget(QtWidgets.QLabel(str(ax), self), i % 3, col+1)
+            self.info_layout.addWidget(set_position, i % 3, col + 2)
+            self.info_layout.addWidget(set_position_button, i % 3, col + 3)
+
+            step_size_select = QtWidgets.QComboBox(self)
+            step_size_select.addItems(self.step_size_values.keys())
+            step_size_select.activated[str].connect(partial(self.on_activated, i))
+            step_str = engineering_format(default_step, self.stage.unit)
+            step_index = self.step_size_values.keys().index(step_str)
+            step_size_select.setCurrentIndex(step_index)
+            layout.addWidget(QtWidgets.QLabel(str(ax), self), i % 3, 5)
+            layout.addWidget(step_size_select, i % 3, 6)
+            if i % 3 == 0:
+                layout.addItem(QtWidgets.QSpacerItem(12, 0), 0, 4)
+
+            plus_button = QtWidgets.QPushButton('', self)
+            plus_button.clicked.connect(partial(self.move_axis_relative, i, ax, 1))
+            minus_button = QtWidgets.QPushButton('', self)
+            minus_button.clicked.connect(partial(self.move_axis_relative, i, ax, -1))
+            if i % 3 == 0:
+                plus_button.setIcon(QtGui.QIcon(os.path.join(path, 'right.png')))
+                minus_button.setIcon(QtGui.QIcon(os.path.join(path, 'left.png')))
+                layout.addWidget(minus_button, 1, 0)
+                layout.addWidget(plus_button, 1, 2)
+            elif i % 3 == 1:
+                plus_button.setIcon(QtGui.QIcon(os.path.join(path, 'up.png')))
+                minus_button.setIcon(QtGui.QIcon(os.path.join(path, 'down.png')))
+                layout.addWidget(plus_button, 0, 1)
+                layout.addWidget(minus_button, 2, 1)
+            elif i % 3 == 2:
+                plus_button.setIcon(QtGui.QIcon(os.path.join(path, 'up.png')))
+                minus_button.setIcon(QtGui.QIcon(os.path.join(path, 'down.png')))
+                layout.addWidget(plus_button, 0, 3)
+                layout.addWidget(minus_button, 2, 3)
+            plus_button.setIconSize(icon_size)
+            plus_button.resize(icon_size)
+            minus_button.setIconSize(icon_size)
+            minus_button.resize(icon_size)
+
+    def crosshair_moved(self):
+        sender = self.sender()
+        if sender in self.xy_positions:
+            i = self.xy_positions.index(sender)
+            self.stage.set_piezo_level(self.xy_positions[i].pos()[0],i*3)
+            self.stage.set_piezo_level(self.xy_positions[i].pos()[1],i*3+1)
+            # print "crosshair moved in xy_widget ", i
+            # print self.xy_positions[i].pos()
+
+    @QtCore.Slot(int)
+    @QtCore.Slot(str)
+    def update_positions(self, axis=None):
+        piezo_levels = self.stage.piezo_levels
+        if axis is None:
+            for i in range(len(self.position_widgets)):
+                if self.show_xy_pos:
+                    self.position_widgets[i].xy_widget.setValue(piezo_levels[i*3],piezo_levels[i*3+1])
+                if self.show_z_pos:
+                    self.position_widgets[i].z_bar.setValue(piezo_levels[i*3+2])
+
+        else:
+            if self.show_xy_pos:
+                if axis % 3 == 0:
+                    self.position_widgets[axis/3].xy_widget.setValue(piezo_levels[axis],piezo_levels[axis+1])
+                elif axis % 3 == 1:
+                    self.position_widgets[axis/3].xy_widget.setValue(piezo_levels[axis-1],piezo_levels[axis])
+            if self.show_z_pos and axis % 3 == 2:
+                self.position_widgets[axis/3].z_bar.setValue(piezo_levels[axis])
+
+
+
+
+
+
 
 
 # class Stage(HasTraits):
@@ -372,7 +560,9 @@ class DummyStage(Stage):
     def __init__(self):
         super(DummyStage, self).__init__()
         self.axis_names = ('x1', 'y1', 'z1', 'x2', 'y2', 'z2')
+        self.max_voltage_levels = [4095 for ch in range(len(self.axis_names))]
         self._position = np.zeros((len(self.axis_names)), dtype=np.float64)
+        self.piezo_levels = [50,50,50,50,50,50]
 
     def move(self, position, axis=None, relative=False):
         def move_axis(position, axis):
@@ -395,6 +585,10 @@ class DummyStage(Stage):
         return self.get_axis_param(lambda axis: self._position[self.axis_names.index(axis)], axis)
 
     position = property(get_position)
+
+    def get_qt_ui(self):
+        return PiezoStageUI(self,show_z_pos=False)
+
 
 
 if __name__ == '__main__':

@@ -59,13 +59,14 @@ class APT_VCP_motor(APT_VCP, Stage):
     """
 
     axis_names = ('x', )
-    def __init__(self, port=None, source=0x01, destination=None, use_si_units=False, stay_alive = False, **kwargs):
+    def __init__(self, port=None, source=0x01, destination=None,
+                 use_si_units=False, stay_alive = False, unit = 'm',**kwargs):
         """
         Set up the serial port, setting source and destinations, and hardware info.
         """
         APT_VCP.__init__(self, port=port, source=source, destination=destination,
                          use_si_units=use_si_units, stay_alive=stay_alive)  # this opens the port
-        Stage.__init__(self)
+        Stage.__init__(self,unit = unit)
         if self.model[1] in DC_status_motors:
             # Set the bit mask for DC controllers
             self.status_bit_mask = np.array([[0x00000001, 'forward hardware limit switch is active'],
@@ -536,12 +537,13 @@ class DC_APT(APT_VCP_motor):
              'DDS':20000,
              'MLS' : 20000
              }
-    def __init__(self,  port=None, source=0x01, destination=None,use_si_units=True, stay_alive=True, stage_type = None):
+    def __init__(self,  port=None, source=0x01, destination=None,use_si_units=True,unit = 'm',
+                 stay_alive=True, stage_type = None):
         """
         Pass all of the correct arguments to APT_VCP_motor for the DC stages and create converters.
         """
         APT_VCP_motor.__init__(self, port=port, source=source, destination=destination,
-                         use_si_units=True, stay_alive=stay_alive)  # this opens the port
+                         use_si_units=True,unit = unit, stay_alive=stay_alive)  # this opens the port
         #Setup up conversion factors
         if self.model[1] == 'BBD102/BBD103': #Once the TBD001 controller is added it needs to be added here
             self.t_constant = 102.4E-6
