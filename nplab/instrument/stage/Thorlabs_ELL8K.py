@@ -199,7 +199,7 @@ class Thorlabs_ELL8K(SerialInstrument,Stage):
         header = response[0:3]
         if header == "{0}GS".format(self.device_index):
             #still moving
-            status_code = response[3:5]
+            status_code = int(response[3:5],base=16)
             status = Thorlabs_ELL8K.DEVICE_STATUS_CODES[status_code]
             outp = {"header": header,"status": status}
             return outp
@@ -445,6 +445,6 @@ def test_ui():
     sys.exit(app.exec_())
 
 if __name__ == "__main__":
-    print "pass"
+    test_ui()
 
     
