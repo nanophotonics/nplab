@@ -83,7 +83,7 @@ class Triax(VisaInstrument):
     	#Perform Conversion
 
     	Coefficents=np.sum(self.Calibration_Arrays[self.Grating_Number]*np.array([Wavelength**2,Wavelength,1.]),axis=1)
-    	return int((-Coefficents[1]+np.sqrt((Coefficents[1]**2)-(4*Coefficents[0]*(Coefficents[2]-Pixel))))/(2*Coefficents[0]))
+    	return (-Coefficents[1]+np.sqrt((Coefficents[1]**2)-(4*Coefficents[0]*(Coefficents[2]-Pixel))))/(2*Coefficents[0])
 
     def Move_Steps(self, Steps):
     	"""
@@ -149,7 +149,7 @@ class Triax(VisaInstrument):
                 print 'Timed out'
                 break
 
-    #-------------------------------------------------------------------------------------------------
+    #--------------------------------------------------------------
 
     """
 	Held here are functions from the original code that, at this point in time, I do not wish to touch
