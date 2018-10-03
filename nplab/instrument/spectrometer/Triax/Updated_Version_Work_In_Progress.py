@@ -7,6 +7,8 @@ Created on Tue Apr 14 18:45:32 2015
 from nplab.utils.gui import QtWidgets, QtCore, uic
 from nplab.instrument.visa_instrument import VisaInstrument
 import numpy as np
+import time
+import copy
 
 """
 This is the base class for the Triax spectrometer. This should be wrapped for each lab use, due to the differences in calibrations.
@@ -24,11 +26,11 @@ class Triax(VisaInstrument):
         self.Grating_Number=self.Grating #Current grating number
         self.Calibration_Arrays=Calibration_Arrays
 
-   def Grating(self, Set_To=None):
-   		"""
-		Function for checking or setting the grating number. If Set_To is left as None, current grating number is returned. If 0,1 or 2 is passed as Set_To, the
-		corresponding grating position is rotated to.
-   		"""
+    def Grating(self, Set_To=None):
+        """
+        Function for checking or setting the grating number. If Set_To is left as None, current grating number is returned. If 0,1 or 2 is passed as Set_To, the
+        corresponding grating position is rotated to.
+        """
 
    		#-----Check Input-------
         
@@ -65,7 +67,7 @@ class Triax(VisaInstrument):
 
     	#Perform conversion
 
-    	Coefficents=np.transpose(self.Calibration_Arrays[self.Grating_Number])
+    	Coefficents=np.transpose(copy.deepcopy(self.Calibration_Arrays[self.Grating_Number]))
     	Step_Array=np.array([Steps**2,Steps,1]).astype(np.float64)
 
     	Coefficents*=Step_Array
@@ -77,13 +79,13 @@ class Triax(VisaInstrument):
 		Function to return the required motor step value that would place a given Wavelength on a given Pixel of the CCD
 		"""
 
-		if self.Grating_Number+1>len(self.Calibration_Arrays): #Check calibration exists
-    		raise ValueError('Current grating is not calibrated! No calibration supplied!')
+        if self.Grating_Number+1>len(self.Calibration_Arrays): #Check calibration exists
+            raise ValueError('Current grating is not calibrated! No calibration supplied!')
 
     	#Perform Conversion
 
     	Coefficents=np.sum(self.Calibration_Arrays[self.Grating_Number]*np.array([Wavelength**2,Wavelength,1.]),axis=1)
-    	return (-Coefficents[1]+np.sqrt((Coefficents[1]**2)-(4*Coefficents[0]*(Coefficents[2]-Pixel))))/(2*Coefficents[0])
+    	return int((-Coefficents[1]+np.sqrt((Coefficents[1]**2)-(4*Coefficents[0]*(Coefficents[2]-Pixel))))/(2*Coefficents[0]))
 
     def Move_Steps(self, Steps):
     	"""
@@ -91,13 +93,13 @@ class Triax(VisaInstrument):
     	"""
 
         if (Steps <= 0):  # Taken from original code, assume there is an issue moving backwards that this corrects
-            self.write("F0,%i\r" % (Step - 1000))
+            self.write("F0,%i\r" % (Steps - 1000))
             time.sleep(1)
             self.waitTillReady()
             self.write("F0,1000\r")
             self.waitTillReady()
         else:
-            self.write("F0,%i\r" % newpos)
+            self.write("F0,%i\r" % Steps)
             time.sleep(1)
             self.waitTillReady()
 
@@ -134,11 +136,11 @@ class Triax(VisaInstrument):
         else:
             return True
 
-   	def waitTillReady(self,Timeout=120):
-   		"""
-		When called, this function checks the triax status once per second to check if it is busy. When it is not, the function returns. Also return automatically 
-		after Timeout seconds.
-   		"""
+    def waitTillReady(self,Timeout=120):
+        """
+        When called, this function checks the triax status once per second to check if it is busy. When it is not, the function returns. Also return automatically 
+        after Timeout seconds.
+        """
 
         Start_Time = time.time()
 
@@ -149,7 +151,7 @@ class Triax(VisaInstrument):
                 print 'Timed out'
                 break
 
-    #--------------------------------------------------------------
+    #-------------------------------------------------------------------------------------------------
 
     """
 	Held here are functions from the original code that, at this point in time, I do not wish to touch
@@ -174,7 +176,7 @@ class Triax(VisaInstrument):
         self.Grating(1)
         self.Grating_Number = self.Grating()
 
-     def exitLateral(self):
+    def exitLateral(self):
         self.write("e0\r")
         self.write("c0\r")  # sets entrance mirror to lateral as well
 
