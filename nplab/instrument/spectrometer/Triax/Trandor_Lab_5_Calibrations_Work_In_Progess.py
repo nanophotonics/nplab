@@ -6,8 +6,9 @@ from nplab.instrument.camera.Andor import Andor
 
 Calibration_Arrays=[]
 
-Calibration_Arrays.append(np.array([]))
+Calibration_Arrays.append(np.array([[ 6.00379272e-10, -6.78228336e-07,  2.05777889e-04], [-1.34194138e-05,  1.45370324e-02, -6.02706470e+00],[ 9.92195985e-02, -8.09189163e+01,  3.08091562e+04]]))
 Calibration_Arrays.append(np.array([[ 4.94388732e-11, -2.16939715e-08, -1.13540608e-05], [-1.31783914e-06,  1.27606623e-03, -2.03620149e+00],[ 4.72696666e-03,  7.87338518e+00,  1.84807750e+03]]))
+
 
 Calibration_Arrays=np.array(Calibration_Arrays)
 
@@ -24,8 +25,8 @@ class Trandor(Andor):#Andor
         self.triax = Triax.Triax('GPIB0::1::INSTR',Calibration_Arrays) #Initialise triax
         #self.Initialize() #Initialise andor
 
-        #self.SetParameter('SetTemperature',-90)  #Turn on andor cooler
-       # self.CoolerON()
+        #self.SetParameter('SetTemperature',-90)  #Turn on andor cooler        #ChECK
+        #self.CoolerON()
         
         print '---------------------------'
         print 'Triax Information:'
@@ -40,7 +41,7 @@ class Trandor(Andor):#Andor
         Pixels=np.arange(0,CCD_Size)
         return np.flipud(self.triax.Convert_Pixels_to_Wavelengths(Pixels))
 
-    def Set_Center_Wavelength(self,Wavelength):   #FIX!!! Broken!!!
+    def Set_Center_Wavelength(self,Wavelength):  
         Centre_Pixel=int(CCD_Size/2)
         Required_Step=self.triax.Find_Required_Step(Wavelength,Centre_Pixel)
         Current_Step=self.triax.Motor_Steps()
