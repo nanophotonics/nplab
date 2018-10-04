@@ -16,7 +16,26 @@ import logging
 LOGGER = create_logger('GeneratedGUI')
 
 class GuiGenerator(QtWidgets.QMainWindow,UiTools):
-    def __init__(self, instrument_dict, parent=None, dock_settings_path = None, scripts_path = None,working_directory = None):
+    """A object for generating a main gui through stitching together multiple guis 
+    by the generation of dock widgets, this allow the user to creaete a save a custom 
+    gui without all of the hard work
+    """
+    def __init__(self, instrument_dict, parent=None, dock_settings_path = None,
+                 scripts_path = None,working_directory = None):#
+        """Args:
+            instrument_dict(dict) :     This is a dictionary containg the 
+                                        instruments objects where the key is the 
+                                        objects new name in the generated new Ipython 
+                                        console
+            dock_settings_path(str):    A path for loading a previous dock widget
+                                        configuration
+            script_path(str):           The path of any scripts the user may want to
+                                        run using the drop down menu at the top
+                                        of the gui
+            working_directory(str):     A path to the requested working directory - 
+                                        handy if you always wish to save data to 
+                                        the same directorys
+                                """
         super(GuiGenerator, self).__init__(parent)
         self._logger = LOGGER
         self.instr_dict = instrument_dict
@@ -85,6 +104,10 @@ class GuiGenerator(QtWidgets.QMainWindow,UiTools):
         return returned
 
     def _open_one_gui(self, instrument_name):
+        """A command for opening a single Instruemnt guiand creating a dock through acquiring the 
+        get_qt_ui function for a single panel or if invidual control and preview widgets
+        are possible then the get_control_widget and get_preview_widgets will be sed
+        """
         if hasattr(self.instr_dict[instrument_name],'get_control_widget') or hasattr(self.instr_dict[instrument_name],'get_preview_widget'):
             if hasattr(self.instr_dict[instrument_name],'get_control_widget'):
                 self.allWidgets[instrument_name+' controls'] = self.instr_dict[instrument_name].get_control_widget()
@@ -109,6 +132,7 @@ class GuiGenerator(QtWidgets.QMainWindow,UiTools):
 
 
     def _addActionViewMenu(self, instr):
+        """Create the actions menu - such as enabled and disabling gui's on the fly """
         if instr not in self.actions['Views']:
             action = QtWidgets.QAction(instr, self)
             self.menuView.addAction(action)
@@ -118,6 +142,7 @@ class GuiGenerator(QtWidgets.QMainWindow,UiTools):
             self.actions['Views'][instr] = action
 
     def _toggleView(self, instr):
+        """A function for togalling a single gui """
         if self.actions['Views'][instr].isChecked():
             self.allDocks[instr].show()
             self.dockwidgetArea.addDock(self.allDocks[instr], 'left')
@@ -133,28 +158,10 @@ class GuiGenerator(QtWidgets.QMainWindow,UiTools):
             action.triggered.connect(lambda: self._toggleInstr(instr))
             self.actions['Instruments'][instr] = action
     
-    
-
-#    def _toggleInstr(self, instr):
-#
-#        if self.actions['Instruments'][instr].isChecked():
-#            if instr not in self.instr_dict.keys():
-#                self.experiment.open_instrument_with_settings(instr)
-#            if instr not in self.allDocks.keys():
-#                self._open_one_gui(instr)
-#            self.experiment.instr_dict[instr].updateGUI.emit()
-#            self._addActionViewMenu(instr)
-#            self._tabifyAll()
-#        else:
-#            if instr in self.allDocks:
-#                self.allDocks[instr].close()
-#                del self.allDocks[instr]
-#                del self.allWidgets[instr]
-#            self.menuView.removeAction(self.actions['Views'][instr])
-#            del self.experiment.instr_dicc[instr]
-#
+  
 
     def _setupSignals(self):
+        """Connect signals for the different general gui buttons/menu's """
         self.actionExit.triggered.connect(self.close)
         self.actionNightMode.triggered.connect(self.toggleNightMode)
         self.actionTerminal.triggered.connect(self.menuTerminal)
@@ -169,9 +176,11 @@ class GuiGenerator(QtWidgets.QMainWindow,UiTools):
         actions[1].triggered.connect(lambda: self.VerboseChanged(actions[1]))
         actions[2].triggered.connect(lambda: self.VerboseChanged(actions[2]))
     def toggle_browser(self):
+        """enable or disable the file browser """
         self.actions['Views']['HDF5'].toggle()
         self._toggleView('HDF5')
     def toggleNightMode(self):
+        """A function to switch all the colors to night mode - handy when working in an optics lab """
         try:
             if self.actionNightMode.isChecked():
                 import qdarkstyle
@@ -191,6 +200,8 @@ class GuiGenerator(QtWidgets.QMainWindow,UiTools):
                 print ee
                 print 'Qt 5 style sheet failed'
     def menuSaveSettings(self):
+        """A function for saving the current dock layout and settings to a numpy
+        binary array file"""
         dock_state = self.dockWidgetArea.saveState()
         if self.dock_settings_path==None:
             import nplab.utils.gui
@@ -207,6 +218,8 @@ class GuiGenerator(QtWidgets.QMainWindow,UiTools):
 
         
     def menuLoadSettings(self):
+        """A function for loading the current dock layout and settings to a numpy
+        binary array file"""
         if self.dock_settings_path==None:
             import nplab.utils.gui
             from nplab.utils.gui import QtGui,QtWidgets
@@ -224,6 +237,8 @@ class GuiGenerator(QtWidgets.QMainWindow,UiTools):
             'The dock_settings file does not exist! or it is for the wrong docks!')
 
     def menuNewExperiment(self):
+        """A start new experiement button casuing the gui to close ask for a new file
+            and reopen"""
         dock_state = self.dockWidgetArea.saveState()
         self.toggle_browser()
         self.data_file = df.current()
@@ -232,15 +247,19 @@ class GuiGenerator(QtWidgets.QMainWindow,UiTools):
         self.dockWidgetArea.restoreState(dock_state)
 #
     def menuSaveExperiment(self):
+        """push to data to hard drive """
         self.data_file.flush()
 
     def menuCloseExperiment(self):
+        """Close the current data_file """
         self.data_file.close()
         self.allWidgets['HDF5'].treeWidget.model.refresh_tree()
 
     def menuTerminal(self):
+        """ Create an ipython console for use within the experiment and push
+        all the equipment to it with the requested names
+        """
         from nplab.utils import terminal
-
         if self.terminalWindow is None:
             self.terminalWindow = terminal.ipython()
             self.terminalWindow.push({'gui': self, 'exper': self.instr_dict})
@@ -266,6 +285,7 @@ class GuiGenerator(QtWidgets.QMainWindow,UiTools):
     '''Script menu'''
 
     def makeScriptMenu(self):
+        """Generate a menu for running the scripts found in the scripts path locationlocation """
         from functools import partial
 
         if self.script_menu is None:
@@ -291,16 +311,21 @@ class GuiGenerator(QtWidgets.QMainWindow,UiTools):
         self.script_menu = script_menu
 
     def refreshScriptMenu(self):
+        """clear and recompile the scripts menu """
         self.script_menu.clear()
         self.makeScriptMenu()
 
     def menuScriptClicked(self, scriptname):
+        """Runs the selected script """
         if self.terminalWindow is None:
             self.menuTerminal()
 
         self.terminalWindow.run_script(scriptname)
 
     def VerboseChanged(self, action):
+        """Automatically change the loggers 
+        verbosity level across all instruments upon 
+        request  """
         instr_logger = logging.getLogger('Instrument')
         if action.isChecked():
             self._logger.setLevel(action.text().upper())
@@ -314,6 +339,7 @@ class GuiGenerator(QtWidgets.QMainWindow,UiTools):
             self._logger.setLevel('INFO')
 
     def closeEvent(self, event):
+        """A quick are you sure you want to quit function """
         quit_msg = "Are you sure you want to exit the program?"
         reply = QtWidgets.QMessageBox.question(self, 'Message', quit_msg,
                                                QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.Save, QtWidgets.QMessageBox.No)
