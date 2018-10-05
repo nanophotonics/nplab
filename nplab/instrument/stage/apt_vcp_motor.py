@@ -162,10 +162,20 @@ class APT_VCP_motor(APT_VCP, Stage):
 
             pos_in_counts = int(np.round(self.convert(pos[axis_number],'position','counts'),decimals = 0))
             data = bytearray(struct.pack('<HL', self.channel_number_to_identity[channel_number], pos_in_counts))
-            self.write(0x0453, data=data,destination_id=axis)
-            if block ==True:
-                self._waitFinishMove()
+            try:
+                self.write(0x0453, data=data,destination_id=axis)
+                if block ==True:
+                    self._waitFinishMove()
+                self._recusive_move_num = 0
+            except struct.error as e:
+                self.log('Move failed with '+str(e),'warning')
+                self._recusive_move_num+=1
+                if self._recusive_move_num>10:
+                    raise Exception('Stage mode failed!')
+                self.move(pos[axis_number],axis=axis,channel_number=channel_number,block = block)
+                print self.position[axis_number], pos[axis_number]
             axis_number += 1
+
 
     '''PARAMETERS'''
 

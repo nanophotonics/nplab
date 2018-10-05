@@ -82,6 +82,7 @@ class LumeneraCamera(Camera):
         
         super(LumeneraCamera,self).__init__() #NB this comes after setting up the hardware
         self.metadata_property_names = ['gain', 'exposure']
+        self.auto_crop_fraction = None
 #        for pname in lucam.Lucam.PROPERTY.keys():
 #            try:
 #                getattr(self, pname)
@@ -119,7 +120,7 @@ class LumeneraCamera(Camera):
         super(LumeneraCamera, self).close()
         self.cam.CameraClose()
         
-    def raw_snapshot(self, suppress_errors=False, reset_on_error=True, retrieve_metadata=True):
+    def raw_snapshot(self, suppress_errors=False, reset_on_error=True, retrieve_metadata=True,crop_fraction = None):
         """Take a snapshot and return it.  Bypass filters etc.
         
         @param: video_priority: If this is set to True, don't interrupt video
@@ -133,6 +134,8 @@ class LumeneraCamera(Camera):
         parameters (gain, exposure, etc.) when we take a frame, and store them
         in self.metadata.  Set this to false to disable the behaviour."""
         #I removed logic for video priority here.  That belongs in raw_image.
+        if self.auto_crop_fraction is not None:
+            crop_fraction = self.auto_crop_fraction
         with self.acquisition_lock:
             for i in range(10):
                 try:
@@ -145,9 +148,14 @@ class LumeneraCamera(Camera):
                     assert frame is not None, "Failed to capture a frame"
                     frame_pointer = frame.ctypes.data_as(
                                         ctypes.POINTER(ctypes.c_byte))
-                    return True, self.convert_frame(
-                                            frame_pointer, 
-                                            np.product(frame.shape))
+                    image = self.convert_frame(frame_pointer,np.product(frame.shape))
+                    if crop_fraction is not None:
+                        x_size = int(image.shape[0]*crop_fraction)/2
+                        x_mid = int(image.shape[0])/2
+                        y_size = int(image.shape[1]*crop_fraction)/2
+                        y_mid = int(image.shape[1])/2
+                        image = image[x_mid-x_size:x_mid+x_size,y_mid-y_size:y_mid+y_size]
+                    return True, image
                 except Exception as e:
                     print "Attempt number {0} failed to capture a frame from the camera: {1}".format(i,e)
         print "Camera.raw_snapshot() has failed to capture a frame."

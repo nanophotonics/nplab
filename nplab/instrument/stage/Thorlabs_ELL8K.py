@@ -224,19 +224,19 @@ class Thorlabs_ELL8K(SerialInstrument,Stage):
        Spins on get_position command comparing returned results. If between two calls position doesn't change
        Then assume stage has stopped and exit
        '''
-        stopped = False
-        previous_angle = 0.0
-        current_angle = 1.0
-
-        try:    
-            while(stopped == False):
-                time.sleep(Thorlabs_ELL8K.SLEEPING_TIME)
-                current_angle = self.get_position()
-                stopped =(np.absolute(current_angle - previous_angle) < Thorlabs_ELL8K.POSITION_JITTER_THRESHOLD)
-                previous_angle = current_angle
-        except KeyboardInterrupt:
-            return
-        return 
+       stopped = False
+       previous_angle = 0.0
+       current_angle = 1.0
+        
+       try:    
+           while(stopped == False):
+               time.sleep(Thorlabs_ELL8K.SLEEPING_TIME)
+               current_angle = self.get_position()
+               stopped =(np.absolute(current_angle - previous_angle) < Thorlabs_ELL8K.POSITION_JITTER_THRESHOLD)
+               previous_angle = current_angle
+       except KeyboardInterrupt:
+           return
+       return 
 
 
     def get_position(self,axis=None):
@@ -274,7 +274,7 @@ class Thorlabs_ELL8K(SerialInstrument,Stage):
         Get UI for stage
         '''
         if self.ui is None:
-            self.ui = Stage_UI(stage=self) 
+            self.ui = Thorlabs_ELL8K_UI(stage=self) 
         return self.ui
 
     def get_device_info(self):
@@ -477,7 +477,7 @@ def test_ui():
     '''
     Run from main to test ui + stage
     '''
-    s = Thorlabs_ELL8K("COM8")
+    s = Thorlabs_ELL8K("COM18")
     app = get_qt_app()
     ui = Thorlabs_ELL8K_UI(stage=s)
     ui.show()

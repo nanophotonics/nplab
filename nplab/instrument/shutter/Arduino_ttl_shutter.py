@@ -30,7 +30,8 @@ class Arduino_TTL_shutter(SerialInstrument,Shutter):
     def get_state(self):
         return self.query('Read')
     def set_state(self,state):
-        self.write(state)
+        self.query(state)
+  #      self.get_state()
 if __name__ == '__main__':
     shutter = Arduino_TTL_shutter(port = 'COM15')
     

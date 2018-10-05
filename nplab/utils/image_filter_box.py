@@ -12,7 +12,7 @@ import numpy as np
 from nplab.utils.notified_property import DumbNotifiedProperty, NotifiedProperty, register_for_property_changes
 from nplab.instrument import Instrument
 from nplab.ui.ui_tools import QuickControlBox
-
+from nplab.utils.image_with_location import ImageWithLocation
 
 class Image_Filter_box(Instrument):
     threshold = DumbNotifiedProperty()
@@ -110,6 +110,11 @@ class Camera_filter_Control_ui(QuickControlBox):
 
             
 def strided_rescale(g, bin_fac= 4):
+    try:
+        attrs = g.attrs
+        return_image_with_loc = True
+    except:
+        return_image_with_loc = False
     g = g.sum(axis=2)
     try:
         strided = as_strided(g,
@@ -119,7 +124,10 @@ def strided_rescale(g, bin_fac= 4):
         strided = np.uint8((strided-np.min(strided))*254.0/(np.max(strided)-np.min(strided)))
         strided=strided.repeat(bin_fac,0)
         strided=strided.repeat(bin_fac,1)
-        return np.copy(strided)
+        if return_image_with_loc==True:
+            return ImageWithLocation(np.copy(strided),attrs = attrs)
+        else:
+            return np.copy(strided)
     except Exception as e:
         print e
         

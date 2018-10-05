@@ -38,7 +38,18 @@ class ThorLabsSC10(Shutter, serial.SerialInstrument):
             self.toggle()
         else:
             print 'Shutter is already closed!'
-
+            
+    def set_mode(self,n):
+        """ Where n equals an associated mode
+            mode=1: Sets the unit to Manual Mode
+            mode=2: Sets the unit to Auto Mode
+            mode=3: Sets the unit to Single Mode
+            mode=4: Sets the unit to Repeat Mode
+            mode=5: Sets the unit to the External Gate Mode"""
+        self.query('mode='+str(n))
+    def get_mode(self):
+        self.query('mode?')
+    
 if __name__ == '__main__':
     import sys
 #    from nplab.utils.gui import *
