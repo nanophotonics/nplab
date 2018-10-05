@@ -9,6 +9,7 @@ from nplab.instrument.serial_instrument import SerialInstrument
 from nplab.instrument.stage import Stage
 from nplab.utils.gui import *
 from nplab.ui.ui_tools import *
+import time
 
 def bytes_to_binary(bytearr,debug = 0):
     '''
@@ -68,6 +69,14 @@ class Thorlabs_ELL8K(SerialInstrument,Stage):
 
     #default id is 0, but if multiple devices of same type connected may have others
     VALID_DEVICE_IDs = [str(v) for v in range(0,11) + ["A","B","C","D","E","F"]]
+
+    #How much a stage sleeps (in seconds) between successive calls to .get_position.
+    #Used to make blocking calls to move_absolute and move_relative. 
+    BLOCK_SLEEPING_TIME = 0.02
+    #Theshold for position accuracy when stage is meant to be stationary
+    #If difference between successive calls to get_position returns value 
+    #whose difference is less than jitter - consider stage to have stopped 
+    POSITION_JITTER_THRESHOLD = 0.02
 
     #human readable status codes
     DEVICE_STATUS_CODES = {
@@ -208,6 +217,28 @@ class Thorlabs_ELL8K(SerialInstrument,Stage):
             position = self.__hex_pulses_to_angle(hex_pulse_position)
             outp = {"header": header,"position": position}
             return outp
+
+    def __block_until_stopped(self):
+       '''
+       Method for blocking move_absolute and move_relative and move_home commands until stage has stopped
+       Spins on get_position command comparing returned results. If between two calls position doesn't change
+       Then assume stage has stopped and exit
+       '''
+        stopped = False
+        previous_angle = 0.0
+        current_angle = 1.0
+
+        try:    
+            while(stopped == False):
+                time.sleep(Thorlabs_ELL8K.SLEEPING_TIME)
+                current_angle = self.get_position()
+                stopped =(np.absolute(current_angle - previous_angle) < Thorlabs_ELL8K.POSITION_JITTER_THRESHOLD)
+                previous_angle = current_angle
+        except KeyboardInterrupt:
+            return
+        return 
+
+
     def get_position(self,axis=None):
         '''
         Query stage for its current position, in degrees
@@ -312,7 +343,7 @@ class Thorlabs_ELL8K(SerialInstrument,Stage):
         else:
             return {"header": header, "status": Thorlabs_ELL8K.DEVICE_STATUS_CODES["OutOfBounds"]}
 
-    def move_home(self,clockwise=True):
+    def move_home(self,clockwise=True,blocking=True):
         '''
         Move stage to factory default home location. 
         Note: Thorlabs API allows resetting stages home but this not implemented as it isnt' advised 
@@ -322,10 +353,13 @@ class Thorlabs_ELL8K(SerialInstrument,Stage):
         elif clockwise == False:
             direction = 1
         response = self.query_device("ho{0}".format(direction))
+
+        if blocking == True:
+            self.__block_until_stopped()
         return self.__decode_position_response(response)
         
 
-    def move_absolute(self,angle):
+    def move_absolute(self,angle,blocking=True):
         """Move to absolute position relative to home setting
 
         Args:
@@ -342,9 +376,12 @@ class Thorlabs_ELL8K(SerialInstrument,Stage):
         response = self.query_device("ma{0}".format(pulses_hex))
         
         header  = response[0:3]
+
+        if blocking == True:
+            self.__block_until_stopped()
         return self.__decode_position_response(response)
         
-    def move_relative(self,angle):
+    def move_relative(self,angle,blocking=True):
         """Moves relative to current position
 
         Args:
@@ -361,6 +398,8 @@ class Thorlabs_ELL8K(SerialInstrument,Stage):
         """
         pulses_hex = self.__angle_to_hex_pulses(angle)
         response = self.query_device("mr{0}".format(pulses_hex))
+        if blocking == True:
+            self.__block_until_stopped()
         return self.__decode_position_response(response)
 
 class Thorlabs_ELL8K_UI(QtWidgets.QWidget, UiTools):
