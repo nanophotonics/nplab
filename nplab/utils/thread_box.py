@@ -6,12 +6,17 @@ Created on Wed Feb 28 16:00:07 2018
 """
 from nplab.ui.ui_tools import QuickControlBox
 from nplab.utils.notified_property import NotifiedProperty
-import inspect
+from nplab.utils.gui import QtWidgets
+from nplab.utils.thread_utils import locked_action, background_action
 import nplab.datafile as df
-import threading
+
 import numpy as np
+import inspect
+import threading
+
+
 from nplab.utils.gui import QtWidgets, QtGui, QtCore
-from nplab.utils.thread_utils import locked_action, background_action, background_actions_running
+
 class ThreadBox3000(QuickControlBox):
     '''A gui/threading utility for running a function in a thread with a simple control window '''
     def __init__(self,function= None):
