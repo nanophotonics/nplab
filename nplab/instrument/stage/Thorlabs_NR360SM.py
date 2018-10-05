@@ -1,82 +1,134 @@
 import sys, numpy as np
-from nplab.instrument.stage.PyAPT import APTMotor
 from nplab.instrument.stage import Stage, StageUI
-import json
+from nplab.instrument.stage.apt_vcp_motor import APT_VCP_motor
+import json,struct
 from nplab.utils.gui import *
 from nplab.ui.ui_tools import *
 import threading
 import time
 from qtpy import QtCore
 
-class Thorlabs_NR360SM(Stage,APTMotor):
 
-	def __init__(self,SerialNum,HWType=22):
+DEBUG = False 
+class Thorlabs_NR360SM(APT_VCP_motor):
+
+	def __init__(self,port='/dev/ttyUSB1', source=0x01, destination=0x50):
 		Stage.__init__(self,unit="u")
-		APTMotor.__init__(self,SerialNum=SerialNum, HWTYPE=HWType)
-		self.axis_names=["deg"]
+		APT_VCP_motor.__init__(self,port=port,destination=destination,source=source)
+		self.axis_names=["x"]
+		self.set_channel_state(1,1)
 		self.zero_pos = 0.0
-		self.serial_num = SerialNum
 		self.ui = None
-
-
-
-	def __del__(self):
-		self.cleanUpAPT()
-	
-	'''
-	@param true_angle - angle reported by the stage itself
-	@zero - zero set by this class
-
-	next_angle = (+zero) (+current) + increment
-		(+zero) if true_angle == False
-		(+current) if relative == True
-		increment - input from user   
-	'''
-
-	def get_qt_ui(self):
-		if self.ui is None:
-			self.ui = Thorlabs_NR360SM_UI(stage=self) 
-		return self.ui
-	def move(self,pos,relative=False,axis=None, true_angle = False):
-		next_position = self.get_next_position(pos,relative=relative, true_angle=true_angle)
-		self.mbAbs(next_position)
-		return
-
-	def get_next_position(self,pos,relative=False, true_angle = False):
-		next_position = pos
-		if relative == True:
-			current_pos = self.get_position(true_angle=true_angle)[0]
-			next_position = next_position + current_pos
-		return next_position
-
-	def get_position(self,axis=None, true_angle=False):
+		self.set_motion_params()
+		self.get_home_parameters()
+		self.set_home_parameters()
+		self.get_home_parameters()
 		
-		#if interested in true angle reported by the stage
-		if true_angle == True:
-			return [self.getPos()]
-		#if interested in angle relative to current zero of device
-		else:
-			#subtract zero from the current position
-			relative_angle = self.getPos()-self.zero_pos
-			while relative_angle < 0.0:
-				relative_angle = relative_angle + 360.0
-			while relative_angle > 360.0:
-				relative_angle = relative_angle - 360.0 
-			return [relative_angle]
+		self.get_limit_switch_parameters()
+		self.set_limit_switch_parameters()
+		self.get_limit_switch_parameters()
+		
 
-	def set_zero(self,pos=None):
-		if pos == None:
-			self.zero_pos = self.get_position(true_angle=True)[0]
-		else:
-			self.zero_pos = pos
+
+	def set_motion_params(self,velocity=6,acceleration=3,channel=1):
+		'''
+		Set velocity parameters in units of deg/sec [both for velocity and acceleration]
+		'''
+		chanIdent = channel
+		minVel = 0
+		acc = self.convert(acceleration,"acceleration","counts")
+		maxVel = self.convert(velocity,"velocity","counts")
+
+		bs = [chanIdent,minVel,acc,maxVel]
+		ds = bytearray(struct.pack("<HLLL",*bs))
+		self.write(0x0413,param1=0x0E,param2=0x00,data=ds)
+		return 
+
+	def set_home_parameters(self,velocity=6,homeAngle=0.1,channel=1,debug= False):
+		#1 2 1 28160 469
+		chanIdent = channel
+		homeDirection = {"forward":1, "reverse":2}
+		limitSwitch = {"hardwareReverse":1,"hardwareForward":1}
+		homeVel = self.convert(velocity,"velocity","counts")
+		offsetDistance = self.convert(homeAngle,"position","counts")
+
+		bs = [chanIdent,homeDirection["reverse"],limitSwitch["hardwareReverse"],homeVel,offsetDistance]
+		if debug > 0 or DEBUG == True:
+			print "set homing parameters:", bs
+		ds = bytearray(struct.pack("<HHHLl",*bs))
+		self.write(0x0440,param1=0x0E,param2=0x00,data=ds)
+		return 
+
+	def get_home_parameters(self,channel=1):
+		'''
+		Set velocity parameters in units of deg/sec [both for velocity and acceleration]
+		'''
+
+		resp = self.query(0x0441,param1=channel,param2=0x00)
+		data = resp["data"]
+
+		chanIdent, homeDir, limSwitch, homeVel, offsetDistance = struct.unpack("<HHHLl",data)
+		print "homing parameters:",chanIdent, homeDir, limSwitch, homeVel, offsetDistance
+		return 
+		
+	def set_limit_switch_parameters(self):
+		bs = [1, 3, 1, 14080, 4693, 1] #parameters loaded from kinesis
+		ds = bytearray(struct.pack("<HHHLLH",*bs))
+		self.write(0x0423,param1=0x10,param2=0x00,data=ds)
+		return
+	def get_limit_switch_parameters(self,debug = False):
+		resp = self.query(0x0424,param1=0x10,param2=0x00)
+		data = resp["data"]
+		chanIdent, cwHardLimit, ccwHardLimit, cwSoftLimit, ccwSoftLimit, limitMode = struct.unpack("<HHHLLH",data)
+		outp = [chanIdent, cwHardLimit, ccwHardLimit, cwSoftLimit, ccwSoftLimit, limitMode]
+		if debug > 0 or DEBUG == True:
+			print "get_limit_switch_paraters:", outp
+		return outp
+	def get_motion_params(self):
+		pass
+
+	def home(self,channel=1):
+		self.write(0x0443,channel,0)
+
+
+	def stop(self,channel=1):
+		stopMode = {"immediate":0x01, "profiled":0x02}
+		self.write(0x0465,channel,stopMode["profiled"])
 		return
 
-	def get_zero(self):
-		return self.zero_pos
+	def convert(self, value, from_, to_,debug = False):
+		'''for NR360SM stage the conversion is:
+		25600 microsteps for 5.4546 degrees
+		see page 35 of 359 of Thorlabs programming manual
+		configuration applicable to BSC10x stage controllers, newer versions BSC20x may be incompatible
+		'''
+		count_to_deg = (float(5.4546 )/float(25600)) 	
+		deg_to_count = 1.0/count_to_deg
 
-	def stop(self):
-		self.stopMove()
-		return
+		vel_to_count = 4693.0
+		count_to_vel = 1.0/vel_to_count
+
+		acc_to_count = 4693.0
+		count_to_acc = 1.0/acc_to_count
+
+		if from_ == "counts" and to_ == "position":
+			val = value*count_to_deg
+		elif from_ == "position" and to_ == "counts":
+			val = int(np.round(value*deg_to_count,decimals=0))
+		
+		elif from_ == "counts" and to_ == "velocity":
+			val = value*count_to_vel
+		elif from_ == "velocity" and to_ == "counts" :
+			val = int(np.round(value*vel_to_count,decimals=0))
+		
+		elif from_ == "counts" and to_ == "acceleration":
+			val = value*count_to_acc
+		elif from_ == "acceleration" and to_ == "counts" :
+			val = int(np.round(value*acc_to_count,decimals=0))
+		
+		if debug > 0 or DEBUG == True:
+				print "from_({}):".format(from_),value, "to_({}):".format(to_),val
+		return val
 
 class Thorlabs_NR360SM_UI(QtWidgets.QWidget, UiTools):
 
@@ -100,7 +152,7 @@ class Thorlabs_NR360SM_UI(QtWidgets.QWidget, UiTools):
 
 
 		#Bind GUI widgets to functions
-		self.serial_num_textbox.setText(str(self.stage.serial_num))
+		self.serial_num_textbox.setText(str(self.stage.serial_number))
 		self.new_angle_textbox.textChanged.connect(self.set_new_angle)
 		self.rotation_speed_textbox.textChanged.connect(self.set_rotation_speed)
 		self.angle_lower_bound_textbox.textChanged.connect(self.set_angle_lower_bound)
@@ -124,10 +176,10 @@ class Thorlabs_NR360SM_UI(QtWidgets.QWidget, UiTools):
 
 	#What to do on close
 	def closeEvent(self,event):
-		if self.debug > 0: print "Widget closed - cleaning up threads"
+		if self.debug > 0 or DEBUG == True: print "Widget closed - cleaning up threads"
 		self.stop_threads_flag.set()
 		self.angle_update_thread.join()
-		if self.debug > 0: print "Widget closed - clean up DONE!"
+		if self.debug > 0 or DEBUG == True: print "Widget closed - clean up DONE!"
 		event.accept()
 		return
 
@@ -149,7 +201,7 @@ class Thorlabs_NR360SM_UI(QtWidgets.QWidget, UiTools):
 	def set_move_type(self):
 		self.move_type = self.move_combo_box.currentText()
 		assert(self.move_type in ["absolute", "relative"])
-		if self.debug > 0: print "Type changed!", self.move_type
+		if self.debug > 0 or DEBUG == True: print "Type changed!", self.move_type
 
 
 	def set_new_angle(self):
@@ -166,42 +218,27 @@ class Thorlabs_NR360SM_UI(QtWidgets.QWidget, UiTools):
 				print "Thorlabs_NR360SM_UI.set_rotation_speed says: Rotating speed too high - wouldn't want to break the stage? - Not changing velocity"
 				return
 			else:
-				self.stage.setVel(self.rotation_speed)
+				# self.stage.setVel(self.rotation_speed)
 				return
 		except:
 			print "Thorlabs_NR360SM_UI.set_rotation_speed: Unable to set new rotation speed"
 		return 
 
 	def set_zero(self):
-		self.stage.set_zero()
+		self.stage.jog()
 		#TODO: set current angle textbox to zero
 		return 
+
 
 	def move_stage(self,blocking = False):
 		
 		#get whether turn is relative
+		print "Moving-1",self.new_angle
 		relative = (self.move_type == "relative")
-
-		#get true angle that we want to rotate to
-		true_next_angle = self.stage.get_next_position(self.new_angle,relative=relative, true_angle=True)
-		self.stage.log("True Next angle: {}".format(true_next_angle))
-		#test if angle is below lower bound - error if so
-		if true_next_angle < self.angle_lower_bound:
-			self.log("Target angle BELOW anglular LOWER bound",level="error")
-			return 
-		#test if angle is above upper bound - error if so
-		elif true_next_angle > self.angle_upper_bound:
-			self.stage.log("Target angle {0} ABOVE anglular UPPER bound {1}".format(true_next_angle,self.angle_upper_bound),level="error")
-		#otherwise - move, if not already moving
-		else:
-			if isinstance(self.move_thread, threading.Thread) and self.move_thread.is_alive():
-				self.stage.log(message="Already moving!", level="info")
-				return
-			self.move_thread = threading.Thread(target=self.stage.move,args=(self.new_angle,relative))
-			self.move_thread.start()
-			if blocking == True:
-				self.move_thread.join()
+		self.stage.move(pos=self.new_angle, axis="x", relative=relative,block = False)	
 		return
+
+
 
 	def stop_stage(self):
 		self.stage.stop()
@@ -234,15 +271,26 @@ class Thorlabs_NR360SM_UI(QtWidgets.QWidget, UiTools):
 				print "self.angle_update_thread : Stopping - self.stop_threads_flag is set!"
 				return
 			else:
-				self.current_angle_textbox.setText(str(self.stage.get_position()[0]))
-				self.zero_pos_textbox.setText(str(self.stage.zero_pos))
-				time.sleep(0.3)
-					
+				try:
+
+					pos = float(self.stage.get_position()[0])
+					self.current_angle_textbox.setText("{0:4g}".format(pos))
+					self.zero_pos_textbox.setText(str(self.stage.zero_pos))
+					time.sleep(0.3)
+				except:
+					pass		
 
 if __name__ == "__main__":
 	import sys
 	from nplab.utils.gui import get_qt_app
-	s = Thorlabs_NR360SM(SerialNum=90810016,HWType=22)
+	s = Thorlabs_NR360SM(port='/dev/ttyUSB0', source=0x01, destination=0x11)
+	s.set_limswitchparams()
+	# s.set_jog_params()
+	s.home()
+	# s.get_motion_parameters()
+	# s.identify()
+	# print s.destination.keys()
+	# s.move(-5.0,relative=True)
 	app = get_qt_app()
 	ui = Thorlabs_NR360SM_UI(stage=s)
 	ui.show()
