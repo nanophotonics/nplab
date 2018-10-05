@@ -274,7 +274,7 @@ class Thorlabs_ELL8K(SerialInstrument,Stage):
         Get UI for stage
         '''
         if self.ui is None:
-            self.ui = Stage_UI(stage=self) 
+            self.ui = Thorlabs_ELL8K_UI(stage=self) 
         return self.ui
 
     def get_device_info(self):
