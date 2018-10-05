@@ -172,7 +172,9 @@ class APT_VCP(serial_instrument.SerialInstrument):
             param1 = len(data)
             formated_message = bytearray(struct.pack('<HBBBB', message_id, param1, param2,
                                                      destination | 0x80, self.source))
+            print "before", formated_message
             formated_message += data
+            print "after", formated_message
         
         if (len(self.command_log) == self.command_log.maxlen 
             and 0x0492 not in self.command_log

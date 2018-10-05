@@ -14,7 +14,7 @@ import types
 import time
 
 DC_status_motors = {'BBD102/BBD103': [], 'TDC001': []}
-
+DEBUG = False
 
 class APT_parameter(NotifiedProperty):
     """A quick way of creating a property that alters an apt parameter.
@@ -79,18 +79,18 @@ class APT_VCP_motor(APT_VCP, Stage):
             self.velocity_scaling_factor = 204.8  # for converting velocity to mm/sec
         else:
             # Set the bit mask for normal motor controllers
-            self.status_bit_mask = {0x00000001: 'forward (CW) hardware limit switch is active',
-                                    0x00000002: 'reverse (CCW) hardware limit switch is active',
-                                    0x00000004: 'forward (CW) software limit switch is active',
-                                    0x00000008: 'reverse (CCW) software limit switch is active',
-                                    0x00000010: 'in motion, moving forward (CW)',
-                                    0x00000020: 'in motion, moving reverse (CCW)',
-                                    0x00000040: 'in motion, jogging forward (CW)',
-                                    0x00000080: 'in motion, jogging reverse (CCW)',
-                                    0x00000100: 'motor connected',
-                                    0x00000200: 'in motion, homing',
-                                    0x00000400: 'homed (homing has been completed)',
-                                    0x00001000: 'interlock state (1 = enabled)'}
+            self.status_bit_mask = np.array([[0x00000001, 'forward (CW) hardware limit switch is active'],
+                                    [0x00000002, 'reverse (CCW) hardware limit switch is active'],
+                                    [0x00000004, 'forward (CW) software limit switch is active'],
+                                    [0x00000008, 'reverse (CCW) software limit switch is active'],
+                                    [0x00000010, 'in motion, moving forward (CW)'],
+                                    [0x00000020, 'in motion, moving reverse (CCW)'],
+                                    [0x00000040, 'in motion, jogging forward (CW)'],
+                                    [0x00000080, 'in motion, jogging reverse (CCW)'],
+                                    [0x00000100, 'motor connected'],
+                                    [0x00000200, 'in motion, homing'],
+                                    [0x00000400, 'homed (homing has been completed)'],
+                                    [0x00001000, 'interlock state (1 = enabled)']])
 
             # delattr(self, 'get_qt_ui')
         if type(destination) != dict and len(self.destination)==1:
@@ -113,7 +113,7 @@ class APT_VCP_motor(APT_VCP, Stage):
 #                return False
 #        return True
 
-    def _waitFinishMove(self,axis = None):
+    def _waitFinishMove(self,axis = None,debug=False):
         """A simple function to force movement to block the console """
         if axis == None:
             destination_ids = self.destination.keys()
@@ -121,6 +121,8 @@ class APT_VCP_motor(APT_VCP, Stage):
             destination_ids = [axis]
         for dest in destination_ids:
             status = self.get_status_update(axis = dest)
+            if debug > 0 or DEBUG == True:
+                print status
             while any(map(lambda x: 'in motion' in x[1], status)):
                 time.sleep(0.1)
                 status = self.get_status_update(axis = dest)
@@ -155,17 +157,9 @@ class APT_VCP_motor(APT_VCP, Stage):
             axes = tuple(axis)
         axis_number = 0
         for axis in axes:
-      #      pos_in_counts = int(np.round(self.convert(pos[axis_number],'position','counts'),decimals = 0))
-        #    data = bytearray(struct.pack('<HL', self.channel_number_to_identity[channel_number], pos_in_counts))
             if relative:
                 pos[axis_number] = self.position[axis_number]+pos[axis_number]
-                
-       #         data = bytearray(struct.pack('<HL', self.channel_number_to_identity[channel_number], pos_in_counts))
-      #          self.write(0x0448, data=data,destination_id=axis)
- #           else:
- #               new_pos = 
-      #          data = bytearray(struct.pack('<HL', self.channel_number_to_identity[channel_number], pos_in_counts))
-    #            self.write(0x0453, data=data,destination_id=axis)
+
             pos_in_counts = int(np.round(self.convert(pos[axis_number],'position','counts'),decimals = 0))
             data = bytearray(struct.pack('<HL', self.channel_number_to_identity[channel_number], pos_in_counts))
             self.write(0x0453, data=data,destination_id=axis)
@@ -183,7 +177,7 @@ class APT_VCP_motor(APT_VCP, Stage):
             returned_message = self.query(0x0480, param1=self.channel_number_to_identity[channel_number],destination_id = axis)
         return self.update_status(returned_message['data'])
 
-    def update_status(self, returned_message):
+    def update_status(self, returned_message,debug=False):
         '''This command should update device properties from the update message
             however this has to be defined for every device as the status update format
             and commands vary,
@@ -191,15 +185,24 @@ class APT_VCP_motor(APT_VCP, Stage):
             Args:
                 The returned message from a status update request           (dict)
         '''
+        if debug > 0 or DEBUG == True:
+            N = len(returned_message)
+            print "returned_message length:",N
         if self.model[1] in DC_status_motors:
             channel, position, velocity, Reserved, status_bits = struct.unpack('<HLHHI', returned_message)
+            #HLHHI
+            #H - 2, L - 4, I - 4
             # self.position = position
             # self.velocity = velocity / self.velocity_scaling_factor
         else:
-            channel, position, EncCnt, status_bits = struct.unpack(returned_message, '<ILLH')
-   #         self.position = position  #
-   #         self.EncCnt = EncCnt
-        self.status = self.status_bit_mask[np.where(self._bit_mask_array(status_bits, self.status_bit_mask[:, 0]))]
+            
+            channel, position, EncCnt,status_bits, ChanIdent2,_,_,_ = struct.unpack('<HILIHLLL',returned_message)
+            # print "Status bits",status_bits
+            # print "self.status_bit_mask",self.status_bit_mask[:, 0]
+            bitmask = self._bit_mask_array(status_bits, [int(i) for i in self.status_bit_mask[:, 0]])
+            self.status = self.status_bit_mask[np.where(bitmask)]
+            if debug > 0 or DEBUG == True:
+                print self.status
         return self.status
 
 
@@ -523,10 +526,11 @@ class Stepper_APT_trinamics(APT_VCP_motor):
              'acceleration' : acc_to_counts}
     
 if __name__ == '__main__':
+    print "pass"
     # microscope_stage = APT_VCP_motor(port='COM12', source=0x01, destination=0x21)
 
-    tdc_cube = APT_VCP_motor(port='COM21', source=0x00, destination=0x50)
-    tdc_cube2 = APT_VCP_motor(port='COM20', source=0x01, destination=0x50)
+    tdc_cube = Stepper_APT_trinamics(port='/dev/ttyUSB1', source=0x01, destination=0x50)
+    # tdc_cube2 = APT_VCP_motor(port='COM20', source=0x01, destination=0x50)
 
     tdc_cube.show_gui()
     # print tdc_cube.position
