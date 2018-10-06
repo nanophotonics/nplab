@@ -19,18 +19,19 @@ class Thorlabs_NR360SM(APT_VCP_motor):
 		self.set_channel_state(1,1)
 		self.zero_pos = 0.0
 		self.ui = None
+		print "initialized NR360SM"
 		self.set_motion_params()
-		self.get_home_parameters()
+		# self.get_home_parameters()
 		self.set_home_parameters()
 		self.get_home_parameters()
 		
-		self.get_limit_switch_parameters()
-		self.set_limit_switch_parameters()
-		self.get_limit_switch_parameters()
+		# self.get_limit_switch_parameters()
+		# self.set_limit_switch_parameters()
+		# self.get_limit_switch_parameters()
 		
 
 
-	def set_motion_params(self,velocity=6,acceleration=3,channel=1):
+	def set_motion_params(self,velocity=10,acceleration=5,channel=1):
 		'''
 		Set velocity parameters in units of deg/sec [both for velocity and acceleration]
 		'''
@@ -225,7 +226,7 @@ class Thorlabs_NR360SM_UI(QtWidgets.QWidget, UiTools):
 		return 
 
 	def set_zero(self):
-		self.stage.jog()
+		self.stage.home()
 		#TODO: set current angle textbox to zero
 		return 
 
@@ -235,7 +236,7 @@ class Thorlabs_NR360SM_UI(QtWidgets.QWidget, UiTools):
 		#get whether turn is relative
 		print "Moving-1",self.new_angle
 		relative = (self.move_type == "relative")
-		self.stage.move(pos=self.new_angle, axis="x", relative=relative,block = False)	
+		self.stage.move(pos=self.new_angle, axis="x", relative=relative,block = blocking)	
 		return
 
 
@@ -284,9 +285,11 @@ if __name__ == "__main__":
 	import sys
 	from nplab.utils.gui import get_qt_app
 	s = Thorlabs_NR360SM(port='/dev/ttyUSB0', source=0x01, destination=0x11)
-	s.set_limswitchparams()
+	# s.set_limswitchparams()
 	# s.set_jog_params()
+	# s.move(10,block=True)
 	s.home()
+
 	# s.get_motion_parameters()
 	# s.identify()
 	# print s.destination.keys()
