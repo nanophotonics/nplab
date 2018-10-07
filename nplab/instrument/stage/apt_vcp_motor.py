@@ -209,10 +209,10 @@ class APT_VCP_motor(APT_VCP, Stage):
             channel, position, EncCnt,status_bits, ChanIdent2,_,_,_ = struct.unpack('<HILIHLLL',returned_message)
             # print "Status bits",status_bits
             # print "self.status_bit_mask",self.status_bit_mask[:, 0]
-            bitmask = self._bit_mask_array(status_bits, [int(i) for i in self.status_bit_mask[:, 0]])
-            self.status = self.status_bit_mask[np.where(bitmask)]
-            if debug > 0 or DEBUG == True:
-                print self.status
+        bitmask = self._bit_mask_array(status_bits, [int(i) for i in self.status_bit_mask[:, 0]])
+        self.status = self.status_bit_mask[np.where(bitmask)]
+        if debug > 0 or DEBUG == True:
+            print self.status
         return self.status
 
 
