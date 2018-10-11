@@ -206,7 +206,7 @@ class GuiGenerator(QtWidgets.QMainWindow,UiTools):
         if self.dock_settings_path==None:
             import nplab.utils.gui
             from nplab.utils.gui import QtGui,QtWidgets
-            app = nplab.utils.gui.get_qt_app()  # ensure Qt is running
+       #     app = nplab.utils.gui.get_qt_app()  # ensure Qt is running
             self.dock_settings_path = QtWidgets.QFileDialog.getSaveFileName(
                 caption="Create new dock settings file",
                 directory=self.working_directory,
@@ -223,7 +223,7 @@ class GuiGenerator(QtWidgets.QMainWindow,UiTools):
         if self.dock_settings_path==None:
             import nplab.utils.gui
             from nplab.utils.gui import QtGui,QtWidgets
-            app = nplab.utils.gui.get_qt_app()  # ensure Qt is running
+  #          app = nplab.utils.gui.get_qt_app()  # ensure Qt is running
             self.dock_settings_path = QtWidgets.QFileDialog.getOpenFileName(
                 caption="Select Existing Data File",
                 directory=self.working_directory,
