@@ -101,7 +101,12 @@ class Shamrock(Instrument):
         error = self.dll.ShamrockGetGrating(self.current_shamrock,byref(grating))
         self.verbose(ERROR_CODE[error], sys._getframe().f_code.co_name)
         return grating
-    current_grating = property(GetGrating)    
+    def SetGrating(self,grating_num):
+        grating_num = int(grating_num)
+        grating = c_int(grating_num)
+        error = self.dll.ShamrockSetGrating(self.current_shamrock,grating)
+        self.verbose(ERROR_CODE[error], sys._getframe().f_code.co_name)
+    current_grating = NotifiedProperty(GetGrating,SetGrating)    
     def GetGratingInfo(self):    
         lines = c_float()
         blaze = c_char()
@@ -298,7 +303,7 @@ class ShamrockControlUI(QuickControlBox):
         self.shamrock = shamrock
         self.add_doublespinbox("center_wavelength")
         self.add_doublespinbox("slit_width")
-        self.add_spinbox("turret_position")
+        self.add_spinbox("current_grating")
         self.add_lineedit('GratingInfo')
         self.controls['GratingInfo'].setReadOnly(True)
         self.auto_connect_by_name(controlled_object = self.shamrock)

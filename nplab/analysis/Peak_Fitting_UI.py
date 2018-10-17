@@ -315,7 +315,7 @@ def Run(Array,x_axis,Threshold=None):
 	if Lower is None:
 		return
 	
-	To_Fit=Array[Lower:Upper]
+	To_Fit=Array[Lower:Upper+1]
 
 	#----------Select Peaks-------------
 

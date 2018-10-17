@@ -208,7 +208,7 @@ class APT_VCP(serial_instrument.SerialInstrument):
         """ Enable or disable a channel"""
         channel_identity = self.channel_number_to_identity[channel_number]
         new_state = self.state_conversion[new_state]
-        self.write(message=0x0210, param_1=channel_identity, param_2=new_state,destination_id = destination_id)
+        self.write(message_id=0x0210, param1=channel_identity, param2=new_state,destination_id = destination_id)
 
     def get_channel_state(self, channel_number,destination_id = None):
         """Get the current state of a channel """

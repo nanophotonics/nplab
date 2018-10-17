@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from scipy.special import riccati_jn,riccati_yn
 from nplab.utils.refractive_index_db import RefractiveIndexInfoDatabase
 from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import cm
 
 #Initialized after first request
 WAVELENGTHS = None
@@ -430,17 +431,17 @@ def scattering_cross_section(radius,wavelength):
     return output
 
 def main4():
-    wavelength_range = np.asarray([1e-9*wl for wl in np.linspace(450,800,350)])
-    radius_range = np.asarray([r*1e-9 for r in np.linspace(100,120,40)])
+    wavelength_range = np.asarray([1e-9*wl for wl in np.linspace(450,1000,550)])
+    radius_range = np.asarray([r*1e-9 for r in np.linspace(50,250,200)])
     x,y= np.meshgrid(radius_range,wavelength_range,indexing="xy")
     f = np.vectorize(scattering_cross_section)
     z = f(x,y)
     fig = plt.figure()
     ax = fig.gca(projection='3d')
     zmin = np.min(z)
-    surf = ax.plot_wireframe(x, y, z/zmin)
-    plt.xlabel("Radius")
-    plt.ylabel("Wavelength")
+    surf = ax.plot_surface(x/1e-9, y/1e-9, z/zmin,cmap=cm.coolwarm)
+    plt.xlabel("Radius [nm]")
+    plt.ylabel("Wavelength [nm]")
     plt.title("Normalized scattering cross section\n Normalization: z/z_min, z_min = {}".format(zmin))
 
     ratio_low = scattering_cross_section(radius = 120e-9,wavelength=450e-9)/scattering_cross_section(radius = 100e-9,wavelength=450e-9)
