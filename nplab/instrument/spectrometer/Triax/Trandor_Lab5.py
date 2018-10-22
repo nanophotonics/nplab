@@ -44,7 +44,7 @@ class Trandor(Andor):#Andor
 
     def Generate_Wavelength_Axis(self):
         Pixels=np.arange(0,CCD_Size)
-        return np.flipud(self.triax.Convert_Pixels_to_Wavelengths(Pixels))
+        return self.triax.Convert_Pixels_to_Wavelengths(Pixels)
 
     def Set_Center_Wavelength(self,Wavelength):  
         Centre_Pixel=int(CCD_Size/2)
