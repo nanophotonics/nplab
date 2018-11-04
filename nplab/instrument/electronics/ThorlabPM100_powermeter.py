@@ -48,6 +48,11 @@ class ThorPM100(ThorlabsPM100,Instrument):
         if self.ui ==None:
             self.ui=ThorlabsPM100_widget(self)
         return self.ui
+    def set_wavelength(self,wavelength):
+        self.power_meter.sense.correction.wavelength = wavelength
+    def get_wavelength(self):
+        return self.sense.correction.wavelength
+    wavelength = NotifiedProperty(get_wavelength,set_wavelength)
         
 
 class ThorlabsPM100_widget(QuickControlBox):
