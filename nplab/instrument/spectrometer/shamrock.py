@@ -100,7 +100,7 @@ class Shamrock(Instrument):
         grating = c_int()
         error = self.dll.ShamrockGetGrating(self.current_shamrock,byref(grating))
         self.verbose(ERROR_CODE[error], sys._getframe().f_code.co_name)
-        return grating
+        return grating.value
     def SetGrating(self,grating_num):
         grating_num = int(grating_num)
         grating = c_int(grating_num)
