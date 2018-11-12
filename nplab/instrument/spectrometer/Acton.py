@@ -2,12 +2,13 @@
 
 from nplab.instrument.visa_instrument import VisaInstrument
 import re
+import time
 
 
 class SP2750(VisaInstrument):
     """ftp://ftp.princetoninstruments.com/public/manuals/Acton/SP-2750.pdf"""
     def __init__(self, address):
-        port_settings = dict(baud_rate=9600, read_termination="\r\n", write_termination="\r")
+        port_settings = dict(baud_rate=9600, read_termination="\r\n", write_termination="\r", timeout=3000)
         super(SP2750, self).__init__(address, port_settings)
         self.clear_read_buffer()
 
@@ -33,12 +34,31 @@ class SP2750(VisaInstrument):
             idx = 0
             while "ok" not in read:
                 read += " | " + self.read()
-                idx +=1
+                idx += 1
                 if idx > 10:
                     raise ValueError("Too many multiple reads")
             return read
 
+    # def read(self, *args, **kwargs):
+    #
+    #     full_reply = self.instr.read(*args, **kwargs)
+    #
+    #     status = full_reply[-2:]
+    #     reply = full_reply[:-2]
+    #
+    #     if "?" in full_reply:
+    #         self._logger.warn("Message  %s" % full_reply)
+    #     elif status == "ok":
+    #         return reply.rstrip("").lstrip("")
+
     # MOVEMENT COMMANDS
+    def _wait(self):
+        """Checks whether movement has finished"""
+        time.sleep(1)
+        t0 = time.time()
+        while time.time() - t0 < 10 and not self.is_ready():
+            time.sleep(1)  # This you get from testing
+
     def set_wavelength_fast(self, wvl):
         """
         Goes to a destination wavelength at maximum motor speed. Accepts destination wavelength in nm as a floating
@@ -47,7 +67,9 @@ class SP2750(VisaInstrument):
         :return:
         """
 
-        self.query("%0.3f GOTO" % wvl)
+        self.write("%0.3f GOTO" % wvl)
+        self._wait()
+        return self.read()
 
     def set_wavelength(self, wvl):
         """
@@ -58,7 +80,7 @@ class SP2750(VisaInstrument):
         :return:
         """
 
-        self.query("%0.3f NM" % wvl)
+        self.write("%0.3f NM" % wvl)
 
     def get_wavelength(self):
         """
@@ -75,6 +97,9 @@ class SP2750(VisaInstrument):
         :return:
         """
         self.query("%0.3f NM/MIN" % rate)
+
+    def is_ready(self):
+        return bool(self.query("MONO-?DONE"))
 
     # GRATING CONTROL
     def set_grating(self, index):
@@ -113,7 +138,9 @@ if __name__ == "__main__":
     print spec.query("?NM")
     print spec.query("?GRATINGS")
 
-    # print spec.set_wavelength_fast(200)
-    # print spec.query()
+    print spec.set_wavelength_fast(0)
+    print spec.get_wavelength()
 
+    print spec.set_wavelength_fast(200)
+    print spec.get_wavelength()
 
