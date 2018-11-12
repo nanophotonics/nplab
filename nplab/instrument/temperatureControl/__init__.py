@@ -1,17 +1,6 @@
-import numpy as np
-from collections import OrderedDict
-import itertools
+# -*- coding: utf-8 -*-
+
 from nplab.instrument import Instrument
-import time
-import threading
-from nplab.utils.gui import *
-from nplab.utils.gui import uic
-from nplab.ui.ui_tools import UiTools
-import nplab.ui
-import inspect
-from functools import partial
-from nplab.utils.formatting import engineering_format
-import collections
 
 
 class TemperatureControl(Instrument):
@@ -44,6 +33,7 @@ class TemperatureControl(Instrument):
 
     def set_target_temperature(self, value):
         raise NotImplementedError
+
     def get_target_temperature(self):
         return
     target_temperature = property(fset=set_target_temperature, fget=get_target_temperature)
