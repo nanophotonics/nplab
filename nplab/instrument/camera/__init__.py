@@ -17,6 +17,7 @@ import time
 from PIL import Image
 import warnings
 import pyqtgraph as pg
+from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 from weakref import WeakSet
 
 from nplab.instrument import Instrument
@@ -640,7 +641,98 @@ class CameraPreviewWidget(pg.GraphicsView):
         """Move the crosshair to centre on a given pixel coordinate."""
         self.crosshair['h_line'].setValue(pos[0])
         self.crosshair['v_line'].setValue(pos[1])
-        
+
+
+class DisplayWidget(QtWidgets.QWidget, UiTools):
+    _max_num_line_plots = 4
+
+    def __init__(self):
+        QtWidgets.QWidget.__init__(self)
+
+        uic.loadUi(os.path.join(os.path.dirname(__file__), 'CameraDefaultDisplay.ui'), self)
+        self.ImageDisplay = self.replace_widget(self.imagelayout, self.ImageDisplay,
+                                                pg.ImageView(view=pg.PlotItem()))
+        self.ImageDisplay.view.setAspectLocked(False)
+        self.ImageDisplay.getHistogramWidget().gradient.restoreState(Gradients.values()[1])
+        self.labelCrossHairPositions = QtWidgets.QLabel()
+        self.imagelayout.addWidget(self.labelCrossHairPositions)
+
+        self.plot = ()
+        for ii in range(self._max_num_line_plots):
+            self.plot += (self.LineDisplay.plot(pen=pg.intColor(ii, self._max_num_line_plots)),)
+        # self.plot1 = self.LineDisplay.plot(pen='y')
+        # self.plot2 = self.LineDisplay.plot(pen='g')
+        # self.plot3 = self.LineDisplay.plot(pen='b')
+        # self.plot4 = self.LineDisplay.plot(pen='w')
+
+        self.CrossHair1 = Crosshair('r')
+        self.CrossHair2 = Crosshair('g')
+        self.ImageDisplay.getView().addItem(self.CrossHair1)
+        self.ImageDisplay.getView().addItem(self.CrossHair2)
+
+        self.LineDisplay.showGrid(x=True, y=True)
+
+        self.CrossHair1.CrossHairMoved.connect(self.mouseMoved)
+        self.CrossHair2.CrossHairMoved.connect(self.mouseMoved)
+
+        self.unit = 'pxl'
+        self.splitter.setSizes([1, 0])
+
+    def pxl_to_unit(self, pxl):
+        return pxl
+
+    def mouseMoved(self):
+        x1 = self.CrossHair1.pos()[0]
+        y1 = self.CrossHair1.pos()[1]
+        x2 = self.CrossHair2.pos()[0]
+        y2 = self.CrossHair2.pos()[1]
+
+        xu1, yu1 = self.pxl_to_unit((x1, y1))
+        xu2, yu2 = self.pxl_to_unit((x2, y2))
+
+        self.labelCrossHairPositions.setText(
+            "<span style='color: red'>Pixel: [%i,%i]px Unit: (%g, %g)%s</span>, " \
+            "<span style='color: green'> Pixel: [%i,%i]px Unit: (%g, %g)%s</span>, " \
+            "Delta pixel: [%i,%i]px Delta Unit: (%g, %g)%s"
+            % (x1, y1, xu1, yu1, self.unit, x2, y2, xu2, yu2, self.unit, abs(x1 - x2), abs(y1 - y2), abs(xu1 - xu2),
+               abs(yu1 - yu2), self.unit))
+
+class Crosshair(pg.GraphicsObject):
+    CrossHairMoved = QtCore.Signal()
+    Released = QtCore.Signal()
+
+    def __init__(self, color):
+        super(Crosshair, self).__init__()
+        self.color = color
+
+    #        self.CrossHairMoved = QtCore.SIGNAL('CrossHairMoved')
+    #        self.Released = QtCore.SIGNAL('CrossHairReleased')
+
+    def paint(self, p, *args):
+        p.setPen(pg.mkPen(self.color))
+        p.drawLine(-5, 0, 5, 0)
+        p.drawLine(0, -5, 0, 5)
+
+    def boundingRect(self):
+        return QtCore.QRectF(-5, -5, 5, 5)
+
+    def mouseDragEvent(self, ev):
+        ev.accept()
+        if ev.isStart():
+            self.startPos = self.pos()
+        elif ev.isFinish():
+            self.setPos(*map(int, self.pos()))
+        else:
+            self.setPos(self.startPos + ev.pos() - ev.buttonDownPos())
+
+        #        self.emit(self.CrossHairMoved)
+        self.CrossHairMoved.emit()
+
+        # def mouseReleaseEvent(self, ev):
+        #     print 'CrossHair released'
+        #     ev.accept()
+        #     self.setPos(map(int, self.pos()))
+        #     self.emit(self.Released)
         
 class DummyCamera(Camera):
     exposure = CameraParameter("exposure", "The exposure time in ms.")
