@@ -9,9 +9,6 @@ from ctypes import *
 import time
 import os, sys
 
-# with nidaqmx.Task() as task:
-#     task.do_channels.add_do_chan('Dev1/PFI0')
-#     task.write(False)
 
 class NewportPowermeter(Instrument):
     def __init__(self, product_id, **kwargs):
