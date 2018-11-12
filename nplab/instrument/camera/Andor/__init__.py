@@ -387,7 +387,11 @@ class AndorBase:
         self.SetParameter('SetTemperature', -60)
         self.SetParameter('CoolerMode', 0)
         self.SetParameter('FanMode', 0)
-        self.SetParameter('OutAmp', 1)
+        try:
+            self.SetParameter('OutAmp', 1)
+        except:
+            self.OutAmp = 0
+            self.log('This CCD does not have em mode','WARN')
         self.CoolerON()
         #      self.GetAllParameters()
 
@@ -1074,7 +1078,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         else:
             filename = 'Andor_data'
         if self.group_comboBox.currentText() == 'AndorData':
-            if df._use_current_group == True:
+            if df._use_current_group == True and df._current_group is not None:
                 group = df._current_group
             elif 'AndorData' in self.data_file.keys():
                 group = self.data_file['AndorData']

@@ -303,8 +303,17 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
             e = ctypes.c_int()
             read_tec_temperature = seabreeze.seabreeze_read_tec_temperature
             read_tec_temperature.restype = c_double
-            temperature = read_tec_temperature(self.index, byref(e))
-            check_error(e)
+            temperature_0 = read_tec_temperature(self.index, byref(e))
+            for i in range(100):
+                temperature = read_tec_temperature(self.index, byref(e))
+                check_error(e)
+                if temperature==temperature_0:
+                    break
+                else:
+                    temperature_0=temperature
+                if i==99:
+                    self.log('Temperature reading inconsitent after 100 attmpets','WARN')
+           
             return temperature
         except OceanOpticsError as error:
             print error
