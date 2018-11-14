@@ -646,8 +646,9 @@ class CameraPreviewWidget(pg.GraphicsView):
 class DisplayWidget(QtWidgets.QWidget, UiTools):
     _max_num_line_plots = 4
 
-    def __init__(self):
+    def __init__(self, scale=(1, 1)):
         QtWidgets.QWidget.__init__(self)
+        self._pxl_scale = scale
 
         uic.loadUi(os.path.join(os.path.dirname(__file__), 'CameraDefaultDisplay.ui'), self)
         self.ImageDisplay = self.replace_widget(self.imagelayout, self.ImageDisplay,
@@ -701,10 +702,10 @@ class Crosshair(pg.GraphicsObject):
     CrossHairMoved = QtCore.Signal()
     Released = QtCore.Signal()
 
-    def __init__(self, color):
-        super(Crosshair, self).__init__()
+    def __init__(self, color, *args):
+        super(Crosshair, self).__init__(*args)
         self.color = color
-
+        self._pxl_scale = (1, 1)
     #        self.CrossHairMoved = QtCore.SIGNAL('CrossHairMoved')
     #        self.Released = QtCore.SIGNAL('CrossHairReleased')
 
@@ -721,7 +722,8 @@ class Crosshair(pg.GraphicsObject):
         if ev.isStart():
             self.startPos = self.pos()
         elif ev.isFinish():
-            self.setPos(*map(int, self.pos()))
+            rounded_pos = map(lambda x, y: x - x % y, self.pos(), self._pxl_scale)  # force it to snap onto a grid
+            self.setPos(*rounded_pos)  # *map(int, self.pos()))
         else:
             self.setPos(self.startPos + ev.pos() - ev.buttonDownPos())
 

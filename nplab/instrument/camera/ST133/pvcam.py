@@ -18,7 +18,6 @@ Original Odemis was tested on Linux with a PI PIXIS. This was tested on Windows 
 """
 
 
-
 from __future__ import division
 
 # import collections
@@ -414,6 +413,14 @@ class PvcamSdk:
     @exposure.setter
     def exposure(self, value):
         self._exposure_time = value
+
+    @NotifiedProperty
+    def binning(self):
+        return self._binning
+
+    @binning.setter
+    def binning(self, value):
+        self._binning = value
 
     def _setStaticSettings(self):
         """
@@ -1399,7 +1406,7 @@ class PvcamSdk:
 
 
 class Pvcam(Camera, PvcamSdk):
-    metadata_property_names = ('exposure', 'AcquisitionMode', 'TriggerMode', 'background', 'x_axis')
+    metadata_property_names = ('exposure', 'binning', 'unit_scale')
 
     def __init__(self, device, **kwargs):
         Camera.__init__(self)
@@ -1457,6 +1464,7 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
         self.captureThread = None
         self.camera = camera
         self.DisplayWidget = None
+        self._scaling()
 
         uic.loadUi((os.path.dirname(__file__) + '/camera.ui'), self)
 
@@ -1467,12 +1475,14 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
         self.save_all_parameters = False
         self.backgrounded = False
 
-        self.gui_params = ['exposure']
         self._func_dict = {}
-        for param in self.gui_params:
-            func = self.callback_to_update_prop(param)
-            self._func_dict[param] = func
-            register_for_property_changes(self.camera, param, self._func_dict[param])
+        for param in self.camera.metadata_property_names:
+            try:
+                func = self.callback_to_update_prop(param)
+                self._func_dict[param] = func
+                register_for_property_changes(self.camera, param, self._func_dict[param])
+            except AssertionError:
+                self.camera._logger.info("%s is not a property so cannot be monitored" % param)
         # self.camera.updateGUI.connect(self.updateGUI)
 
     def __del__(self):
@@ -1483,7 +1493,6 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
 
     def _setup_signals(self):
         # self.comboBoxAcqMode.activated.connect(self.AcquisitionModeChanged)
-        # self.comboBoxBinning.activated.connect(self.BinningChanged)
         # self.comboBoxReadMode.activated.connect(self.ReadModeChanged)
         # self.comboBoxTrigMode.activated.connect(self.TrigChanged)
         # self.spinBoxNumFrames.valueChanged.connect(self.NumFramesChanged)
@@ -1497,10 +1506,12 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
         # # self.checkBoxAutoExp.stateChanged.connect(self.AutoExpose)
         # self.checkBoxEMMode.stateChanged.connect(self.OutputAmplifierChanged)
         # self.spinBoxEMGain.valueChanged.connect(self.EMGainChanged)
-        self.lineEditExpT.editingFinished.connect(self.exposureChanged)
+        self.lineEditExpT.editingFinished.connect(self.changed_exposure)
         # self.lineEditExpT.setValidator(QtGui.QDoubleValidator())
-        self.pushButtonDiv5.clicked.connect(lambda: self.exposureChanged('/'))
-        self.pushButtonTimes5.clicked.connect(lambda: self.exposureChanged('x'))
+        self.pushButtonDiv5.clicked.connect(lambda: self.changed_exposure('/'))
+        self.pushButtonTimes5.clicked.connect(lambda: self.changed_exposure('x'))
+        self.spinBox_binx.valueChanged.connect(self.changed_binning)
+        self.spinBox_biny.valueChanged.connect(self.changed_binning)
 
         self.pushButtonCapture.clicked.connect(self.Capture)
         self.pushButtonLive.clicked.connect(self.Live)
@@ -1587,6 +1598,18 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
     def update_exposure(self, value):
         self.lineEditExpT.setText(str(value))
 
+    def update_binning(self, value):
+        self.spinBox_binx.setValue(value[0])
+        self.spinBox_biny.setValue(value[1])
+        self._scaling()
+
+    def _scaling(self):
+        self._pxl_scale = tuple(map(lambda x, y: float(x) * y, self.camera.unit_scale, self.camera.binning))
+        if self.DisplayWidget is not None:
+            for attr in [1, 2]:
+                crosshair = getattr(self.DisplayWidget, "CrossHair%d" % attr)
+                crosshair._pxl_scale = self._pxl_scale
+
     # def update_Cooler(self, value):
     #     self.checkBoxCooler.setCheckState(value)
     #
@@ -1617,19 +1640,13 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
     #     if self.checkBoxCrop.isChecked():
     #         self.checkBoxCrop.setChecked(False)
     #         # self.ROI()
-    #
-    # def BinningChanged(self):
-    #     current_binning = int(self.comboBoxBinning.currentText()[0])
-    #     if self.camera.parameters['IsolatedCropMode']['value'][0]:
-    #         params = list(self.camera.parameters['IsolatedCropMode']['value'])
-    #         params[3] = current_binning
-    #         params[4] = current_binning
-    #         self.camera._self._logger.debug('BinningChanged: %s' % str(params))
-    #         self.camera.SetImage(*params)
-    #     else:
-    #         self.camera.SetImage(current_binning, current_binning, *self.camera.parameters['Image']['value'][2:])
-    #     self.camera.SetParameter('FVBHBin', current_binning)
-    #
+
+    def changed_binning(self):
+        xbin = self.spinBox_binx.value()
+        ybin = self.spinBox_biny.value()
+        self.camera.binning = (xbin, ybin)
+        self._scaling()
+
     # def NumFramesChanged(self):
     #     num_frames = self.spinBoxNumFrames.value()
     #     self.camera.SetParameter('NKin', num_frames)
@@ -1653,7 +1670,7 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
     #     else:
     #         self.camera._self._logger.info('Changing the rows only works in Fast Kinetic or in Single Track mode')
 
-    def exposureChanged(self, input=None):
+    def changed_exposure(self, input=None):
         if input is None:
             expT = float(self.lineEditExpT.text())
         elif input == 'x':
@@ -1662,50 +1679,9 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
             expT = float(self.lineEditExpT.text()) / 5
         self.camera.exposure = expT
 
-    #     # self.camera.SetexposureTime(expT)
-    #     #    self.camera.SetParameter('exposure', expT)
-    #     # self.camera.GetAcquisitionTimings()
-    #     #    display_str = str(float('%#e' % self.camera.parameters['AcquisitionTimings']['value'][0])).rstrip('0')
-    #     #   self.lineEditExpT.setText(self.camera.exposure)
-    #
     # def EMGainChanged(self):
     #     gain = self.spinBoxEMGain.value()
     #     self.camera.SetParameter('EMGain', gain)
-    #
-    # def IsolatedCrop(self):
-    #     if self.DisplayWidget is None:
-    #         return
-    #     if hasattr(self.DisplayWidget, 'CrossHair1') and hasattr(self.DisplayWidget, 'CrossHair2'):
-    #         current_binning = int(self.comboBoxBinning.currentText()[0])
-    #         pos1 = self.DisplayWidget.CrossHair1.pos()
-    #         pos2 = self.DisplayWidget.CrossHair2.pos()
-    #         shape = self.camera.parameters['DetectorShape']['value']
-    #         if self.checkBoxEMMode.isChecked():
-    #             minx, maxx = map(lambda x: int(x),
-    #                              (min(pos1[0], pos2[0]), max(pos1[0], pos2[0])))
-    #             miny, maxy = map(lambda x: int(x),  # shape[1] -
-    #                              (min(pos1[1], pos2[1]), max(pos1[1], pos2[1])))
-    #         else:
-    #             maxx, minx = map(lambda x: shape[0] - int(x),
-    #                              (min(pos1[0], pos2[0]), max(pos1[0], pos2[0])))
-    #             miny, maxy = map(lambda x: int(x),  # shape[1] -
-    #                              (min(pos1[1], pos2[1]), max(pos1[1], pos2[1])))
-    #         if self.checkBoxCrop.isChecked():
-    #             if self.checkBoxROI.isChecked():
-    #                 self.checkBoxROI.setChecked(False)
-    #             self.camera.parameters['IsolatedCropMode']['value'] = (1,)
-    #             self.camera.SetImage(1, maxy, maxx, current_binning, current_binning)
-    #             # if self.checkBoxEMMode.isChecked():
-    #             #     self.camera.SetImage(1, maxy, maxx, current_binning, current_binning)
-    #             #     print maxy, maxx
-    #             # else:
-    #             #     self.camera.SetImage(1, maxy, shape[0]-maxx, current_binning, current_binning)
-    #             #     print maxy, shape[0] - maxx
-    #         else:
-    #             self.camera.SetParameter('IsolatedCropMode', 0, maxy, maxx, current_binning, current_binning)
-    #             self.camera.SetImage()
-    #     else:
-    #         self.camera._self._logger.warn("You can't crop an image using a DisplayWidget that doesn't have CrossHairs...")
 
     def take_background(self):
         self.camera.background = self.camera.raw_snapshot()
@@ -1737,33 +1713,22 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
             dataset_name = "pvcam%d" % idx
 
         if self.backgrounded:
+            self.camera._logger.info("Saving backgrounded image. Remember to save the background separately")
+            data = np.array(data, np.float)
             data -= self.camera.background
 
         try:
             data_set = group.create_dataset(name=dataset_name, data=data)
             if self.checkBox_attrs.isChecked():
                 attrs = dict()
-                for param in self.gui_params:
+                for param in self.camera.metadata_property_names:
                     attrs[param] = getattr(self.camera, param)
                 if self.description_plainTextEdit.toPlainText():
                     attrs['Description'] = self.description_plainTextEdit.toPlainText()
-                if hasattr(self.camera, 'x_axis'):
-                    attrs['wavelengths'] = self.camera.x_axis
-                if self.backgrounded:
-                    attrs["background"] = self.camera.background
+                # attrs['scaling'] = self.camera.unit_scale
                 df.attributes_from_dict(data_set, attrs)
         except Exception as e:
             self.camera._logger.warn(e)
-
-    # def update_groups_box(self):
-    #     if self.data_file == None:
-    #         self.data_file = df.current()
-    #     self.group_comboBox.clear()
-    #     if 'cameraData' not in self.data_file.values():
-    #         self.group_comboBox.addItem('cameraData')
-    #     for group in self.data_file.values():
-    #         if type(group) == df.Group:
-    #             self.group_comboBox.addItem(group.name[1:], group)
 
     def ROI(self):
         if self.DisplayWidget is None:
@@ -1822,7 +1787,7 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
 
     def updateImage(self):
         if self.DisplayWidget is None:
-            self.DisplayWidget = DisplayWidget()
+            self.DisplayWidget = DisplayWidget(self.camera.unit_scale)
 
         if self.DisplayWidget.isHidden():
             self.DisplayWidget.show()
@@ -1892,10 +1857,11 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
 
         # offset = (0, 0)
         # print "OFFSET: ", offset, tuple(map(operator.add, offset, (xvals[0], 0)))
+        self._scaling()
 
-        scale = self.camera.unit_scale
-        pos = tuple(map(operator.mul, offset, scale))
-        self.DisplayWidget.ImageDisplay.setImage(data, pos=pos, autoRange=False, autoLevels=True, scale=scale)
+        # scale = self.camera.unit_scale
+        pos = tuple(map(operator.mul, offset, self.camera.unit_scale))
+        self.DisplayWidget.ImageDisplay.setImage(data, pos=pos, autoRange=False, autoLevels=True, scale=self._pxl_scale)
         self.DisplayWidget.ImageDisplay.autoRange()
         self.ImageUpdated.emit()
 

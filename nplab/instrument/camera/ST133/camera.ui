@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>380</width>
-    <height>409</height>
+    <width>347</width>
+    <height>377</height>
    </rect>
   </property>
   <property name="maximumSize">
@@ -20,6 +20,252 @@
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
+   <item row="3" column="3">
+    <widget class="QCheckBox" name="checkBoxRemoveBG">
+     <property name="maximumSize">
+      <size>
+       <width>60</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>Remove 
+BG</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="2">
+    <widget class="QLabel" name="labelReadMode">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>60</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>Read Mode</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="3">
+    <widget class="QPushButton" name="pushButtonAbort">
+     <property name="maximumSize">
+      <size>
+       <width>60</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">color:rgb(85, 0, 0)</string>
+     </property>
+     <property name="text">
+      <string>Abort</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="3">
+    <widget class="QPushButton" name="pushButtonCapture">
+     <property name="maximumSize">
+      <size>
+       <width>60</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">color:rgb(85, 0, 0)</string>
+     </property>
+     <property name="text">
+      <string>Capture</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="2">
+    <widget class="QPushButton" name="pushButtonLive">
+     <property name="maximumSize">
+      <size>
+       <width>60</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">color:rgb(85, 0, 0)</string>
+     </property>
+     <property name="text">
+      <string>Live</string>
+     </property>
+    </widget>
+   </item>
+   <item row="11" column="0" colspan="4">
+    <widget class="Line" name="line">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="12" column="0" colspan="4">
+    <spacer name="verticalSpacer_3">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item row="4" column="3">
+    <widget class="QComboBox" name="comboBoxReadMode">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>60</width>
+       <height>20</height>
+      </size>
+     </property>
+     <item>
+      <property name="text">
+       <string>FVB</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Multi-track</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Random track</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Single track</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Image</string>
+      </property>
+     </item>
+    </widget>
+   </item>
+   <item row="3" column="2">
+    <widget class="QPushButton" name="pushButtonTakeBG">
+     <property name="maximumSize">
+      <size>
+       <width>60</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>Take BG</string>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="3">
+    <widget class="QComboBox" name="comboBoxTrigMode">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>60</width>
+       <height>20</height>
+      </size>
+     </property>
+     <item>
+      <property name="text">
+       <string>Internal</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>External</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>ExternalStart</string>
+      </property>
+     </item>
+    </widget>
+   </item>
+   <item row="5" column="2">
+    <widget class="QLabel" name="label">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>60</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>Trig. Mode</string>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="3">
+    <widget class="QCheckBox" name="checkBoxEMMode">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>60</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>EM on</string>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="2">
+    <widget class="QSpinBox" name="spinBoxEMGain">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>65</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="wrapping">
+      <bool>false</bool>
+     </property>
+     <property name="specialValueText">
+      <string>EM Gain</string>
+     </property>
+     <property name="showGroupSeparator" stdset="0">
+      <bool>false</bool>
+     </property>
+     <property name="maximum">
+      <number>50</number>
+     </property>
+    </widget>
+   </item>
    <item row="0" column="0" colspan="3">
     <widget class="QFrame" name="frame">
      <property name="maximumSize">
@@ -108,271 +354,11 @@
      </layout>
     </widget>
    </item>
-   <item row="4" column="3">
-    <widget class="QComboBox" name="comboBoxReadMode">
-     <property name="maximumSize">
-      <size>
-       <width>70</width>
-       <height>20</height>
-      </size>
-     </property>
-     <item>
-      <property name="text">
-       <string>FVB</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Multi-track</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Random track</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Single track</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Image</string>
-      </property>
-     </item>
-    </widget>
-   </item>
-   <item row="4" column="2">
-    <widget class="QLabel" name="labelReadMode">
-     <property name="text">
-      <string>Read Mode</string>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="3">
-    <widget class="QPushButton" name="pushButtonAbort">
-     <property name="maximumSize">
-      <size>
-       <width>70</width>
-       <height>16777215</height>
-      </size>
-     </property>
-     <property name="styleSheet">
-      <string notr="true">color:rgb(85, 0, 0)</string>
-     </property>
-     <property name="text">
-      <string>Abort</string>
-     </property>
-    </widget>
-   </item>
-   <item row="7" column="1">
-    <widget class="QComboBox" name="comboBoxBinning">
-     <property name="maximumSize">
-      <size>
-       <width>70</width>
-       <height>20</height>
-      </size>
-     </property>
-     <item>
-      <property name="text">
-       <string>1x1</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>2x2</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>4x4</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>8x8</string>
-      </property>
-     </item>
-    </widget>
-   </item>
-   <item row="0" column="3">
-    <widget class="QPushButton" name="pushButtonCapture">
-     <property name="maximumSize">
-      <size>
-       <width>70</width>
-       <height>16777215</height>
-      </size>
-     </property>
-     <property name="font">
-      <font>
-       <weight>75</weight>
-       <bold>true</bold>
-      </font>
-     </property>
-     <property name="styleSheet">
-      <string notr="true">color:rgb(85, 0, 0)</string>
-     </property>
-     <property name="text">
-      <string>Capture</string>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="2">
-    <widget class="QPushButton" name="pushButtonLive">
-     <property name="maximumSize">
-      <size>
-       <width>70</width>
-       <height>16777215</height>
-      </size>
-     </property>
-     <property name="styleSheet">
-      <string notr="true">color:rgb(85, 0, 0)</string>
-     </property>
-     <property name="text">
-      <string>Live</string>
-     </property>
-    </widget>
-   </item>
-   <item row="7" column="0">
-    <widget class="QLabel" name="label_3">
-     <property name="maximumSize">
-      <size>
-       <width>50</width>
-       <height>25</height>
-      </size>
-     </property>
-     <property name="text">
-      <string>Binning</string>
-     </property>
-    </widget>
-   </item>
-   <item row="6" column="1">
-    <widget class="QComboBox" name="comboBoxAcqMode">
-     <property name="maximumSize">
-      <size>
-       <width>70</width>
-       <height>20</height>
-      </size>
-     </property>
-     <item>
-      <property name="text">
-       <string>Single</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Accumulate</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Kinetic</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Fast Kinetic</string>
-      </property>
-     </item>
-    </widget>
-   </item>
-   <item row="6" column="0">
-    <widget class="QLabel" name="label_2">
-     <property name="maximumSize">
-      <size>
-       <width>50</width>
-       <height>16777215</height>
-      </size>
-     </property>
-     <property name="text">
-      <string>Acq. Mode</string>
-     </property>
-    </widget>
-   </item>
-   <item row="6" column="3">
-    <widget class="QComboBox" name="comboBoxTrigMode">
-     <property name="maximumSize">
-      <size>
-       <width>70</width>
-       <height>20</height>
-      </size>
-     </property>
-     <item>
-      <property name="text">
-       <string>Internal</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>External</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>ExternalStart</string>
-      </property>
-     </item>
-    </widget>
-   </item>
-   <item row="6" column="2">
-    <widget class="QLabel" name="label">
-     <property name="maximumSize">
-      <size>
-       <width>50</width>
-       <height>16777215</height>
-      </size>
-     </property>
-     <property name="text">
-      <string>Trig. Mode</string>
-     </property>
-    </widget>
-   </item>
-   <item row="7" column="3">
-    <widget class="QCheckBox" name="checkBoxEMMode">
-     <property name="text">
-      <string>EM mode</string>
-     </property>
-    </widget>
-   </item>
-   <item row="7" column="2">
-    <widget class="QSpinBox" name="spinBoxEMGain">
-     <property name="wrapping">
-      <bool>false</bool>
-     </property>
-     <property name="specialValueText">
-      <string>EM Gain</string>
-     </property>
-     <property name="showGroupSeparator" stdset="0">
-      <bool>false</bool>
-     </property>
-     <property name="maximum">
-      <number>50</number>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="2">
-    <widget class="QPushButton" name="pushButtonTakeBG">
-     <property name="maximumSize">
-      <size>
-       <width>70</width>
-       <height>16777215</height>
-      </size>
-     </property>
-     <property name="text">
-      <string>Take BG</string>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="3">
-    <widget class="QCheckBox" name="checkBoxRemoveBG">
-     <property name="text">
-      <string>Remove BG</string>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="0" rowspan="3" colspan="2">
+   <item row="2" column="0" rowspan="5" colspan="2">
     <widget class="QFrame" name="frame_2">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
      <property name="maximumSize">
       <size>
        <width>16777215</width>
@@ -409,6 +395,9 @@
         <layout class="QVBoxLayout" name="verticalLayout">
          <item>
           <widget class="QCheckBox" name="checkBoxROI">
+           <property name="enabled">
+            <bool>true</bool>
+           </property>
            <property name="maximumSize">
             <size>
              <width>45</width>
@@ -422,6 +411,9 @@
          </item>
          <item>
           <widget class="QCheckBox" name="checkBoxCrop">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
            <property name="maximumSize">
             <size>
              <width>45</width>
@@ -435,6 +427,9 @@
          </item>
          <item>
           <widget class="QCheckBox" name="checkBoxCooler">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
            <property name="text">
             <string>Cooler</string>
            </property>
@@ -448,6 +443,9 @@
       </item>
       <item row="0" column="0" rowspan="3">
        <widget class="QFrame" name="frame_4">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="frameShape">
          <enum>QFrame::StyledPanel</enum>
         </property>
@@ -598,7 +596,7 @@
      </layout>
     </widget>
    </item>
-   <item row="12" column="0" rowspan="2" colspan="4">
+   <item row="15" column="0" rowspan="2" colspan="4">
     <widget class="QFrame" name="frame_5">
      <property name="frameShape">
       <enum>QFrame::StyledPanel</enum>
@@ -683,25 +681,96 @@
      </layout>
     </widget>
    </item>
-   <item row="8" column="0" colspan="4">
-    <widget class="Line" name="line">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+   <item row="7" column="2" colspan="2">
+    <widget class="QFrame" name="frame_6">
+     <property name="frameShape">
+      <enum>QFrame::StyledPanel</enum>
      </property>
+     <property name="frameShadow">
+      <enum>QFrame::Raised</enum>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout_2">
+      <item>
+       <widget class="QLabel" name="label_3">
+        <property name="enabled">
+         <bool>true</bool>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>50</width>
+          <height>25</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>Binning</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QSpinBox" name="spinBox_binx">
+        <property name="minimum">
+         <number>1</number>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QSpinBox" name="spinBox_biny">
+        <property name="minimum">
+         <number>1</number>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </widget>
    </item>
-   <item row="9" column="0" colspan="4">
-    <spacer name="verticalSpacer_3">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
+   <item row="7" column="1">
+    <widget class="QComboBox" name="comboBoxAcqMode">
+     <property name="enabled">
+      <bool>false</bool>
      </property>
-     <property name="sizeHint" stdset="0">
+     <property name="maximumSize">
       <size>
-       <width>20</width>
-       <height>40</height>
+       <width>70</width>
+       <height>20</height>
       </size>
      </property>
-    </spacer>
+     <item>
+      <property name="text">
+       <string>Single</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Accumulate</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Kinetic</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Fast Kinetic</string>
+      </property>
+     </item>
+    </widget>
+   </item>
+   <item row="7" column="0">
+    <widget class="QLabel" name="label_2">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>60</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>Acq. Mode</string>
+     </property>
+    </widget>
    </item>
   </layout>
  </widget>
