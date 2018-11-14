@@ -390,8 +390,13 @@ class AndorBase:
         try:
             self.SetParameter('OutAmp', 1)
         except:
+<<<<<<< HEAD
             print 'Amplifier Error. OutAmp set to 0.'
             self.SetParameter('OutAmp', 0)
+=======
+            self.OutAmp = 0
+            self.log('This CCD does not have em mode','WARN')
+>>>>>>> 322ad86db4852fda7dde1fbb31206a06cebdec8d
         self.CoolerON()
         #      self.GetAllParameters()
 
@@ -1078,6 +1083,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         else:
             filename = 'Andor_data'
         if self.group_comboBox.currentText() == 'AndorData':
+            if df._use_current_group == True and df._current_group is not None:
                 group = df._current_group
             elif 'AndorData' in self.data_file.keys():
                 group = self.data_file['AndorData']
