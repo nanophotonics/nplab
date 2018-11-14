@@ -1078,7 +1078,6 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         else:
             filename = 'Andor_data'
         if self.group_comboBox.currentText() == 'AndorData':
-            if df._use_current_group == True:
                 group = df._current_group
             elif 'AndorData' in self.data_file.keys():
                 group = self.data_file['AndorData']
