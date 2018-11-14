@@ -384,10 +384,14 @@ class AndorBase:
         self.SetParameter('Image', 1, 1, 1, self.DetectorShape[0], 1,
                           self.DetectorShape[1])
         self.SetParameter('Shutter', 1, 0, 1, 1)
-        self.SetParameter('SetTemperature', -60)
+        self.SetParameter('SetTemperature', -90)
         self.SetParameter('CoolerMode', 0)
         self.SetParameter('FanMode', 0)
-        self.SetParameter('OutAmp', 1)
+        try:
+            self.SetParameter('OutAmp', 1)
+        except:
+            print 'Amplifier Error. OutAmp set to 0.'
+            self.SetParameter('OutAmp', 0)
         self.CoolerON()
         #      self.GetAllParameters()
 
