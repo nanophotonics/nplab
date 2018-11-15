@@ -1411,7 +1411,8 @@ class Pvcam(Camera, PvcamSdk):
     def __init__(self, device, **kwargs):
         Camera.__init__(self)
         PvcamSdk.__init__(self, device, logger=self._logger)
-        self.unit_scale = (0.5, 1)  # for x and y axis
+        self.unit_scale = (1, 1)  # for x and y axis
+        self.unit_offset = (0, 0)
 
     def raw_snapshot(self):
         return self.capture()
@@ -1449,7 +1450,6 @@ class Pvcam(Camera, PvcamSdk):
         return self.ui.DisplayWidget
 
 
-
 # for param_name, param_id in zip(["exposure"], ["PARAM_EXP_TIME"]):
 #     setattr(PVCam, param_name, PVCamParameter(param_id))
 
@@ -1464,7 +1464,13 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
         self.captureThread = None
         self.camera = camera
         self.DisplayWidget = None
+        # self._unit_offset = self.camera.unit_offset
         self._scaling()
+        # TODO: make a GUI that can nicely handle displaying different magnitudes on each axis (e.g. space and energy),
+        # in different units (e.g. nm and eV), and different binning (without screwing the units up) and that can keep
+        # the CrossHairs in place when changing any of these parameters
+        self._binning_changed = False
+        self._prev_bin = self.camera.binning
 
         uic.loadUi((os.path.dirname(__file__) + '/camera.ui'), self)
 
@@ -1599,16 +1605,20 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
         self.lineEditExpT.setText(str(value))
 
     def update_binning(self, value):
+        self._binning_changed = True
         self.spinBox_binx.setValue(value[0])
         self.spinBox_biny.setValue(value[1])
-        self._scaling()
 
     def _scaling(self):
-        self._pxl_scale = tuple(map(lambda x, y: float(x) * y, self.camera.unit_scale, self.camera.binning))
         if self.DisplayWidget is not None:
-            for attr in [1, 2]:
-                crosshair = getattr(self.DisplayWidget, "CrossHair%d" % attr)
-                crosshair._pxl_scale = self._pxl_scale
+            self.DisplayWidget._pxl_offset = self.camera.unit_offset
+            self.DisplayWidget._pxl_scale = tuple(map(lambda x, y: x * y, self.camera.unit_scale, self.camera.binning))
+
+            offset = (self.camera._image_rect[0], self.camera._image_rect[2])
+            pos = tuple(map(operator.div, offset, self.camera.binning))
+            self.DisplayWidget.ImageDisplay.getImageItem().setPos(*pos)
+
+            self.DisplayWidget._rescale()
 
     # def update_Cooler(self, value):
     #     self.checkBoxCooler.setCheckState(value)
@@ -1642,10 +1652,12 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
     #         # self.ROI()
 
     def changed_binning(self):
+        if not self._binning_changed:
+            self._binning_changed = True
+            self._prev_bin = self.camera.binning
         xbin = self.spinBox_binx.value()
         ybin = self.spinBox_biny.value()
         self.camera.binning = (xbin, ybin)
-        self._scaling()
 
     # def NumFramesChanged(self):
     #     num_frames = self.spinBoxNumFrames.value()
@@ -1670,12 +1682,12 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
     #     else:
     #         self.camera._self._logger.info('Changing the rows only works in Fast Kinetic or in Single Track mode')
 
-    def changed_exposure(self, input=None):
-        if input is None:
+    def changed_exposure(self, variable=None):
+        if variable is None:
             expT = float(self.lineEditExpT.text())
-        elif input == 'x':
+        elif variable == 'x':
             expT = float(self.lineEditExpT.text()) * 5
-        elif input == '/':
+        elif variable == '/':
             expT = float(self.lineEditExpT.text()) / 5
         self.camera.exposure = expT
 
@@ -1736,15 +1748,12 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
         if hasattr(self.DisplayWidget, 'CrossHair1') and hasattr(self.DisplayWidget, 'CrossHair2'):
             # hbin, vbin = self.camera.parameters['Image']['value'][:2]
             if self.checkBoxROI.isChecked():
-                scale = self.camera.unit_scale
-                # if self.checkBoxCrop.isChecked():
-                #     self.checkBoxCrop.setChecked(False)
                 pos1 = self.DisplayWidget.CrossHair1.pos()
                 pos2 = self.DisplayWidget.CrossHair2.pos()
                 # print 'GUI ROI. CrossHair: ', pos1, pos2
-                minx, maxx = map(lambda x: int(x / scale[0]),
+                minx, maxx = map(lambda x: int(x) * self.camera.binning[0],  # / scale[0]
                                  (min(pos1[0], pos2[0]), max(pos1[0], pos2[0])))
-                miny, maxy = map(lambda x: int(x / scale[1]),  # shape[1] -
+                miny, maxy = map(lambda x: int(x) * self.camera.binning[1],  # shape[1] - / scale[1]
                                  (min(pos1[1], pos2[1]), max(pos1[1], pos2[1])))
 
                 self.camera._image_rect = (minx, maxx, miny, maxy)
@@ -1787,14 +1796,15 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
 
     def updateImage(self):
         if self.DisplayWidget is None:
-            self.DisplayWidget = DisplayWidget(self.camera.unit_scale)
+            self.DisplayWidget = DisplayWidget(self.camera.unit_scale, self.camera.unit_offset)
 
         if self.DisplayWidget.isHidden():
             self.DisplayWidget.show()
 
         # The offset is designed so that image ends up being displayed at the correct crosshair coordinates
         # The scale is used for scaling the image according to the binning, hence also preserving the crosshair coordinates
-        offset = (self.camera._image_rect[0], self.camera._image_rect[2])
+        # offset = (self.camera._image_rect[0], self.camera._image_rect[2])
+        # offset = tuple(map(lambda x, y: x + y, offset, self.camera.unit_offset))
         # scale = self.camera.parameters['Image']['value'][:2]
         data = np.array(self.camera.CurImage, dtype="float")
         if np.shape(data) == np.shape(self.camera.background) and self.backgrounded:
@@ -1857,12 +1867,22 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
 
         # offset = (0, 0)
         # print "OFFSET: ", offset, tuple(map(operator.add, offset, (xvals[0], 0)))
+        # self._scaling()
+
+        # pos = tuple(map(operator.mul, offset, self.camera.unit_scale))
+        # self.DisplayWidget.ImageDisplay.setImage(data, pos=pos, autoRange=False, autoLevels=True)  # , scale=self.camera.unit_scale
+        self.DisplayWidget.ImageDisplay.setImage(data, autoRange=True, autoLevels=True)  # , scale=self.camera.unit_scale
         self._scaling()
 
-        # scale = self.camera.unit_scale
-        pos = tuple(map(operator.mul, offset, self.camera.unit_scale))
-        self.DisplayWidget.ImageDisplay.setImage(data, pos=pos, autoRange=False, autoLevels=True, scale=self._pxl_scale)
+        if self._binning_changed:
+            for idx in [1, 2]:
+                xhair = getattr(self.DisplayWidget, "CrossHair%d" % idx)
+                pos = xhair.pos()
+                xhair.setPos(*map(lambda x, y, z: float(x) / (float(y) / float(z)), pos, self.camera.binning, self._prev_bin))
+            self._binning_changed = False
+
         self.DisplayWidget.ImageDisplay.autoRange()
+
         self.ImageUpdated.emit()
 
 
