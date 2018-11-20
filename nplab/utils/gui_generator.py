@@ -261,14 +261,23 @@ class GuiGenerator(QtWidgets.QMainWindow,UiTools):
         """
         from nplab.utils import terminal
         if self.terminalWindow is None:
-            self.terminalWindow = terminal.ipython()
-            self.terminalWindow.push({'gui': self, 'exper': self.instr_dict})
-            self.terminalWindow.push(self.instr_dict)
-            self.terminalWindow.execute('import nplab.datafile as df')
-            self.terminalWindow.execute('data_file = df.current()')
-            self.terminalWindow.execute('')
+            if os.environ["QT_API"] == "pyqt5":
+                self.terminalWindow = terminal.QIPythonWidget()
+                self.terminalWindow.push_vars({'gui': self, 'exper': self.instr_dict})
+                self.terminalWindow.push_vars(self.instr_dict)
+                self.terminalWindow.execute_command('import nplab.datafile as df')
+                self.terminalWindow.execute_command('data_file = df.current()')
+                self.terminalWindow.execute_command('')
+                handle = logging.StreamHandler(self.terminalWindow.kernel_manager.kernel.stdout)
+            else:
+                self.terminalWindow = terminal.ipython()
+                self.terminalWindow.push({'gui': self, 'exper': self.instr_dict})
+                self.terminalWindow.push(self.instr_dict)
+                self.terminalWindow.execute('import nplab.datafile as df')
+                self.terminalWindow.execute('data_file = df.current()')
+                self.terminalWindow.execute('')
+                handle = logging.StreamHandler(self.terminalWindow.kernel.stdout)
             formatter = ColoredFormatter('[%(name)s] - %(levelname)s: %(message)s - %(asctime)s ', '%H:%M')
-            handle = logging.StreamHandler(self.terminalWindow.kernel.stdout)
             handle.setFormatter(formatter)
             self._logger.addHandler(handle)
             instr_logger = logging.getLogger('Instrument')
