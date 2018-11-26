@@ -107,8 +107,8 @@ def Attempt_To_Fit(Shift,Array,Peak_Shifts,Peak_Heights,Width,Minimum_Height=0):
 			U_Bounds=[np.inf]
 			for i in Option:
 				Initial+=[Peak_Heights[i],Peak_Shifts[i],Width]
-				L_Bounds+=[0,-np.inf,0]
-				U_Bounds+=[np.inf,np.inf,np.inf]
+				L_Bounds+=[0,np.min(Shift),0]
+				U_Bounds+=[np.inf,np.max(Shift),np.inf]
 				#print Initial
 			try:
 				Params=spo.curve_fit(Multi_L_Constant,Shift,Array,Initial,bounds=(L_Bounds,U_Bounds))
