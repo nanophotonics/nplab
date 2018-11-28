@@ -1,146 +1,225 @@
-# -*- coding: utf-8 -*-
+# NPlab code to control Acton spectrometer
 
-from nplab.instrument.visa_instrument import VisaInstrument
-import re
 import time
+from nplab.instrument.serial_instrument import SerialInstrument
+import serial
 
+#logger = logging.getLogger(__name__)
 
-class SP2750(VisaInstrument):
-    """ftp://ftp.princetoninstruments.com/public/manuals/Acton/SP-2750.pdf"""
-    def __init__(self, address):
-        port_settings = dict(baud_rate=9600, read_termination="\r\n", write_termination="\r", timeout=3000)
-        super(SP2750, self).__init__(address, port_settings)
-        self.clear_read_buffer()
+class Acton(SerialInstrument):
+    port_settings = dict(baudrate=9600,
+                         bytesize=serial.EIGHTBITS,
+                         parity=serial.PARITY_NONE,
+                         stopbits=serial.STOPBITS_ONE,
+                         timeout=5,  # wait at most one second for a response
+                         writeTimeout=1,  # similarly, fail if writing takes >1s
+                         xonxoff=False, rtscts=False, dsrdtr=False,
+                         )
+                         
+    def __init__(self, port, debug=False, echo=True, dummy=False):
+        SerialInstrument.__init__(self, port)
+        
+        self.echo=echo
+        
+        self.ser.flushInput()
+        self.ser.flushOutput()
+        # model info
+        #self.write_command("MONO-RESET")
+        self.model = self.write_command("MODEL")
+        self.serial_number = self.write_command("SERIAL")
+        # load grating info
+        self.read_grating_info()
+    
 
-    def query(self, *args, **kwargs):
+    def read_done_status(self):
+        resp = self.write_command("MONO-?DONE")  # returns either 1 or 0 for done or not done
+        return bool(int(resp))
+    
+    def read_wl(self):
+        resp = self.write_command("?NM")
+        "700.000 nm"
+        self.wl = float(resp.split()[0])
+        return self.wl
+        
+    def write_wl(self, wl, waittime=1.0):
+        wl = float(wl)
+        resp = self.write_command("%0.3f NM" % wl,waittime=waittime)
+#        if self.debug: logger.debug("write_wl wl:{} resp:{}".format( wl, resp))
+        
+    def write_wl_fast(self, wl, waittime=1.0):
+        wl = float(wl)
+        resp = self.write_command("%0.3f GOTO" % wl,waittime=waittime)
+#        if self.debug: logger.debug("write_wl_fast wl:{} resp:{}".format( wl, resp))
+        
+
+    def write_wl_nonblock(self, wl):
+        wl = float(wl)
+        resp = self.write_command("%0.3f >NM" % wl)
+#        if self.debug: logger.debug("write_wl_nonblock wl:{} resp:{}".format( wl, resp))
+        
+    def read_grating_info(self):
+        grating_string = self.write_command("?GRATINGS", waittime=1.0)
         """
-        Simple query wrapper that checks whether the command was received properly
-        :param args:
-        :param kwargs:
-        :return:
+            \x1a1  300 g/mm BLZ=  500NM 
+            2  300 g/mm BLZ=  1.0UM 
+            3  150 g/mm BLZ=  500NM 
+            4  Not Installed     
+            5  Not Installed     
+            6  Not Installed     
+            7  Not Installed     
+            8  Not Installed     
+            9  Not Installed     
+            ok
         """
-        full_reply = self.instr.query(*args, **kwargs)
-
-        status = full_reply[-2:]
-        reply = full_reply[:-2]
-
-        if "?" in full_reply:
-            self._logger.warn("Message  %s" %full_reply)
-        elif status == "ok":
-            return reply.rstrip("").lstrip("")
+        # 0x1A is the arrow char, indicates selected grating
+        
+        if self.echo:
+            gratings = grating_string.splitlines()[1:-1] # needed for echo
         else:
-            self._logger.info("Multiple reads")
-            read = str(full_reply)
-            idx = 0
-            while "ok" not in read:
-                read += " | " + self.read()
-                idx += 1
-                if idx > 10:
-                    raise ValueError("Too many multiple reads")
-            return read
+            gratings = grating_string.splitlines()[0:-1] # for no echo
+#        if self.debug: print(gratings)
+        
+        print gratings
+        self.gratings = []
+        
+        for grating in gratings:
+#            if self.debug: logger.debug("grating: {}".format( grating ))
+            grating_num, name = grating.strip('\x1a').strip(' ').split(' ', 1)
+            #if self.debug: logger.debug("grating stripped: {}".format( grating ))
+            num = int(grating_num)
+            self.gratings.append( (num, name) )
+        
+        self.gratings_dict = {num: name for num,name in self.gratings}
+        
+        return self.gratings
+        
+    def read_turret(self):
+        resp = self.write_command("?TURRET")
+        self.turret = int(resp)
+        return self.turret
+    
+    def write_turret(self, turret):
+        assert turret in [1,2,3]
+        "%i TURRET"
+    
+    def read_grating(self):
+        resp = self.write_command("?GRATING")
+        self.grating = int(resp)
+        return self.grating
+        
+    def read_grating_name(self):
+        self.read_grating()
+        return self.gratings[self.grating-1]
+        
+    def write_grating(self, grating):
+        assert 0 < grating < 10 
+        self.write_command("%i GRATING" % grating)        
+        
+    def read_exit_mirror(self):
+        resp = self.write_command("EXIT-MIRROR ?MIRROR")
+        self.exit_mirror = resp.upper()
+        return self.exit_mirror
+    
+    def write_exit_mirror(self, pos):
+        pos = pos.upper()
+        assert pos in ['FRONT', 'SIDE']
+        self.write_command("EXIT-MIRROR %s" % pos)
+        
+    def read_entrance_slit(self):
+        resp = self.write_command("SIDE-ENT-SLIT ?MICRONS")
+        #"480 um" or "no motor"
+        print(repr(resp))
+        if resp == 'no motor':
+            self.entrance_slit = -1
+        else:
+            self.entrance_slit = int(resp.split()[0])
+        return self.entrance_slit
+        
+    def write_entrance_slit(self, pos):
+        assert 5 <= pos <= 3000
+        self.write_command("SIDE-ENT-SLIT %i MICRONS" % pos)
+        # should return new pos
 
-    # def read(self, *args, **kwargs):
-    #
-    #     full_reply = self.instr.read(*args, **kwargs)
-    #
-    #     status = full_reply[-2:]
-    #     reply = full_reply[:-2]
-    #
-    #     if "?" in full_reply:
-    #         self._logger.warn("Message  %s" % full_reply)
-    #     elif status == "ok":
-    #         return reply.rstrip("").lstrip("")
+    def home_entrance_slit(self):
+        # TODO
+        "SIDE-ENT-SLIT SHOME"
 
-    # MOVEMENT COMMANDS
-    def _wait(self):
-        """Checks whether movement has finished"""
-        time.sleep(1)
-        t0 = time.time()
-        while time.time() - t0 < 10 and not self.is_ready():
-            time.sleep(1)  # This you get from testing
+        
+    def read_exit_slit(self):
+        resp = self.write_command("SIDE-EXIT-SLIT ?MICRONS")
+        #"960 um" or "no motor"
+        if resp == 'no motor':
+            self.exit_slit = -1
+        else:
+            self.exit_slit = int(resp.split()[0])
+        return self.exit_slit
+        
+    def write_exit_slit(self, pos):
+        assert 5 <= pos <= 3000
+        self.write_command("SIDE-EXIT-SLIT %i MICRONS" % pos)
+        
 
-    def set_wavelength_fast(self, wvl):
-        """
-        Goes to a destination wavelength at maximum motor speed. Accepts destination wavelength in nm as a floating
-        point number with up to 3 digits after the decimal point or whole number wavelength with no decimal point.
-        :param wvl:
-        :return:
-        """
+#    def write_command(self, cmd):
+#        if self.debug: print "write_command:", cmd
+#        self.ser.write(cmd + "\r\n")
+#        response = self.ser.readline()
+#        if self.debug: print "\tresponse:", repr(response)
+#        assert response[-4:] == "ok\r\n"
+#        return response[:-4].strip()
+    
+    def write_command(self, cmd, waittime=0.5):
+#        if self.debug: logger.debug("write_command cmd: {}".format( cmd ))
+#        if self.dummy: return "0"
+        cmd_bytes = (cmd).encode('ASCII')
+        self.ser.write(cmd_bytes+b"\r")
+        time.sleep(waittime)
+        
+        out = bytearray()
+        char = b""
+        missed_char_count = 0
+        while char != b"k":
+            char = self.ser.read()
+            #if self.debug: print("readbyte", repr(char))
+            if char == b"": #handles a timeout here
+                missed_char_count += 1
+#                if self.debug: logger.debug("no character returned, missed %i so far" % missed_char_count)
+                if missed_char_count > 3:
+                    return 0
+                continue
+            out += char
 
-        self.write("%0.3f GOTO" % wvl)
-        self._wait()
-        return self.read()
+        
+        out += self.ser.read(2) #Should be "\r\n"
+        
+        out = out.decode('ascii')
 
-    def set_wavelength(self, wvl):
-        """
-        Goes to a destination wavelength at constant nm/min rate specified by last NM/MIN
-        command. Accepts destination wavelength in nm as a floating point number with up
-        to 3 digits after the decimal point or whole number wavelength with no decimal point.
-        :param wvl:
-        :return:
-        """
-
-        self.write("%0.3f NM" % wvl)
-
-    def get_wavelength(self):
-        """
-        Returns present wavelength in nm to 0.01nm resolution with units nm appended.
-        :return:
-        """
-        string = self.query("?NM")
-        return re.findall(" ([0-9]+\.[0-9]+) ", string)[0]
-
-    def set_speed(self, rate):
-        """
-        Sets the scan rate in nm/min to 0.01 nm/min resolution with units nm/min
-        :param rate:
-        :return:
-        """
-        self.query("%0.3f NM/MIN" % rate)
-
-    def is_ready(self):
-        return bool(self.query("MONO-?DONE"))
-
-    # GRATING CONTROL
-    def set_grating(self, index):
-        """
-        Places specified grating in position to the wavelength of the wavelength on the
-        present grating. Up to nine (9) gratings are allowed on three (3) turrets. This
-        command takes a grating number from 1 -9. IMPORTANT NOTE: This command
-        assumes that the correct turret is specified by the TURRET command. For example,
-        using grating numbers 1, 4 and 7 will place the first grating on the installed turret into
-        that position and call up the parameters for the grating number specified.
-        :param index:
-        :return:
-        """
-
-        self.query("%d GRATING" %index)
-
-    def get_grating(self):
-        """
-        Returns the number of gratings presently being used numbered 1 -9.
-        :return:
-        """
-        return self.query("?GRATING")
-
-    def get_gratings(self):
-        """
-        Returns the list of installed gratings with position groove density and blaze. The
-        present grating is specified with an arrow.
-        :return:
-        """
-        return self.query("?GRATINGS")
+#        if self.debug:
+##            logger.debug( "complete message" +  repr(out))
+#            print("complete message" + repr(out))
+        #assert out[-3:] == ";FF"
+        #assert out[:7] == "@%03iACK" % self.address   
+        
+        assert out[-5:] == " ok\r\n"
+        out = out[:-5].strip()
+    
+        # When echo is enabled, verify echoed command and strip
+        if self.echo:
+            echo = out[0:len(cmd_bytes)]        
+            rest = out[len(cmd_bytes):]
+            print("echo, rest, cmd:", echo, rest, cmd_bytes)
+            assert echo == cmd
+            return rest
+        else:
+            return out
+        #self.ser.flushInput()
+        #self.ser.flushOutput()
+        #return out
+    
+    def close(self):
+        self.ser.close()
 
 
 if __name__ == "__main__":
-    spec = SP2750("COM12")
 
-    print spec.query("?NM")
-    print spec.query("?GRATINGS")
-
-    print spec.set_wavelength_fast(0)
-    print spec.get_wavelength()
-
-    print spec.set_wavelength_fast(200)
-    print spec.get_wavelength()
-
+    port = "COM6"
+    ac = Acton(port=port)
