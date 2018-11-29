@@ -1,5 +1,87 @@
 # NPlab code to control Acton spectrometer
+# Model SP-2356, see ftp://ftp.princetoninstruments.com/public/manuals/Acton/SP-2300i.pdf
 
+'''
+Monochromator parameters:
+    Slits: from 10 micron to 3 mm (width), 4 & 14 mm height
+    Detector coverage: ~68.5nm across 1.0inch (25.4mm). (137 nm with 600 g/mm grating)
+
+Software:
+    RS-232
+
+Initialization:
+    Initialized to wavelength 0.0nm for grating 1
+    Will re-initialize on reboot
+    Alternative start-up parameters can be programmed (Appendix A)
+
+Commands:
+    Single/grouped
+    All commands are single words, no spaces
+    All commands in string separated by at least one line (\n or \r?)
+    Parameters preceed command, separated by at least one space
+
+Port settings:
+    9600 baud, 1 stop bit, no parity
+    termination character: carriage return (0x0D)
+
+    responds to command when completed with "OK\r\n"
+    commands are blocking
+
+Movement commands:
+    
+    Wavelength commands:
+        GOTO/<GOTO> - move to specified wavelength at max speed
+        
+        NM - blocking move to dest wavelength at user-specified speed
+        <NM> - compatibility mode
+        >NM - non-blocking, must be terminated with MONO-STOP
+            MONO-?DONE - determine if monochromator reached end
+            MONO-STOP stops motion
+        ?NM - returns current wavelength, units appended
+        
+        NM/MIN - sets rotation speed
+        ?NM/MIN - gets rotation speed
+    
+    Grating:
+        GRATING - place grating in specified wavelength
+            assumes correct TURRET
+        ?GRATING - return number of gratings 
+        ?GRATINGS - list of installed gratings, present specified with arrow
+
+        TURRET - specific installed turret
+        ?TURRET - get current
+
+        INSTALL - install config for grating into non-volatile
+            SELECT-GRATING
+            G/MM
+            BLAZE
+            UNINSTALL
+
+    Grating calibration:
+        INIT-OFFSET: offset for designated grating
+        INIT-GADJUST: adjustment value fo designated grating
+            default: 10000 for all gratings
+            limits: +/- 1000 for all gratings
+        MONO-EESTATUS: return setup and grating calibration
+        RESTORE FACTORY SETTINGS
+        MONO-RESET after:
+            INIT-OFFSET
+            INIT-GADJUST    
+        Defaults:
+            TURRET: 1
+            GRATNG: 1
+            WAVELENGTH: 0.0nm
+            SPEED: 100.0 nm/min
+        
+
+    Divert control - exit mirror, not needed
+    Slit control - not needed
+
+
+
+
+
+'''
 import time
 from nplab.instrument.serial_instrument import SerialInstrument
 import serial
@@ -92,7 +174,22 @@ class Acton(SerialInstrument):
         self.gratings_dict = {num: name for num,name in self.gratings}
         
         return self.gratings
-        
+    
+    def set_wavelength(self,wavelength,blocking=True,debug=0):
+
+        if blocking == True:
+            query = "{0:.3f} NM".format(wavelength)
+            
+        elif blocking == False:
+            query = "{0:.3f} >NM".format(wavelength)
+        print "set_wavelength:", query
+        resp = self.write_command(query,debug=debug)
+        return resp 
+
+    def get_wavelength(self):
+        resp = self.write_command("?NM")
+        return resp
+
     def read_turret(self):
         resp = self.write_command("?TURRET")
         self.turret = int(resp)
@@ -157,19 +254,8 @@ class Acton(SerialInstrument):
     def write_exit_slit(self, pos):
         assert 5 <= pos <= 3000
         self.write_command("SIDE-EXIT-SLIT %i MICRONS" % pos)
-        
-
-#    def write_command(self, cmd):
-#        if self.debug: print "write_command:", cmd
-#        self.ser.write(cmd + "\r\n")
-#        response = self.ser.readline()
-#        if self.debug: print "\tresponse:", repr(response)
-#        assert response[-4:] == "ok\r\n"
-#        return response[:-4].strip()
-    
-    def write_command(self, cmd, waittime=0.5):
-#        if self.debug: logger.debug("write_command cmd: {}".format( cmd ))
-#        if self.dummy: return "0"
+           
+    def write_command(self, cmd, waittime=0.5, debug = 0):       
         cmd_bytes = (cmd).encode('ASCII')
         self.ser.write(cmd_bytes+b"\r")
         time.sleep(waittime)
@@ -179,10 +265,8 @@ class Acton(SerialInstrument):
         missed_char_count = 0
         while char != b"k":
             char = self.ser.read()
-            #if self.debug: print("readbyte", repr(char))
             if char == b"": #handles a timeout here
                 missed_char_count += 1
-#                if self.debug: logger.debug("no character returned, missed %i so far" % missed_char_count)
                 if missed_char_count > 3:
                     return 0
                 continue
@@ -193,12 +277,9 @@ class Acton(SerialInstrument):
         
         out = out.decode('ascii')
 
-#        if self.debug:
-##            logger.debug( "complete message" +  repr(out))
-#            print("complete message" + repr(out))
-        #assert out[-3:] == ";FF"
-        #assert out[:7] == "@%03iACK" % self.address   
-        
+        if debug > 0:
+            print "response full:", out   
+            print "response tail:",out[-5:]
         assert out[-5:] == " ok\r\n"
         out = out[:-5].strip()
     

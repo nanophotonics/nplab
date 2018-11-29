@@ -26,6 +26,9 @@ import ctypes as ct
 import numpy as np
 from matplotlib import pyplot as plt
 from nplab.instrument.camera import Camera
+import sys,os
+
+PARENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 class clsPicamReadoutStruct(ct.Structure):
     _fields_ = [("ptr", ct.c_void_p),
@@ -35,7 +38,12 @@ class Pixis(Camera):
     def __init__(self):
     
         self.bolRunning = False
-    
+        self.y_max = 0
+        self.x_max = 0
+        self.StartUp()
+        
+
+        
     def __del__(self):
         
         if self.bolRunning == True:
@@ -57,6 +65,24 @@ class Pixis(Camera):
             else:
                 raise e        
 
+    def get_roi(self,x_min=0, x_max = None, y_min=0,y_max = None, suppress_errors=False):
+        _,raw_image = self.raw_snapshot(suppress_errors=suppress_errors)
+        if x_max is None:
+            x_max = self.x_max
+        if y_max is None:
+            y_max = self.y_max
+
+        print x_min,x_max,y_min,y_max
+        roi_image = raw_image[max(0,y_min):min(y_max,self.y_max),max(0,x_min):min(self.x_max,x_max)]
+        print roi_image.shape
+        return roi_image
+
+    def get_spectrum(self, x_min=0, x_max = None, y_min=0,y_max = None, suppress_errors=False):
+        
+        roi_image = self.get_roi(x_min,x_max,y_min,y_max,suppress_errors)
+        return np.mean(roi_image,axis=0)
+
+
     def get_parameter(self,parameter, label="unknown"):
         '''
         Perform GetParameterIntegerValue calls to DLL
@@ -75,7 +101,7 @@ class Pixis(Camera):
         cint_temp = ct.c_int()
         # Find DLL
         try:
-            self.picam = ct.WinDLL('Picam/picam_64bit.dll')
+            self.picam = ct.WinDLL(os.path.normpath('{}/Picam/picam_64bit.dll'.format(PARENT_DIR)))
         except:
             print("Could not find picam dll")
             return
@@ -93,8 +119,8 @@ class Pixis(Camera):
         if self.picam.Picam_OpenFirstCamera(ct.byref(self.CameraHandle)) != 0:
             print("Could not find camera")
             return
-        self.FrameWidth = self.get_parameter(parameter=16842811, label="frame width")
-        self.FrameHeight = self.get_parameter(parameter=16842812, label="frame height")
+        self.x_max = self.FrameWidth = self.get_parameter(parameter=16842811, label="frame width")
+        self.y_max = self.FrameHeight = self.get_parameter(parameter=16842812, label="frame height")
         
         self.bolRunning = True 
     
@@ -109,14 +135,14 @@ class Pixis(Camera):
             return
         self.bolRunning = False
         
-    def SetExposureTime(self): 
+    def SetExposureTime(self,time): 
         # Exposure time is measured in ms
-        cint_temp = ct.c_int()  
+        cint_temp = ct.c_int(time)  
         if self.bolRunning == False:
-            self.StartUp    
-        if self.picam.Picam_SetParameterIntegerValue(
-                self.CameraHandle, 33685527, ct.byref(cint_temp)) != 0:
-            print("Could not set exposure time")
+            self.StartUp
+        response = self.picam.Picam_SetParameterIntegerValue(self.CameraHandle, 33685527, cint_temp)# ct.byref(cint_temp))    
+        if response != 0:
+            print("Could not set exposure time. Error code: {0}".format(response))
         
     def GetExposureTime(self):
         
@@ -153,10 +179,11 @@ class Pixis(Camera):
         
 if __name__ == "__main__":
     
-    Pixis = Pixis()
-    Pixis.StartUp()
-    _,Frame = Pixis.raw_snapshot()
-    Pixis.ShutDown()
+    p = Pixis()
+    
+    p.SetExposureTime(10)
+    _,Frame = p.raw_snapshot()
+    p.ShutDown()
     
     plt.imshow(Frame, cmap='gray')
     plt.show()
