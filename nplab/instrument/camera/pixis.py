@@ -66,16 +66,18 @@ class Pixis(Camera):
             else:
                 raise e        
 
-    def get_roi(self,x_min=0, x_max = None, y_min=0,y_max = None, suppress_errors=False):
+    def get_roi(self,x_min=0, x_max = None, y_min=0,y_max = None, suppress_errors=False,debug=0):
         _,raw_image = self.raw_snapshot(suppress_errors=suppress_errors)
         if x_max is None:
             x_max = self.x_max
         if y_max is None:
             y_max = self.y_max
 
-        print x_min,x_max,y_min,y_max
+        if debug > 0:
+            print "Pixis.get_roi region of interest:",x_min,x_max,y_min,y_max
         roi_image = raw_image[max(0,y_min):min(y_max,self.y_max),max(0,x_min):min(self.x_max,x_max)]
-        print roi_image.shape
+        if debug > 0:
+            print "Pixis.roi_image.shape:",roi_image.shape
         return roi_image
 
     def get_spectrum(self, x_min=0, x_max = None, y_min=0,y_max = None,with_boundary_cut = True, suppress_errors=False):    

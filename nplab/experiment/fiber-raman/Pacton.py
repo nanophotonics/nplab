@@ -24,7 +24,6 @@ def spectrum_pixel_offset(spectrum_1,spectrum_2):
 def pixel_wavelength_conversion(pixel_offset,wavelength_offset):
 	return wavelength_offset/float(pixel_offset)
 
-
 class Pacton(Instrument):
 
 	def __init__(self,pixis,acton,boundary_cut=5):
@@ -52,10 +51,14 @@ class Pacton(Instrument):
 
 	def get_image(self,center_wavelength,roi = None,debug=0):
 		self.acton.set_wavelength(center_wavelength,blocking=True,debug=debug)
-		if roi is None == False:
+		if roi is not None:
+
+			if debug>0: print "starting try-catch"
 			try:
 				[x_min,x_max,y_min,y_max] = roi
-				return self.pixis.get_roi(x_min=x_min, x_max = x_max, y_min=y_min,y_max = y_max)
+				if debug > 0:
+					print "Pacton.get_image: region of interest:", roi
+				return self.pixis.get_roi(x_min=x_min, x_max = x_max, y_min=y_min,y_max = y_max,debug=debug)
 
 			except: 
 				raise ValueError("Unable to unpack region of interest")
@@ -107,7 +110,7 @@ class Pacton(Instrument):
 		self.acton.set_wavelength(center_wavelength,blocking=True,debug=debug)
 		if subtract_background == True and self.pixel_response is None:
 			raise ValueError("Error getting spectrum with background subtraction - no background to subtract, please run: Pacton.get_pixel_response_calibration_spectrum ") 
-		if roi is None == False:
+		if roi is not None:
 			try:
 				[x_min,x_max,y_min,y_max] = roi
 				spectrum,pixels = self.pixis.get_spectrum(x_min=x_min, x_max = x_max, y_min=y_min,y_max = y_max)

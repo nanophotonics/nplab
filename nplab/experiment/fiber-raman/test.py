@@ -39,15 +39,22 @@ print "Measuring..."
 # def pixel_wavelength_conversion(pixel_offset,wavelength_offset):
 # 	return wavelength_offset/float(pixel_offset)
 
-# fig,ax = plt.subplots(1)
-# pacton.get_pixel_response_calibration_spectrum()
-# for wl in range(590,640,10):
-# 	spectrum,wavelengths = pacton.get_spectrum(wl,subtract_background=True,debug=1)
-# 	ax.plot(wavelengths,spectrum)
+# act.set_wavelength(600,fast=True)
+# img = pacton.get_image(600,roi = [0,1024,600,800],debug=1)
 
-# plt.show()		
+# plt.imshow(img)
+# plt.show()
 
-	
+
+fig,ax = plt.subplots(1)
+pacton.get_pixel_response_calibration_spectrum()
+for wl in range(550,700,10):
+	spectrum,wavelengths = pacton.get_spectrum(wl,subtract_background=True,roi=[0,1024,600,800],debug=1)
+	ax.plot(wavelengths[50:],spectrum[50:])
+
+plt.show()		
+
+
 # print "Calibrating..."
 # pacton.calibrate(range(600,624,3),with_background_subtraction=False,plot=True,debug=1)
 # print "Done!"
