@@ -9,6 +9,7 @@ p.StartUp()
 p.SetExposureTime(10)
 initialized = False
 tries = 0
+
 # while initialized == False and tries < 50:
 # 	try:
 # 		a = Acton("COM6")

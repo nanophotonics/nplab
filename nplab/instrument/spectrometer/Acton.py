@@ -98,19 +98,24 @@ class Acton(SerialInstrument):
                          xonxoff=False, rtscts=False, dsrdtr=False,
                          )
                          
-    def __init__(self, port, debug=False, echo=True, dummy=False):
+    def __init__(self, port, debug=0, echo=True, dummy=False):
+        if debug > 0:
+            print "Started: Acton.__init__"
         SerialInstrument.__init__(self, port)
-        
         self.echo=echo
         
-        self.ser.flushInput()
-        self.ser.flushOutput()
+        # self.ser.flushInput()
+        # self.ser.flushOutput()
+        
         # model info
         #self.write_command("MONO-RESET")
-        self.model = self.write_command("MODEL")
-        self.serial_number = self.write_command("SERIAL")
+        # if debug > 0:
+            # print "Started [2]: Acton.__init__"
+        
+        # self.model = self.write_command("MODEL",debug=debug)
+        # self.serial_number = self.write_command("SERIAL",debug=debug)
         # load grating info
-        self.read_grating_info()
+        # self.read_grating_info(debug=debug)
     
 
     def read_done_status(self):
@@ -123,10 +128,10 @@ class Acton(SerialInstrument):
         self.wl = float(resp.split()[0])
         return self.wl
         
-    def write_wl(self, wl, waittime=1.0):
-        wl = float(wl)
-        resp = self.write_command("%0.3f NM" % wl,waittime=waittime)
-#        if self.debug: logger.debug("write_wl wl:{} resp:{}".format( wl, resp))
+#     def write_wl(self, wl, waittime=1.0):
+#         wl = float(wl)
+#         resp = self.write_command("%0.3f NM" % wl,waittime=waittime)
+# #        if self.debug: logger.debug("write_wl wl:{} resp:{}".format( wl, resp))
         
     def write_wl_fast(self, wl, waittime=1.0):
         wl = float(wl)
@@ -134,13 +139,13 @@ class Acton(SerialInstrument):
 #        if self.debug: logger.debug("write_wl_fast wl:{} resp:{}".format( wl, resp))
         
 
-    def write_wl_nonblock(self, wl):
-        wl = float(wl)
-        resp = self.write_command("%0.3f >NM" % wl)
-#        if self.debug: logger.debug("write_wl_nonblock wl:{} resp:{}".format( wl, resp))
+#     def write_wl_nonblock(self, wl):
+#         wl = float(wl)
+#         resp = self.write_command("%0.3f >NM" % wl)
+# #        if self.debug: logger.debug("write_wl_nonblock wl:{} resp:{}".format( wl, resp))
         
-    def read_grating_info(self):
-        grating_string = self.write_command("?GRATINGS", waittime=1.0)
+    def read_grating_info(self,debug=0):
+        grating_string = self.write_command("?GRATINGS", waittime=1.0,debug=debug)
         """
             \x1a1  300 g/mm BLZ=  500NM 
             2  300 g/mm BLZ=  1.0UM 
@@ -175,11 +180,16 @@ class Acton(SerialInstrument):
         
         return self.gratings
     
-    def set_wavelength(self,wavelength,blocking=True,debug=0):
+    def set_wavelength(self,wavelength,blocking=True,fast=True,debug=0):
+
 
         if blocking == True:
-            query = "{0:.3f} NM".format(wavelength)
-            
+
+            if fast == False:
+                query = "{0:.3f} NM".format(wavelength)
+            elif fast == True:
+                query = "{0:.3f} GOTO".format(wavelength)
+
         elif blocking == False:
             query = "{0:.3f} >NM".format(wavelength)
         print "set_wavelength:", query
@@ -288,7 +298,7 @@ class Acton(SerialInstrument):
             echo = out[0:len(cmd_bytes)]        
             rest = out[len(cmd_bytes):]
             print("echo, rest, cmd:", echo, rest, cmd_bytes)
-            assert echo == cmd
+            # assert echo == cmd
             return rest
         else:
             return out

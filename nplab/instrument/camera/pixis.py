@@ -35,15 +35,16 @@ class clsPicamReadoutStruct(ct.Structure):
                 ("intCount", ct.c_int64)]
 
 class Pixis(Camera):
-    def __init__(self):
+    def __init__(self,with_start_up = False):
     
         self.bolRunning = False
         self.y_max = 0
         self.x_max = 0
-        self.StartUp()
-        
-
-        
+        if with_start_up == True:
+            self.StartUp()
+            self.SetExposureTime(10)
+            
+        self.boundary_cut = 5
     def __del__(self):
         
         if self.bolRunning == True:
@@ -77,11 +78,16 @@ class Pixis(Camera):
         print roi_image.shape
         return roi_image
 
-    def get_spectrum(self, x_min=0, x_max = None, y_min=0,y_max = None, suppress_errors=False):
-        
+    def get_spectrum(self, x_min=0, x_max = None, y_min=0,y_max = None,with_boundary_cut = True, suppress_errors=False):    
         roi_image = self.get_roi(x_min,x_max,y_min,y_max,suppress_errors)
-        return np.mean(roi_image,axis=0)
+        #cut edge values from raw spectrum - remove edge effects
+        raw_spectrum = np.mean(roi_image,axis=0)
+        pixels = range(0,len(raw_spectrum))
+        if with_boundary_cut == True:
+            return raw_spectrum[self.boundary_cut:-self.boundary_cut], pixels[self.boundary_cut:-self.boundary_cut]
 
+        else:
+            return raw_spectrum,pixels
 
     def get_parameter(self,parameter, label="unknown"):
         '''
