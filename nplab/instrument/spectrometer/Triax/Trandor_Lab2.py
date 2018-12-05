@@ -10,14 +10,16 @@ import types
 
 Calibration_Arrays=[]
 
-Calibration_Arrays.append(np.array([[ 6.00379272e-10, -6.78228336e-07,  2.05777889e-04], [-1.34194138e-05,  1.45370324e-02, -6.02706470e+00],[ 9.92195985e-02, -8.09189163e+01,  3.08091562e+04]]))
-Calibration_Arrays.append(np.array([[ 4.94388732e-11, -2.16939715e-08, -1.13540608e-05], [-1.31783914e-06,  1.27606623e-03, -2.03620149e+00],[ 4.72696666e-03,  7.87338518e+00,  1.84807750e+03]]))
+Calibration_Arrays.append([])
+Calibration_Arrays.append([])
+Calibration_Arrays.append([[ -1.51319453e-09 , 9.60766480e-07],[  5.16869111e-04, -4.40076883e-01],[ -1.83290709e+01,  2.85258107e+04]])
+#Calibration_Arrays.append([[ 1.00000000e-08, -1.51319453e-09 , 9.60766480e-07],[ 1.00000000e-08 , 5.16869111e-04, -4.40076883e-01],[ 1.00000000e-08, -1.83290709e+01,  2.85258107e+04]])
 
 Calibration_Arrays=np.array(Calibration_Arrays)
 
-CCD_Size=1600 #Size of ccd in pixels
+CCD_Size=2048 #Size of ccd in pixels
 
-#Make a deepcopy of the andor capture function, to add a white light shutter close command to if reuqired later
+#Make a deepcopy of the andor capture function, to add a white light shutter close command to if required later
 Andor_Capture_Function=types.FunctionType(Andor.capture.func_code, Andor.capture.func_globals, 'Unimportant_Name',Andor.capture.func_defaults, Andor.capture.func_closure)
 
 class Trandor(Andor):#Andor
@@ -44,7 +46,7 @@ class Trandor(Andor):#Andor
 
     def Generate_Wavelength_Axis(self):
         Pixels=np.arange(0,CCD_Size)
-        return np.flipud(self.triax.Convert_Pixels_to_Wavelengths(Pixels))
+        return self.triax.Convert_Pixels_to_Wavelengths(Pixels)
 
     def Set_Center_Wavelength(self,Wavelength):  
         Centre_Pixel=int(CCD_Size/2)

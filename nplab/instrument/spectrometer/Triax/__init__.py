@@ -24,7 +24,19 @@ class Triax(VisaInstrument):
         
         VisaInstrument.__init__(self, Address, settings=dict(timeout=4000, write_termination='\n'))
         
-        self.Grating_Number=self.Grating #Current grating number
+        Attempts=0
+        End=False
+        while End is False:
+            if self.query(" ")=='F':
+                End=True
+            else:
+                self.instr.write_raw('\x4f\x32\x30\x30\x30\x00')
+                time.sleep(2)
+                Attempts+=1
+                if Attempts==5:
+                    raise Exception('Triax communication error!')
+        
+        self.Grating_Number=self.Grating() #Current grating number
         self.Calibration_Arrays=Calibration_Arrays
 
     def Grating(self, Set_To=None):
@@ -64,7 +76,10 @@ class Triax(VisaInstrument):
         Steps=self.Motor_Steps() #Check grating position
             
         if self.Grating_Number+1>len(self.Calibration_Arrays): #Check calibration exists
-            raise ValueError('Current grating is not calibrated! No calibration supplied!')
+            if len(self.Calibration_Arrays)==0:
+                return Pixel_Array
+            else:
+                raise ValueError('Current grating is not calibrated! No calibration supplied!')
             
         #Perform conversion
             
@@ -73,8 +88,12 @@ class Triax(VisaInstrument):
             
         Coefficents*=Step_Array
         Coefficents=np.sum(Coefficents,axis=1)
-        return (-Coefficents[1]+np.sqrt((Coefficents[1]**2)-(4*Coefficents[0]*(Coefficents[2]-Pixel_Array))))/(2*Coefficents[0])
 
+        if len(Coefficents)==3:
+            return (-Coefficents[1]+np.sqrt((Coefficents[1]**2)-(4*Coefficents[0]*(Coefficents[2]-Pixel_Array))))/(2*Coefficents[0])
+        if len(Coefficents)==2:
+            return (Pixel_Array-Coefficents[1])/Coefficents[0]
+            
     def Find_Required_Step(self,Wavelength,Pixel):
         """
         Function to return the required motor step value that would place a given Wavelength on a given Pixel of the CCD
@@ -85,7 +104,10 @@ class Triax(VisaInstrument):
         
         #Perform Conversion
         
-        Coefficents=np.sum(self.Calibration_Arrays[self.Grating_Number]*np.array([Wavelength**2,Wavelength,1.]),axis=1)
+        if len(self.Calibration_Arrays[self.Grating_Number][0])==3:
+            Coefficents=np.sum(self.Calibration_Arrays[self.Grating_Number]*np.array([Wavelength**2,Wavelength,1.]),axis=1)
+        elif len(self.Calibration_Arrays[self.Grating_Number][0])==2:
+            Coefficents=np.sum(self.Calibration_Arrays[self.Grating_Number]*np.array([Wavelength,1.]),axis=1)
         return int((-Coefficents[1]-np.sqrt((Coefficents[1]**2)-(4*Coefficents[0]*(Coefficents[2]-Pixel))))/(2*Coefficents[0]))
 
     def Move_Steps(self, Steps):
