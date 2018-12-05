@@ -241,6 +241,9 @@ class GSC01(SerialInstrument, Stage):
 
 
 class SHOT(VisaInstrument, Stage):
+    """
+    https://www.global-optosigma.com/en_jp/software/motorize/manual_en/SHOT-102.zip
+    """
     axis_names = (1, 2)
 
     def __init__(self, address, **kwargs):
@@ -457,7 +460,8 @@ class SHOT(VisaInstrument, Stage):
 class HIT(SerialInstrument, Stage):
     """
     Stage controller for the many-axis HIT controller.
-    Implementing commands from C:/Users/USER/Drive_polariton/polariton_lab/Equipment_manuals/Sigma-Koki_stages/SHOT-102/SHOT-102.pdf
+
+    https://www.global-optosigma.com/en_jp/software/motorize/manual_en/HIT_En.pdf
     """
 
     # TODO: add interpolation commands. They allow you to set a position in the plane of two axes and move towards it in a curved or straight path
@@ -487,6 +491,8 @@ class HIT(SerialInstrument, Stage):
         #         self.MechanicalHome()
 
     def move(self, counts, axes=None, relative=False):
+        assert -134217728 < counts < +134217727
+
         if axes is None:
             axes = range(len(self.axis_names))
         if not hasattr(counts, '__iter__'):
@@ -495,11 +501,13 @@ class HIT(SerialInstrument, Stage):
             axes = (axes, )
 
         if relative:
-            command = 'M' # + ',' * axis + str(counts)
+            command = 'M'
         else:
-            command = 'A' #+ ',' * axis + str(counts)
+            command = 'A'
 
         self.multi_axis_cmd(command, axes, counts, wait=True)
+
+        # TODO: add checking for Stage limits using status +-LS
 
     def get_position(self, axes=None):
         if axes is None:
@@ -514,12 +522,24 @@ class HIT(SerialInstrument, Stage):
         return positions
 
     def status(self, axes=None):
+        bit_list = ["", "DRV alarm", "Scale alarm", "Z limit", "Near", "ORG", "+LS", "-LS"]
         if axes is None:
             axes = range(len(self.axis_names))
         statuses = self.query("Q:S").split(",")
         status = []
         for ax in axes:
-            status += [statuses[ax]]
+            if statuses[ax]:
+                _bin = bin(int(statuses[ax], 16))[2:].zfill(8)  # Converting to 8-bit hexadecimal. https://stackoverflow.com/questions/1425493/convert-hex-to-binary
+                _status = []
+                for bit, bit_name in zip(_bin, bit_list):
+                    if bool(int(bit)):
+                        _status += [bit_name]
+                if len(_status) > 0:
+                    status += [",".join(_status)]
+                else:
+                    status += ["OK"]
+            else:
+                status += [statuses[ax]]
         return status
 
     def is_busy(self, axes=None):
@@ -545,6 +565,7 @@ class HIT(SerialInstrument, Stage):
         self.write(command)
 
         reply = self.readline()[:-1]  # excluding the \n termination
+        self._logger.debug("Reply: %s" % reply)
 
         if reply == 'NG':
             self._logger.warn('%s replied %s' % (command, reply))
@@ -564,8 +585,9 @@ class HIT(SerialInstrument, Stage):
 
         if not hasattr(axes, "__iter__"):
             axes = (axes,)
-        if not hasattr(parameters, "__init__"):
+        if not hasattr(parameters, "__iter__"):
             parameters = [parameters] * len(axes)
+        self._logger.debug("Axes: ", axes, " Parameters: ", parameters)
 
         argument_list = ['DUMMY']*8
         for ax, param in zip(axes, parameters):
@@ -575,7 +597,7 @@ class HIT(SerialInstrument, Stage):
         command += ':' + argument_string
         self._logger.debug('Writing: %s' %command)
 
-        self.write_check(command)
+        self.write_check(command, wait)
 
         # reply = self.readline()[:-1]  # excluding the \n termination
         #
@@ -596,7 +618,7 @@ class HIT(SerialInstrument, Stage):
         :return:
         '''
 
-        self.multi_axis_cmd('H', axes, [1]*len(axes), wait=True)
+        self.multi_axis_cmd('H', axes, 1, wait=True)
 
     def set_home(self, axes):
         """
@@ -831,13 +853,13 @@ if __name__ == '__main__':
 
     # enc = sys.getfilesystemencoding()
     #
-    # hit = HIT('COM10')
-    # hit._logger.setLevel("DEBUG")
-    # hit.show_gui()
+    hit = HIT('COM15')
+    hit._logger.setLevel("DEBUG")
+    hit.show_gui()
 
-    shot = SHOT("GPIB0::8::INSTR")
-    shot._logger.setLevel("DEBUG")
-    shot.show_gui()
+    # shot = SHOT("GPIB0::8::INSTR")
+    # shot._logger.setLevel("DEBUG")
+    # shot.show_gui()
     # print shot.query("?:")
     #     matches = list(re.findall("'(.+?)'", err[0]))
     #     for dec in ['cp932', 'euc_jp', 'euc_jis_2004', 'euc_jisx0213', 'iso2022_jp', 'iso2022_jp_1', 'iso2022_jp_2',

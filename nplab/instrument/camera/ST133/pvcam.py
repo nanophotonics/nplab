@@ -156,7 +156,7 @@ class PVCamDLL(ct.WinDLL):
                                      (func.__name__, err_code, err_mes.value))
             except Exception:
                 # if not res:
-                raise PVCamError(result, "Call to %s failed with unknown error code %d" %
+                raise PVCamError(result, "call to %s failed with unknown error code %d" %
                                      (func.__name__, err_code))
 
         return result
@@ -337,6 +337,7 @@ class PvcamSdk:
         self._binning = (1, 1)  # px
         max_bin = self._get_max_bin()
         self._image_rect = (0, self.resolution[0] - 1, 0, self.resolution[1] - 1)
+        self._number_frames = 1
 
         self._min_res = self.get_min_resolution()
         minr = (int(math.ceil(self._min_res[0] / max_bin[0])),
@@ -406,6 +407,7 @@ class PvcamSdk:
             self._handle = None
             del self.pvcam
 
+    # Properties
     @NotifiedProperty
     def exposure(self):
         return self._exposure_time
@@ -421,6 +423,14 @@ class PvcamSdk:
     @binning.setter
     def binning(self, value):
         self._binning = value
+
+    @NotifiedProperty
+    def number_frames(self):
+        return self._number_frames
+
+    @number_frames.setter
+    def number_frames(self, value):
+        self._number_frames = value
 
     def _setStaticSettings(self):
         """
@@ -454,7 +464,7 @@ class PvcamSdk:
         if self.get_param_access(pv.PARAM_CLEAR_MODE) == pv.ACC_READ_WRITE:
             self._logger.debug("Setting clear mode to pre sequence")
             # TODO: should be done pre-exposure? As we are not closing the shutter?
-            self.set_param(pv.PARAM_CLEAR_MODE, pv.CLEAR_PRE_SEQUENCE)
+            self.set_param(pv.PARAM_CLEAR_MODE, pv.CLEAR_PRE_EXPOSURE)
 
         # set the exposure resolution. (choices are us, ms or s) => ms is best
         # for life imaging (us allows up to 71min)
@@ -1013,8 +1023,13 @@ class PvcamSdk:
         region.sbin, region.pbin = self._binning
         # self._metadata[MD_BINNING] = self._binning  # self._transposeSizeToUser(self._binning)
         new_image_settings = self._binning + self._image_rect
-        size = ((self._image_rect[1] - self._image_rect[0] + 1) // self._binning[0],
-                (self._image_rect[3] - self._image_rect[2] + 1) // self._binning[1])
+        # size = ((self._image_rect[1] - self._image_rect[0] + 1) // self._binning[0],
+        #         (self._image_rect[3] - self._image_rect[2] + 1) // self._binning[1],
+        #         self._number_frames)
+        size = (self._number_frames,
+                (self._image_rect[3] - self._image_rect[2] + 1) // self._binning[1],
+                (self._image_rect[1] - self._image_rect[0] + 1) // self._binning[0]
+                )
 
         # nothing special for the exposure time
         # self._metadata[MD_EXP_TIME] = self._exposure_time
@@ -1023,7 +1038,7 @@ class PvcamSdk:
         # Shutter closes between exposures iif:
         # * period between exposures is long enough (>0.1s): to ensure we don't burn the mechanism
         # * readout time > exposure time/100 (when risk of smearing is possible)
-        readout_time = size[0] * size[1] / self._readout_rate  # s
+        readout_time = np.prod(size) / self._readout_rate  # s
         tot_time = readout_time + self._exposure_time  # reality will be slightly longer
         self._logger.debug("exposure = %f s, readout = %f s", readout_time, self._exposure_time)
         try:
@@ -1036,9 +1051,11 @@ class PvcamSdk:
                                   "smaller than exposure",
                                   self._exposure_time / readout_time)
                 self.set_param(pv.PARAM_SHTR_OPEN_MODE, pv.OPEN_PRE_SEQUENCE)
-            else:
+            elif self.get_param(pv.PARAM_SHTR_OPEN_MODE) != 0:
                 self.set_param(pv.PARAM_SHTR_OPEN_MODE, pv.OPEN_PRE_EXPOSURE)
                 self._logger.info("Shutter activated")
+            else:
+                self._logger.info("Shutter closed")
         except PVCamError:
             self._logger.debug("Failed to change shutter mode")
 
@@ -1047,13 +1064,12 @@ class PvcamSdk:
 
         return self._exposure_time, region, size
 
-    @staticmethod
-    def _allocate_buffer(length):
+    def _allocate_buffer(self, length):
         """
         length (int): number of bytes requested by pl_exp_setup
         returns a cbuffer of the right type for an image
         """
-        cbuffer = (ct.c_uint16 * (length // 2))()  # empty array
+        cbuffer = (ct.c_uint16 * (self._number_frames * length // 2))()  # empty array
         return cbuffer
     
     @staticmethod
@@ -1064,8 +1080,9 @@ class PvcamSdk:
         return an ndarray
         """
         p = ct.cast(cbuffer, ct.POINTER(ct.c_uint16))
-        dataarray = np.ctypeslib.as_array(p, (size[1], size[0]))  # np shape is H, W
-        return np.transpose(dataarray)
+        # dataarray = np.ctypeslib.as_array(p, (size[2], size[1], size[0]))  # np shape is H, W
+        dataarray = np.ctypeslib.as_array(p, size)  # np shape is H, W
+        return dataarray  #
 
     # def start_flow(self, callback):
     #     """
@@ -1093,13 +1110,13 @@ class PvcamSdk:
         blength = ct.c_uint32()
         exp_ms = int(math.ceil(exposure * 1e3))  # ms
         # 1 image, with 1 region
-        self.pvcam.pl_exp_setup_seq(self._handle, 1, 1, ct.byref(region),
+        self.pvcam.pl_exp_setup_seq(self._handle, self._number_frames, 1, ct.byref(region),
                                     pv.TIMED_MODE, exp_ms, ct.byref(blength))
         self._logger.debug("acquisition setup report buffer size of %d", blength.value)
         cbuffer = self._allocate_buffer(blength.value)  # TODO shall allocate a new buffer every time?
-        assert (blength.value / 2) >= (size[0] * size[1])
+        assert (blength.value / 2) >= (np.prod(size))
 
-        readout_sw = size[0] * size[1] * 1.0 / self._readout_rate  # s
+        readout_sw = np.prod(size) * 1.0 / self._readout_rate  # s
         # tends to be very slightly bigger:
         readout = self.get_param(pv.PARAM_READOUT_TIME) * 1e-3  # s
         self._logger.debug("exposure of %g s, readout %g s (expected %g s)", exp_ms * 1e-3, readout, readout_sw)
@@ -1292,6 +1309,13 @@ class PvcamSdk:
 
         return data_array
 
+    def dark_exposure(self):
+        _current_value = self.get_param(pv.PARAM_SHTR_OPEN_MODE)
+        self.set_param(pv.PARAM_SHTR_OPEN_MODE, pv.OPEN_NEVER)
+        array = self.capture()
+        self.set_param(pv.PARAM_SHTR_OPEN_MODE, _current_value)
+        return array
+
     # def _start_acquisition(self, cbuf):
     #     """
     #     Triggers the start of the acquisition on the camera. If the DataFlow
@@ -1411,20 +1435,31 @@ class Pvcam(Camera, PvcamSdk):
     def __init__(self, device, **kwargs):
         Camera.__init__(self)
         PvcamSdk.__init__(self, device, logger=self._logger)
-        self.unit_scale = (0.5, 1)  # for x and y axis
+        self.unit_scale = (1, 1)  # for x and y axis
+        self.unit_offset = (0, 0)
 
     def raw_snapshot(self):
+        """
+        If only one frame, returns a 2D array. If multiple frames, returns a 3D array, where the first dimension is
+        frame number
+        :return: ndarray
+        """
         return self.capture()
+        # array = np.swapaxes(self.capture(), 1, 2)
+        # if array.shape[0] == 1:
+        #     return array[0]
+        # else:
+        #     return array
 
     def get_camera_parameter(self, parameter_name):
         return self.get_param(getattr(pv, parameter_name))
 
     def set_camera_parameter(self, parameter_name, parameter_value):
         try:
-            self.set_param(getattr(pv, parameter_name), parameter_value)
+            self.set_param(getattr(pv, parameter_name), getattr(pv, parameter_value))
         except Exception as e:
-            self.log('paramter' +parameter_name+' could not be set with the value '+parameter_value+
-                     'due to error '+str(e))
+            self.log('paramter ' +parameter_name+' could not be set with the value '+parameter_value+
+                     ' due to error '+str(e))
 
     def get_qt_ui(self, control_only=False, parameters_only=False):
         if control_only:
@@ -1449,7 +1484,6 @@ class Pvcam(Camera, PvcamSdk):
         return self.ui.DisplayWidget
 
 
-
 # for param_name, param_id in zip(["exposure"], ["PARAM_EXP_TIME"]):
 #     setattr(PVCam, param_name, PVCamParameter(param_id))
 
@@ -1464,12 +1498,18 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
         self.captureThread = None
         self.camera = camera
         self.DisplayWidget = None
+        # self._unit_offset = self.camera.unit_offset
         self._scaling()
+        # TODO: make a GUI that can nicely handle displaying different magnitudes on each axis (e.g. space and energy),
+        # in different units (e.g. nm and eV), and different binning (without screwing the units up) and that can keep
+        # the CrossHairs in place when changing any of these parameters
+        self._binning_changed = False
+        self._prev_bin = self.camera.binning
 
         uic.loadUi((os.path.dirname(__file__) + '/camera.ui'), self)
 
         self._setup_signals()
-        self.updateGUI()
+        # self.updateGUI()
         # self.BinningChanged()
         self.data_file = None
         self.save_all_parameters = False
@@ -1522,8 +1562,8 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
         # self.referesh_groups_pushButton.clicked.connect(self.update_groups_box)
 
     # # GUI FUNCTIONS
-    def updateGUI(self):
-        pass
+    # def updateGUI(self):
+    #     pass
 
     #     trig_modes = {0: 0, 1: 1, 6: 2}
     #     self.comboBoxAcqMode.setCurrentIndex(self.camera.parameters['AcquisitionMode']['value'] - 1)
@@ -1599,16 +1639,20 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
         self.lineEditExpT.setText(str(value))
 
     def update_binning(self, value):
+        self._binning_changed = True
         self.spinBox_binx.setValue(value[0])
         self.spinBox_biny.setValue(value[1])
-        self._scaling()
 
     def _scaling(self):
-        self._pxl_scale = tuple(map(lambda x, y: float(x) * y, self.camera.unit_scale, self.camera.binning))
         if self.DisplayWidget is not None:
-            for attr in [1, 2]:
-                crosshair = getattr(self.DisplayWidget, "CrossHair%d" % attr)
-                crosshair._pxl_scale = self._pxl_scale
+            self.DisplayWidget._pxl_offset = self.camera.unit_offset
+            self.DisplayWidget._pxl_scale = tuple(map(lambda x, y: x * y, self.camera.unit_scale, self.camera.binning))
+
+            offset = (self.camera._image_rect[0], self.camera._image_rect[2])
+            pos = tuple(map(operator.div, offset, self.camera.binning))
+            self.DisplayWidget.ImageDisplay.getImageItem().setPos(*pos)
+
+            self.DisplayWidget._rescale()
 
     # def update_Cooler(self, value):
     #     self.checkBoxCooler.setCheckState(value)
@@ -1642,10 +1686,12 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
     #         # self.ROI()
 
     def changed_binning(self):
+        if not self._binning_changed:
+            self._binning_changed = True
+            self._prev_bin = self.camera.binning
         xbin = self.spinBox_binx.value()
         ybin = self.spinBox_biny.value()
         self.camera.binning = (xbin, ybin)
-        self._scaling()
 
     # def NumFramesChanged(self):
     #     num_frames = self.spinBoxNumFrames.value()
@@ -1670,12 +1716,12 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
     #     else:
     #         self.camera._self._logger.info('Changing the rows only works in Fast Kinetic or in Single Track mode')
 
-    def changed_exposure(self, input=None):
-        if input is None:
+    def changed_exposure(self, variable=None):
+        if variable is None:
             expT = float(self.lineEditExpT.text())
-        elif input == 'x':
+        elif variable == 'x':
             expT = float(self.lineEditExpT.text()) * 5
-        elif input == '/':
+        elif variable == '/':
             expT = float(self.lineEditExpT.text()) / 5
         self.camera.exposure = expT
 
@@ -1684,7 +1730,7 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
     #     self.camera.SetParameter('EMGain', gain)
 
     def take_background(self):
-        self.camera.background = self.camera.raw_snapshot()
+        self.camera.background = self.camera.dark_exposure()
         self.backgrounded = True
         self.checkBoxRemoveBG.setChecked(True)
 
@@ -1736,15 +1782,12 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
         if hasattr(self.DisplayWidget, 'CrossHair1') and hasattr(self.DisplayWidget, 'CrossHair2'):
             # hbin, vbin = self.camera.parameters['Image']['value'][:2]
             if self.checkBoxROI.isChecked():
-                scale = self.camera.unit_scale
-                # if self.checkBoxCrop.isChecked():
-                #     self.checkBoxCrop.setChecked(False)
                 pos1 = self.DisplayWidget.CrossHair1.pos()
                 pos2 = self.DisplayWidget.CrossHair2.pos()
                 # print 'GUI ROI. CrossHair: ', pos1, pos2
-                minx, maxx = map(lambda x: int(x / scale[0]),
+                minx, maxx = map(lambda x: int(x) * self.camera.binning[0],  # / scale[0]
                                  (min(pos1[0], pos2[0]), max(pos1[0], pos2[0])))
-                miny, maxy = map(lambda x: int(x / scale[1]),  # shape[1] -
+                miny, maxy = map(lambda x: int(x) * self.camera.binning[1],  # shape[1] - / scale[1]
                                  (min(pos1[1], pos2[1]), max(pos1[1], pos2[1])))
 
                 self.camera._image_rect = (minx, maxx, miny, maxy)
@@ -1787,20 +1830,24 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
 
     def updateImage(self):
         if self.DisplayWidget is None:
-            self.DisplayWidget = DisplayWidget(self.camera.unit_scale)
+            self.DisplayWidget = DisplayWidget(self.camera.unit_scale, self.camera.unit_offset)
 
         if self.DisplayWidget.isHidden():
             self.DisplayWidget.show()
 
         # The offset is designed so that image ends up being displayed at the correct crosshair coordinates
         # The scale is used for scaling the image according to the binning, hence also preserving the crosshair coordinates
-        offset = (self.camera._image_rect[0], self.camera._image_rect[2])
+        # offset = (self.camera._image_rect[0], self.camera._image_rect[2])
+        # offset = tuple(map(lambda x, y: x + y, offset, self.camera.unit_offset))
         # scale = self.camera.parameters['Image']['value'][:2]
         data = np.array(self.camera.CurImage, dtype="float")
         if np.shape(data) == np.shape(self.camera.background) and self.backgrounded:
             data -= self.camera.background
             # for image_number in range(len(self.camera.CurImage)):
             #     data[image_number] = data[image_number] - self.camera.background
+        elif np.shape(data)[1:] == np.shape(self.camera.background)[1:] and self.backgrounded:
+            self.camera._logger.info("Do not have enough background frames. Using the average background")
+            data -= np.array([np.mean(self.camera.background, 0)] * np.shape(data)[0])
         elif self.backgrounded:
             self.camera._logger.info(
                 'The background (%s) and the current image (%s) are different shapes and therefore cannot be subtracted'
@@ -1857,12 +1904,26 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
 
         # offset = (0, 0)
         # print "OFFSET: ", offset, tuple(map(operator.add, offset, (xvals[0], 0)))
+        # self._scaling()
+
+        # pos = tuple(map(operator.mul, offset, self.camera.unit_scale))
+        # self.DisplayWidget.ImageDisplay.setImage(data, pos=pos, autoRange=False, autoLevels=True)  # , scale=self.camera.unit_scale
+
+        data = np.swapaxes(data, 1, 2)
+        if data.shape[0] == 1:
+            data = data[0]
+        self.DisplayWidget.ImageDisplay.setImage(data, autoRange=True, autoLevels=True)  # , scale=self.camera.unit_scale
         self._scaling()
 
-        # scale = self.camera.unit_scale
-        pos = tuple(map(operator.mul, offset, self.camera.unit_scale))
-        self.DisplayWidget.ImageDisplay.setImage(data, pos=pos, autoRange=False, autoLevels=True, scale=self._pxl_scale)
+        if self._binning_changed:
+            for idx in [1, 2]:
+                xhair = getattr(self.DisplayWidget, "CrossHair%d" % idx)
+                pos = xhair.pos()
+                xhair.setPos(*map(lambda x, y, z: float(x) / (float(y) / float(z)), pos, self.camera.binning, self._prev_bin))
+            self._binning_changed = False
+
         self.DisplayWidget.ImageDisplay.autoRange()
+
         self.ImageUpdated.emit()
 
 
