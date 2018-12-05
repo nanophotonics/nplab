@@ -13,7 +13,6 @@ Calibration_Arrays=[]
 Calibration_Arrays.append([])
 Calibration_Arrays.append([])
 Calibration_Arrays.append([[ -1.51319453e-09 , 9.60766480e-07],[  5.16869111e-04, -4.40076883e-01],[ -1.83290709e+01,  2.85258107e+04]])
-#Calibration_Arrays.append([[ 1.00000000e-08, -1.51319453e-09 , 9.60766480e-07],[ 1.00000000e-08 , 5.16869111e-04, -4.40076883e-01],[ 1.00000000e-08, -1.83290709e+01,  2.85258107e+04]])
 
 Calibration_Arrays=np.array(Calibration_Arrays)
 
@@ -39,6 +38,8 @@ class Trandor(Andor):#Andor
         print 'Current Grating:',self.triax.Grating()
         print 'Current Slit Width:', self.triax.Slit(),'um'
         print '---------------------------'
+
+        self.Notch_Filters_Tested=False
         
 
     def Grating(self, Set_To=None):
@@ -53,27 +54,51 @@ class Trandor(Andor):#Andor
         Required_Step=self.triax.Find_Required_Step(Wavelength,Centre_Pixel)
         Current_Step=self.triax.Motor_Steps()
         self.triax.Move_Steps(Required_Step-Current_Step)
+
+    def Test_Notch_Alignment(self):
+    	Accepted=False
+    	while Accepted is False:
+    		Input=raw_input('WARNING! A slight misalignment of the narrow band notch filters could be catastrophic! Has the laser thoughput been tested? [Yes/No]')
+    		if Input.upper() in ['Y','N','YES','NO']:
+    			Accepted=True
+    			if len(Input)>1:
+    				Input=Input.upper()[0]
+    	if Input=='Y':
+    		print 'You are now free to capture spectra'
+    		self.Notch_Filters_Tested=True
+    	else:
+    		print 'The next spectrum capture will be allowed for you to test this. Please LOWER the laser power and REDUCE the integration time.'
+    		self.Notch_Filters_Tested=None
+
          
     def capture(self,Close_White_Shutter=True):
         """
         Edits the capture function is a white light shutter object is supplied, to ensure it is closed while the image is taken.
         This behaviour can be overwirtten by passing Close_White_Shutter=False
         """
-        if self.White_Shutter is not None and Close_White_Shutter is True:
-            try:
-                self.White_Shutter.close_shutter()
-            except:
-                 Dump=1
-                    
-            Output=Andor_Capture_Function(self)
-                
-            try:
-                self.White_Shutter.open_shutter()
-            except:
-                Dump=1
-            return Output
+
+        if self.Notch_Filters_Tested is False:
+        	Test_Notch_Alignment()
+        	
         else:
-           return Andor_Capture_Function(self)
+	        if self.White_Shutter is not None and Close_White_Shutter is True:
+	            try:
+	                self.White_Shutter.close_shutter()
+	            except:
+	                 Dump=1
+	                    
+	            Output=Andor_Capture_Function(self)
+	                
+	            try:
+	                self.White_Shutter.open_shutter()
+	            except:
+	                Dump=1
+	            return Output
+	        else:
+	           return Andor_Capture_Function(self)
+
+	    if self.Notch_Filters_Tested is None:
+	    	self.Notch_Filters_Tested=False
             
 
     x_axis=NotifiedProperty(Generate_Wavelength_Axis) #This is grabbed by the Andor code 
