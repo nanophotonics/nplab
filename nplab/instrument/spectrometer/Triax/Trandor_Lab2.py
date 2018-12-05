@@ -39,7 +39,7 @@ class Trandor(Andor):#Andor
         print 'Current Slit Width:', self.triax.Slit(),'um'
         print '---------------------------'
 
-        self.Notch_Filters_Tested=False
+        self.Notch_Filters_Tested=True
         
 
     def Grating(self, Set_To=None):
@@ -56,19 +56,19 @@ class Trandor(Andor):#Andor
         self.triax.Move_Steps(Required_Step-Current_Step)
 
     def Test_Notch_Alignment(self):
-    	Accepted=False
-    	while Accepted is False:
-    		Input=raw_input('WARNING! A slight misalignment of the narrow band notch filters could be catastrophic! Has the laser thoughput been tested? [Yes/No]')
-    		if Input.upper() in ['Y','N','YES','NO']:
-    			Accepted=True
-    			if len(Input)>1:
-    				Input=Input.upper()[0]
-    	if Input=='Y':
-    		print 'You are now free to capture spectra'
-    		self.Notch_Filters_Tested=True
-    	else:
-    		print 'The next spectrum capture will be allowed for you to test this. Please LOWER the laser power and REDUCE the integration time.'
-    		self.Notch_Filters_Tested=None
+        	Accepted=False
+        	while Accepted is False:
+        		Input=raw_input('WARNING! A slight misalignment of the narrow band notch filters could be catastrophic! Has the laser thoughput been tested? [Yes/No]')
+        		if Input.upper() in ['Y','N','YES','NO']:
+        			Accepted=True
+        			if len(Input)>1:
+        				Input=Input.upper()[0]
+        	if Input.upper()=='Y':
+        		print 'You are now free to capture spectra'
+        		self.Notch_Filters_Tested=True
+        	else:
+        		print 'The next spectrum capture will be allowed for you to test this. Please LOWER the laser power and REDUCE the integration time.'
+        		self.Notch_Filters_Tested=None
 
          
     def capture(self,Close_White_Shutter=True):
@@ -78,9 +78,12 @@ class Trandor(Andor):#Andor
         """
 
         if self.Notch_Filters_Tested is False:
-        	Test_Notch_Alignment()
+            self.Test_Notch_Alignment()
+            return (np.array(range(CCD_Size))*0,1,(CCD_Size,))
         	
         else:
+	        if self.Notch_Filters_Tested is None:
+	            self.Notch_Filters_Tested=False
 	        if self.White_Shutter is not None and Close_White_Shutter is True:
 	            try:
 	                self.White_Shutter.close_shutter()
@@ -96,10 +99,6 @@ class Trandor(Andor):#Andor
 	            return Output
 	        else:
 	           return Andor_Capture_Function(self)
-
-	    if self.Notch_Filters_Tested is None:
-	    	self.Notch_Filters_Tested=False
-            
 
     x_axis=NotifiedProperty(Generate_Wavelength_Axis) #This is grabbed by the Andor code 
 
