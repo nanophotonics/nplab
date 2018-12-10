@@ -28,16 +28,23 @@ import numpy as np
 import os
 import threading
 import time
+import ast
 from nplab.instrument.camera import Camera, CameraParameter, DisplayWidget
 import nplab.datafile as df
 # from nplab.utils.thread_utils import background_action, locked_action
 from nplab.utils.notified_property import NotifiedProperty
 from nplab.utils.gui import QtCore, QtGui, QtWidgets, uic
+from nplab.utils.log import create_logger
 from nplab.ui.ui_tools import UiTools
 from nplab.utils.notified_property import register_for_property_changes
 import operator
 import pvcam_h as pv  # Dictionary linking variables with values
-from nplab.utils.log import create_logger
+import SocketServer
+import socket
+import json
+import inspect
+import sys
+
 
 def index_closest(val, l):
     """
@@ -105,6 +112,81 @@ class CancelledError(Exception):
     raise to indicate the acquisition is cancelled and must stop
     """
     pass
+
+
+def function_builder(command_name): #, _type="function"):
+    ''' A function for generating the write functions for intergrating classes with
+    the speaker instrument class.
+    '''
+
+    # if _type == "function":
+    def function(*args, **kwargs):
+        # input_str = ''
+        obj = args[0]
+        # if len(args) > 1:
+        # for input_value in args[1:]:
+        #     input_str += str(input_value) + ','
+        # for input_name, input_value in kwargs.iteritems():
+        #     input_str = input_str + input_name + '=' + input_value + ','
+        # input_str = input_str[:-1]
+        # obj.memory_map_in.seek(0)
+        # obj.memory_map_in.write(command_name + '(' + input_str + ')\n')
+        # print command_name + '(' + input_str + ')\n'
+        command_dict = dict(command=command_name)
+        if len(args) > 1:
+            command_dict["args"] = args[1:]
+        if len(kwargs.keys()) > 0:
+            command_dict["kwargs"] = kwargs
+        # print "Command dictionary: ", command_dict
+        # reply = obj.send_to_server(json.dumps(command_dict))
+        reply = obj.send_to_server(repr(command_dict))
+        if type(reply) == dict:
+            if "array" in reply:
+                reply = np.array(reply["array"])
+        return reply
+    return function
+    # else:
+    #     def function(*args, **kwargs):
+    #         print command_name
+    #     return function
+
+def create_speaker_class(original_class, function_list=None):
+    ''' A function that creates a speaker class by subclassing the original class
+    and replacing any function calls with write commands that pass the functions to the listener
+    '''
+
+    class original_class_Stripped(original_class):  # copies the class
+        def __init__(self):
+            original_class.__init__(self)
+            # self.function_list = []
+
+    if function_list is None:
+        function_list = original_class.__dict__.keys()
+
+    # function_list = []
+    for command_name in function_list:  # replaces any method
+        command = getattr(original_class_Stripped, command_name)
+        if inspect.ismethod(command):
+            # print "Method: ", command
+            setattr(original_class_Stripped, command_name, function_builder(command_name))
+            # function_list += [command_name]
+    # setattr(original_class_Stripped, "function_list", function_list)
+
+    # def my_getattr(self, item):
+    #     print "Getting: ", item
+    #     if item in self.function_list:
+    #         print "Running: ", item
+    #         return original_class_Stripped.__getattr__(self, item)
+    #     else:
+    #         if item.startswith("__"):
+    #             return original_class_Stripped.__getattr__(self, item)
+    #         else:
+    #             print "Retrieving: ", item
+    # setattr(original_class_Stripped, "__getattr__", my_getattr)
+    # else:
+    #     print "Variable: ", command
+    #     setattr(original_class_Stripped, command_name, function_builder(command_name, "variable"))
+    return original_class_Stripped
 
 
 class PVCamDLL(ct.WinDLL):
@@ -236,7 +318,7 @@ class PvcamSdk:
     Provides low-level methods corresponding to the SDK functions.
     """
 
-    def __init__(self, device, **kwargs):
+    def __init__(self, device, *args, **kwargs):
         """
         Initialises the device
         device (int or string): number of the device to open, as defined in
@@ -244,7 +326,7 @@ class PvcamSdk:
         Raise an exception if the device cannot be opened.
         """
         self.pvcam = PVCamDLL()
-        self.CurImage = None
+        self.current_image = None
         if "logger" in kwargs:
             self._logger = kwargs["logger"]
         elif not hasattr(self, "_logger"):
@@ -1307,12 +1389,15 @@ class PvcamSdk:
         except PVCamError:
             self._logger.exception("Failed to finish the acquisition properly")
 
+        self.current_image = data_array
+
         return data_array
 
     def dark_exposure(self):
         _current_value = self.get_param(pv.PARAM_SHTR_OPEN_MODE)
         self.set_param(pv.PARAM_SHTR_OPEN_MODE, pv.OPEN_NEVER)
         array = self.capture()
+        self.background = array
         self.set_param(pv.PARAM_SHTR_OPEN_MODE, _current_value)
         return array
 
@@ -1401,8 +1486,6 @@ class PvcamSdk:
     #         # ensure it's not set, even if the thread died prematurately
     #         self.acquire_must_stop.clear()
 
-
-
     @staticmethod
     def scan():
         """
@@ -1433,10 +1516,11 @@ class Pvcam(Camera, PvcamSdk):
     metadata_property_names = ('exposure', 'binning', 'unit_scale')
 
     def __init__(self, device, **kwargs):
+        # super(Pvcam, self).__init__(device, logger=self._logger)
         Camera.__init__(self)
         PvcamSdk.__init__(self, device, logger=self._logger)
-        self.unit_scale = (1, 1)  # for x and y axis
-        self.unit_offset = (0, 0)
+        self.unit_scale = [1, 1]  # for x and y axis
+        self.unit_offset = [0, 0]
 
     def raw_snapshot(self):
         """
@@ -1484,6 +1568,166 @@ class Pvcam(Camera, PvcamSdk):
         return self.ui.DisplayWidget
 
 
+function_list = PvcamSdk.__dict__.keys() + ["raw_snapshot", "get_camera_parameter", "set_camera_parameter"]   # Pvcam.__dict__.keys()
+pvcam_client_base = create_speaker_class(Pvcam, function_list)
+
+BUFFER_SIZE = 3131894
+
+class PvcamClient(pvcam_client_base):
+    def __init__(self, address):
+        self.instance_attributes = self.send_to_server("list_attributes", address)  # ["_exposure_time"]
+        self.address = address
+
+    def __getattr__(self, item):
+        print "Getting: ", item, item in ["address", "instance_attributes"]
+        if item in ["address", "instance_attributes", "ui"]:
+            tst = object.__getattribute__(self, item)
+            return tst
+        elif item in self.instance_attributes:
+            # print "Want to get something: ", item
+            # return self.send_to_server(json.dumps(dict(variable_get=item)))
+            return self.send_to_server(repr(dict(variable_get=item)))
+        # elif item == "list_attributes":
+        #     return self.send_to_server("list_attributes")
+        elif item in ["get_qt_ui", "get_control_widget", "get_preview_widget"]:
+            return Pvcam.__getattribute__(self, item)
+        else:
+            super(PvcamClient, self).__getattr__(item)
+
+    def __setattr__(self, item, value):
+        print "Setting: ", item
+        # if item == "instance_attributes":
+        #     super(PvcamClient, self).__setattr__(item, value)
+        if item in ["address", "instance_attributes"]:
+            object.__setattr__(self, item, value)
+        elif item in ["ui"]:
+            return Pvcam.__setattr__(self, item, value)
+        elif item in self.instance_attributes:
+            # self.send_to_server(json.dumps(dict(variable_set=item, variable_value=value)))
+            self.send_to_server(repr(dict(variable_set=item, variable_value=value)))
+        # elif item == "list_attributes":
+        #     return self.send_to_server("list_attributes")
+        else:
+            # print "Fuck sake"
+            # raise ValueError
+            super(PvcamClient, self).__setattr__(item, value)
+
+    # def read(self, sock, buffer_size=1024):
+    #     string = sock.recv(buffer_size)
+    #     while "THISISTHEEND" not in string:
+    #         string += sock.recv(buffer_size)
+    #     return string
+
+    def send_to_server(self, command, address=None):
+        if address is None:
+            address = self.address
+        print "Client sending: ", command[:50]
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            sock.connect(address)
+            sock.sendall(command)
+            print "Client sent: ", command[:50]
+            received = sock.recv(BUFFER_SIZE)
+            while "THISISTHEEND" not in received:
+                received += sock.recv(BUFFER_SIZE)
+            # received = self.read(sock) #sock.recv(BUFFER_SIZE)
+            print "Client received: ", received[:20]
+            received = received.rstrip("THISISTHEEND")
+            # if received == "picture":
+            #     print "Receiving again"
+            #     received = sock.recv(1024 * 1024 * 1024)
+            #     print "Received again: "
+        except Exception as e:
+            raise e
+        print type(received)
+        return ast.literal_eval(received)  # json.loads(received)
+
+    # def fucksake(self):
+    #     self.ui = pvcamUI(self)
+    #     return self.ui
+
+    # def get_qt_ui(self, control_only=False, parameters_only=False):
+    #     print "YepUI"
+    #     if control_only:
+    #         return self.get_control_widget()
+    #     elif parameters_only:
+    #         self._logger.warn("Not implemented")
+    #     else:
+    #         # if not hasattr(self, 'ui'):
+    #         #     self.ui = pvcamUI(self)
+    #         # elif not isinstance(self.ui, pvcamUI):
+    #         self.ui = pvcamUI(self)
+    #         return self.ui
+    #
+    # def get_control_widget(self):
+    #     return self.get_qt_ui()
+    #
+    # def get_preview_widget(self):
+    #     if not hasattr(self, 'ui'):
+    #         self.get_qt_ui()
+    #     if self.ui.DisplayWidget is None:
+    #         self.ui.DisplayWidget = DisplayWidget()
+    #     return self.ui.DisplayWidget
+
+class PvcamServerHandler(SocketServer.BaseRequestHandler):
+    def handle(self):
+        try:
+            raw_data = self.request.recv(BUFFER_SIZE).strip()
+            print "Server received: ", raw_data
+            # if type(raw_data) == str:
+            if raw_data == "list_attributes":
+                # instr_reply = json.dumps(self.server.camera.__dict__.keys())
+                instr_reply = repr(self.server.camera.__dict__.keys())
+                # else:
+                #     raise ValueError("Unrecognised string command: " + raw_data)
+            else:
+                # command_dict = json.loads(raw_data)
+                command_dict = ast.literal_eval(raw_data)
+
+                if "command" in command_dict:
+                    if "args" in command_dict and "kwargs" in command_dict:
+                        instr_reply = getattr(self.server.camera, command_dict["command"])(*command_dict["args"], **command_dict["kwargs"])
+                    elif "args" in command_dict:
+                        instr_reply = getattr(self.server.camera, command_dict["command"])(*command_dict["args"])
+                    elif "kwargs" in command_dict:
+                        instr_reply = getattr(self.server.camera, command_dict["command"])(**command_dict["kwargs"])
+                    else:
+                        instr_reply = getattr(self.server.camera, command_dict["command"])()
+                elif "variable_get" in command_dict:
+                    instr_reply = getattr(self.server.camera, command_dict["variable_get"])
+                elif "variable_set" in command_dict:
+                    setattr(self.server.camera, command_dict["variable_set"], command_dict["variable_value"])
+                    instr_reply = ''
+                else:
+                    instr_reply = "JSON dictionary did not contain a 'command' or 'variable' key"
+        except Exception as e:
+            print e
+            instr_reply = dict(error=e)
+        print "Instrument reply: ", instr_reply
+
+        try:
+            # reply = json.dumps(instr_reply)
+            if type(instr_reply) == np.ndarray:
+                reply = repr(instr_reply.tolist())
+            else:
+                reply = repr(instr_reply)
+        except Exception as e:
+            # if type(instr_reply) == np.ndarray:
+            #     # self.request.sendall("picture")
+            #     # reply = json.dumps(instr_reply.tolist())
+            #     reply = repr(instr_reply.tolist())
+            # else:
+            reply = repr(dict(error=str(e)))
+        # reply = raw_data.upper()
+        reply += "THISISTHEEND"
+        self.request.sendall(reply)
+        print "Server replied ", len(reply), " ", sys.getsizeof(reply), ": ", reply[0:10], "...", reply[-10:]
+
+class PvcamServer(SocketServer.TCPServer):
+    def __init__(self, camera_number, server_address, handler_class=PvcamServerHandler, bind_and_activate=True):
+        SocketServer.TCPServer.__init__(self, server_address,  handler_class, bind_and_activate)
+        self.camera = Pvcam(camera_number)
+
 # for param_name, param_id in zip(["exposure"], ["PARAM_EXP_TIME"]):
 #     setattr(PVCam, param_name, PVCamParameter(param_id))
 
@@ -1492,22 +1736,25 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
     ImageUpdated = QtCore.Signal()
 
     def __init__(self, camera):
-        assert isinstance(camera, Pvcam), "instrument must be an camera"
+        assert isinstance(camera, (Pvcam, PvcamClient)), "instrument must be an camera"
+        self._logger = create_logger("pvcam.GUI")
+
+        # try:
+        #     print "super call"
         super(pvcamUI, self).__init__()
+        # except BaseException as e:
+        #     print e
         #        self.ImageUpdated = QtCore.SIGNAL('cameraImageUpdated')
         self.captureThread = None
         self.camera = camera
         self.DisplayWidget = None
         # self._unit_offset = self.camera.unit_offset
         self._scaling()
-        # TODO: make a GUI that can nicely handle displaying different magnitudes on each axis (e.g. space and energy),
-        # in different units (e.g. nm and eV), and different binning (without screwing the units up) and that can keep
-        # the CrossHairs in place when changing any of these parameters
+
         self._binning_changed = False
-        self._prev_bin = self.camera.binning
+        self._prev_bin = camera.binning
 
         uic.loadUi((os.path.dirname(__file__) + '/camera.ui'), self)
-
         self._setup_signals()
         # self.updateGUI()
         # self.BinningChanged()
@@ -1522,7 +1769,7 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
                 self._func_dict[param] = func
                 register_for_property_changes(self.camera, param, self._func_dict[param])
             except AssertionError:
-                self.camera._logger.info("%s is not a property so cannot be monitored" % param)
+                self._logger.info("%s is not a property so cannot be monitored" % param)
         # self.camera.updateGUI.connect(self.updateGUI)
 
     def __del__(self):
@@ -1730,7 +1977,8 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
     #     self.camera.SetParameter('EMGain', gain)
 
     def take_background(self):
-        self.camera.background = self.camera.dark_exposure()
+        # self.camera.background = self.camera.dark_exposure()
+        self.camera.dark_exposure()
         self.backgrounded = True
         self.checkBoxRemoveBG.setChecked(True)
 
@@ -1743,7 +1991,7 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
     def Save(self):
         if self.data_file is None:
             self.data_file = df.current()
-        data = self.camera.CurImage
+        data = self.camera.current_image
 
         if self.lineEdit_groupname.text():
             group = self.data_file.create_group(self.lineEdit_groupname.text())
@@ -1759,7 +2007,7 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
             dataset_name = "pvcam%d" % idx
 
         if self.backgrounded:
-            self.camera._logger.info("Saving backgrounded image. Remember to save the background separately")
+            self._logger.info("Saving backgrounded image. Remember to save the background separately")
             data = np.array(data, np.float)
             data -= self.camera.background
 
@@ -1774,7 +2022,7 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
                 # attrs['scaling'] = self.camera.unit_scale
                 df.attributes_from_dict(data_set, attrs)
         except Exception as e:
-            self.camera._logger.warn(e)
+            self._logger.warn(e)
 
     def ROI(self):
         if self.DisplayWidget is None:
@@ -1791,14 +2039,14 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
                                  (min(pos1[1], pos2[1]), max(pos1[1], pos2[1])))
 
                 self.camera._image_rect = (minx, maxx, miny, maxy)
-                self.camera._logger.info("ROI: %s" % str(self.camera._image_rect))
+                self._logger.info("ROI: %s" % str(self.camera._image_rect))
             else:
                 # print self.camera.resolution
                 # print self.camera._shape
                 shape = self.camera._shape
                 self.camera._image_rect = (0, shape[0] - 1, 0, shape[1] - 1)
         else:
-            self.camera._logger.warn("You can't set the ROI using a DisplayWidget that doesn't have CrossHairs...")
+            self._logger.warn("You can't set the ROI using a DisplayWidget that doesn't have CrossHairs...")
 
     def Capture(self, wait=True):
         if self.captureThread is not None:
@@ -1840,18 +2088,19 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
         # offset = (self.camera._image_rect[0], self.camera._image_rect[2])
         # offset = tuple(map(lambda x, y: x + y, offset, self.camera.unit_offset))
         # scale = self.camera.parameters['Image']['value'][:2]
-        data = np.array(self.camera.CurImage, dtype="float")
-        if np.shape(data) == np.shape(self.camera.background) and self.backgrounded:
-            data -= self.camera.background
+        data = np.array(self.camera.current_image, dtype="float")
+        background = self.camera.background
+        if np.shape(data) == np.shape(background) and self.backgrounded:
+            data -= background
             # for image_number in range(len(self.camera.CurImage)):
             #     data[image_number] = data[image_number] - self.camera.background
-        elif np.shape(data)[1:] == np.shape(self.camera.background)[1:] and self.backgrounded:
-            self.camera._logger.info("Do not have enough background frames. Using the average background")
-            data -= np.array([np.mean(self.camera.background, 0)] * np.shape(data)[0])
+        elif np.shape(data)[1:] == np.shape(background)[1:] and self.backgrounded:
+            self._logger.info("Do not have enough background frames. Using the average background")
+            data -= np.array([np.mean(background, 0)] * np.shape(data)[0])
         elif self.backgrounded:
-            self.camera._logger.info(
+            self._logger.info(
                 'The background (%s) and the current image (%s) are different shapes and therefore cannot be subtracted'
-                % (str(self.camera.background.shape), str(data.shape)))
+                % (str(background.shape), str(data.shape)))
 
         # try:
         #     if (self.camera._current_x_axis is None or
@@ -1955,7 +2204,7 @@ class CaptureThread(QtCore.QThread):
         self.camera.isAborted = False
 
     def SingleAcquire(self):
-        self.camera.CurImage = self.camera.raw_snapshot()
+        self.camera.raw_snapshot()  # self.camera.CurImage =
 
         # if self.camera.parameters['AcquisitionMode']['value'] in [1, 2] and self.camera.parameters['NKin']['value'] > 1:
         #     if self.camera.parameters['SoftwareWaitBetweenCaptures']['value']:
@@ -2008,8 +2257,8 @@ class WaitThread(QtCore.QThread):
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
-    pvcam = Pvcam(0)
-
+    # pvcam = Pvcam(0)
+    # print pvcam.get_camera_parameter("PARAM_EXP_TIME")
     # print pvcam._devname
     # print pvcam._readout_rates
     # print pvcam._min_res
@@ -2034,4 +2283,16 @@ if __name__ == '__main__':
     # axs[1].imshow(array)
     # plt.show()
 
-    pvcam.show_gui(blocking=True)
+    # array = pvcam.raw_snapshot()
+    # print array
+    # print array.tolist()
+    # print(len(array.tolist()))
+
+    # pvcam.show_gui(blocking=True)
+
+
+    address = ("localhost", 9999)
+    server = PvcamServer(0, address)
+    server.serve_forever()
+
+    # client = PvcamClient(address)
