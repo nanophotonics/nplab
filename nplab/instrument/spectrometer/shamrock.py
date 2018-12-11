@@ -10,8 +10,7 @@ Created on Fri Apr 10 08:43:56 2015
 # - accessoires
 # - output slit
 # - Shutter
-
-
+import platform
 
 from ctypes import *
 import time
@@ -24,12 +23,20 @@ class Shamrock(Instrument):
     def __init__(self):
         super(Shamrock,self).__init__()
         #for Windows
-        self.dll2 = CDLL("C:\\Program Files\\Andor SOLIS\\Drivers\\Shamrock64\\atshamrock")
-        self.dll = CDLL("C:\\Program Files\\Andor SOLIS\\Drivers\\Shamrock64\\ShamrockCIF")
-        
-        tekst = c_char()        
-        error = self.dll.ShamrockInitialize(byref(tekst))
-        
+        architecture = platform.architecture()
+
+        if architecture[0] == "64bit":
+            self.dll2 = CDLL("C:\\Program Files\\Andor SOLIS\\Drivers\\Shamrock64\\atshamrock")
+            self.dll = CDLL("C:\\Program Files\\Andor SOLIS\\Drivers\\Shamrock64\\ShamrockCIF")
+            tekst = c_char()        
+            error = self.dll.ShamrockInitialize(byref(tekst))
+
+        elif architecture[0] == "32bit":
+            self.dll2 = WinDLL("C:\\Program Files\\Andor SDK\\Shamrock\\atshamrock.dll")
+            self.dll = WinDLL("C:\\Program Files\\Andor SDK\\Shamrock\\ShamrockCIF.dll")
+            tekst = c_char_p("")     
+            error = self.dll.ShamrockInitialize(tekst)
+            
         self.current_shamrock = 0 #for more than one Shamrock this has to be varied, see ShamrockGetNumberDevices
         self.center_wavelength = 0.0
 
@@ -308,3 +315,12 @@ class ShamrockControlUI(QuickControlBox):
         self.controls['GratingInfo'].setReadOnly(True)
         self.auto_connect_by_name(controlled_object = self.shamrock)
     
+if __name__ == "__main__":
+
+    from nplab.ui.ui_tools import *
+    from nplab.utils.gui import *
+    app = get_qt_app()
+    s = Shamrock() 
+    ui = ShamrockControlUI(shamrock=s)
+    ui.show()
+    sys.exit(app.exec_())

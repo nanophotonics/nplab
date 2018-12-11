@@ -1509,4 +1509,4 @@ if __name__ == '__main__':
 
     ui1.show()
     ui2.show()
-    # andor.show_gui(True)
+    andor.show_gui(True) 
