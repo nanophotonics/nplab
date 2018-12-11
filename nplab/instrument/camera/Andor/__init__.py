@@ -1500,7 +1500,7 @@ ERROR_CODE = {
     20992: "DRV_NOT_AVAILABLE"
 }
 
-if __name__ == '__main__':
+def main():
     andor = Andor()  # wvl_to_pxl=32.5 / 1600, magnification=30, pxl_size=16)
     app = QtWidgets.QApplication([])
     ui1 = andor.get_control_widget()
@@ -1510,3 +1510,6 @@ if __name__ == '__main__':
     ui1.show()
     ui2.show()
     andor.show_gui(True) 
+
+if __name__ == '__main__':
+    main()

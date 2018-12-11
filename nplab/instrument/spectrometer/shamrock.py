@@ -19,6 +19,9 @@ from nplab.instrument import Instrument
 from nplab.utils.notified_property import NotifiedProperty
 from nplab.ui.ui_tools import QuickControlBox
 from nplab.utils.gui import QtWidgets
+from nplab.ui.ui_tools import *
+from nplab.utils.gui import *
+
 class Shamrock(Instrument):
     def __init__(self):
         super(Shamrock,self).__init__()
@@ -314,13 +317,15 @@ class ShamrockControlUI(QuickControlBox):
         self.add_lineedit('GratingInfo')
         self.controls['GratingInfo'].setReadOnly(True)
         self.auto_connect_by_name(controlled_object = self.shamrock)
-    
-if __name__ == "__main__":
 
-    from nplab.ui.ui_tools import *
-    from nplab.utils.gui import *
+def main():
+    
     app = get_qt_app()
     s = Shamrock() 
     ui = ShamrockControlUI(shamrock=s)
     ui.show()
     sys.exit(app.exec_())
+
+if __name__ == "__main__":
+    main()
+    
