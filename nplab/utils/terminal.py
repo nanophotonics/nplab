@@ -102,3 +102,9 @@ class QIPythonWidget(RichJupyterWidget):
     def execute_command(self, command):
         """ Execute a command in the frame of the console widget """
         self._execute(command, False)
+
+    def run_script(self, scriptname):
+        try:
+            self._execute('run -i scripts/%s' % scriptname, False)
+        except Exception as e:
+            print 'Failed because ', e
