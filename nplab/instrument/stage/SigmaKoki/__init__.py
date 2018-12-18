@@ -326,11 +326,11 @@ class SHOT(VisaInstrument, Stage):
 
         if not hasattr(counts, '__iter__'):
             counts = (counts, )
+        for count in counts:
+            if not (-16777214 <= count <= 16777214):
+                raise exceptions.ValueError('stage1 must be between -16777214 and 16777214.')
 
         if relative:
-            for count in counts:
-                if not (-16777214 <= count <= 16777214):
-                    raise exceptions.ValueError('stage1 must be between -16777214 and 16777214.')
             command = "M:"
         else:
             command = "A:"
@@ -466,6 +466,7 @@ class HIT(SerialInstrument, Stage):
 
     # TODO: add interpolation commands. They allow you to set a position in the plane of two axes and move towards it in a curved or straight path
     axis_names = map(str, range(8))
+    axis_LUT = dict(zip(map(str, range(8)), range(8)))
 
     def __init__(self, address, **kwargs):
 
@@ -490,28 +491,59 @@ class HIT(SerialInstrument, Stage):
         #     if kwargs['home_on_start']:
         #         self.MechanicalHome()
 
-    def move(self, counts, axes=None, relative=False):
-        assert -134217728 < counts < +134217727
+    def _axes_iterable(self, axes=None):
+        """
+        Given a list of axes names or axes numbers (can be mixed), returns an list of the corresponding axes numbers
+        using axis_LUT
 
+        :param axes: list of axes names or number (can be mixed)
+        :return:
+        """
         if axes is None:
-            axes = range(len(self.axis_names))
-        if not hasattr(counts, '__iter__'):
-            counts = (counts, )
+            axes = self.axis_names
         if not hasattr(axes, '__iter__'):
             axes = (axes, )
+        axes_iter = []
+        for ax in axes:
+            if ax in self.axis_LUT.keys():
+                axes_iter += [self.axis_LUT[ax]]
+            elif type(ax) == int:
+                axes_iter += [ax]
+            else:
+                raise ValueError("Unrecognised axis type: %s %s" % (ax, type(ax)))
+        return axes_iter
+
+    def move(self, counts, axes=None, relative=False, wait=True):
+        """
+
+        TODO: add units
+        :param counts: (int) number of motor steps. If iterable, should be same length as axes.
+        :param axes: list of axes
+        :param relative: (bool)
+        :return:
+        """
+        if axes is None:
+            axes = self.axis_names
+        elif not hasattr(axes, '__iter__'):
+            axes = (axes, )
+        if not hasattr(counts, '__iter__'):
+            counts = [counts] * len(axes)
+        for count in counts:
+            assert -134217728 < count < +134217727
+        counts = map(int, counts)
 
         if relative:
             command = 'M'
         else:
             command = 'A'
 
-        self.multi_axis_cmd(command, axes, counts, wait=True)
+        self.multi_axis_cmd(command, axes, counts, wait)
 
         # TODO: add checking for Stage limits using status +-LS
 
     def get_position(self, axes=None):
         if axes is None:
-            axes = range(len(self.axis_names))
+            axes = self._axes_iterable()
         all_positions = self.query("Q:").split(",")
         positions = []
         for ax in axes:
@@ -552,16 +584,22 @@ class HIT(SerialInstrument, Stage):
         return status
 
     def wait(self):
-        '''
+        """
         If any of the axes are in motion, wait.
-
         :return:
-        '''
+        """
         while '1' in self.query('!:'):
             time.sleep(0.1)
 
     @locked_action
     def write_check(self, command, wait=False):
+        """
+        Light wrapper providing error checking, locking and waiting
+
+        :param command: full serial command to send to device
+        :param wait: bool
+        :return:
+        """
         self.write(command)
 
         reply = self.readline()[:-1]  # excluding the \n termination
@@ -575,77 +613,70 @@ class HIT(SerialInstrument, Stage):
             return reply
 
     def multi_axis_cmd(self, command, axes, parameters, wait=False):
-        '''
-        Adds error checking to the write function
+        """
 
-        :param command: serial command to send to device
-        :param wait (bool): if True, calls self.wait before returning
+        :param command: command code to send to device
+        :param axes: list of axes
+        :param parameters: list of parameters to pass. If iterable, it passes each item to each of the axes. Otherwise it passes the same argument to all axes
+        :param wait: if True, calls self.wait before returning
         :return:
-        '''
-
+        """
         if not hasattr(axes, "__iter__"):
             axes = (axes,)
         if not hasattr(parameters, "__iter__"):
             parameters = [parameters] * len(axes)
-        self._logger.debug("Axes: ", axes, " Parameters: ", parameters)
+        if any([ax not in self.axis_LUT.keys() and ax not in self.axis_LUT.values() for ax in axes]):
+            raise ValueError("Unrecognised axes")
+        if len(parameters) != len(axes):
+            raise ValueError("Length of axes and parameters must be the same")
+
+        axes_iter = self._axes_iterable(axes)
+        self._logger.debug("Axes: ", axes, " axs_iter: ", axes_iter, " Parameters: ", parameters)
 
         argument_list = ['DUMMY']*8
-        for ax, param in zip(axes, parameters):
+        for ax, param in zip(axes_iter, parameters):
             argument_list[ax] = str(param)
         argument_string = ','.join(argument_list)
         argument_string = argument_string.replace('DUMMY', '')
         command += ':' + argument_string
-        self._logger.debug('Writing: %s' %command)
+        self._logger.debug('Writing: %s' % command)
 
         self.write_check(command, wait)
 
-        # reply = self.readline()[:-1]  # excluding the \n termination
-        #
-        # if reply == 'NG':
-        #     self._logger.warn('%s replied %s' % (command, reply))
-        # else:
-        #     if wait:
-        #         self.wait()
-        #     return reply
-
     def mechanical_home(self, axes):
-        '''
+        """
         This command is used to detect the mechanical origin for a stage and set that position as the origin. The moving
         speed S: 500pps, F:5000ps, R:200mS. Running a stop command suspends the operation. Any other commands are not
         acceptable.
-
         :param axes: list of axes
         :return:
-        '''
-
+        """
         self.multi_axis_cmd('H', axes, 1, wait=True)
 
     def set_home(self, axes):
         """
         Sets the origin to the current position.
+        :param axes: list of axes
+        :return:
         """
-        # cmnd = [0] * 8
-        # for ax in axes:
-        #     cmnd[ax] = 1
-
-        self.multi_axis_cmd('R', axes, [1]*len(axes))
+        self.multi_axis_cmd('R', axes, 1)
 
     def jog(self, directions, axes, timeout=2):
         """
         Moves stage continuously at jogging speed for specified length of time.
-        :param direction: either '+' or '-'
+        :param directions: a single value or iterable of either '+' or '-'
+        :param axes:
         :param timeout: in seconds
         :return:
         """
-        if not hasattr(directions, '__iter__'):
-            directions = (directions, )
-        if not hasattr(axes, '__iter__'):
-            axes = (axes,)
-        self.multi_axis_cmd('J', axes, directions)
-        t0 = time.time()
-        while time.time() - t0 < timeout:
-            time.sleep(0.1)
-        self.decelerate(axes)
+
+        # TODO: make the multi_axis_cmd non-blocking for this to work
+        raise NotImplementedError
+        # self.multi_axis_cmd('J', axes, directions)
+        # t0 = time.time()
+        # while time.time() - t0 < timeout:
+        #     time.sleep(0.1)
+        # self.decelerate(axes)
 
     def decelerate(self, axes):
         """
@@ -661,10 +692,11 @@ class HIT(SerialInstrument, Stage):
 
     def set_speed(self, axis, start_speed, max_speed, acceleration_time):
         """
-        Set minimum and maximum speeds and acceleration time.
-        :param minSpeed1: between 100 and 20000, in steps of 100 [PPS]
-        :param maxSpeed1: between 100 and 20000, in steps of 100 [PPS]
-        :param accelerationTime1: between 0 and 1000 [ms]
+
+        :param axis:
+        :param start_speed:  between 100 and 20000, in steps of 100 [PPS]
+        :param max_speed: between 100 and 20000, in steps of 100 [PPS]
+        :param acceleration_time: between 0 and 1000 [ms]
         :return:
         """
 
@@ -674,12 +706,15 @@ class HIT(SerialInstrument, Stage):
         if not (1 <= acceleration_time <= 1000):
             raise exceptions.ValueError('Must be 00 <= acceleration_time <= 1000.')
 
-        self.write_check('D:%d,%d,%d,%d' % (axis, start_speed, max_speed, acceleration_time))
+        axes = self._axes_iterable(axis)
+        for axis in axes:
+            self.write_check('D:%d,%d,%d,%d' % (axis, start_speed, max_speed, acceleration_time))
 
     def on_off(self, axes, on_off=None):
         """
         Turn motor on/off
-        :param stage1: True (on) or False (off)
+        :param axes:
+        :param on_off: True (on) or False (off)
         :return:
         """
         if on_off is None:
