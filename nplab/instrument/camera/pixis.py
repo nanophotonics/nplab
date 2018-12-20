@@ -27,12 +27,32 @@ import numpy as np
 from matplotlib import pyplot as plt
 from nplab.instrument.camera import Camera
 import sys,os
+from picam_constants import PicamError
 
 PARENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 class clsPicamReadoutStruct(ct.Structure):
     _fields_ = [("ptr", ct.c_void_p),
                 ("intCount", ct.c_int64)]
+
+# class clsPicamConstraintScope(ct.Structure):
+#     #TODO
+
+# class clsPicamConstraintSeverity(ct.Structure):
+#     #TODO
+
+class clsPicamRangeConstraint(ct.Structure):
+    _fields_ = [("scope", ct.c_int),
+                ("severity", ct.c_int),
+                ("empty_set",ct.c_bool),
+                ("minimum",ct.c_float),
+                ("maximum",ct.c_float),
+                ("increment",ct.c_float),
+                ("excluded_values_array",ct.c_float*10),
+                ("excluded_values_count",ct.c_int),
+                ("outlying_values_array",ct.c_float*10),
+                ("outlying_values_count",ct.c_int)
+            ]
 
 class Pixis(Camera):
     def __init__(self,with_start_up = False):
@@ -97,10 +117,11 @@ class Pixis(Camera):
         parameter: integer number identifying parameter to fetch
             where to look these up? - not sure
         '''
-        cint_temp = ct.c_int()
-        if self.picam.Picam_GetParameterIntegerValue(
-                self.CameraHandle, parameter, ct.byref(cint_temp)) != 0:
+        cint_temp = ct.c_int(-1)
+        response = self.picam.Picam_GetParameterIntegerValue(self.CameraHandle, parameter, ct.byref(cint_temp))
+        if response != 0:
             print("Could not determine value of parameter {0} [label:{1}]".format(parameter,label))
+            print("[Code:{0}] {1}".format(response, PicamError[response]))
             return np.nan
         return cint_temp.value
 
@@ -114,6 +135,7 @@ class Pixis(Camera):
             print("Could not find picam dll")
             return
         # Initialise library
+
         bolInitialised = ct.c_bool(False)
         if self.picam.Picam_InitializeLibrary() != 0:
             print("Could not initialise library")
@@ -129,7 +151,7 @@ class Pixis(Camera):
             return
         self.x_max = self.FrameWidth = self.get_parameter(parameter=16842811, label="frame width")
         self.y_max = self.FrameHeight = self.get_parameter(parameter=16842812, label="frame height")
-        
+        print "Frame size:", self.x_max, self.y_max
         self.bolRunning = True 
     
     def ShutDown(self):
@@ -143,14 +165,62 @@ class Pixis(Camera):
             return
         self.bolRunning = False
         
-    def SetExposureTime(self,time): 
+    def SetExposureTime(self,time):
+        print "SetExposureTime--"
+        PARAMETER=33685527
         # Exposure time is measured in ms
-        cint_temp = ct.c_int(time)  
         if self.bolRunning == False:
             self.StartUp
-        response = self.picam.Picam_SetParameterIntegerValue(self.CameraHandle, 33685527, cint_temp)# ct.byref(cint_temp))    
-        if response != 0:
-            print("Could not set exposure time. Error code: {0}".format(response))
+
+        value = ct.c_double()
+        response = self.picam.Picam_GetParameterFloatingPointValue(self.CameraHandle, PARAMETER,ct.byref(value))
+        print "Get",response,value
+
+        value = ct.c_double()
+        response = self.picam.Picam_GetParameterFloatingPointDefaultValue(self.CameraHandle, PARAMETER,ct.byref(value))
+        print "GetDefault",response,value
+
+        # value = (clsPicamRangeConstraint*1)()
+        # print "constraint:",value
+        # response = self.picam.Picam_GetParameterRangeConstraint(self.CameraHandle, PARAMETER,3,ct.byref(value))
+        # print "Range",response,
+        # print "Range..."
+        # for v in list(value):
+        #     print v.severity
+        #     print v.empty_set
+        #     print v.increment
+        #     print v.minimum
+        #     print v.maximum
+
+        value = ct.c_double(time)
+        response = self.picam.Picam_SetParameterFloatingPointValue(self.CameraHandle, PARAMETER,value)
+        print "Set",response,value
+
+        failed_commit = (ct.c_int*10)()
+        failed_count = ct.c_int() 
+        response = self.picam.Picam_CommitParameters(self.CameraHandle,ct.byref(failed_commit),ct.byref(failed_count))
+        print "Commit:",response, failed_count, list(failed_commit)
+
+        committed = ct.c_bool(False)
+        response = self.picam.Picam_AreParametersCommitted(self.CameraHandle,ct.byref(committed))
+        print "AreCommit:",response, committed
+
+        
+        value = ct.c_double()
+        response = self.picam.Picam_GetParameterFloatingPointValue(self.CameraHandle, PARAMETER,ct.byref(value))
+        print "Get",response,value
+        
+        # value = ct.c_int(-1)
+        # print "Before:", value
+        # print "GetParameterIntegerValue response",response,value
+        # response_value = ct.c_int(-1)
+        # print "Response before:", response_value
+        # response = self.picam.Picam_CanSetParameterIntegerValue(self.CameraHandle, ct.c_int(PARAMETER),cint_temp,ct.byref(response_value))
+
+        # print "Exit code:",response,"Settable",response_value    
+        # response = self.picam.Picam_SetParameterIntegerValue(self.CameraHandle, 33685527,ct.byref(cint_temp))    
+        # if response != 0:
+        #     print("Could not set exposure time. Error code: {0}".format(response))
         
     def GetExposureTime(self):
         
@@ -188,9 +258,24 @@ class Pixis(Camera):
 if __name__ == "__main__":
     
     p = Pixis()
-    
-    p.SetExposureTime(10)
+    p.StartUp()
+    # print p.GetExposureTime()
+    p.SetExposureTime(50.0)
     _,Frame = p.raw_snapshot()
+    
+    p.SetExposureTime(100.0)
+    _,Frame = p.raw_snapshot()
+    
+    p.SetExposureTime(200.0)
+    _,Frame = p.raw_snapshot()
+    
+    p.SetExposureTime(400.0)
+    _,Frame = p.raw_snapshot()
+    
+    p.SetExposureTime(800.0)
+    _,Frame = p.raw_snapshot()
+    
+
     p.ShutDown()
     
     plt.imshow(Frame, cmap='gray')
