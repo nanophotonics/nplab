@@ -111,7 +111,7 @@ class Pixis(Camera):
         
         if self.debug > 0:
             print "Function name:",function_name
-            print "Function object", f
+            # print "Function object", f
         
         getter = getattr(self.picam,function_name)
         temp =  {
@@ -163,17 +163,18 @@ class Pixis(Camera):
         
 
         function_name = "Picam_SetParameter{}Value".format(param_type.replace("PicamValueType_",""))
-        
+        setter = getattr(self.picam,function_name)
+        # setter = self.picam.Picam_SetParameterFloatingPointValue
         if self.debug > 0:
             print "Function name:",function_name
-            print "Function object", f
+            print "Paramer type, Constraint type, n:", param_type, constraint_type, n
+            print "Function object", setter
         
-        setter = getattr(self.picam,function_name)
         temp =  {
             "PicamValueType_Integer" : ct.c_int,
             "PicamValueType_Boolean" : ct.c_bool,
             "PicamValueType_LargeInteger" : ct.c_long,
-            "PicamValueType_FloatingPoint" : ct.c_float,
+            "PicamValueType_FloatingPoint" : ct.c_double, #WARNING - THIS SHOULD BE A DOUBLE (64bit), NOT FLOAT (32bit) [for 32bit change to float]
             "PicamValueType_Enumeration": None, #TODO 
             "PicamValueType_Rois": None, #TODO
             "PicamValueType_Pulse": None, #TODO
@@ -181,9 +182,12 @@ class Pixis(Camera):
         }
         
         #allocate memory for parameter for DLL to populate
-        value = temp[param](parameter_value)
+        value = temp[param_type](parameter_value)
 
         if value is not None:
+            if self.debug > 0:
+                print "setting: param_id:  {0}, value:{1}".format(param_id,value)
+
             response = setter(self.CameraHandle,param_id, value)
             if response != 0:
                 print("Could not SET value of parameter {0} [label:{1}]".format(parameter,label))
@@ -240,8 +244,9 @@ class Pixis(Camera):
         if self.picam.Picam_OpenFirstCamera(ct.byref(self.CameraHandle)) != 0:
             print("Could not find camera")
             return
-        self.x_max = self.FrameWidth = self.get_parameter(parameter=16842811, label="frame width")
-        self.y_max = self.FrameHeight = self.get_parameter(parameter=16842812, label="frame height")
+
+        self.x_max = self.FrameWidth = self.get_parameter(parameter_name="PicamParameter_SensorActiveWidth", label="frame width")
+        self.y_max = self.FrameHeight = self.get_parameter(parameter_name="PicamParameter_SensorActiveHeight", label="frame height")
         print "Frame size:", self.x_max, self.y_max
         self.bolRunning = True 
     
@@ -260,14 +265,14 @@ class Pixis(Camera):
         
         param_name = "PicamParameter_ExposureTime"        
         param_value = time #in milliseconds
-        self.set_parameter(parameter_name=param_name,parameter_value=parameter_value)
+        self.set_parameter(parameter_name=param_name,parameter_value=param_value)
         
         
     def GetExposureTime(self):
         param_name = "PicamParameter_ExposureTime"        
         return self.get_parameter(parameter_name=param_name)
         
-        return self.get_parameter(parameter=33685527, label="exposure time")
+        # return self.get_parameter(parameter=33685527, label="exposure time")
     
     def GetCurrentFrame(self):
         
@@ -296,25 +301,29 @@ class Pixis(Camera):
         
 if __name__ == "__main__":
     
-    p = Pixis(debug=0)
+    p = Pixis(debug=1)
     p.StartUp()
 
     print p.GetExposureTime()
     p.SetExposureTime(50.0)
     _,Frame = p.raw_snapshot()
-    
+    print p.GetExposureTime()
+
     p.SetExposureTime(100.0)
     _,Frame = p.raw_snapshot()
+    print p.GetExposureTime()
     
     p.SetExposureTime(200.0)
     _,Frame = p.raw_snapshot()
-    
+    print p.GetExposureTime()
+
     p.SetExposureTime(400.0)
     _,Frame = p.raw_snapshot()
+    print p.GetExposureTime()
     
     p.SetExposureTime(800.0)
     _,Frame = p.raw_snapshot()
-    
+    print p.GetExposureTime()
 
     p.ShutDown()
     
