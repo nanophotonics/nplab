@@ -10,11 +10,11 @@ def get_window(N, window_type ="hamming"):
 	elif window_type == "hann":
 		return scipy.signal.hann(N,sym=False)
 
-def correlation_align(signal_0,signal_1,upsampling=1.0):
+def correlation_align(signal_0,signal_1,upsampling=1.0,return_integer_shift=True):
 	#Returns the shift (integer) which signal_1 must be moved to 
 	#Align it with signal_0. Upsampling used to provide higher resolution.
 	N = signal_0.shape[0]
-	assert(signal_0.shape==signal_1.shape)
+	# assert(signal_0.shape==signal_1.shape)
 
 	if upsampling > 1.0:
 		signal_0 = scipy.signal.resample(signal_0,int(np.round(N*upsampling)))
@@ -22,10 +22,15 @@ def correlation_align(signal_0,signal_1,upsampling=1.0):
 		N = int(np.round(N*upsampling))
 
 	xcorr = scipy.signal.correlate(signal_0,signal_1,mode="same", method="fft")
-	full_precision_shift = shift = int(np.round(N/2.0))-np.argmax(xcorr)
-	integer_shift = int(np.round(shift/float(upsampling)))
-	return integer_shift,xcorr
+	full_precision_shift = shift = (np.round(N/2.0)-np.argmax(xcorr))/float(upsampling)
+	integer_shift = int(np.round(shift))
+	if return_integer_shift == True:
+		return integer_shift,xcorr
+	else:
+		return full_precision_shift,xcorr
 
+def overlap_align(signal_0, signal_1):
+	pass
 
 def demo():
 	N = 1014
