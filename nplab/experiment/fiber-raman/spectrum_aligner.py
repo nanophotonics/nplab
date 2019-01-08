@@ -42,6 +42,7 @@ def least_squares(xs,ys):
 	m,_,_,_ = np.linalg.lstsq(xs_augmented,ys)
 	return m
 
+
 def merge_spectra(ys0,ys1,shift):
 	shift = np.abs(shift)
 	ys0 = np.array(ys0)
@@ -61,7 +62,7 @@ def merge_spectra(ys0,ys1,shift):
 	
 	ys1 =np.concatenate((ys1_pad,ys1),axis=1)
 	outp = np.vstack((ys0,ys1))
-	return outp 
+	return outp, relative_shift
 
 def apply_function(data_matrix, functions):
 	spectrum = np.zeros((len(functions),data_matrix.shape[1]))
@@ -175,16 +176,36 @@ def load_reference_data(reference_file,lower_wavelength,upper_wavelength, debug 
 		ax3.set_title("Reference spectrum,\n Wavelength lower bound:{0}\n Wavelength upper bound:{1}".format(lower_wavelength,upper_wavelength))
 	return ref_xs, ref_ys
 
-def median_spectrum(data,debug=0):
+def plot_layers(center_wavelengths, data,mapper,show_plot=True):
+	fig, ax = plt.subplots(1)
+	for i in range(len(data)):
+		center_wl, ys = data[i][0], data[i][2]
+		xs = range(len(ys)) 
+		
+		ys = ys - np.nanmin(ys)
+		ys = i + (ys/(1.1*np.nanmax(ys))) 
+		wls = [mapper(center_wl,x) for x in range(len(ys))]
+		plt.plot(wls,ys,color="blue")
+	if show_plot == True:
+		plt.show()
+
+def make_data_matrix(data):
 	spectra = [d[2] for d in data]
 	#Compute shifts between each spectrum
 	shifts_indices, ys_shift = compute_shifts(spectra,debug=0)
-	
 	data_matrix = np.array([data[0][2]])
+	relative_shifts = []
 	for i in range(1,len(data)):
 		ys1 = [data[i][2]]
-		data_matrix = merge_spectra(data_matrix,ys1,ys_shift[i])
-		# print ys0.shape
+		data_matrix,relative_shift = merge_spectra(data_matrix,ys1,ys_shift[i])
+		relative_shifts = relative_shifts + [relative_shift]
+	# absolute_offsets = [relative_shifts[0:i]) for i in range(len(relative_shifts))]
+	return relative_shifts, data_matrix
+		
+def median_spectrum(data,debug=0):
+	
+	absolute_offsets, data_matrix = make_data_matrix(data)
+	absolute_offsets = [0] + absolute_offsets 		# print ys0.shape
 
 	if debug > 0:
 		fig2, axarr2 = plt.subplots(2)
@@ -215,20 +236,13 @@ def median_spectrum(data,debug=0):
 	center_wavelengths = [d[0] for d in data]
 	
 	def pixel_to_index_map_generator(debug = 0):
-		assert(data_matrix.shape[0] == len(center_wavelengths))
-		N = data_matrix.shape[0]
-		offsets = []
-		for i in range(0,N):
-			in_matrix_offset = np.min(np.nonzero(data_matrix[i,:]))
-			offsets = offsets + [in_matrix_offset]
-
-		print offsets
-		center_to_offset = interp1d(center_wavelengths,offsets)
-		def pixel_to_index(center_wavelength,pixel_number):
-			offset = center_to_offset(center_wavelength) 
-			return offset + pixel_number
+		center_to_offset = interp1d(center_wavelengths,absolute_offsets)
 		
-		return pixel_to_index
+		def mapper_1(center_wavelength,pixel_index):
+			offset = int(np.round(center_to_offset(center_wavelength))) 
+			return offset + pixel_index
+		
+		return mapper_1
 
 	pixel_to_index = pixel_to_index_map_generator()
 	
@@ -265,10 +279,10 @@ def rescale_reference(xs,ys,max_size,N,debug=0):
 	ys = resample(ys,N)
 
 	#Resample the wavelength scale as well:
-	ref_xs = resample(xs,N)
+	xs = resample(xs,N)
+
 	[gradient, offset] = least_squares(range(0,len(xs)),xs)
 	if debug > 0:
-		print "MODEL FIT:", m
 	
 		fig, ax = plt.subplots(1)
 		ax.plot(xs)
@@ -334,7 +348,7 @@ def link_peaks(signal_peaks, reference_peaks, ignored_signal_indices,ignored_ref
 	return interpolator_function,bounds,lines  
 		
 
-def main(debug=1):
+def main(debug=0):
 	#Measurements and Calibration files
 	measurement_file = df.DataFile("measured_spectrum.hdf5","r")
 	reference_file = df.DataFile("maxwell_room_light_spectrum_calibration.hdf5","r")
@@ -345,6 +359,7 @@ def main(debug=1):
 	#Load measured data from file
 	data = load_measured_data(measurement_file)
 
+	center_wavelengths = [d[0] for d in data]
 	#Load the raw counts from the measured data 
 
 	#Merge individual spectra (using median) and normalise to set minimum value to zero
@@ -357,8 +372,9 @@ def main(debug=1):
 	signal_spectrum,_,_ = convex_smooth(signal_spectrum,1.0)
 
 	#rescale the reference and fit a line to the wavelength range [nm]
- 	ref_xs,ref_ys, gradient, offset = rescale_reference(xs=ref_xs,ys=ref_ys,max_size=np.nanmax(signal_spectrum),N=len(signal_spectrum),debug=0)
+ 	ref_xs,ref_ys, gradient, offset = rescale_reference(xs=ref_xs,ys=ref_ys,max_size=np.nanmax(signal_spectrum),N=len(signal_spectrum),debug=1)
 	
+
 	#Get peaks from the signal, with thresholding to eliminate low order maxima/minima
 	signal_peaks = get_peaks(signal_spectrum,threshold =1.0)
 	ref_peaks = get_peaks(ref_ys,threshold =2.0)
@@ -406,18 +422,38 @@ def main(debug=1):
 		plt.plot(xs,ys)
 
 		fig, ax = plt.subplots(1)
-		ax.plot([index_to_wavelength(x,with_correction=False) for x in range(len(ref_ys))],ref_ys,label="Reference spectrum (rescaled)")
+
+		wavelengths_reference = [index_to_wavelength(x,with_correction=False) for x in range(len(ref_ys))]
+		ax.plot(wavelengths_reference,ref_ys,label="Reference spectrum (rescaled)")
 		xs = range(interpolator_bounds[0],interpolator_bounds[1])
-		ax.plot([index_to_wavelength(x) for x in xs],[signal_spectrum[x] for x in xs],label="Stitched signal (corrected)")
+
+		ax.plot([index_to_wavelength(x,with_correction=True) for x in xs],[signal_spectrum[x] for x in xs],label="Stitched signal (corrected)")
 		ax.plot([index_to_wavelength(x,with_correction=False) for x in xs],[signal_spectrum[x] for x in xs],alpha=0.4,label="Stitched signal (uncorrected)")
-		
+		ax.set_ylim(0)
+
+		ax.set_xlabel("Wavelength [nm]")
+		ax.set_ylabel("Intensity (arb. units)")
+		ax.set_title("Alignment to reference spectrum\n Reference: Ocean Optics Spectrometer\n Signal: Acton+Pixis")
 		ax.legend()
+
+		
+	# mapper_1 : maps from (center_wavelength, pixel_index) to index in spectrum array
+	# mapper_2 : maps from index in spectrum array to wavelenegth
+	def mapper(center_wavelength, pixel_index):
+		try:
+			array_index = mapper_1(center_wavelength,pixel_index)
+			wavelength= mapper_2(array_index)
+			return wavelength
+		except:
+			return np.nan
+
+	if debug> 0:
 
 		plt.show()
 
-	# mapper_1 : maps from (center_wavelength, pixel_index) to index in spectrum array
-	# mapper_2 : maps from index in spectrum array to wavelenegth
-	
-	return mapper_1,mapper_2
+	#This tests the data
+	plot_layers(center_wavelengths, data,mapper,show_plot=True)
+	return mapper
 
-main()
+
+mapper = main()
