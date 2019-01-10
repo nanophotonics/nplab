@@ -75,8 +75,8 @@ class Triax(VisaInstrument):
             
         Steps=self.Motor_Steps() #Check grating position
             
-        if self.Grating_Number+1>len(self.Calibration_Arrays): #Check calibration exists
-            if len(self.Calibration_Arrays)==0 or len(self.Calibration_Arrays[self.Grating])==0:
+        if self.Grating_Number>=len(self.Calibration_Arrays): #Check calibration exists
+            if len(self.Calibration_Arrays)==0 or len(self.Calibration_Arrays[self.Grating_Number])==0:
                 return Pixel_Array
             else:
                 raise ValueError('Current grating is not calibrated! No calibration supplied!')
@@ -99,7 +99,7 @@ class Triax(VisaInstrument):
         Function to return the required motor step value that would place a given Wavelength on a given Pixel of the CCD
         """
 
-        if self.Grating_Number+1>len(self.Calibration_Arrays): #Check calibration exists
+        if self.Grating_Number>=len(self.Calibration_Arrays): #Check calibration exists
             raise ValueError('Current grating is not calibrated! No calibration supplied!')
         
         #Perform Conversion
