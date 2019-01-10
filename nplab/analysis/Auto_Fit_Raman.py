@@ -14,7 +14,7 @@ Input is the 1D apectrum array. Shift is the correspodning array of Raman shifts
 The function runs as follows:
 
 A gaussian smooth of width Smoothing_Factor is applied. Local maxima are identifed in this smoothed spectrum and the heights of these possible peaks in the raw spectra 
-are found. The noise level is estimated as the standard devation of the differential of the raw spectrum (iffy for spetcra with dense peaks). Possible peaks with heights
+are found. The noise level is estimated as the standard devation of the differential of the raw spectrum (iffy for spectra with dense peaks). Possible peaks with heights
 below Noise_Threshold*the noise level are discarded. The smoothed signal is fit to all potential peaks (as Lorentzians) and a constant background. If the fit fails
 (doesn't converge, peaks below noise, peaks not spectrally resolved etc) using all N peaks, all combinations of N-1 peaks are tested and so on. The fitting results
 are fit to the raw spectrum.
