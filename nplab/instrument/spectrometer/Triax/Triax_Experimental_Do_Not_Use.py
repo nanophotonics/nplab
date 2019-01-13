@@ -16,7 +16,7 @@ This is the base class for the Triax spectrometer. This should be wrapped for ea
 class Triax(VisaInstrument):
     metadata_property_names = ('wavelength', )
 
-    def __init__(self, Address, Calibration_Data=[],Iterative_Calibration_Steps=0):  
+    def __init__(self, Address, Calibration_Data=[], Maximum_Calibration_Iterations=20, Calibration_Iteration_Threshold=1e-5):  
         """
         Initialisation function for the triax class. Address in the port address of the triax connection.
 
@@ -50,15 +50,18 @@ class Triax(VisaInstrument):
             self.Spline_Data.append([i[0]])
             for j in i[1:]:
                 self.Spline_Data[-1].append([])
-                for k in range(len(self.Spline_Data[0]))[1:-1]:
+                for k in range(len(self.Spline_Data[-1][0]))[1:-1]:
                     self.Spline_Data[-1][-1].append(np.polyfit(self.Spline_Data[-1][0][k-1:k+2],j[k-1:k+2],2))
 
-        self.Iterative_Calibration_Steps=Iterative_Calibration_Steps
+        self.Maximum_Calibration_Iterations=Maximum_Calibration_Iterations
+        self.Calibration_Iteration_Threshold=Calibration_Iteration_Threshold
 
         print 'This Triax spectrometer is calibrated for use over the following ranges:'
         for i in range(len(Calibration_Data)):
             if isinstance(Calibration_Data[i],list)==True and len(Calibration_Data[i])==4:
                 print 'Grating',i,':',np.min(Calibration_Data[i][0]),'nm - ',np.max(Calibration_Data[i][0]),'nm'
+
+
 
 
     def Grating(self, Set_To=None):
@@ -87,24 +90,24 @@ class Triax(VisaInstrument):
         """
         Returns the current rotation of the grating in units of steps of the internal stepper motor
         """
+
         self.write("H0\r")
         return int(self.read()[1:])
 
     def Iterate_Pixels_to_Wavelengths(self,Pixel_Array,Steps,Current_Wavelength_Estimation_Array):
-        Spline_Data=self.Calibration_Data[self.Grating_Number] #[Calibration_Wavelength,Square_Coefficents,Linear_Coefficents,Constant_Coefficents]
+        Spline_Data=self.Spline_Data[self.Grating_Number] #[Calibration_Wavelength,Square_Coefficents,Linear_Coefficents,Constant_Coefficents]
         
         #Split wavelength array into different regions of the quadratic spline
 
         Coefficent_Blocks=[]
         for i in range(len(Spline_Data[1])):
             Coefficent_Blocks.append(np.array([Spline_Data[1][i],Spline_Data[2][i],Spline_Data[3][i]]))
-        #Coefficent_Blocks=[Coefficent_Blocks[0]]+Coefficent_Blocks+[Coefficent_Blocks[-1]]
 
         Chunks=[]
         Counter=0
         while Counter<len(Current_Wavelength_Estimation_Array):
             Region=0
-            while Region<len(Spline_Data[0]) and Spline_Data[0][n]<Current_Wavelength_Estimation_Array[Counter]:
+            while Region<len(Spline_Data[0]) and Spline_Data[0][Region]<Current_Wavelength_Estimation_Array[Counter]:
                 Region+=1
             if Region==0:
                 Start=-np.inf
@@ -122,21 +125,25 @@ class Triax(VisaInstrument):
 
         Changing_Coefficents=[]
         for i in Chunks:
+           # print i
             Chunk=np.array(Current_Wavelength_Estimation_Array[i[1]:i[2]])
             if i[0]<=1:
-                Chunk*=0
-                Chunk+=1
-                Changing_Coefficents+=(Chunk*Coefficent_Blocks[0]).tolist()
+                for q in Chunk:
+                    Changing_Coefficents.append(Coefficent_Blocks[0])
             elif i[0]>=len(Spline_Data)-1:
-                Chunk*=0
-                Chunk+=1
-                C hanging_Coefficents+=(Chunk*Coefficent_Blocks[-1]).tolist()
+                 for q in Chunk:
+                    Changing_Coefficents.append(Coefficent_Blocks[-1])
             else:
                 Chunk-=Spline_Data[0][i[0]-1]
                 Chunk/=Spline_Data[0][i[0]]-Spline_Data[0][i[0]-1]
-                Changing_Coefficents+=((1-Chunk)*Coefficent_Blocks[i[0]-1]+Chunk*Coefficent_Blocks[i[0]]).tolist()
+                for q in Chunk:
+                    Changing_Coefficents.append((1-q)*Coefficent_Blocks[i[0]-2]+q*Coefficent_Blocks[i[0]-1])
 
-        return Changing_Coefficents
+        Changing_Coefficents=np.array(Changing_Coefficents)
+
+        Coefficents=np.transpose(np.sum(Changing_Coefficents*np.array([[Steps**2],[Steps],[1]]).astype(np.float64),axis=1))
+
+        return (-Coefficents[1]+np.sqrt((Coefficents[1]**2)-(4*Coefficents[0]*(Coefficents[2]-Pixel_Array))))/(2*Coefficents[0])
 
 
     def Convert_Pixels_to_Wavelengths(self,Pixel_Array):
@@ -162,6 +169,13 @@ class Triax(VisaInstrument):
 
         if len(Coefficents)==3:
             Lambda=(-Coefficents[1]+np.sqrt((Coefficents[1]**2)-(4*Coefficents[0]*(Coefficents[2]-Pixel_Array))))/(2*Coefficents[0])
+            End=False
+            Counter=0
+            while End is False and Counter<self.Maximum_Calibration_Iterations:
+                New_Lambda=self.Iterate_Pixels_to_Wavelengths(Pixel_Array,Steps,Lambda)
+                if np.max(np.abs(New_Lambda-Lambda))<self.Calibration_Iteration_Threshold:
+                    End=True
+                Lambda=New_Lambda
             return Lambda
         if len(Coefficents)==2:
             return (Pixel_Array-Coefficents[1])/Coefficents[0]
