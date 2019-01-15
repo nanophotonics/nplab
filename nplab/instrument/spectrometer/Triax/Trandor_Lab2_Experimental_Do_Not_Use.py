@@ -2,7 +2,7 @@
 jpg66
 """
 
-from nplab.instrument.spectrometer.Triax.Triax_Experimental_Do_Not_Use import Triax
+from nplab.instrument.spectrometer.Triax.__init__ import Triax
 import numpy as np
 from nplab.utils.notified_property import NotifiedProperty
 from nplab.instrument.camera.Andor import Andor
