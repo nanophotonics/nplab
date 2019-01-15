@@ -19,7 +19,7 @@ class Triax(VisaInstrument):
         Initialisation function for the triax class. Address in the port address of the triax connection.
 
         For each grating, a list of wavelengths used for calibration (in acending order) is put into Calibration Data, 
-        followed by experimental data points for each quadratic coefficient. 
+        followed by experimental data points for each quadratic coefficient. Pass an empty list to just get the pixel array back for that grating.
 
         CCD_Horizontal_Resolution is an integer for the horizontal size of the camera used with the triax.
 
