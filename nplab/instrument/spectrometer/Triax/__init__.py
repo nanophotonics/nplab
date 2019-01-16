@@ -14,7 +14,7 @@ This is the base class for the Triax spectrometer. This should be wrapped for ea
 class Triax(VisaInstrument):
     metadata_property_names = ('wavelength', )
 
-    def __init__(self, Address, Calibration_Data=[], CCD_Horizontal_Resolution, Maximum_Calibration_Iterations=20, Calibration_Iteration_Threshold=1e-5):  
+    def __init__(self, Address, Calibration_Data=[], CCD_Horizontal_Resolution=2000, Maximum_Calibration_Iterations=20, Calibration_Iteration_Threshold=1e-5):  
         """
         Initialisation function for the triax class. Address in the port address of the triax connection.
 
@@ -29,10 +29,9 @@ class Triax(VisaInstrument):
         
         #--------Attempt to open communication------------
 
-        try:
+        #try:
 
         VisaInstrument.__init__(self, Address, settings=dict(timeout=4000, write_termination='\n'))
-        
         Attempts=0
         End=False
         while End is False:
@@ -45,8 +44,8 @@ class Triax(VisaInstrument):
                 if Attempts==5:
                     raise Exception('Triax communication error!')
 
-        except:
-            raise Exception('Triax communication error!')
+       # except:
+            #raise Exception('Triax communication error!')
 
         #----Generate initial 3x3 calibration arrays for the gratings used for initial estimate of wavelengths on each CCD pixel--------
         
@@ -63,11 +62,13 @@ class Triax(VisaInstrument):
 
         self.Spline_Data=[]   
         for i in Calibration_Data:
-            self.Spline_Data.append([i[0]])
-            for j in i[1:]:
-                self.Spline_Data[-1].append([])
-                for k in range(len(self.Spline_Data[-1][0]))[1:-1]:
-                    self.Spline_Data[-1][-1].append(np.polyfit(self.Spline_Data[-1][0][k-1:k+2],j[k-1:k+2],2))
+            self.Spline_Data.append([])
+            if isinstance(i,list)==True and len(i)==4:
+                self.Spline_Data[-1].append(i[0])
+                for j in i[1:]:
+                    self.Spline_Data[-1].append([])
+                    for k in range(len(self.Spline_Data[-1][0]))[1:-1]:
+                        self.Spline_Data[-1][-1].append(np.polyfit(self.Spline_Data[-1][0][k-1:k+2],j[k-1:k+2],2))
 
         self.Maximum_Calibration_Iterations=Maximum_Calibration_Iterations
         self.Calibration_Iteration_Threshold=Calibration_Iteration_Threshold
@@ -112,7 +113,10 @@ class Triax(VisaInstrument):
             time.sleep(1)
             self.waitTillReady()
             self.Grating_Number = Set_To
-            self.Wavelength_Array=self.Convert_Pixels_to_Wavelengths(np.array(range(self.Number_of_Pixels))) #Update wavelength array
+            try:
+                self.Wavelength_Array=self.Convert_Pixels_to_Wavelengths(np.array(range(self.Number_of_Pixels))) #Update wavelength array
+            except:
+                Dump=1
 
     def Motor_Steps(self):
         """
@@ -204,19 +208,22 @@ class Triax(VisaInstrument):
         Coefficents*=Step_Array
         Coefficents=np.sum(Coefficents,axis=1)
 
-        Lambda=(-Coefficents[1]+np.sqrt((Coefficents[1]**2)-(4*Coefficents[0]*(Coefficents[2]-Pixel_Array))))/(2*Coefficents[0])
-
-        #----Use Iterate_Pixels_to_Wavelengths() to update the wavelength approximation to use quadratic spline rather than fixed quadratics--------
-
-        End=False
-        Counter=0
-        while End is False and Counter<self.Maximum_Calibration_Iterations:
-            New_Lambda=self.Iterate_Pixels_to_Wavelengths(Pixel_Array,Steps,Lambda)
-            if np.max(np.abs(New_Lambda-Lambda))<self.Calibration_Iteration_Threshold:
-                End=True
-            Lambda=New_Lambda
-
-        return Lambda
+        try:
+            Lambda=(-Coefficents[1]+np.sqrt((Coefficents[1]**2)-(4*Coefficents[0]*(Coefficents[2]-Pixel_Array))))/(2*Coefficents[0])
+    
+            #----Use Iterate_Pixels_to_Wavelengths() to update the wavelength approximation to use quadratic spline rather than fixed quadratics--------
+    
+            End=False
+            Counter=0
+            while End is False and Counter<self.Maximum_Calibration_Iterations:
+                New_Lambda=self.Iterate_Pixels_to_Wavelengths(Pixel_Array,Steps,Lambda)
+                if np.max(np.abs(New_Lambda-Lambda))<self.Calibration_Iteration_Threshold:
+                    End=True
+                Lambda=New_Lambda
+    
+            return Lambda
+        except:
+            return Pixel_Array
         
             
     def Find_Required_Step(self,Wavelength,Pixel):
@@ -244,7 +251,7 @@ class Triax(VisaInstrument):
         elif Region>=len(Spline_Data)-1:
             Coefficents=Coefficent_Blocks[-1]
         else:
-            Frac=(Wavelength-Spline_Data[0][Region-1])/(Spline_Data[0][Region]-Spline_Data[0][Region])
+            Frac=(Wavelength-Spline_Data[0][Region-1])/(Spline_Data[0][Region]-Spline_Data[0][Region-1])
             Coefficents=(1-Frac)*Coefficent_Blocks[Region-2]+Frac*Coefficent_Blocks[Region-1]
         
         #Perform Conversion
@@ -268,7 +275,10 @@ class Triax(VisaInstrument):
             self.write("F0,%i\r" % Steps)
             time.sleep(1)
             self.waitTillReady()
-        self.Wavelength_Array=self.Convert_Pixels_to_Wavelengths(np.array(range(self.Number_of_Pixels))) #Update wavelength array
+        try:
+            self.Wavelength_Array=self.Convert_Pixels_to_Wavelengths(np.array(range(self.Number_of_Pixels))) #Update wavelength array
+        except:
+            Dump=1 
 
     def Slit(self, Width=None):
         """
