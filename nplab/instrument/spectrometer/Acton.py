@@ -1,17 +1,19 @@
 # -*- coding: utf-8 -*-
 
 from nplab.instrument.visa_instrument import VisaInstrument
-from nplab.instrument.camera.ST133.pvcam import Pvcam
+from nplab.instrument.camera.ST133.pvcam import Pvcam, PvcamClient
 import re
 import time
 from visa import VisaIOError
 
 
 class SP2750(VisaInstrument):
-    """ftp://ftp.princetoninstruments.com/public/manuals/Acton/SP-2750.pdf"""
+    """ Monochromator class
+    ftp://ftp.princetoninstruments.com/public/manuals/Acton/SP-2750.pdf
+    """
 
     def __init__(self, address):
-        port_settings = dict(baud_rate=9600, read_termination="\r\n", write_termination="\r", timeout=3000)
+        port_settings = dict(baud_rate=9600, read_termination="\r\n", write_termination="\r", timeout=10000)
         super(SP2750, self).__init__(address, port_settings)
         self.clear_read_buffer()
 
@@ -135,34 +137,3 @@ class SP2750(VisaInstrument):
         """
         return self.query("?GRATINGS")
 
-
-class Pvacton(Pvcam):
-    def __init__(self, camera_device, spectrometer_address, **kwargs):
-        # super(Pvacton, self).__init__(camera_device, **kwargs)
-        # SP2750.__init__(self, spectrometer_address)
-        Pvcam.__init__(self, camera_device, **kwargs)
-        self.spectrometer = SP2750(spectrometer_address)
-
-    def get_wavelength(self):
-        wvl = self.spectrometer.get_wavelength()
-        self.unit_offset[0] = wvl
-        return wvl
-
-    def set_wavelength(self, wvl):
-        self.spectrometer.set_wavelength(wvl)
-        self.unit_offset[0] = self.spectrometer.calibrate(wvl) - self.unit_scale[0] * self.resolution[0] / 2
-
-    wavelength = property(get_wavelength, set_wavelength)
-
-
-if __name__ == "__main__":
-    spec = SP2750("COM12")
-
-    print spec.query("?NM")
-    print spec.query("?GRATINGS")
-
-    print spec.set_wavelength_fast(0)
-    print spec.get_wavelength()
-
-    print spec.set_wavelength_fast(200)
-    print spec.get_wavelength()
