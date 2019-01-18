@@ -117,10 +117,9 @@ def extractRamanSpc(path, bg_path = False, combine_statics = False):
 
         wavenumbers = f.x #Pulls x data from spc file
         nScans = int(f.__dict__['fnsub']) #Number of Raman spectra contained within the spc file (>1 if file contains a kinetic scan)
-        ramanIntensities = [f.sub[i].y for i in range(nScans)] #Builds list of y data arrays
+        ramanIntensities = np.array([f.sub[i].y for i in range(nScans)]) #Builds list of y data arrays
 
         metadata = f.__dict__ #Pulls metadata dictionary from spc file for easy access
-        metadata.update(f.log_dict)
 
         if absLaserPower != 'Undefined':
             absRamanIntensities = [(spectrum * 1000) / (absLaserPower * integrationTime * float(accumulations)) for spectrum in ramanIntensities]
@@ -132,7 +131,7 @@ def extractRamanSpc(path, bg_path = False, combine_statics = False):
             ramanIntensities = ramanIntensities[0] #Reduces to single array if not a kinetic scan
             absRamanIntensities = absRamanIntensities[0] #Also for this
 
-        spectra.append(Raman_Spectrum(filename, metadata, laserWl, laserPower, absLaserPower, integrationTime, nScans, accumulations,
+        spectra.append(Raman_Spectrum(filename, metadata, laserWl, laserPower, absLaserPower, integrationTime, accumulations, nScans,
                                       wavenumbers, ramanIntensities, absRamanIntensities))
 
         #except Exception as e:
@@ -194,14 +193,17 @@ def populateH5(spectra, h5File):
             dRaw = f['Spectra'][gSpectrum]['Raman (cts)']
             dRaw = gRaw.create_dataset(gSpectrum, data = dRaw)
             dRaw.attrs.update(f['Spectra'][gSpectrum].attrs)
+            dRaw.attrs.update(f['Spectra'][gSpectrum]['Raman (cts)'].attrs)
 
             dAbs = f['Spectra'][gSpectrum]['Raman (cts mw^-1 s^-1)']
             dAbs = gAbs.create_dataset(gSpectrum, data = dAbs)
             dAbs.attrs.update(f['Spectra'][gSpectrum].attrs)
+            dAbs.attrs.update(f['Spectra'][gSpectrum]['Raman (cts mw^-1 s^-1)'].attrs)
 
             dNorm = f['Spectra'][gSpectrum]['Raman (normalised)']
             dNorm = gNorm.create_dataset(gSpectrum, data = dNorm)
             dNorm.attrs.update(f['Spectra'][gSpectrum].attrs)
+            dNorm.attrs.update(f['Spectra'][gSpectrum]['Raman (normalised)'].attrs)
 
     print '\th5 file populated'
 
@@ -231,5 +233,6 @@ if __name__ == '__main__':
     rootDir = os.getcwd()
     print 'Extracting data from %s' % rootDir
     spectra = extractRamanSpc(rootDir)
-    h5FileName = createOutputFile('Raman Data')
+    dirName = '%s Raman Data' % rootDir.split('\\')[-1]
+    h5FileName = createOutputFile(dirName)
     populateH5(spectra, h5FileName)
