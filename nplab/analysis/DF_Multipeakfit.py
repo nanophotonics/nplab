@@ -67,7 +67,7 @@ class DF_Spectrum(object):
 
 '''FUNCTIONS'''
 
-def retrieveData(summaryFile, startSpec, finishSpec, attrsOnly = False):
+def retrieveData(summaryFile, startSpec = 0, finishSpec = 0, attrsOnly = False):
 
     '''Retrieves data from summary file'''
 
@@ -291,35 +291,40 @@ def butterLowpassFiltFilt(data, cutoff = 1500, fs = 60000, order=5):
     yFiltered = filtfilt(b, a, data)
     return yFiltered
 
-def detectMinima(y, negOnly = True, threshold = 0):
-    '''Finds and returns list of minima in a data set'''
-    ind = False
+def detectMinima(array):
+    '''
+    detectMinima(array) -> mIndices
+    Finds the turning points within a 1D array and returns the indices of the minima.
+    '''
+    mIndices = []
 
-    ySign = np.sign(y + threshold)
-    dy = np.zeros(len(y))
-    dy[1:] = np.diff(y)
+    if len(array) < 3:
+        return mIndices
 
-    if len(dy) > 1:
-        dy[0] = dy[1]
-        dy = np.sign(dy)
-        d2y = np.zeros(len(y))
-        d2y[1:] = np.diff(dy)
-        d2y[0] = d2y[1]
-        d2y = np.sign(d2y)
+    neutral, rising, falling = range(3)
 
-        if negOnly == True:
-            '''Finds only minima that exist below zero'''
-            ind = np.nonzero((-ySign + dy + d2y) == 3)
-            ind = ind[0]
-            ind = [int(i) for i in ind]
+    def getState(a, b):
+        if a < b: return rising
+        elif a > b: return falling
+        else: return neutral
 
-        elif negOnly == False:
-            '''Finds all minima'''
-            ind = np.nonzero((dy + d2y) == 2)
-            ind = ind[0]
-            ind = [int(i) for i in ind]
+    ps = getState(array[0], array[1])
+    begin = 1
 
-        return ind
+    for i in range(2, len(array)):
+        s = getState(array[i - 1], array[i])
+
+        if s != neutral:
+
+            if ps != neutral and ps != s:
+
+                if s != falling:
+                    mIndices.append((begin + i - 1) / 2)
+
+            begin = i
+            ps = s
+
+    return np.array(mIndices)
 
 def testIfNpom(x, y, lower = 0.05, upper = 2.5, NpomThreshold = 1.5):
     '''Filters out spectra that are obviously not from NPoMs'''
@@ -712,7 +717,9 @@ def multiPeakFit(x, y, indices, needsSmoothing = True, cutoff = 1500, fs = 60000
     else:
         return out
 
-def gaussian(x, height, center, fwhm):
+def gaussian(x, height, center, fwhm, offset = 0):
+
+    '''Gaussian as a function of height, centre, fwhm and offset'''
     a = height
     b = center
     c = fwhm
@@ -722,6 +729,7 @@ def gaussian(x, height, center, fwhm):
     F = -(N / D)
     E = np.exp(F)
     y = a*E
+    y += offset
 
     return y
 
@@ -2054,6 +2062,7 @@ def plotAllStacks(outputFile, plotTitle = '', closeFigures = False, filterWeird 
     imgName = 'Stack (all)'
     plotTitle = '%s%s' % (title, imgName)
     plotStackedMap(spectraSorted, imgName = imgName, plotTitle = plotTitle, closeFigures = closeFigures)
+
     '''By CM wavelength'''
 
     cmWlName = 'Coupled mode wavelength'
@@ -2773,6 +2782,7 @@ def doStats(outputFile, minBinFactor = 5, sortSpec = True, replaceWhenSorting = 
         histStartTime = time.time()
 
         if 'Histogram' in outputFile['Statistics']:
+
             try:
                 del outputFile['Statistics/Histogram']
 
@@ -2856,10 +2866,6 @@ def doStats(outputFile, minBinFactor = 5, sortSpec = True, replaceWhenSorting = 
 
         irEnd = time.time()
         timeElapsed = irEnd - irStart
-
-
-
-
         print '\n\tAll intensity ratios plotted in %s seconds' % timeElapsed
 
         visualiseIntensityRatios(outputFile)
@@ -3153,7 +3159,7 @@ if __name__ == '__main__':
     if method == 'All':
 
         summaryFile = findH5File(os.getcwd(), nameFormat = summaryNameFormat)
-        spectra, wavelengths, background, reference, summaryAttrs = retrieveData(summaryFile, startSpec, finishSpec)
+        spectra, wavelengths, background, reference, summaryAttrs = retrieveData(summaryFile, startSpec = startSpec, finishSpec = finishSpec)
         x, yData = prepareData(spectra, wavelengths, reference)
         initImg = plotInitStack(x, yData, imgName = 'Initial Stack', closeFigures = True)
 
@@ -3166,7 +3172,7 @@ if __name__ == '__main__':
     elif method == 'Stats':
 
         summaryFile = findH5File(os.getcwd(), nameFormat = summaryNameFormat)
-        summaryAttrs = retrieveData(summaryFile, startSpec, finishSpec, attrsOnly = True)
+        summaryAttrs = retrieveData(summaryFile, startSpec = startSpec, finishSpec = finishSpec, attrsOnly = True)
         outputFile = findH5File(os.getcwd(), nameFormat = outputNameFormat)
 
         with h5py.File(outputFile, 'a') as f:
@@ -3179,6 +3185,6 @@ if __name__ == '__main__':
     elif method == 'Stack':
         print '\nRetrieving data...'
 
-        spectra, wavelengths, background, reference, summaryAttrs = retrieveData(summaryNameFormat, startSpec, finishSpec)
+        spectra, wavelengths, background, reference, summaryAttrs = retrieveData(summaryNameFormat, startSpec = startSpec, finishSpec = finishSpec)
         x, yData = prepareData(spectra, wavelengths, reference)
         initImg = plotInitStack(x, yData, imgName = 'Initial Stack', closeFigures = False)

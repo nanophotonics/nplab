@@ -37,12 +37,14 @@ def findH5File(rootDir, mostRecent = True, nameFormat = 'date'):
         n = 0
 
     if nameFormat == 'date':
-         h5File = sorted([i for i in os.listdir('.') if re.match('\d\d\d\d-[01]\d-[0123]\d.h5', i)],
-                          key = lambda i: os.path.getmtime(i))[n]
+        h5File = sorted([i for i in os.listdir('.') if re.match('\d\d\d\d-[01]\d-[0123]\d', i[:10])
+                         and (i.endswith('.h5') or i.endswith('.hdf5'))],
+                        key = lambda i: os.path.getmtime(i))[n]
 
     else:
-        h5File = sorted([i for i in os.listdir('.') if (i.endswith('.h5') and i.startswith(nameFormat))],
-                    key = lambda i: os.path.getmtime(i))[n]
+        h5File = sorted([i for i in os.listdir('.') if i.startswith(nameFormat)
+                         and (i.endswith('.h5') or i.endswith('.hdf5'))],
+                        key = lambda i: os.path.getmtime(i))[n]
 
     print '\nH5 file %s found' % h5File
 
@@ -248,7 +250,6 @@ def extractAllSpectra(rootDir, returnIndividual = False, dodgyThreshold = 0.4, s
             elif fileType == '2018':
                 gScanFormat = 'ParticleScannerScan_'
                 gParticleFormat = 'Particle_'
-                dParticleFormat = 'alinger.z_scan_0'
 
             allScans = sorted([groupName for groupName in ipf.keys() if groupName.startswith(gScanFormat)],
                               key = lambda groupName: len(ipf[groupName].keys()))[::-1]
@@ -257,6 +258,9 @@ def extractAllSpectra(rootDir, returnIndividual = False, dodgyThreshold = 0.4, s
 
                 if len(ipf[scanName]) < 15:
                     continue
+
+                if fileType == '2018':
+                    dParticleFormat = 'alinger.z_scan_%s' % n
 
                 nummers = range(10, 101, 10)
                 scanStart = time.time()
@@ -301,7 +305,7 @@ def extractAllSpectra(rootDir, returnIndividual = False, dodgyThreshold = 0.4, s
                         zScan = particleGroup[dParticleFormat]
 
                     except:
-                        print 'Z-Stack not found in %s' % (dParticleFormat, groupName)
+                        print 'Z-Stack not found in %s' % (groupName)
                         continue
 
                     if referenced == False:
@@ -361,6 +365,8 @@ def extractAllSpectra(rootDir, returnIndividual = False, dodgyThreshold = 0.4, s
 
                 for key in attrs.keys():
                     dScan.attrs[key] = attrs[key]
+
+    return outputFile #String of output file name for easy identification later
 
 if __name__ == '__main__':
 
