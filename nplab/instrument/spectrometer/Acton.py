@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from nplab.instrument.visa_instrument import VisaInstrument
-from nplab.instrument.camera.ST133.pvcam import Pvcam, PvcamClient
 import re
 import time
 from visa import VisaIOError
@@ -21,8 +20,8 @@ class SP2750(VisaInstrument):
         """
         Simple query wrapper that checks whether the command was received properly
         :param args:
-        :param kwargs:
-        :return:
+        :param kwarg
+        :rets:urn:
         """
         full_reply = self.instr.query(*args, **kwargs)
 

@@ -21,7 +21,8 @@ NOTE: class.__dict__ does not contain superclass attributes or methods (https://
 
 WARN: this has not been extensively tested, and can definitely have some issues if the user is not careful about
     thinking what functions and replies he wants to send over the TCP communication and which ones he doesn't (e.g. you
-    would not want to send the instrument.show_gui() command through TCP)
+    would not want to send the instrument.show_gui() command through TCP), and also that PyQT signals are not --and
+    cannot be-- sent through the TCP, which might cause some confusion.
 
 EXAMPLE:
     Creating a server and client instruments for a Princeton Instruments PVCAM which only has 32bit DLLs that do not
@@ -34,7 +35,6 @@ EXAMPLE:
     Then, on the computer connected to the camera, run:
     >>>> camera = camera_server((IP, port), 0)
     >>>> camera.run()
-    camera.
     And on the client computer run:
     >>>> camera = camera_client((IP, port))
     >>>> camera.show_gui()
@@ -111,14 +111,17 @@ def create_server_class(original_class):
             self.instrument = original_class(*args, **kwargs)
             self._logger = create_logger('TCP server')
 
-        def run(self, with_gui=True):
-            if with_gui:
+        def run(self, with_gui=True, backgrounded=False):
+            if with_gui or backgrounded:
                 t = threading.Thread(target=self.serve_forever)
                 t.setDaemon(True)  # don't hang on exit
                 t.start()
-                self.instrument.show_gui()
+                if with_gui:
+                    self.instrument.show_gui()
             else:
                 self.serve_forever()
+
+
     return server
 
 
@@ -218,21 +221,4 @@ def create_client_class(original_class, tcp_methods=None, excluded_methods=('get
     setattr(new_class, "__getattr__", my_getattr)
     return new_class
 
-
-# stages = create_client_class(HIT)
-
-if __name__ == "__main__":
-    # PVCAM class
-    from nplab.instrument.camera.ST133.pvcam import Pvcam, PvcamSdk
-
-    camera_client = create_client_class(Pvcam,
-                                        PvcamSdk.__dict__.keys() + ["get_camera_parameter", "set_camera_parameter"],
-                                        ('get_qt_ui', "raw_snapshot", "get_control_widget", "get_preview_widget"))
-    camera_server = create_server_class(Pvcam)
-
-    # SHOT class
-    from nplab.instrument.stage.SigmaKoki import SHOT
-    shot_client = create_client_class(SHOT)
-    shot_server = create_server_class(SHOT)
-    address = ('localhost', 9999)
 

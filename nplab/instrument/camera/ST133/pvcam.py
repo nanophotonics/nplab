@@ -20,7 +20,6 @@ Original Odemis was tested on Linux with a PI PIXIS. This was tested on Windows 
 
 from __future__ import division
 
-# import collections
 import ctypes as ct
 from nplab.instrument.camera.ST133 import *  # Dictionary linking metadata names with codes
 import math
@@ -28,10 +27,8 @@ import numpy as np
 import os
 import threading
 import time
-import ast
 from nplab.instrument.camera import Camera, CameraParameter, DisplayWidget
 import nplab.datafile as df
-# from nplab.utils.thread_utils import background_action, locked_action
 from nplab.utils.notified_property import NotifiedProperty
 from nplab.utils.gui import QtCore, QtGui, QtWidgets, uic
 from nplab.utils.log import create_logger
@@ -39,11 +36,6 @@ from nplab.ui.ui_tools import UiTools
 from nplab.utils.notified_property import register_for_property_changes
 import operator
 import pvcam_h as pv  # Dictionary linking variables with values
-import SocketServer
-import socket
-import json
-import inspect
-import sys
 
 
 def index_closest(val, l):
@@ -112,81 +104,6 @@ class CancelledError(Exception):
     raise to indicate the acquisition is cancelled and must stop
     """
     pass
-
-
-def function_builder(command_name): #, _type="function"):
-    ''' A function for generating the write functions for intergrating classes with
-    the speaker instrument class.
-    '''
-
-    # if _type == "function":
-    def function(*args, **kwargs):
-        # input_str = ''
-        obj = args[0]
-        # if len(args) > 1:
-        # for input_value in args[1:]:
-        #     input_str += str(input_value) + ','
-        # for input_name, input_value in kwargs.iteritems():
-        #     input_str = input_str + input_name + '=' + input_value + ','
-        # input_str = input_str[:-1]
-        # obj.memory_map_in.seek(0)
-        # obj.memory_map_in.write(command_name + '(' + input_str + ')\n')
-        # print command_name + '(' + input_str + ')\n'
-        command_dict = dict(command=command_name)
-        if len(args) > 1:
-            command_dict["args"] = args[1:]
-        if len(kwargs.keys()) > 0:
-            command_dict["kwargs"] = kwargs
-        # print "Command dictionary: ", command_dict
-        # reply = obj.send_to_server(json.dumps(command_dict))
-        reply = obj.send_to_server(repr(command_dict))
-        if type(reply) == dict:
-            if "array" in reply:
-                reply = np.array(reply["array"])
-        return reply
-    return function
-    # else:
-    #     def function(*args, **kwargs):
-    #         print command_name
-    #     return function
-
-def create_speaker_class(original_class, function_list=None):
-    ''' A function that creates a speaker class by subclassing the original class
-    and replacing any function calls with write commands that pass the functions to the listener
-    '''
-
-    class original_class_Stripped(original_class):  # copies the class
-        def __init__(self):
-            original_class.__init__(self)
-            # self.function_list = []
-
-    if function_list is None:
-        function_list = original_class.__dict__.keys()
-
-    # function_list = []
-    for command_name in function_list:  # replaces any method
-        command = getattr(original_class_Stripped, command_name)
-        if inspect.ismethod(command):
-            # print "Method: ", command
-            setattr(original_class_Stripped, command_name, function_builder(command_name))
-            # function_list += [command_name]
-    # setattr(original_class_Stripped, "function_list", function_list)
-
-    # def my_getattr(self, item):
-    #     print "Getting: ", item
-    #     if item in self.function_list:
-    #         print "Running: ", item
-    #         return original_class_Stripped.__getattr__(self, item)
-    #     else:
-    #         if item.startswith("__"):
-    #             return original_class_Stripped.__getattr__(self, item)
-    #         else:
-    #             print "Retrieving: ", item
-    # setattr(original_class_Stripped, "__getattr__", my_getattr)
-    # else:
-    #     print "Variable: ", command
-    #     setattr(original_class_Stripped, command_name, function_builder(command_name, "variable"))
-    return original_class_Stripped
 
 
 class PVCamDLL(ct.WinDLL):
@@ -1569,163 +1486,13 @@ class Pvcam(Camera, PvcamSdk):
         return self.ui.DisplayWidget
 
 
-# REMOTE TCP COMMUNICATION
-# Using repr and ast.literal_eval instead of json.dumps/json.loads allows the TCP communication to send through tuples
-# and lists while retaining their Python types
-
-function_list = PvcamSdk.__dict__.keys() + ["get_camera_parameter", "set_camera_parameter"]
-pvcam_client_base = create_speaker_class(Pvcam, function_list)
-
-BUFFER_SIZE = 3131894
-message_end = 'this_string_ends_message'
-
-
-class PvcamClient(pvcam_client_base):
-    def __init__(self, address):
-        self._logger = create_logger('PVCam TCP client')
-        self.instance_attributes = self.send_to_server("list_attributes", address)  # ["_exposure_time"]
-        self.address = address
-
-    def __getattr__(self, item):
-        # print "Getting: ", item, item in ["address", "instance_attributes"]
-        if item in ["address", "instance_attributes", "ui", "_logger"]:
-            tst = object.__getattribute__(self, item)
-            return tst
-        elif item in self.instance_attributes:
-            return self.send_to_server(repr(dict(variable_get=item)))
-            # return self.send_to_server(json.dumps(dict(variable_get=item)))
-        elif item in ["raw_snapshot", "get_qt_ui", "get_control_widget", "get_preview_widget"]:
-            return Pvcam.__getattribute__(self, item)
-        else:
-            super(PvcamClient, self).__getattr__(item)
-
-    def __setattr__(self, item, value):
-        # print "Setting: ", item
-        if item in ["address", "instance_attributes", "_logger"]:
-            object.__setattr__(self, item, value)
-        elif item in ["ui"]:
-            return Pvcam.__setattr__(self, item, value)
-        elif item in self.instance_attributes:
-            # self.send_to_server(json.dumps(dict(variable_set=item, variable_value=value)))
-            self.send_to_server(repr(dict(variable_set=item, variable_value=value)))
-        else:
-            super(PvcamClient, self).__setattr__(item, value)
-
-    # def read(self, sock, buffer_size=1024):
-    #     string = sock.recv(buffer_size)
-    #     while "THISISTHEEND" not in string:
-    #         string += sock.recv(buffer_size)
-    #     return string
-
-    def send_to_server(self, command, address=None):
-        if address is None:
-            address = self.address
-        self._logger.debug("Client sending: %s" % command[:50])
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            sock.connect(address)
-            sock.sendall(command)
-            self._logger.debug("Client sent: %s" % command[:50])
-            received = sock.recv(BUFFER_SIZE)
-            while message_end not in received:
-                received += sock.recv(BUFFER_SIZE)
-            self._logger.debug("Client received: %s" % received[:20])
-            received = received.rstrip(message_end)
-        except Exception as e:
-            raise e
-        return ast.literal_eval(received)  # json.loads(received)
-
-    # def fucksake(self):
-    #     self.ui = pvcamUI(self)
-    #     return self.ui
-
-    # def get_qt_ui(self, control_only=False, parameters_only=False):
-    #     print "YepUI"
-    #     if control_only:
-    #         return self.get_control_widget()
-    #     elif parameters_only:
-    #         self._logger.warn("Not implemented")
-    #     else:
-    #         # if not hasattr(self, 'ui'):
-    #         #     self.ui = pvcamUI(self)
-    #         # elif not isinstance(self.ui, pvcamUI):
-    #         self.ui = pvcamUI(self)
-    #         return self.ui
-    #
-    # def get_control_widget(self):
-    #     return self.get_qt_ui()
-    #
-    # def get_preview_widget(self):
-    #     if not hasattr(self, 'ui'):
-    #         self.get_qt_ui()
-    #     if self.ui.DisplayWidget is None:
-    #         self.ui.DisplayWidget = DisplayWidget()
-    #     return self.ui.DisplayWidget
-
-
-class PvcamServerHandler(SocketServer.BaseRequestHandler):
-    def handle(self):
-        try:
-            raw_data = self.request.recv(BUFFER_SIZE).strip()
-            self.server._logger.debug("Server received: %s" % raw_data)
-            if raw_data == "list_attributes":
-                # instr_reply = json.dumps(self.server.camera.__dict__.keys())
-                instr_reply = repr(self.server.camera.__dict__.keys())
-            else:
-                # command_dict = json.loads(raw_data)
-                command_dict = ast.literal_eval(raw_data)
-
-                if "command" in command_dict:
-                    if "args" in command_dict and "kwargs" in command_dict:
-                        instr_reply = getattr(self.server.camera, command_dict["command"])(*command_dict["args"], **command_dict["kwargs"])
-                    elif "args" in command_dict:
-                        instr_reply = getattr(self.server.camera, command_dict["command"])(*command_dict["args"])
-                    elif "kwargs" in command_dict:
-                        instr_reply = getattr(self.server.camera, command_dict["command"])(**command_dict["kwargs"])
-                    else:
-                        instr_reply = getattr(self.server.camera, command_dict["command"])()
-                elif "variable_get" in command_dict:
-                    instr_reply = getattr(self.server.camera, command_dict["variable_get"])
-                elif "variable_set" in command_dict:
-                    setattr(self.server.camera, command_dict["variable_set"], command_dict["variable_value"])
-                    instr_reply = ''
-                else:
-                    instr_reply = "JSON dictionary did not contain a 'command' or 'variable' key"
-        except Exception as e:
-            self.server._logger.warn(e)
-            instr_reply = dict(error=e)
-        # print instr_reply
-        self.server._logger.debug("Instrument reply: %s" % str(instr_reply))
-
-        try:
-            # reply = json.dumps(instr_reply)
-            if type(instr_reply) == np.ndarray:
-                reply = repr(instr_reply.tolist())
-            else:
-                reply = repr(instr_reply)
-        except Exception as e:
-            self.server._logger.warn(e)
-            reply = repr(dict(error=str(e)))
-        reply += message_end
-        self.request.sendall(reply)
-        self.server._logger.debug(
-            "Server replied %s %s: %s ... %s" % (len(reply), sys.getsizeof(reply), reply[:10], reply[-10:]))
-
-
-class PvcamServer(SocketServer.TCPServer):
-    def __init__(self, camera_number, server_address, handler_class=PvcamServerHandler, bind_and_activate=True):
-        SocketServer.TCPServer.__init__(self, server_address,  handler_class, bind_and_activate)
-        self.camera = Pvcam(camera_number)
-        self._logger = create_logger('PVCam server')
-
-
 # GUIs and capture threads
 
 class pvcamUI(QtWidgets.QWidget, UiTools):
     # ImageUpdated = QtCore.Signal()
 
     def __init__(self, camera):
-        assert isinstance(camera, (Pvcam, PvcamClient)), "instrument must be an camera"
+        assert isinstance(camera, Pvcam), "instrument must be an camera"
         self._logger = create_logger("pvcam.GUI")
 
         # try:
@@ -2154,7 +1921,7 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
             self.captureThread.wait()
 
     def Live(self, wait=True):
-        if isinstance(self.camera, PvcamClient):
+        if isinstance(self.camera):
             raise ValueError("Haven't yet figured out how to have live mode with a TCP connection")
         if self.captureThread is not None:
             if not self.captureThread.isFinished():
@@ -2248,47 +2015,3 @@ class WaitThread(QtCore.QThread):
         #             except cameraWarning as warn:
         #                 if warn.error_name != 'DRV_TEMP_OFF':
         #                     raise warn
-
-
-if __name__ == '__main__':
-    import matplotlib.pyplot as plt
-
-    # pvcam = Pvcam(0)
-    # print pvcam.get_camera_parameter("PARAM_EXP_TIME")
-    # print pvcam._devname
-    # print pvcam._readout_rates
-    # print pvcam._min_res
-    # print pvcam._gains
-    # print pvcam._shape
-    # print pvcam._hwVersion
-    # print pvcam._swVersion
-    # print STATUS_IN_PROGRESS
-    # print pvcam.get_model()
-    # print pvcam.selfTest()
-    # pvcam.exposure = 0.1
-    # print 'Fuck', pvcam._update_settings()
-
-    # array, status = pvcam.raw_snapshot()
-    # array = pvcam.raw_snapshot()
-    # # pvcam._acquire_thread_run()
-    # array2 = pvcam.raw_snapshot()
-    #
-    # fig, axs = plt.subplots(1, 2)
-    # # axs[0].plot
-    # axs[0].imshow(array2)
-    # axs[1].imshow(array)
-    # plt.show()
-
-    # array = pvcam.raw_snapshot()
-    # print array
-    # print array.tolist()
-    # print(len(array.tolist()))
-
-    # pvcam.show_gui(blocking=True)
-
-
-    address = ("localhost", 9999)
-    server = PvcamServer(0, address)
-    server.serve_forever()
-
-    # client = PvcamClient(address)
