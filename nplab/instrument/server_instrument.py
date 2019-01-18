@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Functions for TCP server and client class creation for nplab instruments. Not e
+Functions for TCP server and client class creation for nplab instruments.
 
 For example, you might have an instrument that needs to be connected to a particular computer (e.g. because of an
 acquisition card, or because it only has 32bit DLLs), but you want to run your experiment from another computer (e.g. a
@@ -15,9 +15,10 @@ instance.
 For TCP messaging we use repr and ast.literal_eval instead of json.dumps and json.loads because they allow us to easily
 send Python lists/tuples
 
-NOTE: class.__dict__ does not contain superclass attributes or methods (https://stackoverflow.com/questions/7241528/python-get-only-class-attribute-no-superclasses)
-    Hence, by default we only override the methods of the class, but not of any of the base classes, so if you want to
-    also send the super methods to the server, you need to explicitly list which methods you want to send.
+NOTE: class.__dict__ does not contain superclass attributes or methods, so by default we only override the class methods
+    but not any of the base classes. If you want to also send the superclass methods to the server, you need to
+    explicitly list which methods you want to send
+    (https://stackoverflow.com/questions/7241528/python-get-only-class-attribute-no-superclasses)
 
 WARN: this has not been extensively tested, and can definitely have some issues if the user is not careful about
     thinking what functions and replies he wants to send over the TCP communication and which ones he doesn't (e.g. you
@@ -51,7 +52,7 @@ import sys
 import re
 
 BUFFER_SIZE = 3131894
-message_end = 'this_string_ends_message'
+message_end = 'tcp_termination'
 
 
 class ServerHandler(SocketServer.BaseRequestHandler):
@@ -66,7 +67,8 @@ class ServerHandler(SocketServer.BaseRequestHandler):
 
                 if "command" in command_dict:
                     if "args" in command_dict and "kwargs" in command_dict:
-                        instr_reply = getattr(self.server.instrument, command_dict["command"])(*command_dict["args"], **command_dict["kwargs"])
+                        instr_reply = getattr(self.server.instrument,
+                                              command_dict["command"])(*command_dict["args"], **command_dict["kwargs"])
                     elif "args" in command_dict:
                         instr_reply = getattr(self.server.instrument, command_dict["command"])(*command_dict["args"])
                     elif "kwargs" in command_dict:
@@ -79,7 +81,7 @@ class ServerHandler(SocketServer.BaseRequestHandler):
                     setattr(self.server.instrument, command_dict["variable_set"], command_dict["variable_value"])
                     instr_reply = ''
                 else:
-                    instr_reply = "JSON dictionary did not contain a 'command' or 'variable' key"
+                    instr_reply = "Dictionary did not contain a 'command' or 'variable' key"
         except Exception as e:
             self.server._logger.warn(e)
             instr_reply = dict(error=e)
@@ -101,17 +103,34 @@ class ServerHandler(SocketServer.BaseRequestHandler):
 
 def create_server_class(original_class):
     """
+    Given an nplab instrument class, returns a class that acts as a TCP server for that instrument.
 
-    :param original_class:
-    :return:
+    :param original_class: an nplab instrument class
+    :return: server class
     """
-    class server(SocketServer.TCPServer):
+
+    class Server(SocketServer.TCPServer):
         def __init__(self, server_address, *args, **kwargs):
+            """
+            To instantiate the server class, the TCP address needs to be given first, and then the arguments that would
+            be passed normally to the nplab instrument
+
+            :param server_address: 2-tuple. IP address and port for the server to listen on
+            :param args: arguments to be passed to the nplab instrument
+            :param kwargs: named arguments for the nplab instrument
+            """
             SocketServer.TCPServer.__init__(self, server_address, ServerHandler, True)
             self.instrument = original_class(*args, **kwargs)
             self._logger = create_logger('TCP server')
 
         def run(self, with_gui=True, backgrounded=False):
+            """
+            Start running the server
+
+            :param with_gui: bool. Runs the server in the background and opens the nplab instrument GUI
+            :param backgrounded: bool. Runs the server in the background
+            :return:
+            """
             if with_gui or backgrounded:
                 t = threading.Thread(target=self.serve_forever)
                 t.setDaemon(True)  # don't hang on exit
@@ -121,70 +140,101 @@ def create_server_class(original_class):
             else:
                 self.serve_forever()
 
-
-    return server
+    return Server
 
 
 def create_client_class(original_class, tcp_methods=None, excluded_methods=('get_qt_ui',),
                         excluded_attributes=('ui', '_ShowGUIMixin__gui_instance')):
     """
+    Given an nplab instrument, returns a class that overrides a series of class methods, so that instead of running
+    those methods, it sends a string over TCP an instrument server of the same type. It is also able to get and set
+    attributes in the specific class instance of the server.
 
-    :param original_class:
-    :param tcp_methods:
-    :param excluded_methods:
-    :param excluded_attributes:
-    :return:
+    :param original_class: an nplab instrument class
+    :param tcp_methods: an iterable of method names that are to be sent over TCP. By default it is the
+                        original_class.__dict__.keys() excluding magic methods
+    :param excluded_methods: methods you do not want to send over TCP. By default the get_qt_ui isn't sent over TCP,
+            since it doesn't return something that can be sent over TCP (a pointer to an instance local to the server)
+    :param excluded_attributes: attributes you do not want to read over TCP, e.g. attributes that are inherently local.
+            Hence, by default, the GUI attributes are not read over TCP.
+    :return: new_class
     """
 
-    def method_builder(command_name):
+    def method_builder(method_name):
+        """
+        Given a method name, return a function that takes in any number of arguments and named arguments, creates a
+        dictionary with at most three keys (command, args, kwargs) and sends it to the server that the instance is
+        connected to
+
+        :param method_name: string
+        :return: method (function)
         """
 
-        :param command_name:
-        :return:
-        """
-
-        def function(*args, **kwargs):
+        def method(*args, **kwargs):
             obj = args[0]
-            command_dict = dict(command=command_name)
+            command_dict = dict(command=method_name)
             if len(args) > 1:
                 command_dict["args"] = args[1:]
             if len(kwargs.keys()) > 0:
                 command_dict["kwargs"] = kwargs
-            print "Command dictionary: ", command_dict
             reply = obj.send_to_server(repr(command_dict))
             if type(reply) == dict:
                 if "array" in reply:
                     reply = np.array(reply["array"])
             return reply
 
-        return function
+        return method
 
-    class new_class(original_class):  # copies the class
+    class NewClass(original_class):
         def __init__(self, address):
+            """
+            The client instantiation also gets a list of attributes present in the server instrument instance
+
+            :param address: 2-tuple of IP and port to connect to
+            """
             self.address = address
             self._logger = create_logger(original_class.__name__ + '_client')
             self.instance_attributes = self.send_to_server("list_attributes", address)
 
         def __setattr__(self, item, value):
+            """
+            Overriding the base __setattr__
+
+            :param item:
+            :param value:
+            :return:
+            """
             # print "Setting: ", item
+            # If the item is a method, pass it to the NewClass so that it can be sent to the server
             if item in self.method_list:
-                super(new_class, self).__setattr__(item, value)
+                super(NewClass, self).__setattr__(item, value)
+            # If the item is a local attribute, set it locally
             elif item in ['instance_attributes', 'address', '_logger'] + excluded_attributes:
                 original_class.__setattr__(self, item, value)
+            # If the item is an attribute of the server instrument, send it over TCP. Note this if needs to happen after
+            # the previous one, since it needs to use the self.instance_attributes
             elif item in self.instance_attributes:
                 self.send_to_server(repr(dict(variable_set=item, variable_value=value)))
             else:
                 original_class.__setattr__(self, item, value)
 
-        def send_to_server(self, command, address=None):
+        def send_to_server(self, tcp_string, address=None):
+            """
+            Opens a TCP port, connects it to address, sends the tcp_string, collects the reply, and returns it after
+            literal_eval
+
+            :param tcp_string: string to be sent over TCP
+            :param address: address to send to
+            :return: ast.literal_eval(reply_string)
+            """
             if address is None:
                 address = self.address
-            self._logger.debug("Client sending: %s" % command[:50])
+            self._logger.debug("Client sending: %s" % tcp_string[:50])
             try:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sock.connect(address)
-                sock.sendall(command)
-                self._logger.debug("Client sent: %s" % command[:50])
+                sock.sendall(tcp_string)
+                self._logger.debug("Client sent: %s" % tcp_string[:50])
                 received = sock.recv(BUFFER_SIZE)
                 while message_end not in received:
                     received += sock.recv(BUFFER_SIZE)
@@ -201,12 +251,12 @@ def create_client_class(original_class, tcp_methods=None, excluded_methods=('get
 
     methods = []
     for command_name in tcp_methods:
-        command = getattr(new_class, command_name)
+        command = getattr(NewClass, command_name)
         # only replaces methods that are not magic (__xx__) and are not explicitly excluded
         if inspect.ismethod(command) and not command_name.startswith('__') and command_name not in excluded_methods:
-            setattr(new_class, command_name, method_builder(command_name))
+            setattr(NewClass, command_name, method_builder(command_name))
             methods += [command_name]
-    setattr(new_class, "method_list", methods)
+    setattr(NewClass, "method_list", methods)
 
     def my_getattr(self, item):
         # print "Getting: ", item, item in ["address", "instance_attributes"]
@@ -217,8 +267,7 @@ def create_client_class(original_class, tcp_methods=None, excluded_methods=('get
         elif item in excluded_methods:
             return original_class.__getattribute__(self, item)
         else:
-            super(new_class, self).__getattr__(item)
-    setattr(new_class, "__getattr__", my_getattr)
-    return new_class
+            super(NewClass, self).__getattr__(item)
 
-
+    setattr(NewClass, "__getattr__", my_getattr)
+    return NewClass
