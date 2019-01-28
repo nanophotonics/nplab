@@ -53,7 +53,7 @@ class Triax(VisaInstrument):
         self.Calibration_Arrays=[]
         for i in Calibration_Data:
             self.Calibration_Arrays.append([])
-            if isinstance(i,list)==True and len(i)==4:
+            if len(i)==4:
                 for j in i[1:]:
                     self.Calibration_Arrays[-1].append(np.polyfit(i[0],j,2))
 
@@ -63,7 +63,7 @@ class Triax(VisaInstrument):
         self.Spline_Data=[]   
         for i in Calibration_Data:
             self.Spline_Data.append([])
-            if isinstance(i,list)==True and len(i)==4:
+            if len(i)==4:
                 self.Spline_Data[-1].append(i[0])
                 for j in i[1:]:
                     self.Spline_Data[-1].append([])
@@ -78,7 +78,7 @@ class Triax(VisaInstrument):
 
         print 'This Triax spectrometer is calibrated for use over the following ranges:'
         for i in range(len(Calibration_Data)):
-            if isinstance(Calibration_Data[i],list)==True and len(Calibration_Data[i])==4:
+            if len(Calibration_Data[i])==4:
                 print 'Grating',i,':',np.min(Calibration_Data[i][0]),'nm - ',np.max(Calibration_Data[i][0]),'nm'
 
         self.Wavelength_Array=None #Not intially set. Updated with a change of grating or stepper motor position

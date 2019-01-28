@@ -24,10 +24,10 @@ Calibration_Arrays[1].append([-7.33329431e-08,  2.29960498e-07,  5.49540270e-08,
 Calibration_Arrays[1].append([-9.36587388e-02, -1.74583163e-01, -1.32106181e-01,-3.97356293e-02, -1.24762620e-01])
 Calibration_Arrays[1].append([ 1.31671421e+04,  2.01994705e+04,  2.02198457e+04,1.42806356e+04,  2.38358208e+04])
 
-Calibration_Arrays[1].append([546., 614.0, 708.19, 785.0, 880.])
-Calibration_Arrays[1].append([ 2.13781882e-07, -2.70362665e-08, -6.43226122e-08, 1.75946165e-07, -1.95240542e-07])
-Calibration_Arrays[1].append([-1.37059698e-01, -1.06307663e-01, -1.03561184e-01, -1.41752470e-01, -7.34959142e-02])
-Calibration_Arrays[1].append([ 8.50652000e+03, 8.33733583e+03, 9.53751217e+03, 1.20245957e+04, 9.96250851e+03])
+Calibration_Arrays[2].append([546., 614.0, 708.19, 785.0, 880.])
+Calibration_Arrays[2].append([ 2.13781882e-07, -2.70362665e-08, -6.43226122e-08, 1.75946165e-07, -1.95240542e-07])
+Calibration_Arrays[2].append([-1.37059698e-01, -1.06307663e-01, -1.03561184e-01, -1.41752470e-01, -7.34959142e-02])
+Calibration_Arrays[2].append([ 8.50652000e+03, 8.33733583e+03, 9.53751217e+03, 1.20245957e+04, 9.96250851e+03])
 
 Calibration_Arrays=np.array(Calibration_Arrays)
 
@@ -41,6 +41,9 @@ class Trandor(Andor):#Andor
     ''' Wrapper class for the Triax and the andor
     ''' 
     def __init__(self,White_Shutter=None):
+        
+        print '---------------------------'
+        print 'Triax Information:'
 
         super(Trandor,self).__init__()
         self.triax = Triax('GPIB0::1::INSTR',Calibration_Arrays,CCD_Size) #Initialise triax
@@ -49,7 +52,6 @@ class Trandor(Andor):#Andor
         self.CoolerON()
         
         print '---------------------------'
-        print 'Triax Information:'
         print 'Current Grating:',self.triax.Grating()
         print 'Current Slit Width:', self.triax.Slit(),'um'
         print '---------------------------'
