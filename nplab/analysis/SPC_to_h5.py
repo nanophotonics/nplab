@@ -149,7 +149,7 @@ def populateH5(spectra, h5File):
         gSpectra = f.create_group('Spectra')
 
         for n, spectrum in enumerate(spectra):
-            name = 'Spectrum %s: %s' % (n, spectrum.filename)
+            name = 'Spectrum %02d: %s' % (n, spectrum.filename)
             gSpectrum = gSpectra.create_group(name)
             attrs = {'Original Filename' : spectrum.filename,
                      'Laser Wavelength'  : spectrum.laserWl,
@@ -185,25 +185,28 @@ def populateH5(spectra, h5File):
             dNorm = gSpectrum.create_dataset('Raman (normalised)', data = yNorm)
             dNorm.attrs['wavelengths'] = x
 
+
         gRaw = f.create_group('All Raw')
         gAbs = f.create_group('All Abs')
         gNorm = f.create_group('All Norm')
 
-        for gSpectrum in f['Spectra']:
-            dRaw = f['Spectra'][gSpectrum]['Raman (cts)']
-            dRaw = gRaw.create_dataset(gSpectrum, data = dRaw)
-            dRaw.attrs.update(f['Spectra'][gSpectrum].attrs)
-            dRaw.attrs.update(f['Spectra'][gSpectrum]['Raman (cts)'].attrs)
+        spectraNames = sorted(f['Spectra'].keys(), key = lambda spectrumName: int(spectrumName.split(':')[0][9:]))
 
-            dAbs = f['Spectra'][gSpectrum]['Raman (cts mw^-1 s^-1)']
-            dAbs = gAbs.create_dataset(gSpectrum, data = dAbs)
-            dAbs.attrs.update(f['Spectra'][gSpectrum].attrs)
-            dAbs.attrs.update(f['Spectra'][gSpectrum]['Raman (cts mw^-1 s^-1)'].attrs)
+        for spectrumName in spectraNames:
+            dRaw = f['Spectra'][spectrumName]['Raman (cts)']
+            dRaw = gRaw.create_dataset(spectrumName, data = dRaw)
+            dRaw.attrs.update(f['Spectra'][spectrumName].attrs)
+            dRaw.attrs.update(f['Spectra'][spectrumName]['Raman (cts)'].attrs)
 
-            dNorm = f['Spectra'][gSpectrum]['Raman (normalised)']
-            dNorm = gNorm.create_dataset(gSpectrum, data = dNorm)
-            dNorm.attrs.update(f['Spectra'][gSpectrum].attrs)
-            dNorm.attrs.update(f['Spectra'][gSpectrum]['Raman (normalised)'].attrs)
+            dAbs = f['Spectra'][spectrumName]['Raman (cts mw^-1 s^-1)']
+            dAbs = gAbs.create_dataset(spectrumName, data = dAbs)
+            dAbs.attrs.update(f['Spectra'][spectrumName].attrs)
+            dAbs.attrs.update(f['Spectra'][spectrumName]['Raman (cts mw^-1 s^-1)'].attrs)
+
+            dNorm = f['Spectra'][spectrumName]['Raman (normalised)']
+            dNorm = gNorm.create_dataset(spectrumName, data = dNorm)
+            dNorm.attrs.update(f['Spectra'][spectrumName].attrs)
+            dNorm.attrs.update(f['Spectra'][spectrumName]['Raman (normalised)'].attrs)
 
     print '\th5 file populated'
 
