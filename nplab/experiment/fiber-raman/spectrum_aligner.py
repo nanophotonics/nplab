@@ -4,7 +4,7 @@ import sys
 from scipy.signal import resample
 from nplab import datafile as df 
 from nplab.analysis.signal_alignment import correlation_align
-from scipy.signal import find_peaks_cwt, argrelmax
+from scipy.signal import find_peaks_cwt, argrelmax,correlate
 from nplab.analysis.wavelets import SUREShrink
 from nplab.analysis.smoothing import convex_smooth
 from scipy.interpolate import interp1d
@@ -42,6 +42,15 @@ def least_squares(xs,ys):
 	m,_,_,_ = np.linalg.lstsq(xs_augmented,ys)
 	return m
 
+def annotate_points(xs,ys,ax):
+	assert(len(xs)==len(ys))
+	texts = []
+	for i in range(len(xs)):
+		label = "ind:{}".format(i)
+		print xs[i], ys[i],label
+		t = ax.text(xs[i],ys[i],label,fontsize=10)
+		texts.append(t)
+	return texts
 
 def merge_spectra(ys0,ys1,shift):
 	shift = np.abs(shift)
@@ -116,6 +125,7 @@ def compute_shifts(spectra,threshold=-105,debug=0):
 	
 	if debug > 0:
 		fig, ax = plt.subplots(1)
+		ax.set_title("fname:compute_shifts, debug plot")
 		ax.plot(inds, shifts[inds],"o",label="Threshold shifts [threshold value: {}".format(threshold))
 		# ax.plot(inds[0], smoothed,"-",label="Threshold shifts [threshold value: {}".format(threshold))
 		ax.plot(range(len(shifts)), shifts,"x-",label="Raw shift values".format(threshold))
@@ -178,6 +188,7 @@ def load_reference_data(reference_file,lower_wavelength,upper_wavelength, debug 
 
 def plot_layers(center_wavelengths, data,mapper,show_plot=True):
 	fig, ax = plt.subplots(1)
+	ax.set_title("fname: plot_layers, debug plot")
 	for i in range(len(data)):
 		center_wl, ys = data[i][0], data[i][2]
 		xs = range(len(ys)) 
@@ -217,12 +228,13 @@ def median_spectrum(data,debug=0):
 		axarr2[0].set_xlim(0,14000)
 		axarr2[1].set_xlim(0,14000)
 
-		fig, ax = plt.subplots(1)
+		
 		#make different spectra by computing medians, means stdevs etc from the data_matrix
 		spectrum = apply_function(data_matrix, [np.median,np.mean,np.std,max_fun,min_fun, len])	
 
 		labels = ["median", "mean", "std", "max_fun","min_fun"]
 		fig, axarr = plt.subplots(2)	
+		axarr[0].set_title("fname: median_spectrum, debug plot 1")
 		for i in range(spectrum.shape[0]-1):
 			x = spectrum[i,:]
 			x = x[~np.isnan(x)]
@@ -251,6 +263,7 @@ def median_spectrum(data,debug=0):
 		lower_bound = 0
 		upper_bound = 1014 
 		fig, ax = plt.subplots(1)
+		ax.set_title("fname: median_spectrum, debug plot 3")
 		ax.plot(wavelengths, [pixel_to_index(wl,lower_bound) for wl in wavelengths],label="Leftmost pixel index (0) (real pixel value: 10)")
 		ax.plot(wavelengths, [pixel_to_index(wl,upper_bound) for wl in wavelengths],label="Rightmost pixel index (1014)")
 		ax.legend()
@@ -285,6 +298,7 @@ def rescale_reference(xs,ys,max_size,N,debug=0):
 	if debug > 0:
 	
 		fig, ax = plt.subplots(1)
+		ax.set_title("fname: rescale_reference, debug plot 0")
 		ax.plot(xs)
 		plt.plot(range(0,len(xs)),[offset+gradient*x for x in  range(0,len(xs))],label="least_squares fit")
 		plt.legend();
@@ -317,8 +331,8 @@ def remove_indices(peaks, indices):
 	return peaks
 
 def link_peaks(signal_peaks, reference_peaks, ignored_signal_indices,ignored_reference_indices,debug=0):
-	signal_peaks = remove_indices(signal_peaks,[9,11,17,signal_peaks.shape[1]-1])
-	reference_peaks = remove_indices(reference_peaks,[11,14,reference_peaks.shape[1]-3])
+	signal_peaks = remove_indices(signal_peaks,ignored_signal_indices)
+	reference_peaks = remove_indices(reference_peaks,ignored_reference_indices)
 
 	signal_pos = []
 	diff = []
@@ -336,11 +350,13 @@ def link_peaks(signal_peaks, reference_peaks, ignored_signal_indices,ignored_ref
 	
 	if debug > 0:
 		fig, ax = plt.subplots(1)
+		ax.set_title("fname: link_peaks, debug plot 0")
 		ax.plot(signal_pos,diff,"o-",label="Raw peak shift [indices]")
 		interp_diff = [interpolator_function(x) for x in range(int(np.min(signal_pos)),int(np.max(signal_pos)))]
 		ax.plot(interp_diff,"-",label="Interpolated peak shift")
 		ax.set_xlabel("Array index")
 		ax.set_ylabel("Index shift")
+		ax.legend()
 
 	bounds = [int(np.min(signal_pos)),int(np.max(signal_pos))]
 	#interpolator_function will generate shift for an array index
@@ -383,22 +399,30 @@ def main(debug=0):
 	interpolator_function,interpolator_bounds, lines = link_peaks(
 		signal_peaks = signal_peaks,
 		reference_peaks = ref_peaks,
-		ignored_signal_indices=[9,11,17,signal_peaks.shape[1]-1],
-		ignored_reference_indices=[11,14,ref_peaks.shape[1]-3]
+		ignored_signal_indices=[3,8,11,13,19,22,23],
+		ignored_reference_indices=[11,14,18],
+		debug = debug
 	)
 
 	if debug > 0:
 		fig, ax = plt.subplots(1,figsize=(12,10))
+		ax.set_title("fname: main, debug 0")
 		ax.plot(ref_ys,"-",label="Reference")
 		ax.plot(signal_spectrum,label="Signal")
+
+
 		
 		ax.plot(ref_peaks[0,:],ref_peaks[1,:],"o",label="Reference peaks")
+		t1s = annotate_points(ref_peaks[0,:],ref_peaks[1,:],ax)
 		ax.plot(signal_peaks[0,:],signal_peaks[1,:],"o",label="Signal peaks")
+		t2s = annotate_points(signal_peaks[0,:],signal_peaks[1,:],ax)
+		
 		for (xs,ys) in lines:
 			ax.plot(xs,ys,"-",color="red")
 
 		ax.set_xlabel("Array index")
 		ax.set_ylabel("Counts [arb. units]")
+		
 		ax.legend()
 
 	def make_mapper2(interpolator_function,gradient,offset):
@@ -417,12 +441,13 @@ def main(debug=0):
 	index_to_wavelength = mapper_2 = make_mapper2(interpolator_function,gradient,offset)
 	if debug > 0:
 		fig, ax = plt.subplots(1)
+		ax.set_title("fname: main, debug plot 1")
 		xs = range(np.min(interpolator_bounds),np.max(interpolator_bounds))
 		ys = [index_to_wavelength(x) for x in xs]
 		plt.plot(xs,ys)
 
 		fig, ax = plt.subplots(1)
-
+		ax.set_title("fname: main, debug plot 2")
 		wavelengths_reference = [index_to_wavelength(x,with_correction=False) for x in range(len(ref_ys))]
 		ax.plot(wavelengths_reference,ref_ys,label="Reference spectrum (rescaled)")
 		xs = range(interpolator_bounds[0],interpolator_bounds[1])
@@ -456,4 +481,4 @@ def main(debug=0):
 	return mapper
 
 
-mapper = main()
+mapper = main(1)

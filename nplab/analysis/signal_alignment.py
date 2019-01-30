@@ -1,7 +1,6 @@
 import numpy as np 
 import matplotlib.pyplot as plt 
-import scipy.signal
-
+from scipy.signal import correlate
 #Perform phase correlation alignment
 def get_window(N, window_type ="hamming"):
 	if window_type == "hamming":
@@ -17,11 +16,13 @@ def correlation_align(signal_0,signal_1,upsampling=1.0,return_integer_shift=True
 	# assert(signal_0.shape==signal_1.shape)
 
 	if upsampling > 1.0:
-		signal_0 = scipy.signal.resample(signal_0,int(np.round(N*upsampling)))
-		signal_1 = scipy.signal.resample(signal_1,int(np.round(N*upsampling)))
+		raise ValueError("Forbidden")
+		#TODO replace resample
+		# signal_0 = scipy.signal.resample(signal_0,int(np.round(N*upsampling)))
+		# signal_1 = scipy.signal.resample(signal_1,int(np.round(N*upsampling)))
 		N = int(np.round(N*upsampling))
 
-	xcorr = scipy.signal.correlate(signal_0,signal_1,mode="same", method="fft")
+	xcorr = correlate(in1=signal_0,in2=signal_1, method='fft',mode="same")
 	full_precision_shift = shift = (np.round(N/2.0)-np.argmax(xcorr))/float(upsampling)
 	integer_shift = int(np.round(shift))
 	if return_integer_shift == True:
@@ -44,7 +45,7 @@ def demo():
 	
 
 	fig, axarr = plt.subplots(2)
-	up = 4.0
+	up = 1.0
 	shift, xcorr = correlation_align(signal0,signal1,upsampling=up)
 	
 	xs = np.array(range(0,N))
