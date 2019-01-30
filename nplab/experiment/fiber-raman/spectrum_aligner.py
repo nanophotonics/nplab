@@ -1,7 +1,7 @@
 import numpy as np 
 import matplotlib.pyplot as plt 
 import sys
-from scipy.signal import resample
+from scipy.signal import resample, argrelmax
 from nplab import datafile as df 
 from nplab.analysis.signal_alignment import correlation_align
 from scipy.signal import find_peaks_cwt, argrelmax
@@ -10,32 +10,6 @@ from nplab.analysis.smoothing import convex_smooth
 from scipy.interpolate import interp1d
 from nplab.analysis.smoothing import convex_smooth
 	
-
-# def find_index_closest_to_value(value, array):
-# 	index = np.argmin(np.abs(array - value))
-# 	return index
-
-# def generate_new_xs(previous_xs, current_xs,shift,debug=0):
-# 	assert(shift < 0)
-# 	index = find_index_closest_to_value(current_xs[0],previous_xs)
-
-# 	diff = previous_xs[index]-current_xs[0]
-	
-# 	lower_wavelengths = previous_xs[index+shift:index]
-# 	if debug > 0:
-# 		print previous_xs[index], current_xs[0]
-# 		print "diff:", diff
-# 		print "indices:", index+shift, index
-# 		print "lower_wavelengths", lower_wavelengths
-
-# 	lower_wavelengths = lower_wavelengths - diff
-# 	assert(len(lower_wavelengths)==np.abs(shift))
-# 	truncated_current = current_xs[0:len(current_xs)+shift]
-# 	assert(len(truncated_current)==len(current_xs)+shift)
-# 	new_xs = np.concatenate([lower_wavelengths, truncated_current])
-# 	print len(new_xs),len(current_xs)
-# 	assert(len(new_xs)==len(current_xs))
-# 	return new_xs
 
 def least_squares(xs,ys):
 	xs_augmented = np.transpose([xs,np.ones(len(xs))])
@@ -127,7 +101,7 @@ def compute_shifts(spectra,threshold=-105,debug=0):
 		ax.plot(padded_smoothed_shifts,"x-",label="Smoothed shift values with end-padding")
 		ax.plot(outp,label="Final output")
 		ax.legend()
-		plt.show()
+		# plt.show()
 
 	assert(len(padded_smoothed_shifts)==len(spectra))
 	return inds,outp
@@ -168,26 +142,41 @@ def load_reference_data(reference_file,lower_wavelength,upper_wavelength, debug 
 	#Get valid intensities
 	ref_ys = ref_ys[inds]
 	ref_xs = ref_xs[inds]
+	peak_indices = argrelmax(ref_ys)[0]
+
+
 	if debug > 0:
 		fig3, ax3 = plt.subplots(1)
 		ax3.plot(ref_xs,ref_ys)
+		ax3.plot(ref_xs[peak_indices],ref_ys[peak_indices],"o")
 		ax3.set_xlabel("Reference Wavelength [nm]")
 		ax3.set_ylabel("Counts")
 		ax3.set_title("Reference spectrum,\n Wavelength lower bound:{0}\n Wavelength upper bound:{1}".format(lower_wavelength,upper_wavelength))
 	return ref_xs, ref_ys
 
-def plot_layers(center_wavelengths, data,mapper,show_plot=True):
+def plot_layers(center_wavelengths, data,mapper,show_plot=True,with_normalisation=False,reference = None):
 	fig, ax = plt.subplots(1)
+	if reference is not None:
+			ref_ys = np.array(reference[1])
+			ref_ys = ref_ys - np.nanmin(ref_ys)
+			ref_ys = ref_ys/np.nanmax(ref_ys) * 80
+			ax.plot(reference[0],ref_ys,color="red")
+
+
 	for i in range(len(data)):
 		center_wl, ys = data[i][0], data[i][2]
 		xs = range(len(ys)) 
+		if with_normalisation == True:
+			ys = ys - np.nanmin(ys)
+			ys = ys/np.nanmax(ys)
+			ys = i + (ys*0.9) 
 		
-		ys = ys - np.nanmin(ys)
-		ys = i + (ys/(1.1*np.nanmax(ys))) 
 		wls = [mapper(center_wl,x) for x in range(len(ys))]
-		plt.plot(wls,ys,color="blue")
+		ax.plot(wls,ys,color="blue")
 	if show_plot == True:
 		plt.show()
+	else:
+		return ax
 
 def make_data_matrix(data):
 	spectra = [d[2] for d in data]
@@ -269,26 +258,49 @@ def zero_min(xs,with_nan_replacement=True):
 
 
 def rescale_reference(xs,ys,max_size,N,debug=0):
-	#Normalise and rescale so that the 
-	ys = zero_min(ys)
-	ys = ys*np.nanmax(max_size)/float(np.nanmax(ys))
 	
+	#Version2 - linear interpolation directly!
+	M = len(xs)
+	intervals = M - 1
+	interval_length = 1/float(intervals)
+	rescaling_factor = float(N)/float(M-1)
+	new_interval_length = interval_length*rescaling_factor
 
-	#Smooth the reference and resample to the same length as the stitched spectrum
-	ys = SUREShrink(ys)
-	ys = resample(ys,N)
+	new_interval_starts = [i*rescaling_factor for i in range(len(xs))]
+	fxs = interp1d(new_interval_starts,xs)
+	fys = interp1d(new_interval_starts,ys)
+	N_max = int(np.floor(new_interval_starts[-1]))
+	assert(N==N_max)
+	print M,N,N_max
+	new_xs = np.array([fxs(i) for i in range(N)])
+	new_ys = np.array([fys(i) for i in range(N)])
 
-	#Resample the wavelength scale as well:
-	xs = resample(xs,N)
+	#Version1	
+	# ys = zero_min(ys)
+	# ys = ys*np.nanmax(max_size)/float(np.nanmax(ys))
+	# ys = SUREShrink(ys)
+	# ys = resample(ys,N)
+	# xs = resample(xs,N)
 
-	[gradient, offset] = least_squares(range(0,len(xs)),xs)
+
+	array_indices = range(0,len(new_xs))
+	wavelengths = new_xs
+	[gradient, offset] = least_squares(array_indices,wavelengths)
 	if debug > 0:
 	
-		fig, ax = plt.subplots(1)
-		ax.plot(xs)
-		plt.plot(range(0,len(xs)),[offset+gradient*x for x in  range(0,len(xs))],label="least_squares fit")
-		plt.legend();
-	return xs, ys, gradient, offset
+		fig, [ax,ax2] = plt.subplots(2)
+		ax.plot(array_indices,wavelengths)
+		ax.plot(array_indices,[offset+gradient*x for x in  array_indices],"--",label="least_squares fit")
+		ax.legend();
+
+		ax.set_title("Rescale Reference(xs,ys,max_size,N) plot")
+
+		ax2.plot(xs,ys,label="Raw reference")
+		ax2.plot(new_xs,new_ys,label="Resampled reference")
+		ax2.legend()
+
+
+	return new_xs, new_ys, gradient, offset
 
 def get_peaks(signal,threshold):
 		indices = argrelmax(signal)[0]
@@ -313,18 +325,25 @@ def prune_peaks(peaks):
 		return peaks
 
 def remove_indices(peaks, indices):
+	print "peaks:", peaks 
+	print "indices:",indices
+
 	peaks = np.array([peaks[:,i] for i in range(peaks.shape[1]) if i not in indices]).T
 	return peaks
 
-def link_peaks(signal_peaks, reference_peaks, ignored_signal_indices,ignored_reference_indices,debug=0):
-	signal_peaks = remove_indices(signal_peaks,[9,11,17,signal_peaks.shape[1]-1])
-	reference_peaks = remove_indices(reference_peaks,[11,14,reference_peaks.shape[1]-3])
+def link_peaks(signal_peaks, reference_peaks, signal_indices,reference_indices,debug=0):
+	signal_peaks = remove_indices(signal_peaks, [i for i in range(signal_peaks.shape[1]) if i not in signal_indices])
+	reference_peaks = remove_indices(reference_peaks, [i for i in range(reference_peaks.shape[1]) if i not in reference_indices])
+	
+	N = min(signal_peaks.shape[1],reference_peaks.shape[1])
+	print signal_peaks.shape
+	print reference_peaks.shape
 
 	signal_pos = []
 	diff = []
 	lines = []
 	
-	for i in range(min(reference_peaks.shape[1],signal_peaks.shape[1])):
+	for i in range(N):
 		xs = [reference_peaks[0,i],signal_peaks[0,i]]
 		ys = [reference_peaks[1,i],signal_peaks[1,i]]
 		
@@ -346,15 +365,26 @@ def link_peaks(signal_peaks, reference_peaks, ignored_signal_indices,ignored_ref
 	#interpolator_function will generate shift for an array index
 	#lines - for plotting 
 	return interpolator_function,bounds,lines  
-		
+	
+def min_max_normalise(ys):
+	signal = ys
+	signal = signal - np.nanmin(signal)
+	signal = signal/np.nanmax(signal)
+	return signal
 
-def main(debug=0):
+def annotate_points(xs,ys,ax):
+	for i in range(len(xs)):
+		x = xs[i]
+		y = ys[i]
+		ax.annotate('i:{0}'.format(i,x,y), xy=(x,y), textcoords='data')
+	ax.grid()
+def main(debug=1):
 	#Measurements and Calibration files
 	measurement_file = df.DataFile("measured_spectrum.hdf5","r")
 	reference_file = df.DataFile("maxwell_room_light_spectrum_calibration.hdf5","r")
 
 	#Load reference within given range 
-	ref_xs, ref_ys = load_reference_data(reference_file,lower_wavelength=430,upper_wavelength=714)
+	ref_xs, ref_ys = load_reference_data(reference_file,lower_wavelength=430,upper_wavelength=714,debug=debug)
 	
 	#Load measured data from file
 	data = load_measured_data(measurement_file)
@@ -363,7 +393,7 @@ def main(debug=0):
 	#Load the raw counts from the measured data 
 
 	#Merge individual spectra (using median) and normalise to set minimum value to zero
-	signal_spectrum,mapper_1 = median_spectrum(data,debug=1)
+	signal_spectrum,mapper_1 = median_spectrum(data,debug=debug)
 	signal_spectrum = zero_min(signal_spectrum)
 	#handcrafted truncation to "valid range" where we can see peaks & that matches the reference spectrum
 	signal_spectrum = signal_spectrum[1550:10570]
@@ -374,17 +404,21 @@ def main(debug=0):
 	#rescale the reference and fit a line to the wavelength range [nm]
  	ref_xs,ref_ys, gradient, offset = rescale_reference(xs=ref_xs,ys=ref_ys,max_size=np.nanmax(signal_spectrum),N=len(signal_spectrum),debug=1)
 	
+ 	ref_ys = ref_ys - np.nanmin(ref_ys)
+ 	ref_ys = ref_ys/float(np.nanmax(ref_ys))
 
+ 	signal_spectrum = signal_spectrum - np.nanmin(signal_spectrum)
+ 	signal_spectrum = signal_spectrum/float(np.nanmax(signal_spectrum))
 	#Get peaks from the signal, with thresholding to eliminate low order maxima/minima
-	signal_peaks = get_peaks(signal_spectrum,threshold =1.0)
-	ref_peaks = get_peaks(ref_ys,threshold =2.0)
+	signal_peaks = get_peaks(signal_spectrum,threshold =0.6)
+	ref_peaks = get_peaks(ref_ys,threshold =0.7)
 
 	#Link peaks, handcrated to ignore false peaks
 	interpolator_function,interpolator_bounds, lines = link_peaks(
 		signal_peaks = signal_peaks,
 		reference_peaks = ref_peaks,
-		ignored_signal_indices=[9,11,17,signal_peaks.shape[1]-1],
-		ignored_reference_indices=[11,14,ref_peaks.shape[1]-3]
+		signal_indices=[0,1,2,3,4,5,7,8,10,12,13,14,15,16,17,19,21,22,23],
+		reference_indices=[0,8,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,26,27]
 	)
 
 	if debug > 0:
@@ -394,27 +428,39 @@ def main(debug=0):
 		
 		ax.plot(ref_peaks[0,:],ref_peaks[1,:],"o",label="Reference peaks")
 		ax.plot(signal_peaks[0,:],signal_peaks[1,:],"o",label="Signal peaks")
+		annotate_points(signal_peaks[0,:],signal_peaks[1,:],ax)
+		annotate_points(ref_peaks[0,:],ref_peaks[1,:],ax)
 		for (xs,ys) in lines:
 			ax.plot(xs,ys,"-",color="red")
 
 		ax.set_xlabel("Array index")
 		ax.set_ylabel("Counts [arb. units]")
+
 		ax.legend()
 
-	def make_mapper2(interpolator_function,gradient,offset):
+	def make_mapper2(interpolator_function,gradient,offset,debug=0):
 
 		def index_to_wavelength(index,with_correction= True):
-			
-			if with_correction:
-				alignment_correction = int(np.round(interpolator_function(index)))
-				index = index - alignment_correction
-			#this out linear model
-			wavelength = index*gradient + offset
-			return wavelength
-
+			index = index - 1550
+			try:
+				if with_correction:
+					alignment_correction = int(np.round(interpolator_function(index)))
+					#1550 - zero of median spectrum
+					index = index - alignment_correction 
+				#this out linear model
+				wavelength = index*gradient + offset
+				return wavelength
+			except:
+				return np.nan
+		if debug > 0:
+			xs = range(1550,10570)
+			ys = [index_to_wavelength(x) for x in xs]
+			fig, ax = plt.subplots(1)
+			ax.plot(xs,ys)
+			ax.set_title("Index to wavelength (mapper_2)")		
 		return index_to_wavelength
 
-	index_to_wavelength = mapper_2 = make_mapper2(interpolator_function,gradient,offset)
+	index_to_wavelength = mapper_2 = make_mapper2(interpolator_function,gradient,offset,debug=debug)
 	if debug > 0:
 		fig, ax = plt.subplots(1)
 		xs = range(np.min(interpolator_bounds),np.max(interpolator_bounds))
@@ -423,7 +469,14 @@ def main(debug=0):
 
 		fig, ax = plt.subplots(1)
 
+
 		wavelengths_reference = [index_to_wavelength(x,with_correction=False) for x in range(len(ref_ys))]
+		rx,ry = load_reference_data(reference_file,lower_wavelength=430,upper_wavelength=714)
+		ry = ry - np.nanmin(ry)
+		ry= np.array(ry)/np.nanmax(ry)
+		ry = ry
+		ax.plot(rx,ry,label="Reference spectrum (raw)")
+		
 		ax.plot(wavelengths_reference,ref_ys,label="Reference spectrum (rescaled)")
 		xs = range(interpolator_bounds[0],interpolator_bounds[1])
 
@@ -442,18 +495,35 @@ def main(debug=0):
 	def mapper(center_wavelength, pixel_index):
 		try:
 			array_index = mapper_1(center_wavelength,pixel_index)
-			wavelength= mapper_2(array_index)
+			wavelength= mapper_2(array_index,with_correction=True)
 			return wavelength
 		except:
-			return np.nan
-
-	if debug> 0:
-
-		plt.show()
+			return np.nan	
 
 	#This tests the data
-	plot_layers(center_wavelengths, data,mapper,show_plot=True)
-	return mapper
+	ax = plot_layers(center_wavelengths=center_wavelengths,data=data,reference = None,mapper=mapper,show_plot=False,with_normalisation=True)
+	y = ref_ys
 
+	
+	ref_xs, ref_ys = load_reference_data(reference_file,lower_wavelength=430,upper_wavelength=714)
+	ax.plot(ref_xs,50* min_max_normalise(ref_ys),label="Raw reference")
+	ref_xs,ref_ys, _, _ = rescale_reference(xs=ref_xs,ys=ref_ys,max_size=np.nanmax(signal_spectrum),N=len(signal_spectrum),debug=0)
+	ax.plot(ref_xs, 50*min_max_normalise(ref_ys),label="Rescaled reference")
+
+	spectrum,_ = median_spectrum(data)
+	spectrum = spectrum[1550:10570]
+	indices = np.array(range(len(spectrum)))
+
+	wls = [mapper_2(i+1550,with_correction=False) for i in indices]
+	ax.plot(wls, 50*min_max_normalise(spectrum),label="Median stitched spectrum (without correction)")
+
+	wls = [mapper_2(i+1550,with_correction=True) for i in indices]
+	ax.plot(wls, 50*min_max_normalise(spectrum),label="Median stitched spectrum (with correction)")
+	
+	ax.legend()
+
+	if debug> 0:
+		plt.show()
+	return mapper
 
 mapper = main()
