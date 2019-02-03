@@ -124,15 +124,17 @@ def main(debug=0):
 
 def mapper_tester(mapper):
 
-	center_wavelengths = np.linspace(740,850,5)
+	center_wavelengths = np.linspace(740,850,4)
 	pixels = np.arange(0,1014,1)
 	# print pixels
 	# print mapper
 	# print center_wavelengths
 	for cw in center_wavelengths:
 		wls = [mapper(cw,p) for p in pixels]
-		plt.plot(pixels,wls,label="cw:{}".format(cw))
-
+		plt.plot(pixels,wls,label="center wavelength:{}".format(cw))
+	plt.xlabel("Pixel index")
+	plt.ylabel("Wavelength [nm]")
+	plt.legend()
 	plt.show()
 			
 
