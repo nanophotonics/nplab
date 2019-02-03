@@ -1,7 +1,7 @@
 import numpy as np 
 from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt 
-
+from nplab import datafile as df
 
 def least_squares(xs,ys):
 	xs_augmented = np.transpose([xs,np.ones(len(xs))])
@@ -37,12 +37,14 @@ def scan_fit(dataset,debug = 0):
 	offsets = []
 	gradients = []
 	for (center_wavelength,spectra,calibration_wavelengths) in dataset:
-		print center_wavelength,len(spectra),len(calibration_wavelengths)
-		gradient, offset = single_position_fit(spectra,calibration_wavelengths,debug=debug,center_wavelength=center_wavelength)
+		if len(spectra) > 1:
 
-		center_wls = center_wls + [center_wavelength]
-		offsets = offsets + [offset]
-		gradients = gradients + [gradient]
+			print center_wavelength,len(spectra),len(calibration_wavelengths)
+			gradient, offset = single_position_fit(spectra,calibration_wavelengths,debug=debug,center_wavelength=center_wavelength)
+
+			center_wls = center_wls + [center_wavelength]
+			offsets = offsets + [offset]
+			gradients = gradients + [gradient]
 
 	if debug > 0:
 		print "len(offsets)", len(offsets)
@@ -62,7 +64,8 @@ def scan_fit(dataset,debug = 0):
 	def mapper(center_wavelength,pixel_index):
 		wavelength_offset = interp1d(center_wls,offsets,kind='linear')
 		wavelength_gradient = interp1d(center_wls,gradients,kind='linear')
-		return wavelength_offset + wavelength_gradient*pixel_index
+
+		return wavelength_offset(center_wavelength) + wavelength_gradient(center_wavelength)*pixel_index
 
 	return mapper
 
@@ -96,6 +99,47 @@ def test(debug):
 	dataset = [dset0,dset1]
 	scan_fit(dataset,debug=1)
 
+def main(debug=0):
+	f =df.DataFile("ir_calibration.hdf5","r")
+	g = f["calibration"]
+	keys = g.keys()
+
+	center_wavelengths = []
+	for k in keys:
+		center_wavelengths = center_wavelengths + [g[k].attrs["center_wavelength"]]
+	
+	center_wavelengths = sorted(np.unique(center_wavelengths))
+	dataset = []
+	for cw in center_wavelengths:
+		entry = (cw,[],[])
+		for k in keys:
+			if g[k].attrs["center_wavelength"] == cw:
+				entry[2].append(g[k].attrs["laser_wavelength"])
+				entry[1].append(np.array(g[k]))
+		dataset.append(entry)
+	mapper = scan_fit(dataset,debug=debug)
+
+	return mapper
+
+
+def mapper_tester(mapper):
+
+	center_wavelengths = np.linspace(740,850,5)
+	pixels = np.arange(0,1014,1)
+	# print pixels
+	# print mapper
+	# print center_wavelengths
+	for cw in center_wavelengths:
+		wls = [mapper(cw,p) for p in pixels]
+		plt.plot(pixels,wls,label="cw:{}".format(cw))
+
+	plt.show()
+			
+
 if __name__ == "__main__":
-	test(debug=1)
+	mapper = main()
+	mapper_tester(mapper)
+
+
+	# test(debug=1)
 	print "pass"
