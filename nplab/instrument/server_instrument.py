@@ -149,7 +149,7 @@ def create_server_class(original_class):
 
 
 def create_client_class(original_class, tcp_methods=None, excluded_methods=('get_qt_ui',),
-                        excluded_attributes=('ui', '_ShowGUIMixin__gui_instance')):
+                        tcp_attributes=None, excluded_attributes=('ui', '_ShowGUIMixin__gui_instance')):
     """
     Given an nplab instrument, returns a class that overrides a series of class methods, so that instead of running
     those methods, it sends a string over TCP an instrument server of the same type. It is also able to get and set
@@ -160,6 +160,7 @@ def create_client_class(original_class, tcp_methods=None, excluded_methods=('get
                         original_class.__dict__.keys() excluding magic methods
     :param excluded_methods: methods you do not want to send over TCP. By default the get_qt_ui isn't sent over TCP,
             since it doesn't return something that can be sent over TCP (a pointer to an instance local to the server)
+    :param tcp_attributes: attributes you do want to read over TCP.
     :param excluded_attributes: attributes you do not want to read over TCP, e.g. attributes that are inherently local.
             Hence, by default, the GUI attributes are not read over TCP.
     :return: new_class
@@ -255,6 +256,9 @@ def create_client_class(original_class, tcp_methods=None, excluded_methods=('get
 
     if tcp_methods is None:
         tcp_methods = original_class.__dict__.keys()
+    excluded_methods = list(excluded_methods)
+    if tcp_attributes is None:
+        tcp_attributes = list()
     excluded_attributes = list(excluded_attributes)
 
     methods = []
@@ -270,7 +274,7 @@ def create_client_class(original_class, tcp_methods=None, excluded_methods=('get
         # print "Getting: ", item, item in ["address", "instance_attributes"]
         if item in ["address", "instance_attributes", "method_list", "_logger", "__init__"] + excluded_attributes:
             return object.__getattribute__(self, item)
-        elif item in self.instance_attributes:
+        elif item in self.instance_attributes or item in tcp_attributes:
             return self.send_to_server(repr(dict(variable_get=item)))
         elif item in excluded_methods:
             return original_class.__getattribute__(self, item)
