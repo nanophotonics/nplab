@@ -42,6 +42,7 @@ EXAMPLE:
 """
 
 from nplab.utils.log import create_logger
+from nplab.utils.array_with_attrs import ArrayWithAttrs
 import threading
 import SocketServer
 import socket
@@ -88,8 +89,10 @@ class ServerHandler(SocketServer.BaseRequestHandler):
         self.server._logger.debug("Instrument reply: %s" % str(instr_reply))
 
         try:
-            if type(instr_reply) == np.ndarray:
-                reply = repr(instr_reply.tolist())
+            if type(instr_reply) == ArrayWithAttrs:
+                reply = repr(dict(array=instr_reply.tolist(), attrs=instr_reply.attrs))
+            elif type(instr_reply) == np.ndarray:
+                reply = repr(dict(array=instr_reply.tolist()))
             else:
                 reply = repr(instr_reply)
         except Exception as e:
@@ -122,6 +125,7 @@ def create_server_class(original_class):
             SocketServer.TCPServer.__init__(self, server_address, ServerHandler, True)
             self.instrument = original_class(*args, **kwargs)
             self._logger = create_logger('TCP server')
+            self.thread = None
 
         def run(self, with_gui=True, backgrounded=False):
             """
@@ -132,14 +136,15 @@ def create_server_class(original_class):
             :return:
             """
             if with_gui or backgrounded:
-                t = threading.Thread(target=self.serve_forever)
-                t.setDaemon(True)  # don't hang on exit
-                t.start()
+                if self.thread is not None:
+                    del self.thread
+                self.thread = threading.Thread(target=self.serve_forever)
+                self.thread.setDaemon(True)  # don't hang on exit
+                self.thread.start()
                 if with_gui:
                     self.instrument.show_gui()
             else:
                 self.serve_forever()
-
     return Server
 
 
@@ -180,7 +185,10 @@ def create_client_class(original_class, tcp_methods=None, excluded_methods=('get
             reply = obj.send_to_server(repr(command_dict))
             if type(reply) == dict:
                 if "array" in reply:
-                    reply = np.array(reply["array"])
+                    if "attrs" in reply:
+                        reply = ArrayWithAttrs(np.array(reply["array"]), reply["attrs"])
+                    else:
+                        reply = np.array(reply["array"])
             return reply
 
         return method
