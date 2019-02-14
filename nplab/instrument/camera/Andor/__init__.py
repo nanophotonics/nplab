@@ -743,10 +743,10 @@ class Andor(Camera, AndorBase):
             else:
                 reshaped = np.reshape(imageArray, (num_of_images,) + image_shape)
             self.CurImage = self.bundle_metadata(reshaped)
-            if len(self.CurImage) == 1:
-                return 1, reshaped[0]
+            if len(reshaped) == 1:
+                return 1, self.CurImage[0]
             else:
-                return 1, reshaped
+                return 1, self.CurImage
         except Exception as e:
             self._logger.warn("Couldn't Capture because %s" % e)
 
