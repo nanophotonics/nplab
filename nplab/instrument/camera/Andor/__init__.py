@@ -621,6 +621,7 @@ class AndorBase:
 
 
 parameters = dict(
+    AvailableCameras=dict(Get=dict(cmdName='GetAvailableCameras', Outputs=(c_uint, )), value=None),
     channel=dict(value=0),
     backgrounded=dict(value=False),
     background=dict(value=None),
@@ -743,9 +744,8 @@ class Andor(Camera, AndorBase):
         try:
             self.SetParameter(parameter_name, parameter_value)
         except Exception as e:
-            self.log('paramter' +parameter_name+' could not be set with the value '+parameter_value+
-                     'due to error '+str(e))
-            
+            self.log('parameter %s could not be set with the value %s due to error %s' % (parameter_name,
+                                                                                          parameter_value, e))
 
     def get_qt_ui(self):
         if not hasattr(self, 'ui'):
@@ -813,6 +813,8 @@ class AndorUI(QtWidgets.QWidget, UiTools):
             self._func_dict[param] = func
             register_for_property_changes(self.Andor, param, self._func_dict[param])
         #self.Andor.updateGUI.connect(self.updateGUI)
+        self.autoLevel=True
+        self.autoRange=False
 
     def __del__(self):
         self._stopTemperatureThread = True
@@ -980,7 +982,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
             self.Andor.SetImage(*params)
         else:
             self.Andor.SetImage(current_binning, current_binning, *self.Andor.parameters['Image']['value'][2:])
-        self.Andor.SetParameter('FVBHBin', current_binning)
+        self.Andor.set_camera_parameter('FVBHBin', current_binning)
 
     def NumFramesChanged(self):
         num_frames = self.spinBoxNumFrames.value()
@@ -1224,7 +1226,8 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         if len(self.Andor.CurImage.shape) == 2:
             if self.Andor.CurImage.shape[0] > self.DisplayWidget._max_num_line_plots:
                 self.DisplayWidget.splitter.setSizes([1, 0])
-                self.DisplayWidget.ImageDisplay.setImage(data.T, pos=tuple(map(operator.add, offset, (xvals[0],0))), autoRange=False,
+                self.DisplayWidget.ImageDisplay.setImage(data.T, pos=tuple(map(operator.add, offset, (xvals[0], 0))),
+                                                         autoRange=self.autoRange,
                                                          scale=(scale[0]*wavelengthScale[0],scale[1]*wavelengthScale[1]))
             else:
                 self.DisplayWidget.splitter.setSizes([0, 1])
@@ -1237,19 +1240,28 @@ class AndorUI(QtWidgets.QWidget, UiTools):
             zvals = 0.99 * np.linspace(0, image.shape[0] - 1, image.shape[0])
             if image.shape[0] == 1:
                 image = image[0]
-                if self.DisplayWidget.ImageDisplay.image is None:
-                    self.DisplayWidget.ImageDisplay.setImage(image, xvals=zvals,
-                                                         pos=tuple(map(operator.add, offset, (xvals[0],0))), autoRange=False,
-                                                         scale=(scale[0]*wavelengthScale[0],scale[1]*wavelengthScale[1]), autoLevels=True)
-                else:
-                    self.DisplayWidget.ImageDisplay.setImage(image, xvals=zvals,
-                                                         pos=tuple(map(operator.add, offset, (xvals[0],0))), autoRange=False,
-                                                         scale=(scale[0]*wavelengthScale[0],scale[1]*wavelengthScale[1]), autoLevels=False)
+                # if self.DisplayWidget.ImageDisplay.image is None:
+                #     self.DisplayWidget.ImageDisplay.setImage(image, xvals=zvals,
+                #                                              pos=tuple(map(operator.add, offset, (xvals[0], 0))),
+                #                                              autoRange=self.autoRange,
+                #                                              scale=(scale[0]*wavelengthScale[0],
+                #                                                     scale[1]*wavelengthScale[1]),
+                #                                              autoLevels=True)
+                # else:
+                #     self.DisplayWidget.ImageDisplay.setImage(image, xvals=zvals,
+                #                                              pos=tuple(map(operator.add, offset, (xvals[0], 0))),
+                #                                              autoRange=self.autoRange,
+                #                                              scale=(scale[0] * wavelengthScale[0],
+                #                                                     scale[1] * wavelengthScale[1]),
+                #                                              autoLevels=self.autoLevel)
 
-            else:
-                self.DisplayWidget.ImageDisplay.setImage(image, xvals=zvals,
-                                                         pos=tuple(map(operator.add, offset, (xvals[0],0))), autoRange=False,
-                                                         scale=(scale[0]*wavelengthScale[0],scale[1]*wavelengthScale[1]))
+            # else:
+            self.DisplayWidget.ImageDisplay.setImage(image, xvals=zvals,
+                                                     pos=tuple(map(operator.add, offset, (xvals[0], 0))),
+                                                     autoRange=self.autoRange,
+                                                     scale=(scale[0] * wavelengthScale[0],
+                                                            scale[1] * wavelengthScale[1]),
+                                                         autoLevels=self.autoLevel)
 
         chxmin = xvals[0]
         chxmax = xvals[-1]
