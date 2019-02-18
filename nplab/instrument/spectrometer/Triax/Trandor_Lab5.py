@@ -1,5 +1,5 @@
 """
-jpg66 10/2018
+jpg66
 """
 
 from nplab.instrument.spectrometer.Triax.__init__ import Triax
@@ -10,14 +10,20 @@ import types
 
 Calibration_Arrays=[]
 
-Calibration_Arrays.append(np.array([[ 6.00379272e-10, -6.78228336e-07,  2.05777889e-04], [-1.34194138e-05,  1.45370324e-02, -6.02706470e+00],[ 9.92195985e-02, -8.09189163e+01,  3.08091562e+04]]))
-Calibration_Arrays.append(np.array([[ 4.94388732e-11, -2.16939715e-08, -1.13540608e-05], [-1.31783914e-06,  1.27606623e-03, -2.03620149e+00],[ 4.72696666e-03,  7.87338518e+00,  1.84807750e+03]]))
+Calibration_Arrays.append([])
+Calibration_Arrays.append([])
+Calibration_Arrays.append([])
+
+Calibration_Arrays[1].append([546.,614.,633.,708.19,785.,880.])
+Calibration_Arrays[1].append([-5.65248674e-06, -3.01056645e-06, -1.99047684e-06, -2.24562594e-05, 2.02336235e-06,  1.15803962e-05])
+Calibration_Arrays[1].append([-1.75115459, -1.79100089, -1.79852965, -1.59951646, -1.85506506,-1.98678881])
+Calibration_Arrays[1].append([7601.12273137,  8563.71071556,  8849.60197977,  9361.94861663,11023.31118393, 12621.76193336])
 
 Calibration_Arrays=np.array(Calibration_Arrays)
 
 CCD_Size=1600 #Size of ccd in pixels
 
-#Make a deepcopy of the andor capture function, to add a white light shutter close command to if reuqired later
+#Make a deepcopy of the andor capture function, to add a white light shutter close command to if required later
 Andor_Capture_Function=types.FunctionType(Andor.capture.func_code, Andor.capture.func_globals, 'Unimportant_Name',Andor.capture.func_defaults, Andor.capture.func_closure)
 
 class Trandor(Andor):#Andor
@@ -25,15 +31,17 @@ class Trandor(Andor):#Andor
     ''' Wrapper class for the Triax and the andor
     ''' 
     def __init__(self,White_Shutter=None):
+        
+        print '---------------------------'
+        print 'Triax Information:'
 
         super(Trandor,self).__init__()
-        self.triax = Triax('GPIB0::1::INSTR',Calibration_Arrays) #Initialise triax
+        self.triax = Triax('GPIB0::1::INSTR',Calibration_Arrays,CCD_Size) #Initialise triax
         self.White_Shutter=White_Shutter
         self.SetParameter('SetTemperature',-90)  #Turn on andor cooler
         self.CoolerON()
         
         print '---------------------------'
-        print 'Triax Information:'
         print 'Current Grating:',self.triax.Grating()
         print 'Current Slit Width:', self.triax.Slit(),'um'
         print '---------------------------'
@@ -43,14 +51,29 @@ class Trandor(Andor):#Andor
         return self.triax.Grating(Set_To)
 
     def Generate_Wavelength_Axis(self):
-        Pixels=np.arange(0,CCD_Size)
-        return np.flipud(self.triax.Convert_Pixels_to_Wavelengths(Pixels))
+        return self.triax.Get_Wavelength_Array()
 
     def Set_Center_Wavelength(self,Wavelength):  
         Centre_Pixel=int(CCD_Size/2)
         Required_Step=self.triax.Find_Required_Step(Wavelength,Centre_Pixel)
         Current_Step=self.triax.Motor_Steps()
         self.triax.Move_Steps(Required_Step-Current_Step)
+
+    def Test_Notch_Alignment(self):
+        	Accepted=False
+        	while Accepted is False:
+        		Input=raw_input('WARNING! A slight misalignment of the narrow band notch filters could be catastrophic! Has the laser thoughput been tested? [Yes/No]')
+        		if Input.upper() in ['Y','N','YES','NO']:
+        			Accepted=True
+        			if len(Input)>1:
+        				Input=Input.upper()[0]
+        	if Input.upper()=='Y':
+        		print 'You are now free to capture spectra'
+        		self.Notch_Filters_Tested=True
+        	else:
+        		print 'The next spectrum capture will be allowed for you to test this. Please LOWER the laser power and REDUCE the integration time.'
+        		self.Notch_Filters_Tested=None
+
          
     def capture(self,Close_White_Shutter=True):
         """
@@ -72,7 +95,6 @@ class Trandor(Andor):#Andor
             return Output
         else:
            return Andor_Capture_Function(self)
-            
 
     x_axis=NotifiedProperty(Generate_Wavelength_Axis) #This is grabbed by the Andor code 
 
