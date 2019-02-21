@@ -1,31 +1,30 @@
 # -*- coding: utf-8 -*-
 
-from nplab.instrument import Instrument
+from nplab.utils import monitor_property
+import threading
+import time
 
 
-class TemperatureControl(Instrument):
+class TemperatureControlMixin(object):
     """A class representing temperature-control stages.
 
-    This class primarily provides two things: the ability to find the temperature
-    of the sensor (using `self.temperature` or `self.temperature()`),
-    and the ability to set a target temperature (see `self.move()`).
+    This class provides two threads: a temperature control thread that monitors the temperature every second and sends a
+    warning when the temperature is out of range, and a temperature monitoring thread that saves the temperature every
+    second and stores the latest temperatures
 
     Subclassing Notes
     -----------------
     The minimum you need to do in order to subclass this is to override the
-    `move` method and the `get_position` method.  NB you must handle the case
-    where `axis` is specified and where it is not.  For `move`, `move_axis` is
-    provided, which will help emulate single-axis moves on stages that can't
-    make them natively.
-
-    In the future, a class factory method might be available, that will
-    simplify the emulation of various features.
+    `get_temperature` method
     """
-
-    metadata_property_names = ('temperature', )
-
     def __init__(self):
-        Instrument.__init__(self)
+        super(TemperatureControlMixin, self).__init__()
+
+        self._control_thread = None
+        self._controlling = False
+        self._monitor_thread = None
+        self._monitoring = False
+        self.temperature_history = None
 
     def get_temperature(self):
         raise NotImplementedError
@@ -37,3 +36,38 @@ class TemperatureControl(Instrument):
     def get_target_temperature(self):
         return
     target_temperature = property(fset=set_target_temperature, fget=get_target_temperature)
+
+    def monitor_temperature(self, minutes=5):
+        "Monitor the temperature every 10s"
+        monitor_property(self, 'temperature', minutes * 60, 10)
+
+    def control_temperature(self, upper_target=None, lower_target=None):
+        """
+        Starts a background thread that checks the temperature is within the stated range. If both range limits are
+        None, and the target_temperature property has not been set, we assume an upper limit of 1000
+
+        :param upper_target: float
+        :param lower_target: float
+        :return:
+        """
+        if upper_target is None and lower_target is None:
+            if self.target_temperature is not None:
+                upper_target = self.target_temperature
+            else:
+                upper_target = 1000
+        if self._control_thread is not None:
+            self._controlling = False
+            self._control_thread.join()
+            del self._control_thread
+        self._control_thread = threading.Thread(target=self._control_temperature, args=(upper_target, lower_target))
+        self._controlling = True
+        self._control_thread.start()
+
+    def _control_temperature(self, upper_temp=None, lower_temp=None):
+        while upper_temp > self.temperature > lower_temp:
+            time.sleep(1)
+            if not self._controlling:
+                break
+        self._logger.warn('Temperature out of range')
+
+
