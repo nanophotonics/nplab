@@ -62,7 +62,7 @@ class ServerHandler(SocketServer.BaseRequestHandler):
             raw_data = self.request.recv(BUFFER_SIZE).strip()
             self.server._logger.debug("Server received: %s" % raw_data)
             if raw_data == "list_attributes":
-                instr_reply = repr(self.server.instrument.__dict__.keys())
+                instr_reply = self.server.instrument.__dict__.keys()
             else:
                 command_dict = ast.literal_eval(raw_data)
 
