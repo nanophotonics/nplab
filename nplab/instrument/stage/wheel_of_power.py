@@ -6,6 +6,7 @@ Created on Sun Oct 07 12:43:44 2018
 """
 import numpy as np
 from scipy.interpolate import interp1d
+from scipy.optimize import minimize
 from collections import deque
 import time
 import threading
@@ -80,8 +81,8 @@ class PowerWheelMixin(object):
 
     def __init__(self):
         super(PowerWheelMixin, self).__init__()
-        self.power_to_angle = lambda x: x
-        self.angle_to_power = lambda x: x
+        self.cal_to_raw = lambda x: x
+        self.raw_to_cal = lambda x: x
         self.calibration = None
         self._raw_calibration = None
         self._raw_min = 0
@@ -106,34 +107,37 @@ class PowerWheelMixin(object):
     def _calibration_functions(self, calibration=None):
         if calibration is None:
             calibration = self.calibration
-        self.power_to_angle = interp1d(calibration[1], calibration[0])
-        self.angle_to_power = interp1d(calibration[0], calibration[1])
+        self.cal_to_raw = interp1d(calibration[1], calibration[0])
+        self.raw_to_cal = interp1d(calibration[0], calibration[1])
 
-    def recalibrate(self, power_meter, points=2):
+    def recalibrate(self, power_meter, points=3):
         """
-        Checks the min and max power values and normalises the calibration.
+        Selects a few random points. Finds the factor that would most closely bring the calibration to these
+        points. This assumes that the only possible change is a multiplicative factor
 
         :param power_meter: instrument instance with a 'power' property
+        :param points: int. Number of points you want to check
         :return:
         """
         assert self.calibration is not None
 
-        # old_raw, old_power = self.calibration
-        _oldmax = self.calibration[1].max()
-        _oldmin = self.calibration[1].min()
+        old_calibration = np.copy(self.calibration)
 
-        self.power = _oldmin
-        _newmin = power_meter.power
-        self.power = _oldmax
-        _newmax = power_meter.power
+        rand_indices = np.random.choice(old_calibration.shape[1], points)
+        raw_vals = old_calibration[0, rand_indices]
+        old_cal = old_calibration[1, rand_indices]
 
-        powers = np.copy(self.calibration[1])
-        powers -= _oldmin
-        powers /= (_oldmax - _oldmin)
-        powers *= (_newmax - _newmin)
-        powers += _newmin
-        self.calibration = np.array([self.calibration[0], powers])
-        self._calibration_functions()
+        new_cal = []
+        for raw in raw_vals:
+            self.raw_power = raw
+            new_cal += [power_meter.power]
+
+        def minimise(params):
+            return np.sum(np.abs((old_cal * params[0]) - new_cal))
+
+        results = minimize(minimise, np.array([1]))
+
+        self.calibration[1] *= results.x[0]
 
     def calibrate(self, power_meter, points=51, min_power=None, max_power=None):
         """
@@ -186,8 +190,8 @@ class PowerWheelMixin(object):
 
     @property
     def power(self):
-        return self.angle_to_power(self.raw_power)
+        return self.raw_to_cal(self.raw_power)
 
     @power.setter
     def power(self, value):
-        self.raw_power = self.power_to_angle(value)
+        self.raw_power = self.cal_to_raw(value)
