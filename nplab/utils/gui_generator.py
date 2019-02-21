@@ -1,14 +1,14 @@
+from nplab.utils.gui import QtWidgets, uic, QtCore
+from nplab.ui.ui_tools import UiTools
+import nplab.datafile as df
+from nplab.utils.log import create_logger, ColoredFormatter
+
 import os
 import inspect
 import numpy as np
 
 import pyqtgraph
 import pyqtgraph.dockarea
-
-from nplab.utils.gui import QtWidgets, uic, QtCore
-from nplab.ui.ui_tools import UiTools
-import nplab.datafile as df
-from nplab.utils.log import create_logger, ColoredFormatter
 
 import logging
 
@@ -17,14 +17,14 @@ LOGGER = create_logger('GeneratedGUI')
 
 class GuiGenerator(QtWidgets.QMainWindow, UiTools):
     """A object for generating a main gui through stitching together multiple guis 
-    by the generation of dock widgets, this allow the user to creaete a save a custom 
+    by the generation of dock widgets, this allow the user to create a save a custom
     gui without all of the hard work
     """
 
     def __init__(self, instrument_dict, parent=None, dock_settings_path=None,
                  scripts_path=None, working_directory=None):  #
         """Args:
-            instrument_dict(dict) :     This is a dictionary containg the 
+            instrument_dict(dict) :     This is a dictionary containing the
                                         instruments objects where the key is the 
                                         objects new name in the generated new Ipython 
                                         console
@@ -35,17 +35,17 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
                                         of the gui
             working_directory(str):     A path to the requested working directory - 
                                         handy if you always wish to save data to 
-                                        the same directorys
+                                        the same directories
                                 """
         super(GuiGenerator, self).__init__(parent)
         self._logger = LOGGER
         self.instr_dict = instrument_dict
-        if working_directory == None:
+        if working_directory is None:
             self.working_directory = os.path.join(os.getcwd())
         else:
             self.working_directory = working_directory
         self.data_file = df.current(working_directory=working_directory)
-        self.instr_dict['HDF5'] = self.data_file
+        self.instr_dict["HDF5"] = self.data_file
         self.setDockNestingEnabled(1)
 
         uic.loadUi(os.path.join(os.path.dirname(__file__), 'guigenerator.ui'), self)
@@ -83,7 +83,6 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
         # address of h5 file
         self.filename = df.current().filename
 
-        #        self._tabifyAll()
         self._setupSignals()
         if dock_settings_path is not None:
             self.dock_settings_path = dock_settings_path
@@ -147,15 +146,6 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
         else:
             self.allDocks[instr].close()
 
-    def _addActionInstrMenu(self, instr):
-        if instr not in self.actions['Instruments']:
-            action = QtWidgets.QAction(instr, self)
-            self.menuInstr.addAction(action)
-            action.setCheckable(True)
-            action.setChecked(settings.addresses[instr]['use?'])
-            action.triggered.connect(lambda: self._toggleInstr(instr))
-            self.actions['Instruments'][instr] = action
-
     def _setupSignals(self):
         """Connect signals for the different general gui buttons/menu's """
         self.actionExit.triggered.connect(self.close)
@@ -163,6 +153,7 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
         self.actionTerminal.triggered.connect(self.menuTerminal)
         self.actionShowBrowser.triggered.connect(self.toggle_browser)
         self.actionNewExperiment.triggered.connect(self.menuNewExperiment)
+        self.actionCloseExperiment.triggered.connect(self.menuCloseExperiment)
         self.actionSaveExperiment.triggered.connect(self.menuSaveExperiment)
         self.actionSaveSettings.triggered.connect(self.menuSaveSettings)
         self.actionRecallSettings.triggered.connect(self.menuLoadSettings)
@@ -238,20 +229,25 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
             and reopen"""
         dock_state = self.dockWidgetArea.saveState()
         self.toggle_browser()
-        self.data_file = df.current()
+        self.data_file.flush()
+        self.data_file.close()
+        self.data_file = df.current(working_directory=self.working_directory)
         self.instr_dict['HDF5'] = self.data_file
         self._open_one_gui('HDF5')
         self.dockWidgetArea.restoreState(dock_state)
 
-    #
     def menuSaveExperiment(self):
         """push to data to hard drive """
         self.data_file.flush()
 
     def menuCloseExperiment(self):
         """Close the current data_file """
-        self.data_file.close()
-        self.allWidgets['HDF5'].treeWidget.model.refresh_tree()
+        try:
+            self.data_file.flush()
+            self.data_file.close()
+            self.allWidgets['HDF5'].treeWidget.model.refresh_tree()
+        except Exception as e:
+            self._logger.info("You likely tried closing a closed file: %s" % e)
 
     def menuTerminal(self):
         """ Create an ipython console for use within the experiment and push
@@ -264,7 +260,6 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
                 self.terminalWindow.push_vars({'gui': self, 'exper': self.instr_dict})
                 self.terminalWindow.push_vars(self.instr_dict)
                 self.terminalWindow.execute_command('import nplab.datafile as df')
-                self.terminalWindow.execute_command('data_file = df.current()')
                 self.terminalWindow.execute_command('')
                 handle = logging.StreamHandler(self.terminalWindow.kernel_manager.kernel.stdout)
             else:
