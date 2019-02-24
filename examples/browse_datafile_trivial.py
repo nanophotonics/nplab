@@ -8,12 +8,12 @@ import nplab.ui.hdf5_browser as browser
 from nplab.utils.gui import get_qt_app
 
 if __name__ == "__main__":
-    nplab.datafile.set_current(r"/Users/rwb27/np/projects/reflective_rig/20150825_tao/2015-08-25.h5", mode="r")
+    nplab.datafile.set_current(r"/Users/Hera/Documents/sc922/2018-08-31.h5", mode="r")
     app = get_qt_app()
     v = browser.HDF5ItemViewer()
     v.show()
     df = nplab.current_datafile()
-    v.data = df['SpectrometerSaver/measurement_0/image']
+   # v.data = df['SpectrometerSaver/measurement_0/image']
     nplab.current_datafile().show_gui()
     
     #nplab.current_datafile().close()

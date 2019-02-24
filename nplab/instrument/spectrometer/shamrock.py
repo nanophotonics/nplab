@@ -10,8 +10,7 @@ Created on Fri Apr 10 08:43:56 2015
 # - accessoires
 # - output slit
 # - Shutter
-
-
+import platform
 
 from ctypes import *
 import time
@@ -20,16 +19,27 @@ from nplab.instrument import Instrument
 from nplab.utils.notified_property import NotifiedProperty
 from nplab.ui.ui_tools import QuickControlBox
 from nplab.utils.gui import QtWidgets
+from nplab.ui.ui_tools import *
+from nplab.utils.gui import *
+
 class Shamrock(Instrument):
     def __init__(self):
         super(Shamrock,self).__init__()
         #for Windows
-        self.dll2 = CDLL("C:\\Program Files\\Andor SOLIS\\Drivers\\Shamrock64\\atshamrock")
-        self.dll = CDLL("C:\\Program Files\\Andor SOLIS\\Drivers\\Shamrock64\\ShamrockCIF")
-        
-        tekst = c_char()        
-        error = self.dll.ShamrockInitialize(byref(tekst))
-        
+        architecture = platform.architecture()
+
+        if architecture[0] == "64bit":
+            self.dll2 = CDLL("C:\\Program Files\\Andor SOLIS\\Drivers\\Shamrock64\\atshamrock")
+            self.dll = CDLL("C:\\Program Files\\Andor SOLIS\\Drivers\\Shamrock64\\ShamrockCIF")
+            tekst = c_char()        
+            error = self.dll.ShamrockInitialize(byref(tekst))
+
+        elif architecture[0] == "32bit":
+            self.dll2 = WinDLL("C:\\Program Files\\Andor SDK\\Shamrock\\atshamrock.dll")
+            self.dll = WinDLL("C:\\Program Files\\Andor SDK\\Shamrock\\ShamrockCIF.dll")
+            tekst = c_char_p("")     
+            error = self.dll.ShamrockInitialize(tekst)
+            
         self.current_shamrock = 0 #for more than one Shamrock this has to be varied, see ShamrockGetNumberDevices
         self.center_wavelength = 0.0
 
@@ -100,8 +110,13 @@ class Shamrock(Instrument):
         grating = c_int()
         error = self.dll.ShamrockGetGrating(self.current_shamrock,byref(grating))
         self.verbose(ERROR_CODE[error], sys._getframe().f_code.co_name)
-        return grating
-    current_grating = property(GetGrating)    
+        return grating.value
+    def SetGrating(self,grating_num):
+        grating_num = int(grating_num)
+        grating = c_int(grating_num)
+        error = self.dll.ShamrockSetGrating(self.current_shamrock,grating)
+        self.verbose(ERROR_CODE[error], sys._getframe().f_code.co_name)
+    current_grating = NotifiedProperty(GetGrating,SetGrating)    
     def GetGratingInfo(self):    
         lines = c_float()
         blaze = c_char()
@@ -298,8 +313,19 @@ class ShamrockControlUI(QuickControlBox):
         self.shamrock = shamrock
         self.add_doublespinbox("center_wavelength")
         self.add_doublespinbox("slit_width")
-        self.add_spinbox("turret_position")
+        self.add_spinbox("current_grating")
         self.add_lineedit('GratingInfo')
         self.controls['GratingInfo'].setReadOnly(True)
         self.auto_connect_by_name(controlled_object = self.shamrock)
+
+def main():
+    
+    app = get_qt_app()
+    s = Shamrock() 
+    ui = ShamrockControlUI(shamrock=s)
+    ui.show()
+    sys.exit(app.exec_())
+
+if __name__ == "__main__":
+    main()
     

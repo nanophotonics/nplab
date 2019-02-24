@@ -230,7 +230,7 @@ class Thorlabs_ELL8K(SerialInstrument,Stage):
         
        try:    
            while(stopped == False):
-               time.sleep(Thorlabs_ELL8K.SLEEPING_TIME)
+               time.sleep(Thorlabs_ELL8K.BLOCK_SLEEPING_TIME)
                current_angle = self.get_position()
                stopped =(np.absolute(current_angle - previous_angle) < Thorlabs_ELL8K.POSITION_JITTER_THRESHOLD)
                previous_angle = current_angle

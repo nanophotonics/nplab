@@ -136,10 +136,15 @@ class Spectrometer(Instrument):
     def read_background(self):
         """Acquire a new spectrum and use it as a background measurement.
         This background should be less than 50% of the spectrometer saturation"""
-
-        background_1 = self.read_spectrum()
+        if self.averaging_enabled == True:
+            background_1 = np.average(self.read_averaged_spectrum(True,True),axis=0)
+        else:
+            background_1 = self.read_spectrum()
         self.integration_time = 2.0*self.integration_time
-        background_2 = self.read_spectrum()
+        if self.averaging_enabled == True:
+            background_2 = np.average(self.read_averaged_spectrum(True,True),axis=0)
+        else:
+            background_2 = self.read_spectrum()
         self.integration_time = self.integration_time/2.0
         self.background_gradient = (background_2-background_1)/self.integration_time
         self.background_constant = background_1-(self.integration_time*self.background_gradient)
@@ -163,7 +168,10 @@ class Spectrometer(Instrument):
 
     def read_reference(self):
         """Acquire a new spectrum and use it as a reference."""
-        self.reference = self.read_spectrum() 
+        if self.averaging_enabled == True:
+            self.reference = np.average(self.read_averaged_spectrum(True,True),axis=0)
+        else:
+            self.reference = self.read_spectrum() 
         self.reference_int = self.integration_time
         self.update_config('reference', self.reference)
         self.update_config('reference_int',self.reference_int) 

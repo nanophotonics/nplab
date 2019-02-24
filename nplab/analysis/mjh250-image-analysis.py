@@ -341,7 +341,7 @@ def zero_pad(img,xdim,ydim):
 	elif img.shape[0] == xdim and img.shape[1] == ydim:
 		return img
 	else:
-		raise ValueErro("Failed!")
+		raise ValueError("Failed!")
 
 def separate_segments(image):
 	image = image.astype(int)

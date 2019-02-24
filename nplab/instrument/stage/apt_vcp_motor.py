@@ -155,8 +155,14 @@ class APT_VCP_motor(APT_VCP, Stage):
                 self._logger.warn('What axis shall I move?')
         else:
             axes = tuple(axis)
-        axis_number = 0
+        #create list of positions for each axis
+        pos_list = [0]*len(self.axis_names)
+        for i,axis  in enumerate(axes):
+            axis_number = np.where(np.array(self.axis_names)==[axis])[0][0]
+            pos_list[axis_number] = pos[i]
+        pos = pos_list
         for axis in axes:
+            axis_number = np.where(np.array(self.axis_names)==[axis])[0][0]
             if relative:
                 pos[axis_number] = self.position[axis_number]+pos[axis_number]
 
@@ -173,7 +179,6 @@ class APT_VCP_motor(APT_VCP, Stage):
                 if self._recusive_move_num>10:
                     raise Exception('Stage mode failed!')
                 self.move(pos[axis_number],axis=axis,channel_number=channel_number,block = block)
-                print self.position[axis_number], pos[axis_number]
             axis_number += 1
 
 
@@ -209,10 +214,10 @@ class APT_VCP_motor(APT_VCP, Stage):
             channel, position, EncCnt,status_bits, ChanIdent2,_,_,_ = struct.unpack('<HILIHLLL',returned_message)
             # print "Status bits",status_bits
             # print "self.status_bit_mask",self.status_bit_mask[:, 0]
-            bitmask = self._bit_mask_array(status_bits, [int(i) for i in self.status_bit_mask[:, 0]])
-            self.status = self.status_bit_mask[np.where(bitmask)]
-            if debug > 0 or DEBUG == True:
-                print self.status
+        bitmask = self._bit_mask_array(status_bits, [int(i) for i in self.status_bit_mask[:, 0]])
+        self.status = self.status_bit_mask[np.where(bitmask)]
+        if debug > 0 or DEBUG == True:
+            print self.status
         return self.status
 
 

@@ -395,8 +395,11 @@ class CameraWithLocation(Instrument):
                  "Pixel shifts:\n{}\nResulting matrix:\n{}".format(fractional_error*100, location_shifts, pixel_shifts,
                                                                    self.pixel_to_sample_displacement))
         update_progress(7)
+        self.update_config('pixel_to_sample_displacement',self.pixel_to_sample_displacement)
         return self.pixel_to_sample_displacement, location_shifts, pixel_shifts, fractional_error
-
+    def load_calibration(self):
+        """Acquire a new spectrum and use it as a reference."""
+        self.pixel_to_sample_displacement = self.config_file['pixel_to_sample_displacement'][:]
     def get_qt_ui(self):
         """Create a QWidget that controls the camera.
 

@@ -184,10 +184,8 @@ class StageUI(QtWidgets.QWidget, UiTools):
             self.update_ui[int].emit(axis)
 
     def move_axis_relative(self, index, axis, dir=1):
-        print axis,'move rel axis'
         self.stage.move(dir * self.step_size[index], axis=axis, relative=True)
         if type(axis) == str:
-            print axis
             #    axis = QtCore.QString(axis)
             self.update_ui[str].emit(axis)
         elif type(axis) == int:
@@ -297,7 +295,6 @@ class StageUI(QtWidgets.QWidget, UiTools):
         if axis not in self.stage.axis_names:
             axis = None
         if axis is None:
-            print self.stage.axis_names
             for axis in self.stage.axis_names:
                 self.update_positions(axis=axis)
         else:

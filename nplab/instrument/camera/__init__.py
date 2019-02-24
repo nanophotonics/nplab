@@ -17,6 +17,7 @@ import time
 from PIL import Image
 import warnings
 import pyqtgraph as pg
+from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 from weakref import WeakSet
 
 from nplab.instrument import Instrument
@@ -640,8 +641,169 @@ class CameraPreviewWidget(pg.GraphicsView):
         """Move the crosshair to centre on a given pixel coordinate."""
         self.crosshair['h_line'].setValue(pos[0])
         self.crosshair['v_line'].setValue(pos[1])
-        
-        
+
+
+class ScalableAxis(pg.AxisItem):
+    """
+    Axis that retains it's underlying coordinates, while displaying different coordinates as ticks.
+    It allows one to retain the sizes, shapes and location of widgets added on top the same independently of scaling
+    (e.g. CrossHairs)
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(ScalableAxis, self).__init__(*args, **kwargs)
+        self._offset = 0
+
+    @property
+    def offset(self):
+        return self._offset
+
+    @offset.setter
+    def offset(self, value):
+        self._offset = value
+        self.resizeEvent()
+
+    def tickStrings(self, values, scale, spacing):
+        if self.logMode:
+            return self.logTickStrings(values, scale, spacing)
+
+        places = max(0, np.ceil(-np.log10(spacing * scale)))
+        strings = []
+        for v in values:
+            vs = v * scale + self.offset  # This is the only difference from the pure pyqtgraph implementation
+            if abs(vs) < .001 or abs(vs) >= 10000:
+                vstr = "%g" % vs
+            else:
+                vstr = ("%%0.%df" % places) % vs
+            strings.append(vstr)
+        return strings
+
+
+class DisplayWidget(QtWidgets.QWidget, UiTools):
+    _max_num_line_plots = 4
+
+    def __init__(self, scale=(1, 1), offset=(0, 0), unit="pxl"):
+        QtWidgets.QWidget.__init__(self)
+
+        uic.loadUi(os.path.join(os.path.dirname(__file__), 'CameraDefaultDisplay.ui'), self)
+
+        # Create a PlotItem in which the shown axis display coordinates that are offset and scaled, without changing the
+        #  underlying coordinates
+        _item = pg.PlotItem(axisItems=dict(bottom=ScalableAxis(orientation="bottom"),
+                                           left=ScalableAxis(orientation="left")))
+        _view = pg.ImageView(view=_item)
+        self.ImageDisplay = self.replace_widget(self.imagelayout, self.ImageDisplay, _view)
+        self.ImageDisplay.view.setAspectLocked(False)
+        self.ImageDisplay.getHistogramWidget().gradient.restoreState(Gradients.values()[1])
+        self.labelCrossHairPositions = QtWidgets.QLabel()
+        self.imagelayout.addWidget(self.labelCrossHairPositions)
+        self.ImageDisplay.imageItem.setTransform(QtGui.QTransform())
+
+        self.plot = ()
+        for ii in range(self._max_num_line_plots):
+            self.plot += (self.LineDisplay.plot(pen=pg.intColor(ii, self._max_num_line_plots)),)
+
+        self.CrossHair1 = Crosshair('r')
+        self.CrossHair2 = Crosshair('g')
+        self.ImageDisplay.getView().addItem(self.CrossHair1)
+        self.ImageDisplay.getView().addItem(self.CrossHair2)
+
+        self.LineDisplay.showGrid(x=True, y=True)
+
+        self.CrossHair1.CrossHairMoved.connect(self.mouseMoved)
+        self.CrossHair2.CrossHairMoved.connect(self.mouseMoved)
+
+        self.unit = unit
+        self._pxl_scale = scale
+        self._pxl_offset = offset
+        self.binning = (1, 1)
+        self.splitter.setSizes([1, 0])
+
+    def pos_to_unit(self, pos):
+        """
+        Returns a position in the appropriate units given by _pxl_scale and _pxl_offset.
+        :param pos: QPoint
+        :return:
+        """
+        tr = QtGui.QTransform()
+        # Order is important!
+        tr.translate(*self._pxl_offset)
+        tr.scale(*self._pxl_scale)
+
+        return tuple(tr.map(*pos))
+
+    def _rescale(self):
+        """
+        Applies the displays scale and offset to the scalable axis
+
+        :return:
+        """
+        vw = self.ImageDisplay.getView()
+        for idx, lbl in enumerate(["bottom", "left"]):
+            ax = vw.axes[lbl]["item"]
+            ax.offset = self._pxl_offset[idx]
+            ax.setScale(self._pxl_scale[idx])
+        self.mouseMoved()  # To update the pixel position display label
+
+    def mouseMoved(self):
+        """
+        Displays the current position of the two cross-hairs, as well as the distance between them, in pixels and in
+        units
+        :return:
+        """
+        params = ()
+        for idx in [1, 2]:
+            xhair = getattr(self, "CrossHair%d" % idx)
+            pos = tuple(xhair.pos())
+            post = self.pos_to_unit(pos)
+            params += tuple(map(lambda x, y: x * y, pos, self.binning))
+            params += post + (self.unit, )
+
+        diff = np.linalg.norm(np.array(params[:2]) - np.array(params[5:7]))
+        difft = np.linalg.norm(np.array(params[2:4]) - np.array(params[7:9]))
+        params += (diff, difft, self.unit, )
+
+        self.labelCrossHairPositions.setText(
+            "<span style='color: red'>Pixel: [%i,%i]px Unit: (%g, %g)%s</span>, " \
+            "<span style='color: green'> Pixel: [%i,%i]px Unit: (%g, %g)%s</span>, " \
+            "Delta pixel: %g px Delta Unit: %g %s"
+            % params)
+        # self.labelCrossHairPositions.setText(
+        #     "<span style='color: red'>Pixel: [%i,%i]px Unit: (%g, %g)%s</span>, " \
+        #     "<span style='color: green'> Pixel: [%i,%i]px Unit: (%g, %g)%s</span>, " \
+        #     "Delta pixel: [%i,%i]px Delta Unit: (%g, %g)%s"
+        #     % (x1, y1, xu1, yu1, self.unit, x2, y2, xu2, yu2, self.unit, abs(x1 - x2), abs(y1 - y2), abs(xu1 - xu2),
+        #        abs(yu1 - yu2), self.unit))
+
+
+class Crosshair(pg.GraphicsObject):
+    CrossHairMoved = QtCore.Signal()
+    Released = QtCore.Signal()
+
+    def __init__(self, color, *args):
+        super(Crosshair, self).__init__(*args)
+        self.color = color
+
+    def paint(self, p, *args):
+        p.setPen(pg.mkPen(self.color))
+        p.drawLine(-5, 0, 5, 0)
+        p.drawLine(0, -5, 0, 5)
+
+    def boundingRect(self):
+        return QtCore.QRectF(-5, -5, 5, 5)
+
+    def mouseDragEvent(self, ev):
+        ev.accept()
+        if ev.isStart():
+            self.startPos = self.pos()
+        elif ev.isFinish():
+            rounded_pos = map(int, self.pos())
+            self.setPos(*rounded_pos)
+        else:
+            self.setPos(self.startPos + ev.pos() - ev.buttonDownPos())
+        self.CrossHairMoved.emit()
+
+
 class DummyCamera(Camera):
     exposure = CameraParameter("exposure", "The exposure time in ms.")
     gain = CameraParameter("gain", "The gain in units of bananas.")
