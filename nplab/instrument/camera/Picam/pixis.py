@@ -82,12 +82,12 @@ class Pixis(Camera):
         roi_image = self.get_roi(x_min,x_max,y_min,y_max,suppress_errors)
         #cut edge values from raw spectrum - remove edge effects
         raw_spectrum = np.mean(roi_image,axis=0)
-        pixels = range(0,len(raw_spectrum))
+        pixel_offsets = np.array(range(0,len(raw_spectrum)))-int(self.FrameWidth/2)
         if with_boundary_cut == True:
-            return raw_spectrum[self.boundary_cut:-self.boundary_cut], pixels[self.boundary_cut:-self.boundary_cut]
+            return raw_spectrum[self.boundary_cut:-self.boundary_cut], pixel_offsets[self.boundary_cut:-self.boundary_cut]
 
         else:
-            return raw_spectrum,pixels
+            return raw_spectrum,pixel_offsets
 
     def get_parameter(self,parameter_name, label="unknown"):
         '''

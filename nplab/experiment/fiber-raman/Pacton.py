@@ -1,10 +1,17 @@
 import numpy as np 
 import matplotlib.pyplot as plt 
+import scipy.signal
 
-
+from nplab import datafile as df 
 from nplab.analysis.smoothing import convex_smooth
 from nplab.instrument import Instrument
 
+
+f = df.DataFile("maxwell_room_light_spectrum_calibration.hdf5","r")
+spectrum = np.array(f["calibration"]["spectrum_1"])
+
+CALIBRATION_WAVELENGTHS = spectrum[0,:]
+CALIBRATION_COUNTS = spectrum[1,:]
 
 def spectrum_pixel_offset(spectrum_1,spectrum_2):
 	sp1 = spectrum_1
@@ -14,7 +21,7 @@ def spectrum_pixel_offset(spectrum_1,spectrum_2):
 	sp2 = sp2 - np.mean(sp2)
 
 	#compute cross correlation to match
-	xcs = np.correlate(sp1,sp2,mode="full")
+	xcs = np.correlate(sp1,sp2,mode="same")
 	#perform fftshift to center zero offset on 0th position
 	xcs = np.fft.fftshift(xcs)
 
@@ -26,8 +33,9 @@ def pixel_wavelength_conversion(pixel_offset,wavelength_offset):
 
 class Pacton(Instrument):
 
-	def __init__(self,pixis,acton,boundary_cut=5):
+	def __init__(self,pixis,acton,boundary_cut=5,debug =0):
 
+		self.debug = debug
 		self.pixis = pixis
 		self.acton = acton 
 
@@ -65,13 +73,59 @@ class Pacton(Instrument):
 		else:
 			return self.pixis.get_roi()
 		
-
-	def pixel_to_wavelength(self,pixels,center_wavelength):
+	def pixel_to_wavelength(self,pixels,center_wavelength, intensity):
 		center_pixel = np.round(self.pixis.x_max)/2.0
 		if self.pixel_to_wl_sf is None:
 			raise ValueError("No conversion factor set, please run Pacton.calibrate routine")
 		else:
-			wavelengths = center_wavelength + self.pixel_to_wl_sf*(pixels - center_pixel)
+			#intensity - the counts on each pixel
+			wavelengths = center_wavelength + self.pixel_to_wl_sf*np.array(pixels)
+			min_wl = np.min(wavelengths)
+			max_wl = np.max(wavelengths)
+
+			indices = np.logical_and(CALIBRATION_WAVELENGTHS >= min_wl,CALIBRATION_WAVELENGTHS < max_wl)
+
+			calibration_intensity = CALIBRATION_COUNTS[indices]
+			calibration_wavelengths =CALIBRATION_WAVELENGTHS[indices]
+
+			calibration_intensity = calibration_intensity - np.min(calibration_intensity)
+			calibration_intensity = calibration_intensity/np.max(calibration_intensity)
+
+			intensity = intensity - np.min(intensity)
+			intensity = intensity/np.max(intensity)
+
+			upsampled_calibration_intensity = scipy.signal.resample(calibration_intensity, len(wavelengths), t=None, axis=0, window=None)
+			upsampled_calibration_wavelengths= scipy.signal.resample(calibration_wavelengths, len(wavelengths), t=None, axis=0, window=None)
+
+
+
+			max_xcs, xcs = spectrum_pixel_offset(upsampled_calibration_intensity,intensity)
+			xcs = np.fft.fftshift(xcs)
+			max_xcs = np.argmax(xcs)
+			offset = max_xcs - len(wavelengths)/2
+			# if self.debug > 0:
+			# 	print "Calibration wavelength range:", np.min(upsampled_calibration_wavelengths),np.max(upsampled_calibration_wavelengths)
+			# 	print "Measured wavelength range:", np.min(wavelengths),np.max(wavelengths)
+				
+			# 	print "Calibration curve length:", len(calibration_intensity)
+			# 	print "Measurement curve length:", len(intensity)
+			# 	print "Upsampled calibration curve length:", len(upsampled_calibration_intensity)
+			# 	print "Offset:", offset
+			# 	import matplotlib.pyplot as plt 
+
+			# 	fig,[ax1,ax2] = plt.subplots(2,figsize=(3*2*4,3*3))
+			# 	ax1.plot(wavelengths,intensity,label="intensity")
+			# 	ax1.plot(calibration_wavelengths,calibration_intensity,label="upsampled calibration_intensity")
+			# 	shifted_wavelengths = center_wavelength + self.pixel_to_wl_sf*(np.array(pixels)+offset)
+			# 	ax1.plot(shifted_wavelengths,intensity,label="shifted intensity")
+				
+			# 	ax2.plot(xcs)
+			# 	ax1.legend()
+			# 	plt.show()
+			wavelengths = center_wavelength + self.pixel_to_wl_sf*(np.array(pixels)+offset)
+			
+
+
 		return wavelengths
 
 	def get_pixel_response_calibration_spectrum(self,debug=0):
@@ -113,16 +167,16 @@ class Pacton(Instrument):
 		if roi is not None:
 			try:
 				[x_min,x_max,y_min,y_max] = roi
-				spectrum,pixels = self.pixis.get_spectrum(x_min=x_min, x_max = x_max, y_min=y_min,y_max = y_max)
+				spectrum,pixel_offsets = self.pixis.get_spectrum(x_min=x_min, x_max = x_max, y_min=y_min,y_max = y_max)
 
 			except: 
 				raise ValueError("Unable to unpack region of interest")
 		else:
-			spectrum,pixels = self.pixis.get_spectrum()
+			spectrum,pixel_offsets = self.pixis.get_spectrum()
 		
 		if subtract_background == True:
 			spectrum = np.array(spectrum) - self.pixel_response
-		wavelengths = self.pixel_to_wavelength(pixels,center_wavelength)
+		wavelengths = self.pixel_to_wavelength(pixel_offsets,center_wavelength,spectrum)
 		return spectrum,wavelengths
 
 	

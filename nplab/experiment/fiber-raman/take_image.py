@@ -6,7 +6,7 @@ from nplab.instrument.camera.Picam.pixis import Pixis
 from Pacton import Pacton
 
 
-def initialize_measurement(acton_port="COM7", exposure_time = 100):
+def initialize_measurement(acton_port, exposure_time = 100):
 	print "Starting.."
 
 	print "Pixis..."
@@ -21,11 +21,12 @@ def initialize_measurement(acton_port="COM7", exposure_time = 100):
 	p.SetExposureTime(exposure_time)
 	return pacton
 
-def single_shot(acton_port="COM7",center_wavelength = 0, exposure_time = 100):
+def single_shot(acton_port="COM5",center_wavelength = 820, exposure_time =10000):
 	pacton = initialize_measurement(acton_port=acton_port,exposure_time=exposure_time)
-	img = pacton.get_image(center_wavelength,roi = None,debug=0)
+	fi = [0,1024,500,600]
+	img = pacton.get_image(center_wavelength,roi = fi ,debug=0)
 	fig, ax = plt.subplots(1)
-	ax.imshow(img)
+	ax.imshow(img, cmap='viridis')
 	plt.show()
 
 single_shot()

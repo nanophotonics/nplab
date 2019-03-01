@@ -124,7 +124,7 @@ def main(debug=0):
 
 def mapper_tester(mapper):
 
-	center_wavelengths = np.linspace(740,850,4)
+	center_wavelengths = np.linspace(740,850,10)
 	pixels = np.arange(0,1014,1)
 	# print pixels
 	# print mapper
@@ -139,7 +139,7 @@ def mapper_tester(mapper):
 			
 
 if __name__ == "__main__":
-	mapper = main()
+	mapper = main(1)
 	mapper_tester(mapper)
 
 

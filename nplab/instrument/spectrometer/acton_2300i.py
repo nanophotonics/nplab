@@ -108,7 +108,7 @@ class Acton(SerialInstrument):
         # self.ser.flushOutput()
         
         # model info
-        #self.write_command("MONO-RESET")
+        self.write_command("MONO-RESET")
         # if debug > 0:
             # print "Started [2]: Acton.__init__"
         
@@ -290,8 +290,8 @@ class Acton(SerialInstrument):
         if debug > 0:
             print "response full:", out   
             print "response tail:",out[-5:]
-        assert out[-5:] == " ok\r\n"
-        out = out[:-5].strip()
+        # assert out[-5:] == " ok\r\n"
+        # out = out[:-5].strip()
     
         # When echo is enabled, verify echoed command and strip
         if self.echo:

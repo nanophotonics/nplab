@@ -8,7 +8,7 @@ from nplab.instrument.camera.Picam.pixis import Pixis
 from Pacton import Pacton
 
 
-def initialize_measurement(acton_port, exposure_time = 100):
+def initialize_measurement(acton_port, exposure_time = 50):
 	print "Starting.."
 
 	print "Pixis..."
@@ -47,6 +47,6 @@ def make_app(pacton, refresh_time):
 	timer.start(refresh_time)
 	app.exec_()
 
-pacton = initialize_measurement("COM5",90)
+pacton = initialize_measurement("COM5",50)
 pacton.get_image(0)
 make_app(pacton,100)
