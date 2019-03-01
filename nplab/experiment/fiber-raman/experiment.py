@@ -6,6 +6,13 @@ from nplab.instrument.camera.Picam.pixis import Pixis
 from Pacton import Pacton
 from nplab import datafile as df 
 
+from spectrum_aligner_ir import main as get_wavelength_map
+mapper = get_wavelength_map(debug=0)
+
+def nm_to_raman_shift(laser_wavelength,wavelength):
+	raman_shift = 1e7*(1.0/laser_wavelength - 1.0/wavelength)
+	return raman_shift
+
 def initialize_datafile(path):
 	"""
 	This function defines the format of the group structure
@@ -31,6 +38,7 @@ def initialize_measurement(acton_port, exposure_time = 100):
 	pacton = Pacton(pixis=p,acton=act)
 	print "Measuring..."
 	p.SetExposureTime(exposure_time)
+
 	return pacton
 
 # Maunually find the COM port of Acton Spectrometer - set exposure time (default)
@@ -51,8 +59,75 @@ def single_shot(pacton, file, center_wavelength = 0, show_ = True):
 		plt.show()
 
 
+def get_spectrum(pacton,file,y_roi,center_wavelength,exposure_time,show_=True,debug = 0,laser_wavelength = None):
+
+	if debug > 0:
+		print "y_roi",y_roi
+		print "center_wavelength",center_wavelength
+		print "exposure_time",exposure_time
+	spectrum_group = file.require_group("spectrum")
+
+	#run calibration to get rid of low pixel value high intensity peaks due to camera response
+	pacton.get_pixel_response_calibration_spectrum()
+	#get spectrum, drop interpolated wavelengths - they are wrong!
+	[ymin,ymax] = y_roi
+	xmin,xmax = [0,1024] #default to be over entire range!
+	roi = [xmin,xmax,ymin,ymax]
+	
+	if debug > 0: print "Fiddling with exposure..."
+	previous_exposure_time = pacton.pixis.GetExposureTime()
+	pacton.pixis.SetExposureTime(exposure_time)
+	if debug > 0: print "Getting spectrum..."
+	spectrum,_ = pacton.get_spectrum(center_wavelength=center_wavelength,roi=roi)
+	
+	pacton.pixis.SetExposureTime(previous_exposure_time)
+	
+	pixel_indices = np.arange(0,1014)
+	
+	if debug > 0: print "Starting wavelength map..." 
+	wavelengths = [mapper(center_wavelength,i) for i in pixel_indices]
+	if laser_wavelength is not None:
+		raman_shifts = [nm_to_raman_shift(laser_wavelength=laser_wavelength,wavelength=wl) for wl in wavelengths]
+	attrs = {
+		"wavelengths":wavelengths,
+		"raman_shift": raman_shifts,
+		"center_wavelength":center_wavelength,
+		"roi":roi,
+		"exposure_time[ms]": exposure_time
+	}
+	if debug > 0: print "writing data..."
+	spectrum_group.create_dataset("series_%d",data=spectrum,attrs=attrs)
+
+	if show_ == True:
+		if laser_wavelength is None:
+			fig, ax =plt.subplots(1)
+			ax.plot(wavelengths,spectrum)
+			ax.set_xlabel("wavelength [nm]")
+			ax.set_ylabel("intensity [a.u.]")
+		elif laser_wavelength is not None:
+			fig, [ax1,ax2] = plt.subplots(2)
+			ax1.plot(wavelengths,spectrum)
+			ax2.plot(raman_shifts,spectrum)
+
+			ax1.set_xlabel("wavelength [nm]")
+			ax1.set_ylabel("intensity [a.u.]")
+			ax2.set_xlabel("raman shift [$cm^{-1}$]")
+			ax2.set_ylabel("intensity [a.u.]")
+		plt.show()
+
+
+
+def experiment(pacton, file, functions,argss,kwargss):
+	for f, args,kwargs in zip(functions,argss,kwargss):
+		f(pacton,file,*args,**kwargs)
+
+	return 0
+
+
 if __name__ == "__main__":
 	file = initialize_datafile('.\experiment_testfile.hdf5')
 	pacton = initialize_measurement('COM5', 100)
-	for i in range(5):
-		single_shot(pacton,file,show_ = False)
+
+	# experiment(pacton,file, [single_shot],[()],[({"show_":True})])
+	get_spectrum(pacton,file,y_roi=[514,583],center_wavelength=840,exposure_time=10000,laser_wavelength=785,debug=1)
+	# single_shot(pacton,file,show_ = True)
