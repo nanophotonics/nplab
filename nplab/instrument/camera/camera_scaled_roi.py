@@ -237,10 +237,6 @@ class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
         #        abs(yu1 - yu2), self.unit))
 
     def update_image(self, newimage):
-        # ONLY CHANGE THE AXIS HERE, so that it gets called when updating the image
-        """Update the image displayed in the preview widget."""
-        # NB compared to previous versions, pyqtgraph flips in y, hence the
-        # funny slice on the next line.
 
         scale = self._pxl_scale
         offset = self._pxl_offset
@@ -251,36 +247,20 @@ class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
                 self.ImageDisplay.setImage(newimage.T, pos=tuple(map(operator.add, offset, (0, 0))),
                                            autoRange=self.autoRange, scale=(scale[0], scale[1]))
             else:
-                self.DisplayWidget.splitter.setSizes([0, 1])
+                self.splitter.setSizes([0, 1])
                 for ii in range(newimage.shape[0]):
-                    self.DisplayWidget.plot[ii].setData(x=0, y=newimage[ii])
+                    self.plot[ii].setData(x=0, y=newimage[ii])
         else:
-            self.DisplayWidget.splitter.setSizes([1, 0])
+            self.splitter.setSizes([1, 0])
             image = np.transpose(newimage, (0, 2, 1))
             zvals = 0.99 * np.linspace(0, image.shape[0] - 1, image.shape[0])
             if image.shape[0] == 1:
                 image = image[0]
-                # if self.DisplayWidget.ImageDisplay.image is None:
-                #     self.DisplayWidget.ImageDisplay.setImage(image, xvals=zvals,
-                #                                              pos=tuple(map(operator.add, offset, (xvals[0], 0))),
-                #                                              autoRange=self.autoRange,
-                #                                              scale=(scale[0]*wavelengthScale[0],
-                #                                                     scale[1]*wavelengthScale[1]),
-                #                                              autoLevels=True)
-                # else:
-                #     self.DisplayWidget.ImageDisplay.setImage(image, xvals=zvals,
-                #                                              pos=tuple(map(operator.add, offset, (xvals[0], 0))),
-                #                                              autoRange=self.autoRange,
-                #                                              scale=(scale[0] * wavelengthScale[0],
-                #                                                     scale[1] * wavelengthScale[1]),
-                #                                              autoLevels=self.autoLevel)
-
-            # else:
-            self.DisplayWidget.ImageDisplay.setImage(image, xvals=zvals,
-                                                     pos=tuple(map(operator.add, offset, (0, 0))),
-                                                     autoRange=self.autoRange,
-                                                     scale=(scale[0], scale[1]),
-                                                     autoLevels=self.autoLevel)
+            self.ImageDisplay.setImage(image, xvals=zvals,
+                                       pos=tuple(map(operator.add, offset, (0, 0))),
+                                       autoRange=self.autoRange,
+                                       scale=(scale[0], scale[1]),
+                                       autoLevels=self.autoLevel)
 
     def get_roi(self):
         """
