@@ -2,6 +2,7 @@ import numpy as np
 import nplab.instrument.serial_instrument as serial 
 from nplab.ui.ui_tools import *
 from nplab.utils.gui import *
+import time
 
 
 class AOTF(serial.SerialInstrument):
@@ -108,7 +109,7 @@ class AOTF(serial.SerialInstrument):
 			End
 		'''
 		assert(int(channel) >= 0 and int(channel) <= 7), "Channel index in range 0-7"
-		assert(float(wavelength) >= 450.0 and float(wavelength) <= 690.0), "Channel wavelength in range 450.0-690.0"
+		assert(float(wavelength) >= 450.0 and float(wavelength) <= 1100.0), "Channel wavelength in range 450.0-690.0"
 		command = "dds w {0} {1:.1f}".format(channel,wavelength) #Notation: :.1f - show 'wavelength' to 1 float ('f') point places
 		response = self.query(command)
 		print "AOTF.set_wavelength:", response
@@ -118,6 +119,8 @@ class AOTF(serial.SerialInstrument):
 		#Note: frequency in MHz?
 		assert(int(channel) >= 0 and int(channel) <= 7), "Channel index in range 0-7"
 		command = "dds f {0} {1:6f}".format(int(channel),frequency) #Notation: :.6f - show 'frequency' to 6 float ('f') point places
+		response = self.query(command)
+		print "AOTF.set_frequency:", response
 
 
 	def set_default_calibration(self):
@@ -241,14 +244,72 @@ class AOTF_UI(QtWidgets.QWidget, UiTools):
 
 
 
-	
-
-
-if __name__ == "__main__":
-	from nplab.instrument.filters.aotf import AOTF
-	aotf = AOTF("COM4")
-
+def make_gui():
+	global aotf 
+	aotf = AOTF("/dev/ttyUSB2")
 	app = get_qt_app()
 	ui = AOTF_UI(device=aotf,debug =False)
 	ui.show()
 	sys.exit(app.exec_())	
+
+def flash_wavelengths(wavelengths,t_sec):
+	aotf = AOTF("/dev/ttyUSB2")
+	while True:
+		for i in range(len(wavelengths)):
+			aotf.enable_channel_by_wavelength(i,wavelengths[i],8000)
+		time.sleep(t_sec)
+		for i in range(len(wavelengths)):
+			aotf.disable_channel(i)
+		time.sleep(t_sec)
+	return 	
+
+
+def say(text):
+	import pyttsx
+	engine = pyttsx.init()
+	engine.say(text)
+	engine.runAndWait()
+	return 
+def flash_frequency(f):
+	aotf = AOTF("/dev/ttyUSB2")
+	while True:
+		aotf.enable_channel_by_frequency(1,f,8000)
+		time.sleep(0.4)
+		aotf.disable_channel(1)
+		time.sleep(0.4)
+
+
+def set_frequency(fs):
+
+	aotf = AOTF("/dev/ttyUSB2")
+	for i,f in enumerate(fs):
+		# aotf.disable_channel(i)
+		aotf.enable_channel_by_frequency(i,f,8000)
+
+def scan_frequency(freqs,t):
+	aotf = AOTF("/dev/ttyUSB2")
+	for f in freqs:
+		print "freq:",f
+		aotf.enable_channel_by_frequency(1,f,8000)
+		say("{0:.3g} megahertz".format(f))
+		say("measure")
+		time.sleep(t)
+		
+		aotf.disable_channel(1)
+		time.sleep(t)
+	
+	return 	
+
+
+if __name__ == "__main__":
+	# time.sleep(10)
+
+	set_frequency([85])
+	# for f in range(60,86):
+		# set_frequency(f)
+		# time.sleep(1)
+		# say("{0:.3g} megahertz".format(f))
+	# scan_frequency(range(48,86),1)
+	# scan_frequency(range(86,95),1)
+	# make_gui()
+	# flash_wavelengths([690],1)
