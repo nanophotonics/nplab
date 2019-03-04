@@ -241,7 +241,7 @@ def truncateSpectrum(wavelengths, spectrum, startWl = 450, finishWl = 900):
     spectrumTrunc = np.array(spectrum[startIndex:finishIndex])
     return np.array([wavelengthsTrunc, spectrumTrunc])
 
-def plotStackedMap(x, yData, imgName = 'Stack', plotTitle = 'Stack', closeFigures = False, init = False, vmin = 0, vmax = 7):
+def plotStackedMap(x, yData, imgName = 'Stack', plotTitle = 'Stack', closeFigures = False, init = False, vmin = 0, vmax = 6):
 
     '''
     Plots stack of xy data.
@@ -904,7 +904,7 @@ def analyseNpomSpectrum(x, y, cutoff = 1500, fs = 60000, doublesThreshold = 2, c
 
     return metadata
 
-def plotAllStacks(outputFileName, fullSort = False, closeFigures = True):
+def plotAllStacks(outputFileName, fullSort = False, closeFigures = True, vmin = 0, vmax = 6):
     stackStart = time.time()
 
     print 'Plotting stacked spectral maps...'
@@ -925,11 +925,11 @@ def plotAllStacks(outputFileName, fullSort = False, closeFigures = True):
                 for sortingMethod in sortingMethods:
                     sortingMethod = (' ').join(sortingMethod.split(' ')[:3])
                     imgName = '%s\n%s by %s' % (date, groupName, sortingMethod)
-                    plotStackedMap(x, yData, imgName = imgName, plotTitle = imgName, closeFigures = closeFigures)
+                    plotStackedMap(x, yData, imgName = imgName, plotTitle = imgName, closeFigures = closeFigures, vmin = vmin, vmax = vmax)
 
             else:
                 imgName = '%s in order of measurement' % (groupName)
-                plotStackedMap(x, yData, imgName = imgName, plotTitle = imgName, closeFigures = closeFigures)
+                plotStackedMap(x, yData, imgName = imgName, plotTitle = imgName, closeFigures = closeFigures, vmin = vmin, vmax = vmax)
 
     stackEnd = time.time()
     timeElapsed = stackEnd - stackStart
@@ -1157,9 +1157,15 @@ def plotAllHists(outputFileName, closeFigures = True, irThreshold = 8, minBinFac
         if plotAll == False:
             npomTypes = ['All NPoMs', 'Non-Weird-Peakers', 'Weird Peakers', 'Ideal NPoMs']
 
+        #if 'Aligned NPoMs' in opf['NPoMs'].keys():
+        #    npomTypes.append('Aligned NPoMs')
+
     for npomType in npomTypes:
-        plotHistAndFit(outputFileName, npomType = npomType, irThreshold = irThreshold, minBinFactor = minBinFactor,
+        try:
+            plotHistAndFit(outputFileName, npomType = npomType, irThreshold = irThreshold, minBinFactor = minBinFactor,
                        closeFigures = closeFigures)
+        except Exception as e:
+            print 'Histogram plotting failed for %s because %s' % (npomType, e)
 
     histPlotEnd = time.time()
     histTimeElapsed = histPlotEnd - histPlotStart
@@ -1385,29 +1391,35 @@ def calcAllPeakAverages(outputFileName, groupAvgs = True, histAvgs = True, singl
 
         for npType in npTypes:
 
-            if histAvgs == True:
+            try:
 
-                histBins = gNPoMs['%s/Histogram data/Binned y data' % npType]
-                binNames = sorted(histBins.keys(), key = lambda binName: int(binName[4:]))
+                if histAvgs == True:
 
-                if singleBin == False:
+                    histBins = gNPoMs['%s/Histogram data/Binned y data' % npType]
+                    binNames = sorted(histBins.keys(), key = lambda binName: int(binName[4:]))
 
-                    for binName in binNames:
-                        gBin = histBins[binName]
-                        calcGroupAttrAvgs(gBin)
+                    if singleBin == False:
 
-                elif singleBin == True:
+                        for binName in binNames:
+                            gBin = histBins[binName]
+                            calcGroupAttrAvgs(gBin)
 
-                    binNames = [binName for binName in binNames if
-                                histBins[binName].attrs['Bin start (nm)'] < peakPos < histBins[binName].attrs['Bin end (nm)']]
+                    elif singleBin == True:
 
-                    for binName in binNames:
-                        gBin = histBins[binName]
-                        calcGroupAttrAvgs(gBin)
+                        binNames = [binName for binName in binNames if
+                                    histBins[binName].attrs['Bin start (nm)'] < peakPos < histBins[binName].attrs['Bin end (nm)']]
 
-            if groupAvgs == True:
-                gSpectra = gNPoMs['%s/Normalised' % npType]
-                calcGroupAttrAvgs(gSpectra)
+                        for binName in binNames:
+                            gBin = histBins[binName]
+                            calcGroupAttrAvgs(gBin)
+
+                if groupAvgs == True:
+                    gSpectra = gNPoMs['%s/Normalised' % npType]
+                    calcGroupAttrAvgs(gSpectra)
+
+            except Exception as e:
+                print 'PEak data collection failed for %s because %s' % (npType, e)
+
 
     peakAvgEnd = time.time()
     timeElapsed = peakAvgEnd - peakAvgStart
@@ -1475,7 +1487,7 @@ def analyseRepresentative(outputFileName):
 
     print '\n\tRepresentative spectrum info collected\n'
 
-def doStats(outputFileName, closeFigures = True, stacks = False, hist = True, allHists = True, irThreshold = 8, minBinFactor = 5, intensityRatios = False,
+def doStats(outputFileName, closeFigures = True, stacks = True, hist = True, allHists = True, irThreshold = 8, minBinFactor = 5, intensityRatios = False,
             peakAvgs = True, analRep = True):
 
     if stacks == True:
@@ -1542,6 +1554,12 @@ def fitAllSpectra(x, yData, outputFileName, summaryAttrs = False, first = 0, las
         gIdealRaw = gIdeal.create_group('Raw')
         gIdealNorm = gIdeal.create_group('Normalised')
 
+        if summaryAttrs:
+            if len(summaryAttrs['Misaligned particle numbers']) > 0.3*len(yData):
+                gAligned = gNPoMs.create_group('Aligned NPoMs')
+                gAlignedRaw = gAligned.create_group('Raw')
+                gAlignedNorm = gAligned.create_group('Normalised')
+
         if len(yData) > 2500:
             print '\tAbout to fit %s spectra. This may take a while...' % len(yData)
 
@@ -1598,6 +1616,14 @@ def fitAllSpectra(x, yData, outputFileName, summaryAttrs = False, first = 0, las
                     gMisaligned[spectrumName] = gAllRaw[spectrumName]
                     gMisaligned[spectrumName].attrs.update(gAllRaw[spectrumName].attrs)
 
+                else:
+                    if 'Aligned NPoMs' in gNPoMs.keys() and 'Spectrum %s' % n in gAllNPoMsNorm.keys():
+                        gAlignedRaw[spectrumName] = gAllRaw[spectrumName]
+                        gAlignedRaw[spectrumName].attrs.update(gAllRaw[spectrumName].attrs)
+
+                        gAlignedNorm[spectrumName] = gAllNPoMsNorm[spectrumName]
+                        gAlignedNorm[spectrumName].attrs.update(gAllNPoMsNorm[spectrumName].attrs)
+
             if specAttrs['NPoM?'] == False:
                 gNonPoms[spectrumName] = gAllRaw[spectrumName]
                 gNonPoms[spectrumName].attrs.update(gAllRaw[spectrumName].attrs)
@@ -1645,6 +1671,7 @@ def fitAllSpectra(x, yData, outputFileName, summaryAttrs = False, first = 0, las
 
                     gIdealNorm[spectrumName] = gAllNPoMsNorm[spectrumName]
                     gIdealNorm[spectrumName].attrs.update(gAllNPoMsNorm[spectrumName].attrs)
+
 
     currentTime = time.time() - totalFitStart
     mins = int(currentTime / 60)
