@@ -99,8 +99,8 @@ def test(debug):
 	dataset = [dset0,dset1]
 	scan_fit(dataset,debug=1)
 
-def main(debug=0):
-	f =df.DataFile("ir_calibration.hdf5","r")
+def main(filepath,debug=0):
+	f =df.DataFile(filepath,"r")
 	g = f["calibration"]
 	keys = g.keys()
 
@@ -122,7 +122,28 @@ def main(debug=0):
 	return mapper
 
 
-def mapper_tester(mapper):
+def grating_1200gmm(debug=0):
+	return main("ir_calibration_1200gmm.hdf5",debug=debug)
+
+def grating_300gmm(debug=0):
+	return main("ir_calibration_300gmm.hdf5",debug=debug)
+
+def mapper_tester_300gmm(mapper):
+
+	center_wavelengths = np.linspace(760,910,10)
+	pixels = np.arange(0,1014,1)
+	# print pixels
+	# print mapper
+	# print center_wavelengths
+	for cw in center_wavelengths:
+		wls = [mapper(cw,p) for p in pixels]
+		plt.plot(pixels,wls,label="center wavelength:{}".format(cw))
+	plt.xlabel("Pixel index")
+	plt.ylabel("Wavelength [nm]")
+	plt.legend()
+	plt.show()
+
+def mapper_tester_1200gmm(mapper):
 
 	center_wavelengths = np.linspace(740,850,10)
 	pixels = np.arange(0,1014,1)
@@ -139,9 +160,8 @@ def mapper_tester(mapper):
 			
 
 if __name__ == "__main__":
-	mapper = main(1)
-	mapper_tester(mapper)
-
-
+	mapper = grating_300gmm(1)
+	mapper_tester_300gmm(mapper)
+	# mapper_tester(mapper) #for 1200 g/mm grating - hand crafted code
 	# test(debug=1)
 	print "pass"

@@ -69,5 +69,5 @@ if __name__ == "__main__":
 	# ax.plot(spectrum)
 	# plt.show()
 
-
+	plot_measurement()
 	p.ShutDown()

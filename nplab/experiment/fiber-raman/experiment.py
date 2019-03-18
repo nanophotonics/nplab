@@ -6,8 +6,12 @@ from nplab.instrument.camera.Picam.pixis import Pixis
 from Pacton import Pacton
 from nplab import datafile as df 
 
-from spectrum_aligner_ir import main as get_wavelength_map
-mapper = get_wavelength_map(debug=0)
+from spectrum_aligner_ir import grating_300gmm as get_wavelength_map #grating_300gmm
+mapper = get_wavelength_map()
+
+def SetSensorTemperatureSetPoint(self,temperature):
+        param_name = "PicamParameter_SensorTemperatureSetPoint"
+        return self.set_parameter(parameter_name=param_name,parameter_value=temperature)
 
 def nm_to_raman_shift(laser_wavelength,wavelength):
 	raman_shift = 1e7*(1.0/laser_wavelength - 1.0/wavelength)
@@ -38,7 +42,9 @@ def initialize_measurement(acton_port, exposure_time = 100):
 	pacton = Pacton(pixis=p,acton=act)
 	print "Measuring..."
 	p.SetExposureTime(exposure_time)
-
+	# print pacton.acton.read_grating()
+	pacton.acton.set_grating(1)
+	# print "New grating",pacton.acton.read_grating_name()  
 	return pacton
 
 # Maunually find the COM port of Acton Spectrometer - set exposure time (default)
@@ -59,7 +65,7 @@ def single_shot(pacton, file, center_wavelength = 0, show_ = True):
 		plt.show()
 
 
-def get_spectrum(pacton,file,y_roi,center_wavelength,exposure_time,show_=True,debug = 0,laser_wavelength = None):
+def get_spectrum(pacton,file,y_roi,center_wavelength,exposure_time,show_= False, debug = 0, laser_wavelength = None):
 
 	if debug > 0:
 		print "y_roi",y_roi
@@ -68,7 +74,7 @@ def get_spectrum(pacton,file,y_roi,center_wavelength,exposure_time,show_=True,de
 	spectrum_group = file.require_group("spectrum")
 
 	#run calibration to get rid of low pixel value high intensity peaks due to camera response
-	pacton.get_pixel_response_calibration_spectrum()
+	
 	#get spectrum, drop interpolated wavelengths - they are wrong!
 	[ymin,ymax] = y_roi
 	xmin,xmax = [0,1024] #default to be over entire range!
@@ -125,9 +131,12 @@ def experiment(pacton, file, functions,argss,kwargss):
 
 
 if __name__ == "__main__":
-	file = initialize_datafile('.\experiment_testfile.hdf5')
+	file = initialize_datafile('C:\\Users\\Hera\\Desktop\\New folder\\20190315\\spectra\\ECDMCCenter840_vc1percent.hdf5')
 	pacton = initialize_measurement('COM5', 100)
 
+	pacton.get_pixel_response_calibration_spectrum()
 	# experiment(pacton,file, [single_shot],[()],[({"show_":True})])
-	get_spectrum(pacton,file,y_roi=[514,583],center_wavelength=840,exposure_time=10000,laser_wavelength=785,debug=1)
-	# single_shot(pacton,file,show_ = True)
+	for i in range(30):
+		get_spectrum(pacton,file,y_roi=[514,600],center_wavelength=840,exposure_time=10000,laser_wavelength=785,debug=0)
+		print i
+	#single_shot(pacton,file,show_ = True)

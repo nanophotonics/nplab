@@ -924,14 +924,13 @@ PicamAcquisitionErrorsMask = {
 if __name__ == "__main__":
 
 	#Perform basic tests
-	expected_value = 33685527 #ExposureTime
-	(value_type, constraint_type, n) = PicamParameter["PicamParameter_ExposureTime"]
+	expected_value = 16908303 #ExposureTime
+	(value_type, constraint_type, n) = PicamParameter["PicamParameter_SensorTemperatureReading"]
 	print value_type, constraint_type,n 
 	computed_value = PI_V(value_type,constraint_type,n)
 	assert(expected_value==computed_value)
-
 	#Parameter dictionary
-	for k in PicamParameter.keys():
-		(value_type, constraint_type, n) = PicamParameter[k]
-		v = PI_V(value_type,constraint_type,n)
-		print k,":",v
+	# for k in PicamParameter.keys():
+	# 	(value_type, constraint_type, n) = PicamParameter[k]
+	# 	v = PI_V(value_type,constraint_type,n)
+	# 	print k,":",v

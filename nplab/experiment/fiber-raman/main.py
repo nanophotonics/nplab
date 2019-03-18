@@ -6,13 +6,13 @@ from nplab.instrument.camera.pixis import Pixis
 
 p = Pixis()
 p.StartUp()
-p.SetExposureTime(10)
+p.SetExposureTime(50)
 initialized = False
 tries = 0
 
 # while initialized == False and tries < 50:
 # 	try:
-# 		a = Acton("COM6")
+a = Acton("COM5")
 # 		initialized = True 
 # 	except:
 # 		tries = tries + 1

@@ -106,20 +106,32 @@ class Pixis(Camera):
         valid_constraint_types = transpose_dictionary(PicamConstraintType).keys()
         assert(constraint_type in valid_constraint_types)
         
+        paramtype = param_type.replace("PicamValueType_","")
+        print "paramtype:", paramtype
+        if paramtype == "Enumeration":
+            paramtype="EnumeratedType"
+        else:
+            paramtype=paramtype+"Value"
 
-        function_name = "Picam_GetParameter{}Value".format(param_type.replace("PicamValueType_",""))
-        
+        function_name = "Picam_GetParameter{}".format(paramtype)
         if self.debug > 0:
             print "Function name:",function_name
+            print "Parameter name:", parameter_name
+            print "Parameter id:",param_id 
             # print "Function object", f
         
-        getter = getattr(self.picam,function_name)
+        getter = getattr(self.picam,function_name,None)
+        if getter is None:
+            raise ValueError("Getter is none!")
+        else:
+            if self.debug > 0:
+                print getter
         temp =  {
             "PicamValueType_Integer" : ct.c_int(),
             "PicamValueType_Boolean" : ct.c_bool(),
             "PicamValueType_LargeInteger" : ct.c_long(),
             "PicamValueType_FloatingPoint" : ct.c_float(),
-            "PicamValueType_Enumeration": None, #TODO 
+            "PicamValueType_Enumeration": ct.c_int(), #TODO 
             "PicamValueType_Rois": None, #TODO
             "PicamValueType_Pulse": None, #TODO
             "PicamValueType_Modulations": None #None       
@@ -127,9 +139,10 @@ class Pixis(Camera):
         
         value = temp[param_type]
         if value is not None:
-            response = getter(self.CameraHandle,param_id, ct.byref(value))
+            response = getter(self.CameraHandle,param_id, ct.pointer(value))
+            print response, value
             if response != 0:
-                print("Could not GET value of parameter {0} [label:{1}]".format(parameter,label))
+                print("Could not GET value of parameter {0} [label:{1}]".format(parameter_name,label))
                 print("[Code:{0}] {1}".format(response, PicamError[response]))
                 return np.nan
         
@@ -175,7 +188,7 @@ class Pixis(Camera):
             "PicamValueType_Boolean" : ct.c_bool,
             "PicamValueType_LargeInteger" : ct.c_long,
             "PicamValueType_FloatingPoint" : ct.c_double, #WARNING - THIS SHOULD BE A DOUBLE (64bit), NOT FLOAT (32bit) [for 32bit change to float]
-            "PicamValueType_Enumeration": None, #TODO 
+            "PicamValueType_Enumeration": ct.c_int, #Maybe an int 
             "PicamValueType_Rois": None, #TODO
             "PicamValueType_Pulse": None, #TODO
             "PicamValueType_Modulations": None #None       
@@ -248,7 +261,8 @@ class Pixis(Camera):
         self.x_max = self.FrameWidth = self.get_parameter(parameter_name="PicamParameter_SensorActiveWidth", label="frame width")
         self.y_max = self.FrameHeight = self.get_parameter(parameter_name="PicamParameter_SensorActiveHeight", label="frame height")
         print "Frame size:", self.x_max, self.y_max
-        self.bolRunning = True 
+        self.bolRunning = True
+        self.SetSensorTemperatureSetPoint(-80.0)
     
     def ShutDown(self):
         if self.bolRunning == False:
@@ -266,10 +280,25 @@ class Pixis(Camera):
         param_name = "PicamParameter_ExposureTime"        
         param_value = time #in milliseconds
         self.set_parameter(parameter_name=param_name,parameter_value=param_value)
-        
-        
+
+    #TODO        
+    # def GetCoolingFanStatus(self):
+    #     param_name = "PicamParameter_CoolingFanStatus"
+    #     status = self.get_parameter(parameter_name=param_name)
+    #     print status 
+
+    def GetSensorTemperatureReading(self):
+        param_name = "PicamParameter_SensorTemperatureReading"
+        return self.get_parameter(param_name)
+
+    def SetSensorTemperatureSetPoint(self,temperature):
+        param_name = "PicamParameter_SensorTemperatureSetPoint"
+        return self.set_parameter(parameter_name=param_name,parameter_value=temperature)
+
+
     def GetExposureTime(self):
-        param_name = "PicamParameter_ExposureTime"        
+        param_name = "PicamParameter_ExposureTime"
+        #function call: PicamEnumeratedType_CoolingFanStatus
         return self.get_parameter(parameter_name=param_name)
         
         # return self.get_parameter(parameter=33685527, label="exposure time")
@@ -304,28 +333,31 @@ if __name__ == "__main__":
     p = Pixis(debug=1)
     p.StartUp()
 
-    print p.GetExposureTime()
-    p.SetExposureTime(50.0)
-    _,Frame = p.raw_snapshot()
-    print p.GetExposureTime()
-
-    p.SetExposureTime(100.0)
-    _,Frame = p.raw_snapshot()
-    print p.GetExposureTime()
+    # print p.GetSensorTemperatureReading()
+    # print p.GetExposureTime()
+    # p.SetExposureTime(50.0)
+    # print p.GetExposureTime()
     
-    p.SetExposureTime(200.0)
-    _,Frame = p.raw_snapshot()
-    print p.GetExposureTime()
+    # _,Frame = p.raw_snapshot()
+    # print p.GetExposureTime()
 
-    p.SetExposureTime(400.0)
-    _,Frame = p.raw_snapshot()
-    print p.GetExposureTime()
+    # p.SetExposureTime(100.0)
+    # _,Frame = p.raw_snapshot()
+    # print p.GetExposureTime()
     
-    p.SetExposureTime(800.0)
-    _,Frame = p.raw_snapshot()
-    print p.GetExposureTime()
+    # p.SetExposureTime(200.0)
+    # _,Frame = p.raw_snapshot()
+    # print p.GetExposureTime()
+
+    # p.SetExposureTime(400.0)
+    # _,Frame = p.raw_snapshot()
+    # print p.GetExposureTime()
+    
+    # p.SetExposureTime(800.0)
+    # _,Frame = p.raw_snapshot()
+    # print p.GetExposureTime()
 
     p.ShutDown()
     
-    plt.imshow(Frame, cmap='gray')
-    plt.show()
+    # plt.imshow(Frame, cmap='gray')
+    # plt.show()

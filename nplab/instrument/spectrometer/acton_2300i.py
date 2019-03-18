@@ -147,7 +147,7 @@ class Acton(SerialInstrument):
     def read_grating_info(self,debug=0):
         grating_string = self.write_command("?GRATINGS", waittime=1.0,debug=debug)
         """
-            \x1a1  300 g/mm BLZ=  500NM 
+            \x1a1  1200 g/mm BLZ=  500NM 
             2  300 g/mm BLZ=  1.0UM 
             3  150 g/mm BLZ=  500NM 
             4  Not Installed     
@@ -218,7 +218,7 @@ class Acton(SerialInstrument):
         self.read_grating()
         return self.gratings[self.grating-1]
         
-    def write_grating(self, grating):
+    def set_grating(self, grating):
         assert 0 < grating < 10 
         self.write_command("%i GRATING" % grating)        
         

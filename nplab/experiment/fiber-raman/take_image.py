@@ -21,9 +21,9 @@ def initialize_measurement(acton_port, exposure_time = 100):
 	p.SetExposureTime(exposure_time)
 	return pacton
 
-def single_shot(acton_port="COM5",center_wavelength = 820, exposure_time =10000):
+def single_shot(acton_port="COM5",center_wavelength = 840, exposure_time =10000):
 	pacton = initialize_measurement(acton_port=acton_port,exposure_time=exposure_time)
-	fi = [0,1024,500,600]
+	fi = [0,1024,514,600]
 	img = pacton.get_image(center_wavelength,roi = fi ,debug=0)
 	fig, ax = plt.subplots(1)
 	ax.imshow(img, cmap='viridis')

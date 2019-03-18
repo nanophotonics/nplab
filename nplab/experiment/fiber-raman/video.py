@@ -47,6 +47,6 @@ def make_app(pacton, refresh_time):
 	timer.start(refresh_time)
 	app.exec_()
 
-pacton = initialize_measurement("COM5",50)
+pacton = initialize_measurement("COM5",300)
 pacton.get_image(0)
-make_app(pacton,100)
+make_app(pacton,50)
