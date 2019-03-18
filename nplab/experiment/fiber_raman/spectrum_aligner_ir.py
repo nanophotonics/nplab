@@ -39,7 +39,15 @@ def scan_fit(dataset,debug = 0):
 	center_wls = []
 	offsets = []
 	gradients = []
+
+	if debug > 0:
+		print "-="*10
+		print "scan_fit dataset debug"
+		print "-="*10
+		for d in dataset:
+			print d
 	for (center_wavelength,spectra,calibration_wavelengths) in dataset:
+
 		if len(spectra) > 1:
 
 			print center_wavelength,len(spectra),len(calibration_wavelengths)
@@ -64,11 +72,12 @@ def scan_fit(dataset,debug = 0):
 		
 		plt.show()
 
-	def mapper(center_wavelength,pixel_index):
+	print "center_wls:",np.max(center_wls),np.min(center_wls)
+	def mapper(cw,pixel_index):
 		wavelength_offset = interp1d(center_wls,offsets,kind='linear')
 		wavelength_gradient = interp1d(center_wls,gradients,kind='linear')
 
-		return wavelength_offset(center_wavelength) + wavelength_gradient(center_wavelength)*pixel_index
+		return wavelength_offset(cw) + wavelength_gradient(cw)*pixel_index
 
 	return mapper
 
@@ -110,16 +119,23 @@ def main(filepath,debug=0):
 	center_wavelengths = []
 	for k in keys:
 		center_wavelengths = center_wavelengths + [g[k].attrs["center_wavelength"]]
-	
+		
 	center_wavelengths = sorted(np.unique(center_wavelengths))
+	print "main:max center wavelength:",np.max(center_wavelengths)
+
 	dataset = []
 	for cw in center_wavelengths:
+
 		entry = (cw,[],[])
 		for k in keys:
 			if g[k].attrs["center_wavelength"] == cw:
 				entry[2].append(g[k].attrs["laser_wavelength"])
 				entry[1].append(np.array(g[k]))
 		dataset.append(entry)
+	print "-="*10
+	for d in dataset:
+		print d
+	print "-="*10
 	mapper = scan_fit(dataset,debug=debug)
 
 	return mapper
@@ -139,6 +155,7 @@ def mapper_tester_300gmm(mapper):
 	# print mapper
 	# print center_wavelengths
 	for cw in center_wavelengths:
+		print "cW:",cw
 		wls = [mapper(cw,p) for p in pixels]
 		plt.plot(pixels,wls,label="center wavelength:{}".format(cw))
 	plt.xlabel("Pixel index")
@@ -148,13 +165,18 @@ def mapper_tester_300gmm(mapper):
 
 def mapper_tester_1200gmm(mapper):
 
-	center_wavelengths = np.linspace(740,850,10)
+	center_wavelengths = np.linspace(750,885,10)
 	pixels = np.arange(0,1014,1)
 	# print pixels
 	# print mapper
 	# print center_wavelengths
 	for cw in center_wavelengths:
-		wls = [mapper(cw,p) for p in pixels]
+		print cw
+		wls = []
+		for p in pixels:
+			# print cw,p
+			wls.append(mapper(cw,p))
+		# wls = [mapper(cw,p) for p in pixels]
 		plt.plot(pixels,wls,label="center wavelength:{}".format(cw))
 	plt.xlabel("Pixel index")
 	plt.ylabel("Wavelength [nm]")
@@ -163,8 +185,8 @@ def mapper_tester_1200gmm(mapper):
 			
 
 if __name__ == "__main__":
-	mapper = grating_300gmm(1)
-	mapper_tester_300gmm(mapper)
+	mapper = grating_1200gmm(1)
+	mapper_tester_1200gmm(mapper)
 	# mapper_tester(mapper) #for 1200 g/mm grating - hand crafted code
 	# test(debug=1)
 	print "pass"

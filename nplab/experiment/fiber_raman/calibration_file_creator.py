@@ -29,8 +29,17 @@ def tune(wl,laser):
 	return
 
 
-def make_measurement(data_group,laser_wavelength,center_wavelength):
+def make_measurement(data_group,laser_wavelength,center_wavelength,reruns=0):
 	spectrum,_ = pacton.get_spectrum(center_wavelength,subtract_background=True,roi=[0,1024,600,800],debug=1)
+	if reruns > 0:
+		N = spectrum.shape[0]
+		spectra = np.zeros((reruns,N))
+		spectra[0,:] = spectrum
+		for i in range(1,reruns):
+			spectrum,_ = pacton.get_spectrum(center_wavelength,subtract_background=True,roi=[0,1024,600,800],debug=1)
+			spectra[i,:] = spectrum
+		spectrum = np.mean(spectra,axis=0)
+
 	data_group.create_dataset("spectrum"+"_%d",data=spectrum, attrs = {"center_wavelength":center_wavelength,"laser_wavelength":laser_wavelength})
 	data_group.file.flush()
 	return
@@ -63,7 +72,7 @@ def plot_measurement(pacton, center_wavelength):
 
 if __name__ == "__main__":
 
-	f = df.DataFile("ir_calibration_300gmm.hdf5","a")
+	f = df.DataFile("ir_calibration_1200gmm.hdf5","a")
 	g = f.require_group("calibration")
 	print "Starting.."
 
@@ -77,20 +86,20 @@ if __name__ == "__main__":
 	pacton = Pacton(pixis=p,acton=act)
 	
 	print "Setting grating..."
-	pacton.acton.set_grating(2) # 1 : 1200g/mm, 2: 300g/mm
+	pacton.acton.set_grating(1) # 1 : 1200g/mm, 2: 300g/mm
 	# print pacton.acton.read_grating()
-	p.SetExposureTime(100)
+	p.SetExposureTime(200)
 	pacton.get_pixel_response_calibration_spectrum()
 
 	# tune(wl,laser)
 	# measured = get_wavelength(laser)
 	# print wl, measured
 
-	center_wavelengths = range(750,920,10)
-	p.SetExposureTime(100)
+	center_wavelengths = range(870,890,10)
+	p.SetExposureTime(200)
 	
 	
-	bandwidth = 20
+	bandwidth = 10
 	for c_wl in center_wavelengths:
 		laser_wavelengths = np.linspace(c_wl-bandwidth,c_wl+bandwidth,5)
 		for l_wl in laser_wavelengths:
@@ -98,7 +107,7 @@ if __name__ == "__main__":
 			tune(l_wl,LASER)
 			measured_wl = get_wavelength(LASER)	
 			#plot_measurement(pacton,c_wl)
-			make_measurement(g,l_wl,c_wl)
+			make_measurement(g,measured_wl,c_wl,reruns=5)
 
 	
 	p.ShutDown()
