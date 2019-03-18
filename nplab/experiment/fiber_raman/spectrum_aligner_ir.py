@@ -1,7 +1,10 @@
+import os 
 import numpy as np 
 from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt 
 from nplab import datafile as df
+
+DIRPATH = os.path.dirname(os.path.abspath(__file__))
 
 def least_squares(xs,ys):
 	xs_augmented = np.transpose([xs,np.ones(len(xs))])
@@ -123,10 +126,10 @@ def main(filepath,debug=0):
 
 
 def grating_1200gmm(debug=0):
-	return main("ir_calibration_1200gmm.hdf5",debug=debug)
+	return main(DIRPATH+"\\"+"ir_calibration_1200gmm.hdf5",debug=debug)
 
 def grating_300gmm(debug=0):
-	return main("ir_calibration_300gmm.hdf5",debug=debug)
+	return main(DIRPATH+"\\"+"ir_calibration_300gmm.hdf5",debug=debug)
 
 def mapper_tester_300gmm(mapper):
 
