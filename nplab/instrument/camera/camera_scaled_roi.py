@@ -29,40 +29,6 @@ class CameraRoiScale(Camera):
         self.x_axis = None
         self.y_axis = None
 
-    def pos_to_unit(self, pos, axis):
-        """
-        Function used to calibrate the camera pixels in the GUI.
-
-        There are two ways a user can provide a calibration:
-            - Overwrite this function in a subclass.
-            - Provide an array (self.x_axis or self.y_axis) of the same size as the relevant axis of the camera.
-
-        :param pos: list of integers
-        :param axis: string. Either 'bottom' or 'left'
-        :return: list of floats
-        """
-
-        def get_value(axis_vector, index):
-            """Function that extracts the value from a list (axis_vectors) according to some given position (index),
-            returning 0 if the index is out of range"""
-            try:
-                return axis_vector[int(index)]
-            except IndexError:
-                return 0
-
-        if axis == 'bottom':
-            if self.x_axis is not None:
-                return map(partial(get_value, self.x_axis), pos)
-            else:
-                return map(int, pos)
-        elif axis == 'left':
-            if self.y_axis is not None:
-                return map(partial(get_value, self.y_axis), pos)
-            else:
-                return map(int, pos)
-        else:
-            raise ValueError
-
     @property
     def roi(self):
         """
@@ -87,22 +53,20 @@ class CameraRoiScale(Camera):
         return 1, 1
 
     def update_widgets(self):
-        for widgt in self._preview_widgets:
-            roi = self.roi
-            widgt._pxl_offset = (roi[0], roi[2])
-            widgt._pxl_scale = self.binning
-            setattr(widgt, '_pos_to_unit', self.pos_to_unit)
+        if self._preview_widgets is not None:
+            for widgt in self._preview_widgets:
+                roi = self.roi
+                widgt._pxl_offset = (roi[0], roi[2])
+                widgt._pxl_scale = self.binning
+                widgt.x_axis = self.x_axis
+                widgt.y_axis = self.y_axis
 
-            size = min(((roi[1] - roi[0])/50, (roi[3]-roi[2])/50))
-            for idx in [1, 2]:
-                xhair = getattr(widgt, 'CrossHair%d' % idx)
-                xhair._size = size
-                xhair.update()
+                size = min(((roi[1] - roi[0])/50., (roi[3]-roi[2])/50.))
+                for idx in [1, 2]:
+                    xhair = getattr(widgt, 'CrossHair%d' % idx)
+                    xhair._size = size
+                    xhair.update()
 
-            vw = widgt.ImageDisplay.getView()
-            for idx, lbl in enumerate(["bottom", "left"]):
-                ax = vw.axes[lbl]["item"]
-                setattr(ax, 'pos_to_unit', partial(self.pos_to_unit, axis=lbl))
         super(CameraRoiScale, self).update_widgets()
 
 
@@ -115,9 +79,26 @@ class ArbitraryAxis(pyqtgraph.AxisItem):
 
     def __init__(self, *args, **kwargs):
         super(ArbitraryAxis, self).__init__(*args, **kwargs)
+        self.axis_values = None
 
     def pos_to_unit(self, value):
-        return value
+        def get_value(index):
+            """Function that extracts the value from a list (axis_vectors) according to some given position (index),
+            returning NaN if the index is out of range"""
+            try:
+                return self.axis_values[int(index)]
+            except IndexError:
+                return np.nan
+
+        if self.axis_values is None:
+            func = int
+        else:
+            func = get_value
+
+        if not hasattr(value, '__iter__'):
+            return func(value)
+        else:
+            return map(func, value)
 
     def tickStrings(self, values, scale, spacing):
         values = self.pos_to_unit(values)
@@ -165,17 +146,18 @@ class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
     update_data_signal = QtCore.Signal(np.ndarray)
 
     def __init__(self, scale=(1, 1), offset=(0, 0), units=("pxl", "pxl")):
-        # QtWidgets.QWidget.__init__(self)
         super(DisplayWidgetRoiScale, self).__init__()
-        uic.loadUi(os.path.join(os.path.dirname(__file__), 'camera_controls_scaled.ui'), self)
+        uic.loadUi(os.path.join(os.path.dirname(__file__), 'camera_display_scaled.ui'), self)
 
         self.units = units
         self._pxl_scale = scale
         self._pxl_offset = offset
         self.binning = (1, 1)
+        self.x_axis = None
+        self.y_axis = None
 
         # Create a PlotItem in which the shown axis display coordinates that are offset and scaled, without changing the
-        #  underlying coordinates
+        # underlying coordinates
         self.splitter = QtWidgets.QSplitter()
         layout = self.layout()
         layout.addWidget(self.splitter, 0, 0, 1, 2)
@@ -206,6 +188,13 @@ class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
         self.checkbox_tools.stateChanged.connect(self.show_tools)
         self.splitter.setSizes([1, 0])
 
+    def get_axes(self):
+        vw = self.ImageDisplay.getView()
+        axs = ()
+        for idx, lbl in enumerate(["bottom", "left"]):
+            axs += (vw.axes[lbl]["item"], )
+        return axs
+
     @property
     def autoRange(self):
         return self.checkbox_autorange.isChecked()
@@ -213,16 +202,9 @@ class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
     def autoLevel(self):
         return self.checkbox_autolevel.isChecked()
 
-    def _pos_to_unit(self, pos, axis):
-        """This is overwritten in CameraScaledRoi.update_widgets, setting it to CameraScaledRoi.pos_to_unit"""
-        return pos
-
     def pos_to_unit(self, pos):
-        """Using the CameraScaledRoi.pos_to_unit for each of the axes"""
-        x = self._pos_to_unit([pos[0]], 'bottom')[0]
-        y = self._pos_to_unit([pos[1]], 'left')[0]
-
-        return x, y
+        axs = self.get_axes()
+        return tuple(map(lambda ax, val: ax.pos_to_unit(val), axs, pos))
 
     def _rescale(self):
         """
@@ -230,9 +212,8 @@ class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
 
         :return:
         """
-        vw = self.ImageDisplay.getView()
-        for idx, lbl in enumerate(["bottom", "left"]):
-            ax = vw.axes[lbl]["item"]
+
+        for idx, ax in enumerate(self.get_axes()):
             ax.offset = self._pxl_offset[idx]
             ax.setScale(self._pxl_scale[idx])
         self.mouseMoved()  # To update the pixel position display label
@@ -243,35 +224,42 @@ class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
         units
         :return:
         """
-        params = ()
+        params1 = ()
+        params2 = ()
         for idx in [1, 2]:
             xhair = getattr(self, "CrossHair%d" % idx)
             pos = tuple(xhair.pos())
             post = self.pos_to_unit(pos)
-            params += tuple(map(lambda x, y: x * y, pos, self.binning))
-            params += post + (self.units[idx-1], )
+            params1 += tuple(map(lambda x, y: x * y, pos, self.binning))
+            params2 += post + (self.units[idx-1], )
+        diff = np.linalg.norm(np.array(params1[:2]) - np.array(params1[2:]))
+        params1 += (diff, )
 
-        diff = np.linalg.norm(np.array(params[:2]) - np.array(params[5:7]))
         if self.units[0] == self.units[1]:
-            difft = np.linalg.norm(np.array(params[2:4]) - np.array(params[7:9]))
+            difft = np.linalg.norm(np.array(params2[:2]) - np.array(params2[3:5]))
             unit = self.units[0]
         else:
-            difft = -1
+            difft = np.nan
             unit = ''
-        params += (diff, difft, unit, )
+        params2 += (unit, difft)
 
-        self.labelCrossHairPositions.setText(
-            "<span style='color: red'>Pixel: [%i,%i]px Unit: (%g, %g)%s</span>, " \
-            "<span style='color: green'> Pixel: [%i,%i]px Unit: (%g, %g)%s</span>, " \
-            "Delta pixel: %g px Delta Unit: %g %s"
-            % params)
+        self.label_crosshairpos.setText(
+            u"Pixels: <span style='color: red'>[%i,%i] </span> " \
+            u"<span style='color: green'> [%i,%i] </span> " \
+            u"\u0394px=%g" \
+            u"<span style='color: red'> (%g, %g)%s</span> " \
+            u"<span style='color: green'> (%g, %g)%s</span> " \
+            u"\u0394%s=%g"
+            % (params1 + params2))
 
     def update_image(self, newimage):
-
         scale = self._pxl_scale
         offset = self._pxl_offset
 
-        if len(newimage.shape) == 2:
+        if len(newimage.shape) == 1:
+            self.splitter.setSizes([0, 1])
+            self.plot[0].setData(x=self.x_axis, y=newimage)
+        elif len(newimage.shape) == 2:
             if newimage.shape[0] > self._max_num_line_plots:
                 self.splitter.setSizes([1, 0])
                 self.ImageDisplay.setImage(newimage.T,
@@ -283,7 +271,7 @@ class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
                 self.splitter.setSizes([0, 1])
                 for ii in range(newimage.shape[0]):
                     self.plot[ii].setData(x=0, y=newimage[ii])
-        else:
+        elif len(newimage.shape) == 3:
             self.splitter.setSizes([1, 0])
             image = np.transpose(newimage, (0, 2, 1))
             zvals = 0.99 * np.linspace(0, image.shape[0] - 1, image.shape[0])
@@ -294,7 +282,16 @@ class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
                                        autoRange=self.autoRange,
                                        autoLevels=self.autoLevel,
                                        scale=(scale[0], scale[1]))
+        else:
+            raise ValueError('Cannot display. Array shape unrecognised')
         self.mouseMoved()
+
+        vw = self.ImageDisplay.getView()
+        for lbl, axis in zip(["bottom", "left"],
+                             [self.x_axis, self.y_axis]):
+            ax = vw.axes[lbl]["item"]
+            if axis is not None:
+                setattr(ax, 'axis_values', axis)
 
     def fix_aspect_ratio(self):
         boolean = self.checkbox_aspectratio.isChecked()
