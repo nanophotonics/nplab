@@ -17,17 +17,40 @@ from functools import partial
 class CameraRoiScale(Camera):
     def __init__(self):
         super(CameraRoiScale, self).__init__()
+        self.x_axis = None
+        self.y_axis = None
 
     def pos_to_unit(self, pos, axis):
         """
-        Returns a position in the appropriate units given by _pxl_scale and _pxl_offset.
-        :param pos: QPoint
-        :return:
+        Function used to calibrate the camera pixels in the GUI.
+
+        There are two ways a user can provide a calibration:
+            - Overwrite this function in a subclass.
+            - Provide an array (self.x_axis or self.y_axis) of the same size as the relevant axis of the camera.
+
+        :param pos: list of integers
+        :param axis: string. Either 'bottom' or 'left'
+        :return: list of floats
         """
+
+        def get_value(axis_vector, index):
+            """Function that extracts the value from a list (axis_vectors) according to some given position (index),
+            returning 0 if the index is out of range"""
+            try:
+                return axis_vector[int(index)]
+            except IndexError:
+                return 0
+
         if axis == 'bottom':
-            return map(lambda x: 0.1*x, pos)
+            if self.x_axis is not None:
+                return map(partial(get_value, self.x_axis), pos)
+            else:
+                return pos
         elif axis == 'left':
-            return map(lambda x: x, pos)
+            if self.y_axis is not None:
+                return map(partial(get_value, self.y_axis), pos)
+            else:
+                return pos
         else:
             raise ValueError
 
@@ -49,13 +72,6 @@ class CameraRoiScale(Camera):
     @binning.setter
     def binning(self, value):
         return
-
-    def axes(self, axis):
-        roi = self.roi
-        if axis == 'x':
-            return self.pos_to_unit(np.arange(roi[0], roi[1]), 'bottom')
-        elif axis == 'y':
-            return self.pos_to_unit(np.arange(roi[2], roi[3]), 'left')
 
     def update_widgets(self):
         for widgt in self._preview_widgets:
@@ -88,20 +104,8 @@ class ArbitraryAxis(pyqtgraph.AxisItem):
 
     def tickStrings(self, values, scale, spacing):
         values = self.pos_to_unit(values)
+        spacing = np.abs(np.diff(self.pos_to_unit([0, spacing])))
         return super(ArbitraryAxis, self).tickStrings(values, scale, spacing)
-        # if self.logMode:
-        #     return self.logTickStrings(values, scale, spacing)
-        #
-        # places = max(0, np.ceil(-np.log10(spacing * scale)))
-        # strings = []
-        # for v in values:
-        #     vs = v * scale + self.offset  # This is the only difference from the pure pyqtgraph implementation
-        #     if abs(vs) < .001 or abs(vs) >= 10000:
-        #         vstr = "%g" % vs
-        #     else:
-        #         vstr = ("%%0.%df" % places) % vs
-        #     strings.append(vstr)
-        # return strings
 
 
 class Crosshair(pyqtgraph.GraphicsObject):
@@ -140,18 +144,24 @@ class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
     def __init__(self, scale=(1, 1), offset=(0, 0), unit="pxl"):
         QtWidgets.QWidget.__init__(self)
 
-        uic.loadUi(os.path.join(os.path.dirname(__file__), 'CameraDefaultDisplay.ui'), self)
+        uic.loadUi(os.path.join(os.path.dirname(__file__), 'camera_controls_scaled.ui'), self)
 
         # Create a PlotItem in which the shown axis display coordinates that are offset and scaled, without changing the
         #  underlying coordinates
+        self.splitter = QtWidgets.QSplitter()
+        layout = self.layout()
+        layout.addWidget(self.splitter, 0, 0, 1, 2)
+
         _item = pyqtgraph.PlotItem(axisItems=dict(bottom=ArbitraryAxis(orientation="bottom"),
                                                   left=ArbitraryAxis(orientation="left")))
-        _view = pyqtgraph.ImageView(view=_item)
-        self.ImageDisplay = self.replace_widget(self.imagelayout, self.ImageDisplay, _view)
+        self.ImageDisplay = pyqtgraph.ImageView(view=_item)
+        self.splitter.addWidget(self.ImageDisplay)
+
+        self.LineDisplay = pyqtgraph.PlotWidget()
+        self.splitter.addWidget(self.LineDisplay)
+        self.splitter.setHandleWidth(10)
         self.ImageDisplay.view.setAspectLocked(False)
         self.ImageDisplay.getHistogramWidget().gradient.restoreState(Gradients.values()[1])
-        self.labelCrossHairPositions = QtWidgets.QLabel()
-        self.imagelayout.addWidget(self.labelCrossHairPositions)
         self.ImageDisplay.imageItem.setTransform(QtGui.QTransform())
 
         self.plot = ()
@@ -167,6 +177,8 @@ class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
 
         self.CrossHair1.CrossHairMoved.connect(self.mouseMoved)
         self.CrossHair2.CrossHairMoved.connect(self.mouseMoved)
+        self.checkbox_aspectratio.stateChanged.connect(self.fix_aspect_ratio)
+        self.checkbox_tools.stateChanged.connect(self.show_tools)
 
         self.unit = unit
         self._pxl_scale = scale
@@ -174,8 +186,12 @@ class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
         self.binning = (1, 1)
         self.splitter.setSizes([1, 0])
 
-        self.autoRange = False
-        self.autoLevel = True
+    @property
+    def autoRange(self):
+        return self.checkbox_autorange.isChecked()
+    @property
+    def autoLevel(self):
+        return self.checkbox_autolevel.isChecked()
 
     def ccdpxl_to_unit(self, pxl):
         return pxl
@@ -244,8 +260,11 @@ class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
         if len(newimage.shape) == 2:
             if newimage.shape[0] > self._max_num_line_plots:
                 self.splitter.setSizes([1, 0])
-                self.ImageDisplay.setImage(newimage.T, pos=tuple(map(operator.add, offset, (0, 0))),
-                                           autoRange=self.autoRange, scale=(scale[0], scale[1]))
+                self.ImageDisplay.setImage(newimage.T,
+                                           pos=tuple(map(operator.add, offset, (0, 0))),
+                                           autoRange=self.autoRange,
+                                           autoLevels=self.autoLevel,
+                                           scale=(scale[0], scale[1]))
             else:
                 self.splitter.setSizes([0, 1])
                 for ii in range(newimage.shape[0]):
@@ -259,9 +278,23 @@ class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
             self.ImageDisplay.setImage(image, xvals=zvals,
                                        pos=tuple(map(operator.add, offset, (0, 0))),
                                        autoRange=self.autoRange,
-                                       scale=(scale[0], scale[1]),
-                                       autoLevels=self.autoLevel)
+                                       autoLevels=self.autoLevel,
+                                       scale=(scale[0], scale[1]))
 
+    def fix_aspect_ratio(self):
+        boolean = self.checkbox_aspectratio.isChecked()
+        self.ImageDisplay.getView().getViewBox().setAspectLocked(boolean, 1)
+
+    def show_tools(self):
+        boolean = self.checkbox_tools.isChecked()
+        if boolean:
+            self.ImageDisplay.getHistogramWidget().show()
+            self.ImageDisplay.ui.roiBtn.show()
+            self.ImageDisplay.ui.menuBtn.show()
+        else:
+            self.ImageDisplay.getHistogramWidget().hide()
+            self.ImageDisplay.ui.roiBtn.hide()
+            self.ImageDisplay.ui.menuBtn.hide()
     def get_roi(self):
         """
         Returns the cross hair positions
