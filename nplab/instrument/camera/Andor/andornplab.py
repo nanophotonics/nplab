@@ -3,9 +3,8 @@
 from nplab.utils.gui import QtWidgets, QtCore, uic, QtGui
 from nplab.instrument.camera.camera_scaled_roi import CameraRoiScale, DisplayWidgetRoiScale
 from nplab.instrument.camera.Andor.andor_sdk import AndorBase
-from nplab.utils.notified_property import NotifiedProperty
-import nplab.datafile as df
 from nplab.utils.notified_property import register_for_property_changes
+import nplab.datafile as df
 
 import os
 import numpy as np
@@ -16,21 +15,14 @@ from weakref import WeakSet
 class Andor(CameraRoiScale, AndorBase):
 
     def __init__(self, settings_filepath=None, **kwargs):
-        # Camera.__init__(self)
         AndorBase.__init__(self)
         CameraRoiScale.__init__(self)
-
-        # self.wvl_to_pxl = kwargs['wvl_to_pxl']
-        # self.magnification = kwargs['magnification']
-        # self.pxl_size = kwargs['pxl_size']
 
         self.CurImage = None
         self.background = None
         self.backgrounded = False
-        self.unit_scale = [1, 1]  # for x and y axis
-        self.unit_offset = [0, 0]
 
-        if settings_filepath != None:
+        if settings_filepath is not None:
             self.load_params_from_file(settings_filepath)
         self.isAborted = False
 
@@ -57,28 +49,31 @@ class Andor(CameraRoiScale, AndorBase):
         except Exception as e:
             self._logger.warn("Couldn't Capture because %s" % e)
 
+    def filter_function(self, frame):
+        if self.backgrounded:
+            frame -= self.background
+        return frame
+
     def get_camera_parameter(self, parameter_name):
         return self.get_andor_parameter(parameter_name)
 
-    def set_camera_parameter(self, parameter_name, parameter_value):
+    def set_camera_parameter(self, parameter_name, *parameter_value):
         try:
-            self.set_andor_parameter(parameter_name, parameter_value)
+            self.set_andor_parameter(parameter_name, *parameter_value)
         except Exception as e:
             self.log('parameter %s could not be set with the value %s due to error %s' % (parameter_name,
                                                                                           parameter_value, e))
 
-    @NotifiedProperty
+    @property
     def roi(self):
-        # return self.Image[2:]
         return tuple(map(lambda x: x - 1, self.Image[2:]))
 
     @roi.setter
     def roi(self, value):
         image = self.Image
-        # self.Image = image[:2] + value
         self.Image = image[:2] + tuple(map(lambda x: x + 1, value))
 
-    @NotifiedProperty
+    @property
     def binning(self):
         return self.Image[:2]
 
@@ -113,13 +108,6 @@ class Andor(CameraRoiScale, AndorBase):
 
         """
         AndorBase.set_image(*params)
-        self.scaling()
-
-    def scaling(self):
-        self.unit_scale = self.Image[:2]  # for x and y axis
-        self.unit_offset = (self.Image[2], self.Image[4])
-
-        return self.unit_scale, self.unit_offset
 
 
 class AndorUI(QtWidgets.QWidget, UiTools):
@@ -131,7 +119,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         self.Andor = andor
         self.DisplayWidget = None
 
-        uic.loadUi((os.path.dirname(__file__) + '/andor.ui'), self)
+        uic.loadUi((os.path.dirname(__file__) + '/andornplab.ui'), self)
 
         self._setup_signals()
         self.updateGUI()
@@ -139,8 +127,8 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         self.data_file = None
         self.save_all_parameters = False
 
-        self.gui_params = ['ReadMode', 'Exposure', 'CoolerMode'
-            , 'AcquisitionMode', 'OutAmp', 'TriggerMode']
+        self.gui_params = ['ReadMode', 'Exposure',
+                           'AcquisitionMode', 'OutAmp', 'TriggerMode']
         self._func_dict = {}
         for param in self.gui_params:
             func = self.callback_to_update_prop(param)
@@ -188,8 +176,6 @@ class AndorUI(QtWidgets.QWidget, UiTools):
     # GUI FUNCTIONS
     def updateGUI(self):
         trig_modes = {0: 0, 1: 1, 6: 2}
-        print self.Andor.parameters
-        print self.Andor._parameters
         self.comboBoxAcqMode.setCurrentIndex(self.Andor._parameters['AcquisitionMode'] - 1)
         self.AcquisitionModeChanged()
         self.comboBoxReadMode.setCurrentIndex(self.Andor._parameters['ReadMode'])
@@ -200,25 +186,17 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         self.BinningChanged()
         self.spinBoxNumFrames.setValue(self.Andor._parameters['NKin'])
 
-        self.Andor.get_andor_parameter('AcquisitionTimings')
+        self.Andor.get_camera_parameter('AcquisitionTimings')
         self.lineEditExpT.setText(
             str(float('%#e' % self.Andor._parameters['AcquisitionTimings'][0])).rstrip('0'))
 
     def Cooler(self):
-        if self.checkBoxCooler.isChecked():
-            if not self.Andor.IsCoolerOn():
-                self.Andor.CoolerON()
-                self.TemperatureUpdateThread = self._constantlyUpdateTemperature()
-        else:
-            if self.Andor.IsCoolerOn():
-                self.Andor.CoolerOFF()
-                if self.TemperatureUpdateThread.isAlive():
-                    self._stopTemperatureThread = True
+        self.Andor.cooler = self.checkBoxCooler.isChecked()
 
     def AcquisitionModeChanged(self):
         available_modes = ['Single', 'Accumulate', 'Kinetic', 'Fast Kinetic']
         currentMode = self.comboBoxAcqMode.currentText()
-        self.Andor.set_andor_parameter('AcquisitionMode', available_modes.index(currentMode) + 1)
+        self.Andor.set_camera_parameter('AcquisitionMode', available_modes.index(currentMode) + 1)
 
         if currentMode == 'Fast Kinetic':
             self.spinBoxNumRows.show()
@@ -236,7 +214,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
     def ReadModeChanged(self):
         available_modes = ['FVB', 'Multi-track', 'Random track', 'Single track', 'Image']
         currentMode = self.comboBoxReadMode.currentText()
-        self.Andor.set_andor_parameter('ReadMode', available_modes.index(currentMode))
+        self.Andor.set_camera_parameter('ReadMode', available_modes.index(currentMode))
         if currentMode == 'Single track':
             self.spinBoxNumRows.show()
             self.labelNumRows.show()
@@ -262,9 +240,6 @@ class AndorUI(QtWidgets.QWidget, UiTools):
     def update_Exposure(self, value):
         self.lineEditExpT.setText(str(value))
 
-    def update_Cooler(self, value):
-        self.checkBoxCooler.setCheckState(value)
-
     def update_OutAmp(self, value):
         self.checkBoxEMMode.setCheckState(value)
 
@@ -279,13 +254,13 @@ class AndorUI(QtWidgets.QWidget, UiTools):
     def TrigChanged(self):
         available_modes = {'Internal': 0, 'External': 1, 'ExternalStart': 6}
         currentMode = self.comboBoxTrigMode.currentText()
-        self.Andor.set_andor_parameter('TriggerMode', available_modes[currentMode])
+        self.Andor.set_camera_parameter('TriggerMode', available_modes[currentMode])
 
     def OutputAmplifierChanged(self):
         if self.checkBoxEMMode.isChecked():
-            self.Andor.set_andor_parameter('OutAmp', 0)
+            self.Andor.set_camera_parameter('OutAmp', 0)
         else:
-            self.Andor.set_andor_parameter('OutAmp', 1)
+            self.Andor.set_camera_parameter('OutAmp', 1)
         if self.checkBoxCrop.isChecked():
             self.checkBoxCrop.setChecked(False)
             # self.ROI()
@@ -304,12 +279,12 @@ class AndorUI(QtWidgets.QWidget, UiTools):
 
     def NumFramesChanged(self):
         num_frames = self.spinBoxNumFrames.value()
-        self.Andor.set_andor_parameter('NKin', num_frames)
+        self.Andor.set_camera_parameter('NKin', num_frames)
 
     def NumAccumChanged(self):
         num_frames = self.spinBoxNumAccum.value()
         # self.Andor.SetNumberAccumulations(num_frames)
-        self.Andor.set_andor_parameter('NAccum', num_frames)
+        self.Andor.set_camera_parameter('NAccum', num_frames)
 
     def NumRowsChanged(self):
         num_rows = self.spinBoxNumRows.value()
@@ -321,7 +296,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
                 self.Andor._logger.info(
                     'Too many rows provided for Single Track mode. Using %g rows instead' % center_row)
                 num_rows = center_row
-            self.Andor.set_andor_parameter('SingleTrack', center_row, num_rows)
+            self.Andor.set_camera_parameter('SingleTrack', center_row, num_rows)
         else:
             self.Andor._logger.info('Changing the rows only works in Fast Kinetic or in Single Track mode')
 
@@ -341,7 +316,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
 
     def EMGainChanged(self):
         gain = self.spinBoxEMGain.value()
-        self.Andor.set_andor_parameter('EMGain', gain)
+        self.Andor.set_camera_parameter('EMGain', gain)
 
     def IsolatedCrop(self):
         current_binning = int(self.comboBoxBinning.currentText()[0])
@@ -359,7 +334,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
             self.Andor._parameters['IsolatedCropMode'] = (1,)
             self.Andor.set_image(1, maxy, maxx, current_binning, current_binning)
         else:
-            self.Andor.set_andor_parameter('IsolatedCropMode', 0, maxy, maxx, current_binning, current_binning)
+            self.Andor.set_camera_parameter('IsolatedCropMode', 0, maxy, maxx, current_binning, current_binning)
             self.Andor.set_image()
 
     def take_background(self):
@@ -434,18 +409,6 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         self.Andor.live_view = False
 
 
-def main():
-    andor = Andor()  # wvl_to_pxl=32.5 / 1600, magnification=30, pxl_size=16)
-    register_for_property_changes(andor, 'latest_raw_frame', andor.update_widgets)
-    app = QtWidgets.QApplication([])
-    # ui1 = andor.get_control_widget()
-    # ui2 = andor.get_preview_widget()
-    # print ui1, ui2
-
-    # ui1.show()
-    # ui2.show()
-    andor.show_gui()
-
-
 if __name__ == '__main__':
-    main()
+    andor = Andor()
+    andor.show_gui()

@@ -5,12 +5,18 @@ from nplab.instrument.camera import CameraParameter
 from nplab.utils.thread_utils import locked_action, background_action
 from nplab.utils.log import create_logger
 import nplab.datafile as df
+from nplab.utils.notified_property import NotifiedProperty
 import os
 import platform
 import time
 from ctypes import *
 import numpy as np
 
+# TODO:
+# Add a transpose checkbox for displaying (or maybe an option to rotate by 90, 180 or 270 degrees), without messing up the ROI and the axis
+# Add unit transformation options for changing between real space, k-space, energy
+#
+# Can we use the pyqtgraph ROI that comes with the ImageDisplay instead of CrossHairs?
 
 LOGGER = create_logger('Andor SDK')
 
@@ -203,6 +209,8 @@ class AndorBase:
                 inputs = inputs[0]
             elif len(np.shape(inputs)) == 3:
                 inputs = inputs[0][0]
+        if 'not_supported' in self.parameters[param_loc] and self.parameters[param_loc]['not_supported']:
+            return
         if 'Set' in self.parameters[param_loc]:
             func = self.parameters[param_loc]['Set']
 
@@ -212,19 +220,29 @@ class AndorBase:
                     form_in += ({'value': getattr(self, input_param[0]), 'type': input_param[1]},)
             for ii in range(len(inputs)):
                 form_in += ({'value': inputs[ii], 'type': func['Inputs'][ii]},)
-            self._dll_wrapper(func['cmdName'], inputs=form_in)
+            try:
+                self._dll_wrapper(func['cmdName'], inputs=form_in)
 
-            if len(inputs) == 1:
-                self.parameters[param_loc]['value'] = inputs[0]
-                self._parameters[param_loc] = inputs[0]
-            else:
-                self.parameters[param_loc]['value'] = inputs
-                self._parameters[param_loc] = inputs
+                if len(inputs) == 1:
+                    self.parameters[param_loc]['value'] = inputs[0]
+                    self._parameters[param_loc] = inputs[0]
+                else:
+                    self.parameters[param_loc]['value'] = inputs
+                    self._parameters[param_loc] = inputs
 
-            if 'Finally' in self.parameters[param_loc]:
-                self.get_andor_parameter(self.parameters[param_loc]['Finally'])
-                #       if 'GetAfterSet' in self.parameters[param_loc]:
-                #          self.GetParameter(param_loc, *inputs)
+                if 'Finally' in self.parameters[param_loc]:
+                    self.get_andor_parameter(self.parameters[param_loc]['Finally'])
+                    #       if 'GetAfterSet' in self.parameters[param_loc]:
+                    #          self.GetParameter(param_loc, *inputs)
+            except AndorWarning:
+                if self.parameters[param_loc]['value'] is None:
+                    self._logger.error('Not supported parameter and None value in the parameter dictionary')
+                else:
+                    self.parameters[param_loc]['not_supported'] = True
+                    inputs = self.parameters[param_loc]['value']
+                    if not isinstance(inputs, tuple):
+                        inputs = (inputs, )
+
         if 'Get' not in self.parameters[param_loc].keys():
             if len(inputs) == 1:
                 setattr(self, '_' + param_loc, inputs[0])
@@ -248,6 +266,11 @@ class AndorBase:
         -------
 
         """
+        if 'not_supported' in self.parameters[param_loc]:
+            self._logger.debug('Ignoring get %s because it is not supported' % param_loc)
+            self.parameters[param_loc]['value'] = getattr(self, '_' + param_loc)
+            self._parameters[param_loc] = getattr(self, '_' + param_loc)
+            return getattr(self, '_' + param_loc)
         if 'Get' in self.parameters[param_loc].keys():
             func = self.parameters[param_loc]['Get']
 
@@ -344,7 +367,7 @@ class AndorBase:
         self.set_andor_parameter('SetTemperature', -90)
         self.set_andor_parameter('CoolerMode', 0)
         self.set_andor_parameter('FanMode', 0)
-        if self.Capabilities['EMGainCapability'] > 0:
+        if self.Capabilities['EMGainCapability'] > 1:
             self.set_andor_parameter('OutAmp', 1)
         self.cooler = 1
 
@@ -557,6 +580,7 @@ class AndorBase:
 parameters = dict(
     AvailableCameras=dict(Get=dict(cmdName='GetAvailableCameras', Outputs=(c_uint,)), value=None),
     channel=dict(value=0),
+    PixelSize=dict(Get=dict(cmdName='GetAvailableCameras', Outputs=(c_float, c_float))),
     SoftwareWaitBetweenCaptures=dict(value=0),
     DetectorShape=dict(Get=dict(cmdName='GetDetector', Outputs=(c_int, c_int)), value=None),
     SerialNumber=dict(Get=dict(cmdName='GetCameraSerialNumber', Outputs=(c_int,)), value=None),
@@ -595,7 +619,7 @@ parameters = dict(
     FrameTransferMode=dict(Set=dict(cmdName='SetFrameTransferMode', Inputs=(c_int,)), value=None),
     SingleTrack=dict(Set=dict(cmdName='SetSingleTrack', Inputs=(c_int,) * 2), value=None),
     MultiTrack=dict(Set=dict(cmdName='SetMultiTrack', Inputs=(c_int,) * 3, Outputs=(c_int,) * 2)),
-    FVBHBin=dict(Set=dict(cmdName='SetFVBHBin', Inputs=(c_int,)), value=None),
+    FVBHBin=dict(Set=dict(cmdName='SetFVBHBin', Inputs=(c_int,)), value=1),
     Spool=dict(Set=dict(cmdName='SetSpool', Inputs=(c_int, c_int, c_char, c_int)), value=None),
     NumVSSpeed=dict(Get=dict(cmdName='GetNumberVSSpeeds', Outputs=(c_int,)), value=None),
     NumHSSpeed=dict(Get=dict(cmdName='GetNumberHSSpeeds', Outputs=(c_int,),
