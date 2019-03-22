@@ -882,8 +882,8 @@ class AndorUI(QtWidgets.QWidget, UiTools):
     # GUI FUNCTIONS
     def updateGUI(self):
         trig_modes = {0: 0, 1: 1, 6: 2}
-        print self.Andor.parameters
-        print self.Andor._parameters
+        # print self.Andor.parameters
+        # print self.Andor._parameters
         self.comboBoxAcqMode.setCurrentIndex(self.Andor._parameters['AcquisitionMode'] - 1)
         self.AcquisitionModeChanged()
         self.comboBoxReadMode.setCurrentIndex(self.Andor._parameters['ReadMode'])
