@@ -13,7 +13,7 @@ An alternative mathod for automatic Raman spectra fitting, suitable using Lorenz
 (Considerably brute force) 
 
 Method works by trying to interatively add peaks one at a time until spectrum is matched. Run with function
-Run(x_axis,Signal,Maximum_FWHM=40,Regions=50,Minimum_Width_Factor=0.1,Peak_Type='L',Print=True).
+Run(x_axis,Signal,Maximum_FWHM=40,Regions=50,Minimum_Width_Factor=0.1,Peak_Type='L',Print=True,Initial_Fit=None).
 
 x_axis and Signal are 1d numpy arrays. The typical peak width is estimated using a Continuous Wavelet Transfrom Method, up to a maximum of Maximum_FWHM.
 
@@ -22,15 +22,62 @@ With this new peak in place, all the peaks are optimised.
 
 If any peaks have a height of zero or a width less than Minimum_Width_Factor x the estimated typical width, it is removed. 
 
-Each time the loss dows not decrease after an interation, the number of iterations is increased by a factor of 5. When the number of regions exceeds the size of
-Signal, the iterations end.
+Each time the loss does not decrease after an interation, the number of iterations is increased by a factor of 5. If the loss technically does decrease, 
+but in reality the number of peaks are the same and none of them have moved by more than half a HWHM, this condition is also triggered. When the number of regions 
+exceeds the size of Signal, the iterations end.
 
 Whether a Lorentzian or Gaussian is used is controlled via Peak_Type='L' or 'G'.
 
 So close to a local minima, the result is passed into scipy.optimize.curve_fit to generate the final fit with fitting errors.
 
 Returns a list [Fits,Errors]
+
+Note: If you have a set of peaks already, you can speed to porcess along by inserting them as Inital_Fit. The code will first optimise the heights of these peaks,
+then all their parameters. It will then continue as normal.
+
+Note: If you have a set of spectra to fit, you can use Fit_Set_of_Spectra which will do the fitting in parallel on a defined number of cores (default=2). If you set 
+Utilise_Persistant to True, the median spectrum will first be fit and used as a starting point for each spectrum.
 """
+
+def Quick_Sort(List,Argument):
+		#Sorts a List based on the numberimal value of the Argument element.
+		def Split(List,Argument):
+			#List is list of lists to seperate
+			#Argument is list argument to seperate via
+
+			Output=[[],[]]
+
+			Pivot=[]
+			for i in List:
+				Pivot.append(i[Argument])
+			if len(Pivot)==2:
+				Pivot=max(Pivot)
+			else:
+				Pivot=np.random.choice(Pivot)
+
+			for i in List:
+				if i[Argument]<Pivot:
+					Output[0].append(i)
+				else:
+					Output[1].append(i)
+			return Output
+
+		def Same(List,Argument):
+			for i in List:
+				if i[Argument]!=List[0][Argument]:
+					return False
+			return True
+
+		Sorted=[]
+		To_Sort=[List]
+		while len(To_Sort)>0:
+			Sorting=To_Sort[0]
+			To_Sort=To_Sort[1:]
+			if Same(Sorting,Argument) is True:
+				Sorted+=Sorting
+			else:
+				To_Sort=Split(Sorting,Argument)+To_Sort
+		return Sorted
 
 def Wavelet_Estimate_Width(x_axis,Signal,Maximum_Width,Smooth_Loss_Function=2):
 	#Uses the CWT to estimate the typical peak FWHM in the signal
@@ -144,7 +191,50 @@ def Add_New_Peak(x_axis,Signal,Current_Peaks,Width,Maximum_Width,Regions=50,Peak
 
 	return Results[np.argmin(Loss_Results)].tolist()
 
-def Run(x_axis,Signal,Maximum_FWHM=40,Regions=50,Minimum_Width_Factor=0.1,Peak_Type='L',Print=True):
+def Optimise_Prexisting_Peaks(x_axis,Signal,Peak_Params,Max_Width,Peak_Type='L'):
+	"""
+	Given a signal and an existing close fit, optimises it. First optimises just the peak heights, then all the parameters.
+	"""
+	Peaks=[]
+	Vector=[]
+	n=0
+	while n<len(Peak_Params):
+		if Peak_Type=='L':
+			Peaks.append(L(x_axis,1,Peak_Params[n+1],Peak_Params[n+2]))
+		else:
+			Peaks.append(G(x_axis,1,Peak_Params[n+1],Peak_Params[n+2]))
+		Vector.append(Peak_Params[n])
+		n+=3
+
+	Bounds=[]
+	for i in Vector:
+		Bounds.append((0,np.inf))
+
+	def Loss(Vector):
+		Output=0.
+		for i in range(len(Vector)):
+			Output+=Vector[i]*Peaks[i]
+		return np.sum(np.abs(Output-Signal))
+
+	Heights=spo.minimize(Loss,Vector,bounds=Bounds).x
+
+	Vector=[]
+	Bounds=[]
+
+	for i in range(len(Heights)):
+		Vector+=[Heights[i],Peak_Params[i*3+1],Peak_Params[i*3+2]]
+		Bounds+=[(0,np.inf),(np.min(x_axis),np.max(x_axis)),(0,Max_Width)]
+
+	if Peak_Type=='L':
+		def Loss(Vector):
+			return np.sum(np.abs(Multi_L(x_axis,*Vector)-Signal))
+	else:
+		def Loss(Vector):
+			return np.sum(np.abs(Multi_G(x_axis,*Vector)-Signal))
+
+	return spo.minimize(Loss,Vector,bounds=Bounds).x.tolist()
+
+def Run(x_axis,Signal,Maximum_FWHM=40,Regions=50,Minimum_Width_Factor=0.1,Peak_Type='L',Print=True,Initial_Fit=None):
 	"""
 	Main function. Explained at top. 
 	"""
@@ -169,30 +259,83 @@ def Run(x_axis,Signal,Maximum_FWHM=40,Regions=50,Minimum_Width_Factor=0.1,Peak_T
 	Loss_Results=[]
 	Results=[[]]
 	while Regions<=len(Signal):
-		if Print is True:
-			print 'Iteration ',len(Loss_Results),', Peaks Found: ',len(Results[-1])/3
-		Result=copy.deepcopy(Results[-1])+Add_New_Peak(x_axis,Signal,Results[-1],Width,Max_Width,Regions=Regions)
-		
-		Bounds=[]
-		n=0
-		while n<len(Result):
-			Bounds+=[(0,np.inf),(np.min(x_axis),np.max(x_axis)),(0,Max_Width)]
-			n+=3
 
-		Opt=spo.minimize(Loss,Result,bounds=Bounds).x.tolist()
+		if Initial_Fit is None:
 
-		Output=[]
-		n=0
-		while n<len(Opt):
-			if Opt[n]!=0 and Opt[n+2]>Minimum_Width:
-				Output+=Opt[n:n+3]
-			n+=3
+			Result=copy.deepcopy(Results[-1])+Add_New_Peak(x_axis,Signal,Results[-1],Width,Max_Width,Regions=Regions)
+
+			Bounds=[]
+			n=0
+			while n<len(Result):
+				Bounds+=[(0,np.inf),(np.min(x_axis),np.max(x_axis)),(0,Max_Width)]
+				n+=3
+
+			Opt=spo.minimize(Loss,Result,bounds=Bounds).x.tolist()
+
+			Output=[]
+			n=0
+			while n<len(Opt):
+				if Opt[n]!=0 and Opt[n+2]>Minimum_Width:
+					Output+=Opt[n:n+3]
+				n+=3
+
+		else:
+			Output=Optimise_Prexisting_Peaks(x_axis,Signal,Initial_Fit,Max_Width,Peak_Type)
+			Initial_Fit=None
 
 		Results.append(Output)
 		Loss_Results.append(Loss(Output))
 
-		if len(Loss_Results)>1 and Loss_Results[-1]>=Loss_Results[-2]:
-			Regions*=5
+		if Print is True:
+			print 'Iteration ',len(Loss_Results),', Peaks Found: ',len(Results[-1])/3
+
+
+		#---Check to increase region by x5
+		if len(Loss_Results)>1:
+			if Loss_Results[-1]>=Loss_Results[-2]: #Has loss gone up?
+				Regions*=5
+			elif len(Results[-1])==len(Results[-2]): #Otherwise, same number of peaks?
+				Old,Current=[],[]
+				n=0
+				while n<len(Results[-2]):
+					Old.append([Results[-2][n+1],Results[-2][n+2]])
+					Current.append([Results[-1][n+1],Results[-1][n+2]]) #Collect peak positions and widths for last two iterations
+					n+=3
+
+				Old=Quick_Sort(Old,0) #Order old iteration in position order
+
+				Temp=[]
+				Current=np.array(np.transpose(Current))
+				for i in Old:
+					Arg=np.argmin(np.abs(Current[0]-i[0]))
+					Temp.append([Current[0][Arg],Current[1][Arg]])  #For each old peak, find the closest new peak
+					Current[0][Arg]=np.inf 
+				Current=Temp
+
+				End=False
+				while End is False:
+					End=True
+					for i in range(len(Old))[1:]:  #Check that swapping any adjacent sets of new peaks doesn't imporve the match between old and new peaks
+						Delta=abs(Old[i-1][0]-Current[i-1][0])+abs(Old[i][0]-Current[i][0])-abs(Old[i-1][0]-Current[i][0])-abs(Old[i][0]-Current[i-1][0])
+						if Delta>0:
+							End=False
+							Current=Current[:i-1]+[Current[i],Current[i-1]]+Current[i+1:]
+				
+				Current=np.transpose(Current)
+				Old=np.transpose(Old)
+				if Peak_Type=='L': #Scale widths to FWHM
+					Current[1]*=2 
+					Old[1]*=2 
+				else:
+					Old[1]*=((2.*np.log(2.))**0.5)
+					Current[1]*=((2.*np.log(2.))**0.5)
+
+				Seperation=np.abs(Old[0]-Current[0])
+				Threshold=(Old[1]+Old[0])*0.125
+
+				if True not in (Seperation>=Threshold).tolist():  #Check if all peaks have moved by less than 0.25 FWHM
+					Regions*=5
+
 
 	if Peak_Type=='L':
 		def Final_Fitting_Function(x,*Params):
@@ -221,62 +364,28 @@ def Run(x_axis,Signal,Maximum_FWHM=40,Regions=50,Minimum_Width_Factor=0.1,Peak_T
 
 	return Output
 
-def Worker_Function(x_axis,Signal,Maximum_FWHM,Regions,Minimum_Width_Factor,Peak_Type,Number):
-		Fit=Run(x_axis,Signal,Maximum_FWHM,Regions,Minimum_Width_Factor,Peak_Type,Print=False)
+def Worker_Function(x_axis,Signal,Maximum_FWHM,Regions,Minimum_Width_Factor,Peak_Type,Initial_Fit,Number):
+		Fit=Run(x_axis,Signal,Maximum_FWHM,Regions,Minimum_Width_Factor,Peak_Type,Initial_Fit=Initial_Fit,Print=False)
 		print 'Fit Spectrum:',Number
 		return [Fit,Number]
 
-def Fit_Set_of_Spectra(x_axis,Signals,Maximum_FWHM=40,Regions=50,Minimum_Width_Factor=0.1,Peak_Type='L',Cores=2):
+def Fit_Set_of_Spectra(x_axis,Signals,Maximum_FWHM=40,Regions=50,Minimum_Width_Factor=0.1,Peak_Type='L',Cores=2,Utilise_Persistent=False):
 
 	"""
 	Utilises multiprocessing to run a set of fits in parrallel.
 	"""
 
-	def Quick_Sort(List,Argument):
-		#Sorts a List based on the numberimal value of the Argument element.
-		def Split(List,Argument):
-			#List is list of lists to seperate
-			#Argument is list argument to seperate via
-
-			Output=[[],[]]
-
-			Pivot=[]
-			for i in List:
-				Pivot.append(i[Argument])
-			if len(Pivot)==2:
-				Pivot=max(Pivot)
-			else:
-				Pivot=np.random.choice(Pivot)
-
-			for i in List:
-				if i[Argument]<Pivot:
-					Output[0].append(i)
-				else:
-					Output[1].append(i)
-			return Output
-
-		def Same(List,Argument):
-			for i in List:
-				if i[Argument]!=List[0][Argument]:
-					return False
-			return True
-
-		Sorted=[]
-		To_Sort=[List]
-		while len(To_Sort)>0:
-			Sorting=To_Sort[0]
-			To_Sort=To_Sort[1:]
-			if Same(Sorting,Argument) is True:
-				Sorted+=Sorting
-			else:
-				To_Sort=Split(Sorting,Argument)+To_Sort
-		return Sorted
+	if Utilise_Persistent is True:
+		Median_Signal=np.median(Signals,axis=0)
+		Initial_Peaks=Run(x_axis,Median_Signal,Maximum_FWHM,Regions,Minimum_Width_Factor,Peak_Type,Print=False)[0]
+	else:
+		Initial_Peaks=None
 
 	Processes=[]
 	Pool=mp.Pool(processes=Cores)
 
 	for i in range(len(Signals)):
-		Processes.append(Pool.apply_async(Worker_Function,args=(x_axis,Signals[i],Maximum_FWHM,Regions,Minimum_Width_Factor,Peak_Type,i)))
+		Processes.append(Pool.apply_async(Worker_Function,args=(x_axis,Signals[i],Maximum_FWHM,Regions,Minimum_Width_Factor,Peak_Type,Initial_Peaks,i)))
 	
 	Results=[p.get() for p in Processes]
 
