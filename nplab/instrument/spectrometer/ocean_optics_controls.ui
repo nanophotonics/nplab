@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>373</width>
-    <height>236</height>
+    <width>387</width>
+    <height>212</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -20,16 +20,7 @@
    <string>Form</string>
   </property>
   <layout class="QVBoxLayout" name="layout">
-   <property name="leftMargin">
-    <number>5</number>
-   </property>
-   <property name="topMargin">
-    <number>5</number>
-   </property>
-   <property name="rightMargin">
-    <number>5</number>
-   </property>
-   <property name="bottomMargin">
+   <property name="margin">
     <number>5</number>
    </property>
    <item>
@@ -185,18 +176,30 @@
         <property name="verticalSpacing">
          <number>0</number>
         </property>
-        <item row="1" column="0">
-         <widget class="QPushButton" name="clear_background_button">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
+        <item row="2" column="2">
+         <widget class="QCheckBox" name="Absorption_checkBox">
           <property name="text">
-           <string>Clear Background</string>
+           <string>Absorption</string>
           </property>
          </widget>
+        </item>
+        <item row="3" column="2">
+         <layout class="QHBoxLayout" name="averaging_horizontalLayout">
+          <item>
+           <widget class="QCheckBox" name="average_checkBox">
+            <property name="text">
+             <string>Averaging</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSpinBox" name="Average_spinBox">
+            <property name="minimum">
+             <number>1</number>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </item>
         <item row="1" column="1">
          <widget class="QPushButton" name="clear_reference_button">
@@ -208,6 +211,19 @@
           </property>
           <property name="text">
            <string>Clear Reference</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QPushButton" name="clear_background_button">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>Clear Background</string>
           </property>
          </widget>
         </item>
@@ -270,6 +286,13 @@
           </property>
          </spacer>
         </item>
+        <item row="3" column="0">
+         <widget class="QPushButton" name="load_state_button">
+          <property name="text">
+           <string>Load State</string>
+          </property>
+         </widget>
+        </item>
         <item row="2" column="1">
          <widget class="QCheckBox" name="referenced">
           <property name="sizePolicy">
@@ -280,38 +303,6 @@
           </property>
           <property name="text">
            <string>Referenced</string>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="0">
-         <widget class="QPushButton" name="load_state_button">
-          <property name="text">
-           <string>Load State</string>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="2">
-         <layout class="QHBoxLayout" name="averaging_horizontalLayout">
-          <item>
-           <widget class="QCheckBox" name="average_checkBox">
-            <property name="text">
-             <string>Averaging</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QSpinBox" name="Average_spinBox">
-            <property name="minimum">
-             <number>1</number>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </item>
-        <item row="2" column="2">
-         <widget class="QCheckBox" name="Absorption_checkBox">
-          <property name="text">
-           <string>Absorption</string>
           </property>
          </widget>
         </item>

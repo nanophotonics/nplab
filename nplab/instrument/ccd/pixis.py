@@ -337,9 +337,8 @@ class Pixis256EUI(QtWidgets.QWidget, UiTools):
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
-
     p = Pixis256EQt()
-    p.exposure = 40
+    p.exposure = 1
 
     def test():
         p.setup_kinetics(p.exposure, 1)
@@ -350,6 +349,7 @@ if __name__ == '__main__':
         for i in range(shots):
             print 'shot {0}'.format(i+1)
             p.start_sequence()
+            time.sleep(0.1)
             while not (p.check_readout()): continue
             print "triggered"
             img = p.readout_image()
@@ -372,4 +372,4 @@ if __name__ == '__main__':
     img = p.read_image(p.exposure, timing='timed', mode='kinetics', new=False, end= True, k_size=1)
     print img
 
-    test()
+#    test()

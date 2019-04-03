@@ -26,7 +26,7 @@ class Digikrom(SerialInstrument):
         super(Digikrom, self).__init__(port=port)
     def query(self,message,convert_to_hex = True,return_as_dec = True,
               max_len_returned = 10,block = True):
-        """The digikrom uses fixed length commands and has no termination charcter
+        """The digikrom uses fixed length commands and has no termination character
         therefore the query function from serialinstrument needs to be overwritten.
         As the digikrom requires input in hex commands must be changed from decimal
         (as listed in the manual) to hex. The returned messages also need the same treatment
@@ -148,7 +148,7 @@ class Digikrom(SerialInstrument):
                      'grating_ruling':info[3]*256+info[4],
                      'grating_blaze':info[5]*256+info[6]}
         return info_dict
-    def set_gratimg(self,grating_number):
+    def set_grating(self,grating_number):
         """This command changes gratings , if additional gratings installed.."""
         self.query(26)
         self.query(grating_number)

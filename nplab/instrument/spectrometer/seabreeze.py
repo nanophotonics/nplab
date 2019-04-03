@@ -149,7 +149,7 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
     @classmethod
     def get_current_spectrometers(cls):
         """Return the currently-open spectrometers, or all spectrometers.
-        
+
         If one or more spectrometers are currently open, create a Spectrometers
         wrapper and include them in it.  If not, attempt to open and wrap all
         spectrometers connected to the computer."""
@@ -243,9 +243,9 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
 
     def get_integration_time(self):
         """The current integration time.
-        
-        The SeaBreeze API doesn't seem to allow us to get the current integration time, so 
-        we work around it by cacheing the last used integration time.  Note that this will 
+
+        The SeaBreeze API doesn't seem to allow us to get the current integration time, so
+        we work around it by cacheing the last used integration time.  Note that this will
         return None if you've not set the integration time."""
         if hasattr(self, "_latest_integration_time"):
             return self._latest_integration_time
@@ -281,8 +281,8 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
         except OceanOpticsError as error:
             print error
             print 'Most likely raised due to the lack of a tec on this device'
-            
-            
+
+
 
     def set_tec_enable(self, state=True):
         """Turn the cooling system on or off."""
@@ -321,7 +321,7 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
             check_error(e)
         except OceanOpticsError as error:
             print error
-            print 'Most likely raised due to the lack of a tec on this device'        
+            print 'Most likely raised due to the lack of a tec on this device'
 
     tec_temperature = property(get_tec_temperature, set_tec_temperature)
 
@@ -337,8 +337,8 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
         return np.array(list(wavelengths_carray))
 
     def get_wavelengths(self):
-        """Wavelength values for each pixel.  
-        
+        """Wavelength values for each pixel.
+
         NB this caches the value so it's only retrieved from the spectrometer once."""
         if self._wavelengths is None:
             self._wavelengths = self.read_wavelengths()
@@ -348,7 +348,7 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
 
     def read_spectrum(self, bundle_metadata=False):
         """Get the current reading from the spectrometer's sensor.
-        
+
         Acquire a new spectrum and return it.  If bundle_metadata is true, this will be
         returned as an ArrayWithAttrs, including the current metadata."""
         e = ctypes.c_int()
@@ -366,13 +366,16 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
 #                self.curr_scan = datafile_group.create_group('continuous_spectra_%d')
 #            self.curr_scan.create_dataset('spectrum_%d', data=new_spectrum, attrs=self.metadata)
             self.spectra_to_save-=1
-            self.spectra_saved+=1
+            self.spectra_saved +=1
             if(self.spectra_to_save==0):
+                self.spectra_buffer = self.spectra_buffer.reshape(self.spectra_saved,self.spectra_buffer.size/self.spectra_saved)
                 datafile_group = self.data_file.require_group('OceanOpticsSpectrometer')
-                datafile_group.create_dataset('continuous_spectra_%d', data=self.spectra_buffer, attrs=self.metadata)
+                attrs = self.metadata
+                if hasattr(self,'_temp_description'):
+                    attrs['description'] = self._temp_description
+                datafile_group.create_dataset('continuous_spectra_%d', data=self.spectra_buffer, attrs=attrs)
                 self.spectra_buffer = np.zeros(0)
-
-                self.spectra_saved=0
+                self.spectra_saved = 0
                 print "continuous acquistion of spectra completed!"
 
         if bundle_metadata:
@@ -440,6 +443,7 @@ class OceanOpticsControlUI(SpectrometerControlUI):
 
     def update_tec(self):
         self.tec_temperature.setText(str(self.spectrometer.tec_temperature))
+
 
 
 def main():
