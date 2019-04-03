@@ -16,7 +16,6 @@ import scipy.sparse.linalg as splu
 from scipy.signal import butter, filtfilt
 from lmfit.models import GaussianModel
 import time
-from PIL import Image
 from random import randint
 import scipy.optimize as spo
 
@@ -36,27 +35,28 @@ class DF_Spectrum(object):
         self.isDouble = isDouble #Whether or not the spectrum contains a double coupled mode (bool)
         self.cmPeakPos = cmPeakPos #What it says on the tin (float)
         metadataKeys = ['NPoM?',
-                      'doublePeak?',
-                      'weirdPeak?',
-                      'transverseModePosition',
-                      'transverseModeIntensity',
-                      'rawTransverseModeIntensity',
-                      'coupledModePosition',
-                      'coupledModeIntensity',
-                      'rawCoupledModeIntensity',
-                      'intensityRatio',
-                      'rawIntensityRatio',
-                      'rawData',
-                      'normalisedSpectrum',
-                      'fullWavelengths',
-                      'truncatedSpectrum',
-                      'smoothedSpectrum',
-                      'initialGuess',
-                      'bestFit',
-                      'residuals',
-                      'finalComponents',
-                      'finalParams',
-                      'truncatedWavelengths',
+                      'NPoM test failure',
+                      'Double Peak?',
+                      'Weird Peak?',
+                      'Transverse mode wavelength',
+                      'Transverse mode intensity (norm)',
+                      'Transverse mode intensity (raw)',
+                      'Coupled mode wavelength',
+                      'Coupled mode intensity (norm)',
+                      'Coupled mode intensity (raw)',
+                      'Intensity ratio (from norm)',
+                      'Intensity ratio (raw)',
+                      'Raw data',
+                      'Raw data (normalised)',
+                      'Full Wavelengths',
+                      'Raw data (truncated, normalised)',
+                      'Smoothed data (truncated, normalised)',
+                      'Initial guess',
+                      'Best fit',
+                      'Residuals',
+                      'Final components',
+                      'Final parameters',
+                      'Wavelengths (truncated)',
                       'secondDerivative']
 
         if metadata == 'N/A':
@@ -67,49 +67,58 @@ class DF_Spectrum(object):
 
 '''FUNCTIONS'''
 
-def retrieveData(summaryFile, startSpec, finishSpec):
+def retrieveData(summaryFile, startSpec = 0, finishSpec = 0, attrsOnly = False):
 
     '''Retrieves data from summary file'''
 
-    try:
-        summaryFile = h5py.File('%s.h5' % summaryFile, 'r')
-
-    except:
-
-        try:
-            summaryFile = h5py.File('%s.hdf5' % summaryFile, 'r')
-
-        except:
-            print 'Summary file not found'
-            return
-
-    allScans = summaryFile['particleScanSummaries/']
-    spectraLengths = []
-
-    for scan in allScans:
-
-        if len(allScans[scan]) != 0:
-            spectraLengths.append(len(allScans[scan]['spectra']))
-
-        else:
-            spectraLengths.append(0)
-
-    scanNumber = np.array(spectraLengths).argmax()
-
-    if finishSpec == 0:
-        spectra = summaryFile['particleScanSummaries/scan%s/spectra' % scanNumber][()][startSpec:]
+    if attrsOnly == False:
+        print '\nRetrieving data...'
 
     else:
-        spectra = summaryFile['particleScanSummaries/scan%s/spectra' % scanNumber][()][startSpec:finishSpec]
+        print '\nRetrieving sample preparation info'
 
-    wavelengths = summaryFile['particleScanSummaries/scan%s/spectra' % scanNumber].attrs['wavelengths'][()]
-    background = summaryFile['particleScanSummaries/scan%s/spectra' % scanNumber].attrs['background'][()]
-    reference = summaryFile['particleScanSummaries/scan%s/spectra' % scanNumber].attrs['reference'][()]
+    with h5py.File(summaryFile) as f:
 
-    summaryFile.close()
+        allScans = f['particleScanSummaries/']
+        spectraLengths = []
 
-    print 'Data retrieved from particleScanSummaries/scan%s\n' % scanNumber
-    return spectra, wavelengths, background, reference
+        for scan in allScans:
+
+            if len(allScans[scan]) != 0:
+                spectraLengths.append(len(allScans[scan]['spectra']))
+
+            else:
+                spectraLengths.append(0)
+
+        scanNumber = np.array(spectraLengths).argmax()
+        scan = f['particleScanSummaries/scan%s' % scanNumber]
+        summaryAttrs = {key : scan['spectra'].attrs[key] for key in scan['spectra'].attrs.keys()}
+
+        if finishSpec == 0:
+            spectra = f['particleScanSummaries/scan%s/spectra' % scanNumber][()][startSpec:]
+
+        else:
+            spectra = f['particleScanSummaries/scan%s/spectra' % scanNumber][()][startSpec:finishSpec]
+
+        wavelengths = f['particleScanSummaries/scan%s/spectra' % scanNumber].attrs['wavelengths'][()]
+        background = f['particleScanSummaries/scan%s/spectra' % scanNumber].attrs['background'][()]
+        reference = f['particleScanSummaries/scan%s/spectra' % scanNumber].attrs['reference'][()]
+
+    if attrsOnly == True:
+        print '\tInfo retrieved from particleScanSummaries/scan%s' % scanNumber
+        print '\t\t%s spectra in total' % max(spectraLengths)
+        return summaryAttrs
+
+    else:
+
+        if finishSpec == 0:
+            finishSpec = max(spectraLengths)
+
+        nSpec = finishSpec - startSpec
+
+        print '\t%s spectra retrieved from particleScanSummaries/scan%s' % (nSpec, scanNumber)
+
+        return spectra, wavelengths, background, reference, summaryAttrs
 
 def findKey(inputDict, value):
     return next((k for k, v in inputDict.items() if v == value), None)
@@ -121,6 +130,19 @@ def removeNaNs(spectrum):
     #Input = 1D array
     #Works like list.sort() rather than sorted(list), i.e. manipulates array directly rather than returning a new one
     '''A bit clunky; will rewrite at some point'''
+
+    nans = False
+
+    for i in spectrum:
+
+        if not np.isfinite(i):
+            nans = True
+
+        else:
+            continue
+
+    if nans == False:
+        return spectrum
 
     i = -1
 
@@ -158,24 +180,8 @@ def removeNaNs(spectrum):
                 for k in range(len(spectrum[i:j])):
                     spectrum[i+k] = float(start) + float(k)*float(diff)/(len(spectrum[i:j]))
 
-def correctSpectrum(spectrum, reference):
-    #Removes any NaNs from all spectra in list and divides each by a 1D array of the same length (designed for referencing)
-    #spectra = list of arrays, 2D array with size (n, 1)
-    #reference = 1D array
-
-    for n in range(len(reference)):
-
-        if reference[n] == 0.:
-            reference[n] = np.nan
-
-    removeNaNs(reference)
-    return spectrum/reference
-
 def printEnd():
-    print '%sDONE' % ('\n' * randint(0, 12))
-
     print '%s%s%sv gud' % ('\t' * randint(0, 12), '\n' * randint(0, 5), ' ' * randint(0, 4))
-
     print '%s%ssuch python' % ('\n' * randint(0, 5), ' ' * randint(0, 55))
     print '%s%smany spectra' % ('\n' * randint(0, 5), ' ' * randint(10, 55))
     print '%s%smuch fitting' % ('\n' * randint(0, 5), ' ' * randint(8, 55))
@@ -192,27 +198,25 @@ def prepareData(spectra, wavelengths, reference):
 
     '''INITIAL FIT PARAMETERS'''
 
-    print 'Preparing data...'
+    print '\nPreparing data...'
 
     removeNaNs(wavelengths)
 
     for spectrum in spectra:
         removeNaNs(spectrum)
 
-    referencedSpectra = [correctSpectrum(spectrum, reference) for spectrum in spectra]
-
     prepEnd = time.time()
     prepTime = prepEnd - prepStart
 
-    print '%s spectra cleared of NaNs and referenced in %s seconds\n' % (len(spectra), prepTime)
+    print '\tAll spectra cleared of NaNs and referenced in %s seconds\n' % (prepTime)
 
-    return wavelengths, referencedSpectra
+    return wavelengths, spectra
 
 def createOutputFile(filename):
 
     '''Auto-increments new filename if file exists'''
 
-    print 'Creating output file...'
+    print '\nCreating output file...'
 
     outputFile = '%s.h5' % filename
 
@@ -226,25 +230,39 @@ def createOutputFile(filename):
             n += 1
             outputFile = '%s_%s.h5' % (filename, n)
 
-    print '\nOutput file %s created' % outputFile
+    print '\tOutput file %s created' % outputFile
     return outputFile
+
+def findH5File(rootDir, mostRecent = True, nameFormat = ''):
+    '''
+    Finds either oldest or most recent .h5 file in a folder containing specified string
+    '''
+    os.chdir(rootDir)
+
+    if mostRecent == True:
+        n = -1
+
+    else:
+        n = 0
+
+    h5File = sorted([i for i in os.listdir('.') if i.endswith('.h5') and i.startswith(nameFormat)],
+                    key = lambda i: os.path.getmtime(i))[n]
+    print '\nH5 file %s found' % h5File
+    return h5File
 
 def truncateSpectrum(wavelengths, spectrum, startWl = 450, finishWl = 900):
     #Truncates spectrum within a certain wavelength range. Useful for removing high and low-end noise
+    wavelengths = np.array(wavelengths)
+    spectrum = np.array(spectrum)
 
-    for n, wl in enumerate(wavelengths):
+    startIndex = abs(wavelengths - startWl).argmin()
+    finishIndex = abs(wavelengths - finishWl).argmin()
 
-        if n == 0 and wl > startWl:
-            startIndex = n
-
-        if int(np.round(wl)) == int(np.round(startWl)):
-            startIndex = n
-
-        elif int(np.round(wl)) == int(np.round(finishWl)):
-            finishIndex = n
-
-        elif n == len(wavelengths) - 1 and wl < finishWl:
-            finishIndex = n
+    if startIndex > finishIndex:
+        ind1 = finishIndex
+        ind2 = startIndex
+        startIndex = ind1
+        finishIndex = ind2
 
     wavelengthsTrunc = np.array(wavelengths[startIndex:finishIndex])
     spectrumTrunc = np.array(spectrum[startIndex:finishIndex])
@@ -273,37 +291,42 @@ def butterLowpassFiltFilt(data, cutoff = 1500, fs = 60000, order=5):
     yFiltered = filtfilt(b, a, data)
     return yFiltered
 
-def detectMinima(y, negOnly = True, threshold = 0):
-    '''Finds and returns list of minima in a data set'''
-    ind = False
+def detectMinima(array):
+    '''
+    detectMinima(array) -> mIndices
+    Finds the turning points within a 1D array and returns the indices of the minima.
+    '''
+    mIndices = []
 
-    ySign = np.sign(y + threshold)
-    dy = np.zeros(len(y))
-    dy[1:] = np.diff(y)
+    if len(array) < 3:
+        return mIndices
 
-    if len(dy) > 1:
-        dy[0] = dy[1]
-        dy = np.sign(dy)
-        d2y = np.zeros(len(y))
-        d2y[1:] = np.diff(dy)
-        d2y[0] = d2y[1]
-        d2y = np.sign(d2y)
+    neutral, rising, falling = range(3)
 
-        if negOnly == True:
-            '''Finds only minima that exist below zero'''
-            ind = np.nonzero((-ySign + dy + d2y) == 3)
-            ind = ind[0]
-            ind = [int(i) for i in ind]
+    def getState(a, b):
+        if a < b: return rising
+        elif a > b: return falling
+        else: return neutral
 
-        elif negOnly == False:
-            '''Finds all minima'''
-            ind = np.nonzero((dy + d2y) == 2)
-            ind = ind[0]
-            ind = [int(i) for i in ind]
+    ps = getState(array[0], array[1])
+    begin = 1
 
-        return ind
+    for i in range(2, len(array)):
+        s = getState(array[i - 1], array[i])
 
-def testIfNpom(x, y, lower = 0.1, upper = 2.5, NpomThreshold = 1.5):
+        if s != neutral:
+
+            if ps != neutral and ps != s:
+
+                if s != falling:
+                    mIndices.append((begin + i - 1) / 2)
+
+            begin = i
+            ps = s
+
+    return np.array(mIndices)
+
+def testIfNpom(x, y, lower = 0.05, upper = 2.5, NpomThreshold = 1.5):
     '''Filters out spectra that are obviously not from NPoMs'''
 
     isNpom = False #Guilty until proven innocent
@@ -316,6 +339,7 @@ def testIfNpom(x, y, lower = 0.1, upper = 2.5, NpomThreshold = 1.5):
     try:
         [xTrunc, yTrunc] = truncateSpectrum(x, y)
         [xUpper, yUpper] = truncateSpectrum(x, y, startWl = 900, finishWl = x.max())
+        yTrunc -= yTrunc.min()
 
     except Exception as e:
         print 'NPoM test failed because %s' % e
@@ -323,32 +347,42 @@ def testIfNpom(x, y, lower = 0.1, upper = 2.5, NpomThreshold = 1.5):
 
     '''Trial the first: do you have a reasonable signal?'''
 
-    if np.sum(yTrunc) > lower and np.sum(yTrunc) < upper:
+    notNpom = 'Signal too low'
+
+    if np.sum(yTrunc) > lower and y.min() > -0.1:
         #If sum of all intensities lies outside a given range, it's probably not an NPoM
         #Can adjust range to suit system
 
+        notNpom = 'CM region too weak'
+
         '''Trial the second: do you slant in the correct direction?'''
 
-        firstHalf = yTrunc[:int(len(yTrunc)/2)]
-        secondHalf = yTrunc[int(len(yTrunc)/2):]
+        firstHalf = yTrunc[:int(len(yTrunc)/3)]
+        secondHalf = yTrunc[int(len(yTrunc)/3):]
 
         if np.sum(firstHalf) < np.sum(secondHalf) * NpomThreshold:
             #NPoM spectra generally have greater total signal at longer wavelengths due to coupled mode
 
+            notNpom = 'Just Noise'
+
             '''Trial the third: are you more than just noise?'''
 
-            if np.sum(yTrunc) > np.sum(yUpper) / NpomThreshold:
+            if np.sum(yTrunc)*3 > np.sum(yUpper) / NpomThreshold:
                 #If the sum of the noise after 900 nm is greater than that of the spectrum itself, it's probably crap
 
+                notNpom = 'Too few peaks detected'
+
                 '''Trial the fourth: do you have more than one maximum?'''
+
                 ySmooth = butterLowpassFiltFilt(y)
                 minima = detectMinima(-ySmooth, negOnly = False)
 
                 if len(minima) > 1:
                     #NPoM spectra usually have more than one distinct peak, separated by a minimum
                     isNpom = True
+                    notNpom = 'N/A'
 
-    return isNpom
+    return isNpom, notNpom
 
 def testIfWeirdPeak(x, y, factor = 1.3, plot = False):
 
@@ -356,11 +390,19 @@ def testIfWeirdPeak(x, y, factor = 1.3, plot = False):
 
     xTrunc = xy[0]
     yTrunc = xy[1]
+
     yTruncSmooth = butterLowpassFiltFilt(yTrunc)
     transHeight = yTruncSmooth[np.where(abs(xTrunc - 533) == abs(xTrunc - 533).min())[0][0]]
-    maxHeight = yTruncSmooth.max()
+    yMaxs = detectMinima(-yTruncSmooth)
 
-    if maxHeight >= transHeight * factor:
+    if len(yMaxs) == 0:
+        weird = False
+        return weird
+
+    maxHeight = yTruncSmooth[yMaxs].max()
+    maxWl = xTrunc[yTruncSmooth.argmax()]
+
+    if maxHeight >= transHeight * factor and maxWl > 533:
         weird = True
 
     else:
@@ -374,26 +416,32 @@ def testIfWeirdPeak(x, y, factor = 1.3, plot = False):
             color = 'g'
 
         plt.figure()
-        plt.plot(x, y, color = color)
+        plt.plot(xTrunc, yTrunc, color = color)
+        plt.plot(maxWl, maxHeight, 'o')
         plt.xlabel('Wavelength (nm)')
         plt.ylabel('Scattered Intensity')
         plt.title('Weird peak = %s' % weird)
 
     return weird
 
-def takeDerivs(y, x):
-    '''Numerically differentiates y wrt x twice and returns both derivatives'''
-    #y, x = 1D array
+def centDiff(x, y):
 
-    dy = np.diff(y)
-    dx = np.diff(x)
-    firstDerivative = dy/dx
+    '''Numerically calculates dy/dx using central difference method'''
 
-    dDyDx = np.diff(firstDerivative)
+    x1 = np.concatenate((x[:2][::-1], x))
+    x2 = np.concatenate((x, x[-2:][::-1]))
+    dx = x2 - x1
+    dx = dx[1:-1]
 
-    secondDerivative = dDyDx/dx[:-1]
+    y1 = np.concatenate((y[:2][::-1], y))
+    y2 = np.concatenate((y, y[-2:][::-1]))
+    dy = y2 - y1
+    dy = dy[1:-1]
 
-    return firstDerivative, secondDerivative
+    d = (dy/dx)
+    d /= 2
+
+    return d
 
 def removeBaseline(x, y, cutoff = 1500, fs = 60000, lambd = 10**6.7, p = 0.003, returnTrunc = False):
     '''Specifically designed for NPoM spectra'''
@@ -463,68 +511,66 @@ def removeBaseline(x, y, cutoff = 1500, fs = 60000, lambd = 10**6.7, p = 0.003, 
     else:
         return ySubtracted
 
-def normToTrans(x, y, cutoff = 1500, fs = 60000, lambd = 10**6.7, p = 0.003, plot = False,
-                monitorProgress = False, baseline = True, returnPeakpos = True, fukkit = False):
-    '''Specifically for use with NPoM spectra'''
-    '''Finds the first shoulder in the spectrum after 500 nm and normalises the spectrum to the corresponding
-       intensity'''
+def normToTrans(x, y, transNorm = 1, troughNorm = 0.61):
 
-    xRaw = x
-    yRaw = y
+    xy = truncateSpectrum(x, y)
 
-    if baseline == True:
-        ySubtracted, xTrunc, yTrunc = removeBaseline(xRaw, yRaw, lambd = lambd, p = p, returnTrunc = True)#Baseline subtraction if requested
+    xTrunc = xy[0]
+    yTrunc = xy[1]
+
+    ySmooth = butterLowpassFiltFilt(yTrunc)
+    ySmooth -= ySmooth.min()
+
+    mIndices = detectMinima(ySmooth, negOnly = False)
+    yMins = ySmooth[mIndices]
+    xMins = xTrunc[mIndices]
+    mins = [[xMin, yMins[n]] for n, xMin in enumerate(xMins)]
+
+    initMins = [minimum for minimum in mins if minimum[0] < 533]
+
+    if len(initMins) == 0:
+        #print 'No initial minima'
+        d1 = centDiff(xTrunc, ySmooth)
+        d2 = centDiff(xTrunc, d1)
+        mIndices = detectMinima(d2, negOnly = False)
+
+        yMins = ySmooth[mIndices]
+        xMins = xTrunc[mIndices]
+        mins = [[xMin, yMins[n]] for n, xMin in enumerate(xMins)]
+
+        initMins = [minimum for minimum in mins if minimum[0] < 533]
+
+    initMinWls = [minimum[0] for minimum in mins]
+    initMinHeights = [minimum[1] for minimum in mins]
+    initMinWl = initMinWls[0]
+
+    a0 = initMinHeights[0]
+    t0 = ySmooth[abs(xTrunc - 533).argmin()]
+
+    #plt.figure()
+    #plt.plot(x, y)
+    #plt.plot(xTrunc, ySmooth)
+    #plt.plot(initMinWl, a0, 'o')
+    #plt.plot(533, t0, 'o')
+    #plt.title('Normalisation')
+    #plt.show()
+
+    aN = troughNorm
+    tN = transNorm
+
+    if a0 < t0:
+
+        yNorm = y - a0
+        yNorm /= (t0 - a0)
+        yNorm *= (tN - aN)
+        yNorm += aN
 
     else:
-        xTrunc, yTrunc = truncateSpectrum(xRaw, yRaw, startWl = 450, finishWl = 900)#Otherwise just truncated to standard range
 
-    yTruncSmooth = butterLowpassFiltFilt(yTrunc, cutoff = cutoff, fs = fs)#Smooth data
+        yNorm = y - ySmooth.min()
+        yNorm /= t0
 
-    if fukkit == False:
-        firstDeriv, secondDeriv = takeDerivs(yTruncSmooth, xTrunc)#Take second derivative
-        peakIndices = detectMinima(secondDeriv, negOnly = False)#Detect minima in second derivative to find spectral peaks/shoulders
-
-        xPeaks = [xTrunc[index] for index in peakIndices]#Peak positions
-
-        for n, peakWl in enumerate(xPeaks):
-
-            if peakWl > 500:
-                transIndex = peakIndices[n]#Finds index of first peak after x=500 - most likely the transverse mode
-                break
-
-        transWl = xTrunc[transIndex]
-
-    elif fukkit == True:
-        transWl = 533
-        transIndex = np.where(abs(xTrunc - transWl) == abs(xTrunc - transWl).min())[0][0]
-
-    if baseline == False: #Sets the spectral minimum to zero
-        ySubtracted = yRaw - min(yTruncSmooth)
-        yTrunc = yTrunc - min(yTruncSmooth)
-
-    transHeight = yTruncSmooth[transIndex]
-
-    yNorm = ySubtracted / transHeight
-    yTruncNorm = yTrunc / transHeight #Normalisation
-
-    if returnPeakpos == True:
-        return yNorm, transWl, xTrunc, yTruncNorm#Returns transverse peak position along with normalised data, if requested
-
-    else:
-        return yNorm, xTrunc, yTruncNorm
-
-def normTo533(x, yRaw, ySmooth = False):
-
-    if ySmooth == False:
-        ySmooth = butterLowpassFiltFilt(yRaw)
-
-    ind533 = np.where(abs(x - 533) == abs(x - 533).min())[0][0]
-    transHeight = ySmooth[ind533]
-
-    yRawNorm = yRaw / transHeight
-    ySmoothNorm = ySmooth / transHeight
-
-    return yRawNorm, ySmoothNorm
+    return yNorm, initMinWl
 
 def multiPeakFind(x, y, cutoff = 1500, fs = 60000, detectionThreshold = 0, returnAll = True,
                   monitorProgress = False):
@@ -535,14 +581,15 @@ def multiPeakFind(x, y, cutoff = 1500, fs = 60000, detectionThreshold = 0, retur
         peakFindMetadata = {}
 
         ySmooth = butterLowpassFiltFilt(y, cutoff = cutoff, fs = fs)
-        peakFindMetadata['smoothedSpectrum'] = ySmooth
+        peakFindMetadata['Smoothed data (truncated, normalised)'] = ySmooth
 
         if monitorProgress == True:
             print '\nData smoothed'
 
         '''Differentiation'''
 
-        firstDerivative, secondDerivative = takeDerivs(ySmooth, x)
+        firstDerivative = centDiff(x, y)
+        secondDerivative = centDiff(x, firstDerivative)
         peakFindMetadata['secondDerivative'] = secondDerivative
 
         if monitorProgress == True:
@@ -559,21 +606,23 @@ def multiPeakFind(x, y, cutoff = 1500, fs = 60000, detectionThreshold = 0, retur
         if returnAll == True:
             return ySmooth, peakIndices, peakFindMetadata
 
-def multiPeakFit(x, y, indices, ySmooth = np.array([]), cutoff = 1500, fs = 60000, constrainPeakpos = False,
+def multiPeakFit(x, y, indices, needsSmoothing = True, cutoff = 1500, fs = 60000, constrainPeakpos = False,
                  returnAll = False, monitorProgress = True):
     '''Performs the actual fitting (given a list of peak indices) using Python's lmfit module'''
     '''You can generate indices using multiPeakFind or input them manually'''
     #x, y = 1D arrays of same length
     #indices = 1D array or list of integers, to be used as indices of x and y
-    #ySmooth (optional). Include this to save time, otherwise the function will smooth the y data for you
     #setting constrainPeakpos = True forces peaks to stay between the indices either side when fitting
     #e.g. for indices of [7, 10, 14], the final centre position of the second peak (initial index = 10) must be between index 7 and 14
 
     fitStart = time.time()
     peakFitMetadata = {}
 
-    if ySmooth.size == 0:
+    if needsSmoothing == True:
         ySmooth = butterLowpassFiltFilt(y, cutoff = cutoff, fs = fs) #smoothes data
+
+    else:
+        ySmooth = y
 
     if monitorProgress == True:
         print '\n%s peaks about to be fitted' % (len(indices))
@@ -622,7 +671,7 @@ def multiPeakFit(x, y, indices, ySmooth = np.array([]), cutoff = 1500, fs = 6000
 
     init = gaussMod.eval(pars, x=x)#Function formed from initial guesses
 
-    peakFitMetadata['initialGuess'] = init
+    peakFitMetadata['Initial guess'] = init
 
     yFloat16 = np.float16(y) #Reduces the number of decimal places in data to speed up fitting
     xFloat16 = np.float16(x)
@@ -631,7 +680,7 @@ def multiPeakFit(x, y, indices, ySmooth = np.array([]), cutoff = 1500, fs = 6000
 
     #out = gaussMod.fit(ySmooth, pars, x=x) #Can fit to smoothed data instead if you like
     comps = out.eval_components(x=xFloat16)
-    peakFitMetadata['finalComponents'] = comps
+    peakFitMetadata['Final components'] = comps
 
     fitEnd = time.time()
     fitTime = fitEnd - fitStart
@@ -658,9 +707,9 @@ def multiPeakFit(x, y, indices, ySmooth = np.array([]), cutoff = 1500, fs = 6000
                 finalParams[prefix[:-1]][name] = x
 
     peakFitMetadata['lmfitOutput'] = out
-    peakFitMetadata['bestFit'] = out.best_fit
-    peakFitMetadata['finalParams'] = finalParams
-    peakFitMetadata['residuals'] = out.residual
+    peakFitMetadata['Best fit'] = out.best_fit
+    peakFitMetadata['Final parameters'] = finalParams
+    peakFitMetadata['Residuals'] = out.residual
 
     if returnAll == True:
         return out, peakFitMetadata
@@ -668,7 +717,9 @@ def multiPeakFit(x, y, indices, ySmooth = np.array([]), cutoff = 1500, fs = 6000
     else:
         return out
 
-def gaussian(x, height, center, fwhm):
+def gaussian(x, height, center, fwhm, offset = 0):
+
+    '''Gaussian as a function of height, centre, fwhm and offset'''
     a = height
     b = center
     c = fwhm
@@ -678,23 +729,25 @@ def gaussian(x, height, center, fwhm):
     F = -(N / D)
     E = np.exp(F)
     y = a*E
+    y += offset
 
     return y
 
 def getFWHM(x, y, fwhmFactor = 1.5, smooth = False):
-    '''Finds FWHM of largest peak in a given dataset'''
+    '''Estimates FWHM of largest peak in a given dataset'''
     '''Also returns xy coords of peak'''
 
     if smooth == True:
         y = butterLowpassFiltFilt(y)
 
-    yMax = y.max()
+    maxdices = detectMinima(-y, negOnly = False)
+    yMax = y[maxdices].max()
     halfMax = yMax/2
-    maxdex = np.where(abs(y - yMax) == abs(y - yMax).min())[0][0]
+    maxdex = maxdices[y[maxdices].argmax()]
     xMax = x[maxdex]
 
-    halfDex1 = np.where(abs(y[:maxdex][::-1] - halfMax) == abs(y[:maxdex][::-1] - halfMax).min())[0][0]
-    halfDex2 = np.where(abs(y[maxdex:] - halfMax) == abs(y[maxdex:] - halfMax).min())[0][0]
+    halfDex1 = abs(y[:maxdex][::-1] - halfMax).argmin()
+    halfDex2 = abs(y[maxdex:] - halfMax).argmin()
 
     xHalf1 = x[:maxdex][::-1][halfDex1]
     xHalf2 = x[maxdex:][halfDex2]
@@ -716,51 +769,73 @@ def getFWHM(x, y, fwhmFactor = 1.5, smooth = False):
 def findMainPeaks(x, y, fwhmFactor = 1.1, plot = False, midpoint = 680, weirdPeak = True):
     peakFindMetadata = {}
 
-    xy = truncateSpectrum(x, y)
+    xy = truncateSpectrum(x, y, finishWl = 987)
     xTrunc = xy[0]
     yTrunc = xy[1]
+
     ySmooth = butterLowpassFiltFilt(yTrunc)
 
     mIndices = detectMinima(ySmooth, negOnly = False)
-    xMins = np.array([xTrunc[mIndex] for mIndex in mIndices])
-    midMin = xMins[np.where(abs(xMins - midpoint) == abs(xMins - midpoint).min())[0][0]]
 
-    xy1 = truncateSpectrum(xTrunc, ySmooth, startWl = 450, finishWl = midMin)
-    xy2 = truncateSpectrum(xTrunc, ySmooth, startWl = midMin, finishWl = 900)
+    xMins = xTrunc[mIndices]
+    yMins = ySmooth[mIndices]
+
+    mins = [[xMin, yMins[n]] for n, xMin in enumerate(xMins)]
+    minsSorted = sorted(mins, key = lambda minimum: abs(minimum[0] - midpoint))
+
+    try:
+        if abs(minsSorted[0][1] - minsSorted[1][1]) > ySmooth.max() * 0.6:
+            midMin = sorted(minsSorted[:2], key = lambda minimum: minimum[1])[0][0]
+
+        else:
+            midMin = xMins[abs(xMins - midpoint).argmin()]
+
+    except:
+        midMin = xMins[abs(xMins - midpoint).argmin()]
+
+    initMin = xMins[0]
+
+    if initMin == midMin:
+        initMin = 450
+
+    xy1 = truncateSpectrum(xTrunc, ySmooth, startWl = initMin, finishWl = midMin)
+    xy2 = truncateSpectrum(xTrunc, ySmooth, startWl = midMin, finishWl = 987)
 
     if weirdPeak == True:
         x1 = xy1[0]
         y1 = xy1[1]
+
         fwhm, xMax, yMax = getFWHM(x1, y1, fwhmFactor = fwhmFactor)
 
-        peakFindMetadata['weirdPeakFwhm'] = fwhm
-        peakFindMetadata['weirdPeakIntensity'] = yMax
-        peakFindMetadata['weirdPeakPosition'] = xMax
+        peakFindMetadata['Weird peak FWHM'] = fwhm
+        peakFindMetadata['Weird peak intensity'] = yMax
+        peakFindMetadata['Weird peak wavelength'] = xMax
         weirdGauss = [gaussian(i, yMax, xMax, fwhm) for i in x]
 
     else:
-        peakFindMetadata['weirdPeakFwhm'] = 'N/A'
-        peakFindMetadata['weirdPeakIntensity'] = 'N/A'
-        peakFindMetadata['weirdPeakPosition'] = 'N/A'
+        peakFindMetadata['Weird peak FWHM'] = 'N/A'
+        peakFindMetadata['Weird peak intensity'] = 'N/A'
+        peakFindMetadata['Weird peak wavelength'] = 'N/A'
         weirdGauss = 'N/A'
 
     x2 = xy2[0]
     y2 = xy2[1]
+
     fwhm, xMax, yMax = getFWHM(x2, y2, fwhmFactor = fwhmFactor)
 
-    peakFindMetadata['coupledModeFwhm'] = fwhm
-    peakFindMetadata['coupledModeIntensity'] = yMax
-    peakFindMetadata['coupledModePosition'] = xMax
+    peakFindMetadata['Coupled mode FWHM'] = fwhm
+    peakFindMetadata['Coupled mode intensity'] = yMax
+    peakFindMetadata['Coupled mode wavelength'] = xMax
     cmGauss = [gaussian(i, yMax, xMax, fwhm) for i in x]
 
     if plot == True or plot == 'all':
-        weirdHeight = peakFindMetadata['weirdPeakIntensity']
-        weirdWl = peakFindMetadata['weirdPeakPosition']
-        weirdFwhm = peakFindMetadata['weirdPeakFwhm']
+        weirdHeight = peakFindMetadata['Weird peak intensity']
+        weirdWl = peakFindMetadata['Weird peak wavelength']
+        weirdFwhm = peakFindMetadata['Weird peak FWHM']
 
-        cmHeight = peakFindMetadata['coupledModeIntensity']
-        cmWl = peakFindMetadata['coupledModePosition']
-        cmFwhm = peakFindMetadata['coupledModeFwhm']
+        cmHeight = peakFindMetadata['Coupled mode intensity']
+        cmWl = peakFindMetadata['Coupled mode wavelength']
+        cmFwhm = peakFindMetadata['Coupled mode FWHM']
 
         weirdFwhmHorizX = np.linspace(weirdWl - weirdFwhm/2, weirdWl + weirdFwhm/2, 2)
         weirdFwhmHorizY = np.array([weirdHeight/2] * 2)
@@ -781,8 +856,9 @@ def findMainPeaks(x, y, fwhmFactor = 1.1, plot = False, midpoint = 680, weirdPea
 
     return peakFindMetadata, weirdGauss, cmGauss
 
-def testIfDouble(x, y, doublesThreshold = 2, midpoint = 680, plot = False):
+def testIfDouble(x, y, doublesThreshold = 2, plot = False, raiseExceptions = True):
     isDouble = False
+    isNpom = True
 
     xy = truncateSpectrum(x, y)
     xTrunc = xy[0]
@@ -790,46 +866,61 @@ def testIfDouble(x, y, doublesThreshold = 2, midpoint = 680, plot = False):
     ySmooth = butterLowpassFiltFilt(yTrunc)
 
     mIndices = detectMinima(ySmooth, negOnly = False)
-    xMins = np.array([xTrunc[mIndex] for mIndex in mIndices])
-    midMin = xMins[np.where(abs(xMins - midpoint) == abs(xMins - midpoint).min())[0][0]]
+    maxdices = detectMinima(-ySmooth, negOnly = False)
 
-    xy2 = truncateSpectrum(xTrunc, ySmooth, startWl = midMin, finishWl = 900)
+    xMins = xTrunc[mIndices]
+    yMins = yTrunc[mIndices]
 
-    x2 = xy2[0]
-    y2 = xy2[1]
+    xMaxs = xTrunc[maxdices]
+    yMaxs = yTrunc[maxdices]
+    maxs = [[xMax, yMaxs[n]] for n, xMax in enumerate(xMaxs)]
 
-    maximaIndices = detectMinima(-y2, negOnly = False)
+    if len(yMaxs) == 0:
+        isNpom = False
+        isDouble = 'N/A'
 
-    xMaxes = x2[maximaIndices]
-    yMaxes = y2[maximaIndices]
-    yMax = max(yMaxes)
+    else:
 
-    xMaxes4RealzThisTime = []
-    yMaxes4RealzThisTime = []
+        try:
+            yMax = max(yMaxs)
 
-    if len(yMaxes > 0):
+        except Exception as e:
 
-        for nn, maximum in enumerate(yMaxes):
+            if raiseExceptions == True:
+                pass
 
-            if maximum > yMax / doublesThreshold:
-                yMaxes4RealzThisTime.append(maximum)
-                xMaxes4RealzThisTime.append(xMaxes[nn])
+            else:
+                print e
+                return False
 
-    xMaxes = xMaxes4RealzThisTime
-    yMaxes = yMaxes4RealzThisTime
+        maxsSortedY = sorted(maxs, key = lambda maximum: maximum[1])
 
-    if len(yMaxes) > 1:
-        isDouble = True
+        yMax = maxsSortedY[-1][1]
+        xMax = maxsSortedY[-1][0]
 
-    if plot == True or plot == 'all':
+        try:
 
-        if len(yMaxes) > 1:
+            yMax2 = maxsSortedY[-2][1]
+
+            if yMax2 > yMax / doublesThreshold:
+                isDouble = True
+
+        except:
+            isDouble = False
+
+        if xMax < 600:
+            isNpom = False
+            isDouble = 'N/A'
+
+    if plot == True or plot == 'all' or plot == 'double test':
+
+        if isDouble == True:
             title = 'Double Peak'
 
-        elif len(yMaxes) == 1:
+        elif isDouble == False:
             title = 'Single Peak'
 
-        elif len(yMaxes) < 1:
+        elif isDouble == 'N/A':
             title = 'No Peak'
 
         plt.figure(figsize = (8, 6))
@@ -837,16 +928,138 @@ def testIfDouble(x, y, doublesThreshold = 2, midpoint = 680, plot = False):
         plt.xlabel('Wavelength (nm)', fontsize = 14)
         plt.ylabel('Intensity', fontsize = 14)
         plt.plot(xTrunc, ySmooth, 'g', label = 'Smoothed')
-        plt.plot(x2, y2,'k', label = 'Truncated')
-        #plt.plot(xMins, yMins, 'ko', label = 'Minima')
-        #plt.plot(xMaxes, yMaxes, 'go', label = 'Maxima in CM Region')
+        plt.plot(xMins, yMins, 'ko', label = 'Minima')
+        plt.plot(xMaxs, yMaxs, 'go', label = 'Maxima')
         plt.legend(loc = 0, ncol = 3, fontsize = 10)
         plt.ylim(0, ySmooth.max()*1.23)
         plt.xlim(450, 900)
         plt.title(title, fontsize = 16)
         plt.show()
 
-    return isDouble
+    return isNpom, isDouble
+
+def analyseNpomPeaks(x, y, cutoff = 1500, fs = 60000, doublesThreshold = 2, doublesDist = 0, monitorProgress = False, raiseExceptions = False,
+                     transPeakPos = 533, plot = False):
+
+    yRaw = np.array(y)
+    xRaw = np.array(x)
+
+    allMetadataKeys = ['NPoM?',
+                      'NPoM test failure',
+                      'Weird Peak?',
+                      'Weird peak intensity (norm)',
+                      'Weird peak wavelength',
+                      'Weird peak FWHM',
+                      'Weird peak intensity (raw)',
+                      'Weird peak FWHM (raw)',
+                      'Double Peak?',
+                      'Transverse mode wavelength',
+                      'Transverse mode intensity (norm)',
+                      'Transverse mode intensity (raw)',
+                      'Coupled mode wavelength',
+                      'Coupled mode intensity (norm)',
+                      'Coupled mode FWHM',
+                      'Coupled mode FWHM (raw)',
+                      'Coupled mode intensity (raw)',
+                      'Intensity ratio (norm)',
+                      'Intensity ratio (raw)',
+                      'Raw data',
+                      'Raw data (normalised)',
+                      'Full Wavelengths',
+                      'Raw data (truncated, normalised)',
+                      'Smoothed data (truncated, normalised)',
+                      'Initial guess',
+                      'Best fit',
+                      'Residuals',
+                      'Final components',
+                      'Final parameters',
+                      'Wavelengths (truncated)',
+                      'secondDerivative']
+
+    metadata = {key : 'N/A' for key in allMetadataKeys}
+    metadata['Raw data'] = yRaw
+    metadata['Full Wavelengths'] = xRaw
+
+    '''Testing if NPoM'''
+
+    isNpom1, notNpom = testIfNpom(xRaw, yRaw)
+    isNpom2, isDouble = testIfDouble(xRaw, yRaw, doublesThreshold = doublesThreshold, raiseExceptions = raiseExceptions, plot = plot)
+
+    if isNpom1 == True and isNpom2 == True:
+        isNpom = True
+
+    else:
+        isNpom = False
+
+    if isNpom2 == False:
+        notNpom = 'Spectral maximum < 600 nm'
+
+    metadata['Double Peak?'] = isDouble
+    metadata['NPoM?'] = isNpom
+    metadata['NPoM test failure'] = notNpom
+
+    if monitorProgress == True:
+        print 'NPoM:', isNpom
+
+    if isNpom == True:
+
+        weird = testIfWeirdPeak(x, y, factor = 1.3)
+        metadata['Weird Peak?'] = weird
+
+        yRawNorm, initMinWl = normToTrans(xRaw, yRaw, transNorm = 1, troughNorm = 0.61)
+
+        #plt.figure()
+        #plt.plot(xRaw, yRaw)
+        #plt.title('raw')
+        #plt.show()
+
+        #plt.figure()
+        #plt.plot(xRaw, yRawNorm)
+        #plt.title('norm')
+        #plt.show()
+
+        metadata['Raw data (normalised)'] = yRawNorm
+        metadata['Transverse mode wavelength'] = transPeakPos
+
+        rawPeakFindMetadata, weirdGauss, cmGauss = findMainPeaks(xRaw, yRaw, fwhmFactor = 1.1, plot = False, midpoint = 680, weirdPeak = weird)
+        metadata['Coupled mode intensity (raw)'] = rawPeakFindMetadata['Coupled mode intensity']
+        metadata['Coupled mode FWHM (raw)'] = rawPeakFindMetadata['Coupled mode FWHM']
+        metadata['Coupled mode wavelength'] = rawPeakFindMetadata['Coupled mode wavelength']
+        metadata['Weird peak intensity (raw)'] = rawPeakFindMetadata['Weird peak intensity']
+        metadata['Weird peak FWHM (raw)'] = rawPeakFindMetadata['Weird peak FWHM']
+        metadata['Weird peak wavelength'] = rawPeakFindMetadata['Weird peak wavelength']
+
+        normPeakFindMetadata, weirdGauss, cmGauss = findMainPeaks(x, yRawNorm, fwhmFactor = 1.1, plot = False, midpoint = 680, weirdPeak = weird)
+        metadata['Coupled mode intensity (norm)'] = normPeakFindMetadata['Coupled mode intensity']
+        metadata['Coupled mode FWHM (norm)'] = normPeakFindMetadata['Coupled mode FWHM']
+        metadata['Weird peak intensity (norm)'] = normPeakFindMetadata['Weird peak intensity']
+        metadata['Weird peak FWHM (norm)'] = normPeakFindMetadata['Weird peak FWHM']
+
+        if isDouble == True:
+            metadata['Coupled mode FWHM'] = 'N/A'
+            metadata['Coupled mode FWHM (raw)'] = 'N/A'
+
+        xyRawTruncNorm = truncateSpectrum(x, yRawNorm)
+        xTrunc = xyRawTruncNorm[0]
+        yRawTruncNorm = xyRawTruncNorm[1]
+        ySmoothTruncNorm = butterLowpassFiltFilt(yRawTruncNorm)
+        yRawSmooth = butterLowpassFiltFilt(yRaw)
+
+        transHeightRaw = yRawSmooth[abs(xRaw - transPeakPos).argmin()]
+        transHeightNorm = ySmoothTruncNorm[abs(xTrunc - transPeakPos).argmin()]
+
+        intensityRatio = metadata['Coupled mode intensity (norm)'] / transHeightNorm
+        rawIntensityRatio = metadata['Coupled mode intensity (raw)'] / transHeightRaw
+
+        metadata['Smoothed data (truncated, normalised)'] = ySmoothTruncNorm
+        metadata['Raw data (truncated, normalised)'] = yRawTruncNorm
+        metadata['Raw data (normalised)'] = yRawNorm
+        metadata['Transverse mode intensity (norm)'] = transHeightNorm
+        metadata['Transverse mode intensity (raw)'] = transHeightRaw
+        metadata['Intensity ratio (from norm)'] = intensityRatio
+        metadata['Intensity ratio (raw)'] = rawIntensityRatio
+
+    return metadata
 
 def findTransAndCoupledMode(x, xRaw, yRaw, ySmooth, fitParams, transGuess = 533, transRange = [500, 550],
                             cmMin = 650, plot = False, fukkit = False):
@@ -878,9 +1091,9 @@ def findTransAndCoupledMode(x, xRaw, yRaw, ySmooth, fitParams, transGuess = 533,
         cmHeightRaw = yRawSmoothTrunc[1].max()
         cmPeakPos = ySmoothTrunc[0][ySmoothTrunc[1].argmax()]
 
-    tcMetadata['coupledModePosition'] = cmPeakPos
-    tcMetadata['coupledModeIntensity'] = cmHeight
-    tcMetadata['rawCoupledModeIntensity'] = cmHeightRaw
+    tcMetadata['Coupled mode wavelength'] = cmPeakPos
+    tcMetadata['Coupled mode intensity (norm)'] = cmHeight
+    tcMetadata['Coupled mode intensity (raw)'] = cmHeightRaw
 
     if fukkit == True:
         transPeakPos = 533
@@ -901,83 +1114,75 @@ def findTransAndCoupledMode(x, xRaw, yRaw, ySmooth, fitParams, transGuess = 533,
                 transPeakPos = transGuess #If no peaks are detected, initial transverse mode guess (533 nm unless specified otherwise) is used as the final value
                 break
 
-    tcMetadata['transverseModePosition'] = transPeakPos
+    tcMetadata['Transverse mode wavelength'] = transPeakPos
     transIndex = np.where(abs(x - transPeakPos) == abs(x - transPeakPos).min())[0][0]
     transIndexRaw = np.where(abs(xRaw - transPeakPos) == abs(xRaw - transPeakPos).min())[0][0]
     transHeight = ySmooth[transIndex]#Takes height of smoothed spectrum at transverse peak position
     transHeightRaw = yRawSmooth[transIndexRaw]
-    tcMetadata['transverseModeIntensity'] = transHeight
-    tcMetadata['rawTransverseModeIntensity'] = transHeightRaw
+    tcMetadata['Transverse mode intensity (norm)'] = transHeight
+    tcMetadata['Transverse mode intensity (raw)'] = transHeightRaw
 
     intensityRatio = cmHeight/transHeight
-    intensityRatioRaw = cmHeightRaw/transHeightRaw
-    tcMetadata['intensityRatio'] = intensityRatio
-    tcMetadata['rawIntensityRatio'] = intensityRatioRaw
+    rawIntensityRatio = cmHeightRaw/transHeightRaw
+    tcMetadata['Intensity ratio (from norm)'] = intensityRatio
+    tcMetadata['Intensity ratio (raw)'] = rawIntensityRatio
 
     return tcMetadata
 
-def fitNpomSpectrum(x, y, cutoff = 1500, fs = 60000, lambd = 10**6.7, baselineP = 0.003,
-                    detectionThreshold = 0, doublesThreshold = 0.5, doublesDist = 0,
-                    constrainPeakpos = False, printReport = False, plot = False, monitorProgress = False, fukkit = False, simpleFit = True):
+def fitNpomSpectrum(x, y, cutoff = 1500, fs = 60000, lambd = 10**6.7, baselineP = 0.003, detectionThreshold = 0, doublesThreshold = 2,
+                    doublesDist = 0, constrainPeakpos = False, printReport = False, plot = False, monitorProgress = False, fukkit = False,
+                    simpleFit = True, raiseExceptions = False, transPeakPos = 533):
 
     yRaw = np.array(y)
     xRaw = np.array(x)
 
     allMetadataKeys = ['NPoM?',
-                      'weirdPeak?',
-                      'weirdPeakIntensity',
-                      'weirdPeakPosition',
-                      'weirdPeakFwhm',
-                      'rawWeirdPeakIntensity',
-                      'doublePeak?',
-                      'transverseModePosition',
-                      'transverseModeIntensity',
-                      'rawTransverseModeIntensity',
-                      'coupledModePosition',
-                      'coupledModeIntensity',
-                      'coupledModeFwhm',
-                      'rawCoupledModeIntensity',
-                      'intensityRatio',
-                      'rawIntensityRatio',
-                      'rawData',
-                      'normalisedSpectrum',
-                      'fullWavelengths',
-                      'truncatedSpectrum',
-                      'smoothedSpectrum',
-                      'initialGuess',
-                      'bestFit',
-                      'residuals',
-                      'finalComponents',
-                      'finalParams',
-                      'truncatedWavelengths',
+                      'NPoM test failure',
+                      'Weird Peak?',
+                      'Weird peak intensity (norm)',
+                      'Weird peak wavelength',
+                      'Weird peak FWHM',
+                      'Weird peak intensity (raw)',
+                      'Double Peak?',
+                      'Transverse mode wavelength',
+                      'Transverse mode intensity (norm)',
+                      'Transverse mode intensity (raw)',
+                      'Coupled mode wavelength',
+                      'Coupled mode intensity (norm)',
+                      'Coupled mode FWHM',
+                      'Coupled mode intensity (raw)',
+                      'Intensity ratio (from norm)',
+                      'Intensity ratio (raw)',
+                      'Raw data',
+                      'Raw data (normalised)',
+                      'Full Wavelengths',
+                      'Raw data (truncated, normalised)',
+                      'Smoothed data (truncated, normalised)',
+                      'Initial guess',
+                      'Best fit',
+                      'Residuals',
+                      'Final components',
+                      'Final parameters',
+                      'Wavelengths (truncated)',
                       'secondDerivative']
 
     metadata = {key : 'N/A' for key in allMetadataKeys}
-    metadata['rawData'] = yRaw
-    metadata['fullWavelengths'] = xRaw
+    metadata['Raw data'] = yRaw
+    metadata['Full Wavelengths'] = xRaw
 
     '''Testing if NPoM'''
 
-    isNpom = testIfNpom(xRaw, yRaw)
+    isNpom1, notNpom = testIfNpom(xRaw, yRaw)
+    isNpom2, isDouble = testIfDouble(x, y, doublesThreshold = doublesThreshold, raiseExceptions = raiseExceptions)
+
+    if isNpom1 == True and isNpom2 == True:
+        isNpom = True
+
+    else:
+        isNpom = False
+
     metadata['NPoM?'] = isNpom
-
-    if plot == 'raw' or plot == 'all':
-        plt.figure(figsize = (10,7))
-        yMax = yRaw[67:661].max()
-        yLimFrac = yMax/10
-        plt.ylim(-yLimFrac, yMax + yLimFrac)
-
-        if isNpom == True:
-            plt.plot(xRaw, yRaw, 'g', label = 'Raw Data')
-
-        else:
-            plt.plot(xRaw, yRaw, 'r', label = 'Raw Data')
-
-        plt.xlim(xRaw.min(), xRaw.max())
-        plt.xlabel('Wavelength (nm)')
-        plt.ylabel('Scattering Intensity')
-        plt.title('Raw Data\nNPoM = %s' % isNpom)
-        plt.show()
+    metadata['Double Peak?'] = isDouble
 
     if monitorProgress == True:
         print 'NPoM:', isNpom
@@ -985,208 +1190,84 @@ def fitNpomSpectrum(x, y, cutoff = 1500, fs = 60000, lambd = 10**6.7, baselineP 
     if isNpom == True:
 
         weird = testIfWeirdPeak(x, y, factor = 1.3)
-        metadata['weirdPeak?'] = weird
+        metadata['Weird Peak?'] = weird
 
-        yRawNorm, transShoulderPeakPos, xTrunc, yTrunc = normToTrans(x, y, cutoff = cutoff, fs = fs,
-                                                                         lambd = lambd, p = baselineP,
-                                                                         plot = False, monitorProgress = False,
-                                                                         baseline = True, fukkit = fukkit)
+        isNpom, yRawNorm, initMinWl = normToTrans(x, y, transNorm = 1, troughNorm = 0.61)
 
-        metadata['normalisedSpectrum'] = yRawNorm
-        metadata['transverseModePosition'] = transShoulderPeakPos
+        metadata['Raw data (normalised)'] = yRawNorm
+        metadata['Transverse mode wavelength'] = transPeakPos
 
-        xTrunc, yTrunc = truncateSpectrum(xTrunc, yTrunc, startWl = xTrunc[0], finishWl = 850)
-        metadata['truncatedSpectrum'] = yTrunc
-        metadata['truncatedWavelengths'] = xTrunc
+        xTrunc, yTrunc = truncateSpectrum(x, yRawNorm, startWl = initMinWl, finishWl = 850)
+
+        metadata['Raw data (truncated, normalised)'] = yTrunc
+        metadata['Wavelengths (truncated)'] = xTrunc
 
         if monitorProgress == True:
             print '\nData baseline subtracted and normalised'
 
-        if plot == 'all':
-            plt.figure(figsize = (10,7))
-            yMax = yRawNorm[67:661].max()
-            yLimFrac = yMax/10
-            plt.ylim(-0.02, yMax + yLimFrac)
-            plt.plot(xRaw, yRawNorm, 'purple')
-            plt.xlim(xRaw.min(), xRaw.max())
-            plt.xlabel('Wavelength (nm)')
-            plt.ylabel('Scattering Intensity')
-            plt.title('Baselined/Normalised Data')
-            plt.show()
+        ySmooth, indices, peakFindMetadata = multiPeakFind(xTrunc, yTrunc, cutoff = 1500, fs = 60000,
+                                                            detectionThreshold = 0, returnAll = True,
+                                                            monitorProgress = False)
+        metadata.update(peakFindMetadata)
 
-        if simpleFit == False:
+        '''Reassignment of x and y below is v. important'''
 
-            ySmooth, indices, peakFindMetadata = multiPeakFind(xTrunc, yTrunc, cutoff = 1500, fs = 60000,
-                                                                detectionThreshold = 0, returnAll = True,
-                                                                monitorProgress = False)
-            metadata.update(peakFindMetadata)
+        y = yTrunc
+        x = xTrunc
 
-            '''Reassignment of x and y below is v. important'''
+        if len(indices) != 0:
+            out, peakFitMetadata = multiPeakFit(x, y, indices, needsSmoothing = True, cutoff = 1500, fs = 60000,
+                                                returnAll = True, monitorProgress = monitorProgress,
+                                                constrainPeakpos = constrainPeakpos)
+            metadata.update(peakFitMetadata)
 
-            y = yTrunc
-            x = xTrunc
+            isNpom, isDouble = testIfDouble(x, y, doublesThreshold = doublesThreshold, raiseExceptions = raiseExceptions)
+            metadata['Double Peak?'] = isDouble
 
-            if len(indices) != 0:
-                out, peakFitMetadata = multiPeakFit(x, y, indices, ySmooth = ySmooth, cutoff = 1500, fs = 60000,
-                                                    returnAll = True, monitorProgress = monitorProgress,
-                                                    constrainPeakpos = constrainPeakpos)
-                metadata.update(peakFitMetadata)
+            if isDouble == False and weird == True:
 
-                isDouble = testIfDouble(x, y, doublesThreshold = 2, midpoint = 680, plot = plot)
-                metadata['doublePeak?'] = isDouble
+                rawPeakFindMetadata, weirdGauss, cmGauss = findMainPeaks(xRaw, yRaw, fwhmFactor = 1.1, plot = False, midpoint = 680, weirdPeak = weird)
+                metadata['Coupled mode intensity (raw)'] = rawPeakFindMetadata['Coupled mode intensity']
+                metadata['Coupled mode FWHM (raw)'] = rawPeakFindMetadata['Coupled mode FWHM']
+                metadata['Coupled mode wavelength'] = rawPeakFindMetadata['Coupled mode wavelength']
+                metadata['Weird peak intensity (raw)'] = rawPeakFindMetadata['Weird peak intensity']
+                metadata['Weird peak FWHM (raw)'] = rawPeakFindMetadata['Weird peak FWHM']
+                metadata['Weird peak wavelength'] = rawPeakFindMetadata['Weird peak wavelength']
 
-                if isDouble == False and weird == True:
-                    simplePeakFindMetadata, weirdGauss, cmGauss = findMainPeaks(x, y, fwhmFactor = 1.1, plot = False, midpoint = 680, weirdPeak = True)
-                    metadata.update(simplePeakFindMetadata)
+                normPeakFindMetadata, weirdGauss, cmGauss = findMainPeaks(x, y, fwhmFactor = 1.1, plot = False, midpoint = 680, weirdPeak = weird)
+                metadata['Coupled mode intensity (norm)'] = rawPeakFindMetadata['Coupled mode intensity']
+                metadata['Coupled mode FWHM (norm)'] = rawPeakFindMetadata['Coupled mode FWHM']
+                metadata['Weird peak intensity (norm)'] = rawPeakFindMetadata['Weird peak intensity']
+                metadata['Weird peak FWHM (raw)'] = rawPeakFindMetadata['Weird peak FWHM']
 
-                if monitorProgress == True:
-                    print 'Fitting complete'
+            if monitorProgress == True:
+                print 'Fitting complete'
 
-                if printReport == True:
-                    print 'Fit report:\n'
-                    print out.fit_report()
+            if printReport == True:
+                print 'Fit report:\n'
+                print out.fit_report()
 
-                if plot == 'basic' or plot == 'both':
-                    plt.figure(figsize = (10,7))
-                    plt.plot(xRaw, yRawNorm, label = 'raw')
-                    plt.plot(x, out.best_fit, 'r-', label = 'fit')
-                    plt.legend(loc = 0)
-                    plt.xlabel('Wavelength (nm)')
-                    plt.tick_params(axis = 'y', labelleft = 'off')
-                    plt.ylabel('Intensity')
-                    plt.xlim(450, 1050)
-                    plt.show()
-
-                elif plot == 'full' or plot == 'all':
-
-                    plt.figure(figsize = (10,7))
-
-                    if monitorProgress == True:
-
-                        if isDouble == True:
-                            plt.title('Double Peak')
-
-                        elif isDouble == False:
-                            plt.title('Single Peak')
-
-                    plt.plot(xRaw, yRawNorm, label = 'raw', linewidth = 0.7)
-                    plt.plot(x, ySmooth, label = 'smoothed', linewidth = 0.5)
-                    plt.plot(x, metadata['initialGuess'], 'k-', label = 'initial guess', linewidth = 0.3)
-
-                    for i in range(len(indices)):
-                        plt.plot(x, metadata['finalComponents']['g%s_' % (i)], '--', label = 'Component %s' % (i),
-                                 linewidth = 0.3)
-
-                    plt.plot(x, out.best_fit, 'r-', label = 'fit')
-                    plt.legend(loc = 0, ncol = 2, fontsize = 9)
-                    plt.xlabel('Wavelength (nm)')
-                    #plt.tick_params(axis = 'y', labelleft = 'off')
-                    plt.ylabel('Intensity')
-                    limFrac = ySmooth.max()/10
-                    plt.ylim(-limFrac/2, ySmooth.max() + limFrac)
-                    plt.xlim(450, 900)
-                    plt.yticks([])
-                    plt.show()
-
-                    plt.figure(figsize = (10, 4))
-                    plt.title('Residuals')
-                    plt.plot(x, out.residual)
-                    plt.xlabel('Wavelength (nm)')
-                    plt.ylabel('Residuals')
-                    plt.yticks([])
-                    plt.xlim(450, 900)
-                    plt.show()
-
-                #if isDouble == False:
-
-                tcMetadata = findTransAndCoupledMode(x, xRaw, yRaw, ySmooth, metadata['finalParams'],
-                                                     transGuess = transShoulderPeakPos, plot = plot, fukkit = fukkit)
-                metadata.update(tcMetadata)
-                transHeight = metadata['transverseModeIntensity']
-
-                ySmooth /= transHeight
-                yTrunc /= transHeight
-                yRawNorm /= transHeight
-
-                metadata['smoothedSpectrum'] = ySmooth
-                metadata['truncatedSpectrum'] = yTrunc
-                metadata['normalisedSpectrum'] = yRawNorm
-
-                if plot == 'all':
-                    limFrac = ySmooth.max()/10
-
-                    plt.plot(xRaw, yRawNorm, lw = 0.5)
-                    plt.plot(x, y)
-                    plt.plot(x, ySmooth)
-                    plt.plot(x, [0] * len(x), '--')
-                    plt.plot([metadata['transverseModePosition']] * 10, np.linspace(transHeight,
-                             metadata['coupledModeIntensity'], 10), 'k--')
-                    plt.plot(x, [metadata['coupledModePosition']] * len(x))
-                    plt.plot(x, [transHeight] * len(x))
-                    plt.title('Intensity Ratio: %s' % (metadata['intensityRatio']))
-                    plt.xlabel('Wavelength(nm)')
-                    plt.ylabel('Intensity')
-                    plt.ylim(-limFrac/2, ySmooth.max() + limFrac)
-                    plt.xlim(450, 900)
-                    plt.show()
-
-            else:
-                metadata['NPoM?'] = False
-
-                if monitorProgress == True:
-                    print 'Not a NPoM'
-
-                metadata['NPoM?'] = isNpom
-                return DF_Spectrum(y, 'N/A', isNpom, 'N/A', 'N/A', metadata)
-
-        elif simpleFit == True:
-
-            isDouble = testIfDouble(x, y, doublesThreshold = 2, midpoint = 680, plot = plot)
-            metadata['doublePeak?'] = isDouble
-
-            if weird == True:
-                simplePeakFindMetadata, weirdGauss, cmGauss = findMainPeaks(x, y, fwhmFactor = 1.1, plot = False, midpoint = 680, weirdPeak = True)
-                metadata['rawCoupledModeIntensity'] = simplePeakFindMetadata['coupledModeIntensity']
-                metadata['rawWeirdPeakIntensity'] = simplePeakFindMetadata['weirdPeakIntensity']
-
-                simplePeakFindMetadata, weirdGauss, cmGauss = findMainPeaks(x, yRawNorm, fwhmFactor = 1.1, plot = False, midpoint = 680,
-                                                                            weirdPeak = True)
-                metadata.update(simplePeakFindMetadata)
-
-            elif weird == False:
-                simplePeakFindMetadata, weirdGauss, cmGauss = findMainPeaks(x, y, fwhmFactor = 1.1, plot = False, midpoint = 680, weirdPeak = False)
-                metadata['rawCoupledModeIntensity'] = simplePeakFindMetadata['coupledModeIntensity']
-
-                simplePeakFindMetadata, weirdGauss, cmGauss = findMainPeaks(x, yRawNorm, fwhmFactor = 1.1, plot = False, midpoint = 680,
-                                                                            weirdPeak = True)
-                metadata.update(simplePeakFindMetadata)
-
-            if isDouble == True:
-                metadata['coupledModeFwhm'] = 'N/A'
-
-            transWl = 533
-            transIndex = np.where(abs(xTrunc - transWl) == abs(xTrunc - transWl).min())[0][0]
-            transIndexRaw = np.where(abs(xRaw - transWl) == abs(xRaw - transWl).min())[0][0]
-
-            ySmooth = butterLowpassFiltFilt(yTrunc)
-            yRawSmooth = butterLowpassFiltFilt(yRaw)
-            transHeight = ySmooth[transIndex]
-            transHeightRaw = yRawSmooth[transIndexRaw]
+            tcMetadata = findTransAndCoupledMode(x, xRaw, yRaw, ySmooth, metadata['Final parameters'],
+                                                 transGuess = transPeakPos, plot = plot, fukkit = fukkit)
+            metadata.update(tcMetadata)
+            transHeight = metadata['Transverse mode intensity (norm)']
 
             ySmooth /= transHeight
             yTrunc /= transHeight
             yRawNorm /= transHeight
 
-            intensityRatio = metadata['coupledModeIntensity'] / transHeight
-            rawIntensityRatio = metadata['rawCoupledModeIntensity'] / transHeightRaw
+            metadata['Smoothed data (truncated, normalised)'] = ySmooth
+            metadata['Raw data (truncated, normalised)'] = yTrunc
+            metadata['Raw data (normalised)'] = yRawNorm
 
-            metadata['smoothedSpectrum'] = ySmooth
-            metadata['truncatedSpectrum'] = yTrunc
-            metadata['normalisedSpectrum'] = yRawNorm
-            metadata['transverseModeIntensity'] = transHeight
-            metadata['rawTransverseModeIntensity'] = transHeightRaw
-            metadata['intensityRatio'] = intensityRatio
-            metadata['rawIntensityRatio'] = rawIntensityRatio
+        else:
+            metadata['NPoM?'] = False
+
+            if monitorProgress == True:
+                print 'Not a NPoM'
+
+            metadata['NPoM?'] = isNpom
+            return DF_Spectrum(y, 'N/A', isNpom, 'N/A', 'N/A', metadata)
 
     else:
 
@@ -1204,8 +1285,16 @@ def reduceNoise(y, factor = 10):
     y = ySmooth + yNoise
     return y
 
-def plotHistogram(outputFile, histName = 'Histogram', startWl = 450, endWl = 900, binNumber = 80, plot = True,
-                  minBinFactor = 5, closeFigures = False, which = 'all'):
+def plotHistogram(outputFile, histName = 'Histogram', startWl = 450, endWl = 987, binNumber = 80, plot = True,
+                  minBinFactor = 5, closeFigures = False, irThreshold = 8, which = 'all', plotTitle = ''):
+
+    rootDir = os.getcwd()
+
+    try:
+        os.stat('%s/Histograms' % rootDir)
+
+    except:
+        os.mkdir('%s/Histograms' % rootDir)
 
     print '\nCombining spectra and plotting histogram...'
     print '\tFilter: %s' % which
@@ -1235,11 +1324,15 @@ def plotHistogram(outputFile, histName = 'Histogram', startWl = 450, endWl = 900
                    and outputFile['Fitted spectra/%s' % spectrum].attrs['Double Peak?'] == False
                    and  outputFile['Fitted spectra/%s' % spectrum].attrs['NPoM?'] == True]
 
+    elif which == 'aligned only':
+        spectra = [spectrum for spectrum in outputFile['Fitted spectra']
+                   if outputFile['Fitted spectra/%s' % spectrum].attrs['Aligned properly?'] == True]
+
     else:
         print 'Choice of spectra not recognised. Plotting all spectra by default'
         spectra = outputFile['Fitted spectra']
 
-    print '\t%s spectra' % len(spectra)
+    print '\t\t%s spectra' % len(spectra)
 
     for n, spectrum in enumerate(outputFile['Fitted spectra']):
 
@@ -1254,10 +1347,7 @@ def plotHistogram(outputFile, histName = 'Histogram', startWl = 450, endWl = 900
     binSize = (endWl - startWl) / binNumber
     bins = np.linspace(startWl, endWl, num = binNumber)
     frequencies = np.zeros(len(bins))
-
-    startIndex = np.where(np.round(x) == np.round(startWl))[0][0]
-    endIndex = np.where(np.round(x) == np.round(endWl))[0][0]
-
+    binPops = np.zeros(len(bins))
     yDataBinned = [np.zeros(len(x)) for f in frequencies]
     yDataRawBinned = [np.zeros(len(x)) for f in frequencies]
     binnedSpectraList = {binStart : [] for binStart in bins}
@@ -1271,24 +1361,38 @@ def plotHistogram(outputFile, histName = 'Histogram', startWl = 450, endWl = 900
             #print [attr for attr in spectra[spectrum].attrs]
             cmPeakPos = outputFile['Fitted spectra'][spectrum].attrs['Coupled mode wavelength']
             #print cmPeakPos
+            intensityRatio = outputFile['Fitted spectra'][spectrum].attrs['Intensity ratio (from norm)']
             yData = outputFile['Fitted spectra'][spectrum]['Raw/Raw data (normalised)']
             yDataRaw = outputFile['Fitted spectra'][spectrum]['Raw/Raw data']
 
-            if cmPeakPos != 'N/A' and binStart <= cmPeakPos < binStart + binSize and 600 < cmPeakPos < 850:
+            if cmPeakPos != 'N/A' and binStart <= cmPeakPos < binStart + binSize and 600 < cmPeakPos < 900:
                 frequencies[nn] += 1
-                yDataBinned[nn] += yData
-                yDataRawBinned[nn] += yDataRaw
+
+                if intensityRatio < irThreshold and truncateSpectrum(x, yData[()]).min() > -irThreshold:
+                    yDataBinned[nn] += yData
+                    yDataRawBinned[nn] += yDataRaw
+                    binPops[nn] += 1
+
                 binnedSpectraList[binStart].append(spectrum)
 
     for n, yDataSum in enumerate(yDataBinned):
-        yDataBinned[n] /= frequencies[n]
-        yDataRawBinned[n] /= frequencies[n]
+        yDataBinned[n] /= binPops[n]
+        yDataRawBinned[n] /= binPops[n]
 
     if minBinFactor == 0:
         minBin = 0
 
     else:
         minBin = max(frequencies)/minBinFactor
+
+    try:
+        resonance, stderr, fwhm, sigma = histyFit(frequencies, bins)
+
+    except Exception as e:
+        print e
+        resonance = 'N/A'
+        stderr = 'N/A'
+        fwhm = 'N/A'
 
     fig = plt.figure(figsize = (8, 6))
 
@@ -1303,11 +1407,11 @@ def plotHistogram(outputFile, histName = 'Histogram', startWl = 450, endWl = 900
         ax2.set_zorder(0)
         ax1.patch.set_visible(False)
 
-        yMax = 0
-
         yDataPlot = []
         freqsPlot = []
         binsPlot = []
+        yMax = 0
+        yMin = 7
 
         for n, yDatum in enumerate(yDataBinned):
 
@@ -1320,15 +1424,19 @@ def plotHistogram(outputFile, histName = 'Histogram', startWl = 450, endWl = 900
 
         for n, yDataSum in enumerate(yDataPlot):
 
-            currentYMax = yDataSum[startIndex:endIndex].max()
-
             ySmooth = reduceNoise(yDataSum, factor = 7)
-            ax1.plot(x, ySmooth, lw = 0.7, color = colors[n])
+            currentYMax = truncateSpectrum(x, ySmooth)[1].max()
+            currentYMin = truncateSpectrum(x, ySmooth)[1].min()
 
             if currentYMax > yMax:
                 yMax = currentYMax
 
-        ax1.set_ylim(-0.1, yMax*1.2)
+            if currentYMin < yMin:
+                yMin = currentYMin
+
+            ax1.plot(x, ySmooth, lw = 0.7, color = colors[n])
+
+        ax1.set_ylim(0, yMax * 1.45)
         ax1.set_ylabel('Normalised Intensity', fontsize = 18)
         ax1.tick_params(labelsize = 15)
         ax1.set_xlabel('Wavelength (nm)', fontsize = 18)
@@ -1341,22 +1449,19 @@ def plotHistogram(outputFile, histName = 'Histogram', startWl = 450, endWl = 900
         ax2.yaxis.set_label_coords(1.11, 0.5)
         ax2.set_yticks([int(tick) for tick in ax2.get_yticks() if tick > 0][:-1])
         ax2.tick_params(labelsize = 15)
+        plt.title('%s: %s\nRes = %s $\pm$ %s\nFWHM = %s' % (plotTitle, which, str(resonance), str(stderr), str(fwhm)))
 
         fig.tight_layout()
 
         if not histName.endswith('.png'):
             histName += '.png'
 
-        fig.savefig(histName, bbox_inches = 'tight')
+        fig.savefig('%s/Histograms/%s' % (rootDir, histName), bbox_inches = 'tight')
 
         if closeFigures == True:
-            plt.close(fig)
+            plt.close('all')
 
-        img = Image.open(histName)
-        img = np.array(img)
-        img = img.transpose((1, 0, 2))
-
-    return frequencies, bins, yDataBinned, yDataRawBinned, binnedSpectraList, x, img
+    return frequencies, bins, yDataBinned, yDataRawBinned, binnedSpectraList, x, resonance, stderr, fwhm, sigma
 
 def histyFit(frequencies, bins):
 
@@ -1370,8 +1475,9 @@ def histyFit(frequencies, bins):
     resonance = out.params['center'].value
     stderr = out.params['center'].stderr
     fwhm = out.params['fwhm'].value
+    sigma = out.params['sigma'].value
 
-    return resonance, stderr, fwhm
+    return resonance, stderr, fwhm, sigma
 
 def isNumber(s):
     try:
@@ -1497,7 +1603,15 @@ def containingRing(fit, xData, yData, fractionInside, numberOfPoints, accuracy =
     return halfMaximumLine2D(fit, height, numberOfPoints)
 
 def plotIntensityRatios(outputFile, plot = True, xBins = 150, yBins = 120, ringFraction = 0.5,
-                        closeFigures = False, filterWeird = False):
+                        closeFigures = False, normalised = True, filterWeird = False, alignedOnly = False, plotTitle = ''):
+
+    rootDir = os.getcwd()
+
+    try:
+        os.stat('%s/Intensity ratios' % rootDir)
+
+    except:
+        os.mkdir('%s/Intensity ratios' % rootDir)
 
     if plot == True:
         print '\nPlotting intensity ratios...'
@@ -1508,7 +1622,9 @@ def plotIntensityRatios(outputFile, plot = True, xBins = 150, yBins = 120, ringF
     if filterWeird == True:
         print '\t(Filtering out weird peaks)'
 
-    img = 'N/A'
+    if alignedOnly == True:
+        print '\t(Selecting correctly centred NPoMs only)'
+
     allSpectra = outputFile['Fitted spectra']
 
     cmPeakPositions = []
@@ -1522,11 +1638,18 @@ def plotIntensityRatios(outputFile, plot = True, xBins = 150, yBins = 120, ringF
         spectrum = allSpectra[spectrum]
 
         cmPeakPos = spectrum.attrs['Coupled mode wavelength']
-        intensityRatio = spectrum.attrs['Intensity ratio (raw)']
+
+        if normalised == True:
+            intensityRatio = spectrum.attrs['Intensity ratio (from norm)']
+            imgSuffix = 'normalised'
+
+        else:
+            intensityRatio = spectrum.attrs['Intensity ratio (raw)']
+            imgSuffix = 'raw'
 
         if filterWeird == True:
 
-            irImgName = 'Intensity Ratios (filtered).png'
+            irImgName = 'Intensity Ratios (filtered, %s).png' % imgSuffix
 
             if (spectrum.attrs['NPoM?'] == True and spectrum.attrs['Double Peak?'] == False and
                 cmPeakPos != 'N/A' and cmPeakPos < 849 and intensityRatio != 'N/A' and
@@ -1536,13 +1659,42 @@ def plotIntensityRatios(outputFile, plot = True, xBins = 150, yBins = 120, ringF
                 intensityRatios.append(intensityRatio)
 
         elif filterWeird == False:
-            irImgName = 'Intensity Ratios.png'
 
-            if (spectrum.attrs['NPoM?'] == True and spectrum.attrs['Double Peak?'] == False and
-                cmPeakPos != 'N/A' and cmPeakPos < 849 and intensityRatio != 'N/A') == True:
+            if alignedOnly == True:
+                irImgName = 'Intensity Ratios (centred NPoMs only, %s).png' % imgSuffix
 
-                cmPeakPositions.append(cmPeakPos)
-                intensityRatios.append(intensityRatio)
+                if (spectrum.attrs['NPoM?'] == True and spectrum.attrs['Double Peak?'] == False and
+                    cmPeakPos != 'N/A' and cmPeakPos < 849 and intensityRatio != 'N/A'
+                    and spectrum.attrs['Aligned properly?']) == True:
+
+                    cmPeakPositions.append(cmPeakPos)
+                    intensityRatios.append(intensityRatio)
+
+            else:
+
+                irImgName = 'Intensity Ratios (%s).png' % imgSuffix
+
+                if (spectrum.attrs['NPoM?'] == True and spectrum.attrs['Double Peak?'] == False and
+                    cmPeakPos != 'N/A' and cmPeakPos < 849 and intensityRatio != 'N/A') == True:
+
+                    cmPeakPositions.append(cmPeakPos)
+                    intensityRatios.append(intensityRatio)
+
+    if normalised == True:
+        imgSuffix = 'normalised'
+
+    elif normalised == False:
+        imgSuffix = 'raw'
+
+    if filterWeird == True:
+
+        irImgName = 'Intensity Ratios (filtered, %s).png' % imgSuffix
+
+    elif filterWeird == False:
+        irImgName = 'Intensity Ratios (%s).png' % imgSuffix
+
+        if alignedOnly == True:
+            irImgName = 'Intensity Ratios (centred NPoMs only, %s).png' % imgSuffix
 
     if plot == True:
 
@@ -1560,26 +1712,50 @@ def plotIntensityRatios(outputFile, plot = True, xBins = 150, yBins = 120, ringF
 
         try:
 
-            fig, ax = plt.subplots(figsize = (9, 9))
+            fig, ax1 = plt.subplots(figsize = (9, 9))
+            cmap = plt.get_cmap('Greys')
 
-            ax = sns.kdeplot(xFilt, yFilt, shade=True, ax=ax, gridsize=200, cmap='Reds', cbar = True,
-                             shade_lowest = False, linewidth = 20, alpha = 0.5, clim=(0.5, 1))
-            ax.set_ylim(0, 10)
-            ax.set_ylabel('Intensity Ratio', fontsize = 18)
-            ax.tick_params(which = 'both', labelsize = 15)
-            ax.set_xlim(550, 900)
-            ax.set_xlabel('Coupled Mode Resonance', fontsize = 18)
+            ax1.scatter(xFilt, yFilt, marker = 'o', color = 'r', s = 2, alpha = 0.5)
+            ax = sns.kdeplot(x, y, ax=ax1, n_levels = 100, gridsize=200)
+
+            ax1Colls = ax1.collections
+
+            for n, line in enumerate(ax1Colls):
+                total = len(ax1Colls)
+
+                if n == int(np.round(total/2)):
+
+                    line.set_linestyle('--')
+                    line.set_edgecolor(cmap(256))
+                    line.set_facecolor(cmap(50))
+                    line.set_alpha(0.5)
+                    print 'Line %s kept' % n
+
+                elif n == int(np.round(total * 0.95)):
+
+                    line.set_edgecolor(cmap(256))
+                    line.set_facecolor(cmap(256))
+                    line.set_alpha(0.9)
+                    print 'Line %s kept' % n
+
+                else:
+                    line.set_alpha(0)
+
+            plt.plot([0], [0], color = 'k', label = '1 Layer')
+
+            ax1.set_ylim(1, 7)
+            ax1.set_ylabel('Intensity Ratio', fontsize = 18)
+            ax1.tick_params(which = 'both', labelsize = 15)
+            ax1.set_xlim(600, 900)
+            ax1.set_xlabel('Coupled Mode Resonance', fontsize = 18)
             #ax.set_xticksize(fontsize = 15)
+            plt.title('%s%s' % (plotTitle, irImgName))
 
             fig.tight_layout()
-            fig.savefig(irImgName, bbox_inches = 'tight')
+            fig.savefig('%s/Intensity ratios/%s' % (rootDir, irImgName), bbox_inches = 'tight')
 
             if closeFigures == True:
-                plt.close(fig)
-
-            img = Image.open(irImgName)
-            img = np.array(img)
-            img = img.transpose((1, 0, 2))
+                plt.close('all')
 
             print '\tIntensity ratios plotted'
 
@@ -1600,29 +1776,27 @@ def plotIntensityRatios(outputFile, plot = True, xBins = 150, yBins = 120, ringF
             ax.set_xlim(550, 900)
             ax.set_xlabel('Coupled Mode Resonance', fontsize = 18)
             #ax.set_xticksize(fontsize = 15)
+            plt.title('%s%s' % (plotTitle, irImgName))
 
             fig.tight_layout()
-            fig.savefig(irImgName, bbox_inches = 'tight')
+            fig.savefig('%s/Intensity ratios/%s' % (rootDir, irImgName), bbox_inches = 'tight')
 
             if closeFigures == True:
-                plt.close(fig)
-
-            img = Image.open(irImgName)
-            img = np.array(img)
-            img = img.transpose((1, 0, 2))
+                plt.close('all')
 
             print '\tIntensity ratios plotted'
 
     else:
-        img = 'N/A'
         print 'Intensity ratios gathered'
 
-    return intensityRatios, cmPeakPositions, img
+    return intensityRatios, cmPeakPositions
 
 def visualiseIntensityRatios(outputFile):
 
     '''OutputFile = an open h5py.File or nplab.datafile.DataFile object with read/write permission'''
     '''Plots all spectra in separate tree with lines indicating calculated peak heights and positions'''
+
+    irVisStart = time.time()
 
     print '\nVisualising intensity ratios for individual spectra...'
 
@@ -1677,7 +1851,11 @@ def visualiseIntensityRatios(outputFile):
 
             outputFile['All spectra/Spectra with peak heights/Spectrum %s' % specNumber] = gIrVis
 
-    print '\tIntensity ratios visualised'
+    irVisEnd = time.time()
+
+    timeElapsed = irVisEnd - irVisStart
+
+    print '\tIntensity ratios visualised in %s seconds' % timeElapsed
 
 def updateTransAndCoupledMode(outputFile, transGuess = 533, transRange = [500, 550], reNormalise = True):
     '''Doesn't work properly yet - needs fixing'''
@@ -1692,10 +1870,10 @@ def updateTransAndCoupledMode(outputFile, transGuess = 533, transRange = [500, 5
 
     for spectrum in allSpectra:
         spectrum = gSpectra[spectrum]
-        x = spectrum['Fit/Smoothed data'].attrs['wavelengths'][()]
+        x = spectrum['Fit/Smoothed data (truncated, normalised)'].attrs['wavelengths'][()]
         xRaw = spectrum['Raw/Raw data'].attrs['wavelengths'][()]
         yRaw = spectrum['Raw/Raw data'][()]
-        ySmooth = np.array(spectrum['Fit/Smoothed data'][()])
+        ySmooth = np.array(spectrum['Fit/Smoothed data (truncated, normalised)'][()])
         fitComps = spectrum['Fit/Final components/']
         fitParams = {'g%s' % n : {key : fitComps[n].attrs[key] for key in fitComps[n].attrs.keys() if
                                   key != 'wavelengths'} for n in fitComps}
@@ -1703,23 +1881,23 @@ def updateTransAndCoupledMode(outputFile, transGuess = 533, transRange = [500, 5
         tcMetadata = findTransAndCoupledMode(x, xRaw, yRaw, ySmooth, fitParams, transGuess = transGuess,
                                              transRange = transRange, plot = False)
 
-        spectrum.attrs['Transverse mode intensity (norm)'] = tcMetadata['transverseModeIntensity']
-        spectrum.attrs['Transverse mode intensity (raw)'] = tcMetadata['rawTransverseModeIntensity']
-        spectrum.attrs['Transverse mode wavelength'] = tcMetadata['transverseModePosition']
-        spectrum.attrs['Coupled mode intensity (norm)'] = tcMetadata['coupledModeIntensity']
-        spectrum.attrs['Coupled mode intensity (raw)'] = tcMetadata['rawCoupledModeIntensity']
-        spectrum.attrs['Coupled mode wavelength'] = tcMetadata['coupledModePosition']
-        spectrum.attrs['Intensity ratio'] = tcMetadata['intensityRatio']
-        spectrum.attrs['Intensity ratio (raw)'] = tcMetadata['rawIntensityRatio']
+        spectrum.attrs['Transverse mode intensity (norm)'] = tcMetadata['Transverse mode intensity (norm)']
+        spectrum.attrs['Transverse mode intensity (raw)'] = tcMetadata['Transverse mode intensity (raw)']
+        spectrum.attrs['Transverse mode wavelength'] = tcMetadata['Transverse mode wavelength']
+        spectrum.attrs['Coupled mode intensity (norm)'] = tcMetadata['Coupled mode intensity (norm)']
+        spectrum.attrs['Coupled mode intensity (raw)'] = tcMetadata['Coupled mode intensity (raw)']
+        spectrum.attrs['Coupled mode wavelength'] = tcMetadata['Coupled mode wavelength']
+        spectrum.attrs['Intensity ratio'] = tcMetadata['Intensity ratio (from norm)']
+        spectrum.attrs['Intensity ratio (raw)'] = tcMetadata['Intensity ratio (raw)']
 
         if reNormalise == True:
 
-            transHeight = tcMetadata['transverseModeIntensity']
+            transHeight = tcMetadata['Transverse mode intensity (norm)']
 
             datasetsToUpdate = ['Fit/Best fit',
                                 'Fit/Final components',
                                 'Fit/Raw data (truncated, normalised)',
-                                'Fit/Smoothed data',
+                                'Fit/Smoothed data (truncated, normalised)',
                                 'Raw/Raw data (normalised)']
 
             for dataset in datasetsToUpdate:
@@ -1767,7 +1945,7 @@ def plotInitStack(x, yData, imgName = 'Initial Stack', closeFigures = False):
 
     fig = plt.figure(figsize = (9, 7))
 
-    plt.pcolormesh(xStack, yStack, zStack, cmap = 'inferno', vmin = 0, vmax = 5)
+    plt.pcolormesh(xStack, yStack, zStack, cmap = 'inferno', vmin = 0, vmax = 7)
     plt.xlim(450, 900)
     plt.xlabel('Wavelength (nm)', fontsize = 14)
     plt.ylabel('Spectrum #', fontsize = 14)
@@ -1789,22 +1967,22 @@ def plotInitStack(x, yData, imgName = 'Initial Stack', closeFigures = False):
     fig.savefig(imgName, bbox_inches = 'tight')
 
     if closeFigures == True:
-        plt.close(fig)
-
-    img = np.array(Image.open(imgName)).transpose((1, 0, 2))
-
-    #except Exception as e:
-    #    print 'Plotting of %s failed because %s' % (imgName, str(e))
-    #    img = 'N/A'
+        plt.close('all')
 
     stackEndTime = time.time()
     timeElapsed = stackEndTime - stackStartTime
 
     print '\tInitial stack plotted in %s seconds' % timeElapsed
 
-    return img
+def plotStackedMap(spectraSorted, imgName = 'Stack', plotTitle = 'Stack', closeFigures = False):
 
-def plotStackedMap(spectraSorted, imgName = 'Stack', closeFigures = False):
+    rootDir = os.getcwd()
+
+    try:
+        os.stat('%s/Stacks' % rootDir)
+
+    except:
+        os.mkdir('%s/Stacks' % rootDir)
 
     try:
         yDataRaw = [spectrum['Raw/Raw data (normalised)'][()] for spectrum in spectraSorted]
@@ -1838,94 +2016,89 @@ def plotStackedMap(spectraSorted, imgName = 'Stack', closeFigures = False):
         plt.xticks(fontsize = 14)
 
         if imgName.endswith('.png'):
-            plt.title(imgName[:-4])
+            plt.title(plotTitle)
 
         else:
-            plt.title(imgName)
+            plt.title(plotTitle)
             imgName = '%s.png' % imgName
 
-        fig.savefig(imgName, bbox_inches = 'tight')
+        fig.savefig('%s/Stacks/%s' % (rootDir, imgName), bbox_inches = 'tight')
 
         if closeFigures == True:
-            plt.close(fig)
-
-        img = np.array(Image.open(imgName)).transpose((1, 0, 2))
+            plt.close('all')
 
     except Exception as e:
         print 'Plotting of %s failed because %s' % (imgName, str(e))
-        img = 'N/A'
 
-    return img
-
-def plotAllStacks(outputFile, closeFigures = False, filterWeird = True):
+def plotAllStacks(outputFile, plotTitle = '', closeFigures = False, filterWeird = True):
 
     print '\nPlotting stacked spectral maps...'
 
+    stackStartTime = time.time()
+
     gSpectra = outputFile['Fitted spectra']
-    gStackOutput = outputFile.create_group('Statistics/Stacks')
+    outputFile.create_group('Statistics/Stacks')
+
+    title = plotTitle
 
     if filterWeird == True:
         '''Spectra without weird peaks'''
 
         cmWlName = 'Coupled mode wavelength'
+        imgName = 'Stack (No weird peaks)'
+        plotTitle = '%s%s' % (title, imgName)
+
         spectra = [gSpectra[spectrum] for spectrum in gSpectra if spectrum[:8] == 'Spectrum' and
                    gSpectra[spectrum].attrs['Weird Peak?'] == False and
                    gSpectra[spectrum].attrs[cmWlName] != 'N/A']
         spectraSorted = sorted(spectra, key = lambda spectrum: spectrum.attrs[cmWlName])
-        gStackOutput.create_dataset('By C mode, weird peaks removed',
-                                    data = plotStackedMap(spectraSorted, imgName = 'Stack (No weird peaks)',
-                                                          closeFigures = closeFigures))
+        plotStackedMap(spectraSorted, imgName = imgName, plotTitle = plotTitle, closeFigures = closeFigures)
 
     '''By order of measurement'''
 
     spectra = [spectrum for spectrum in gSpectra if spectrum[:8] == 'Spectrum']
     spectraSorted = sorted(spectra, key = lambda spectrum: int(spectrum[9:]))
     spectraSorted = [gSpectra[spectrum] for spectrum in spectraSorted]
+    imgName = 'Stack (all)'
+    plotTitle = '%s%s' % (title, imgName)
+    plotStackedMap(spectraSorted, imgName = imgName, plotTitle = plotTitle, closeFigures = closeFigures)
 
-    gStackOutput.create_dataset('All',
-                                data = plotStackedMap(spectraSorted, imgName = 'Stack (all)',
-                                                      closeFigures = closeFigures))
     '''By CM wavelength'''
 
     cmWlName = 'Coupled mode wavelength'
+    imgName = 'Stack (CM wavelength)'
+    plotTitle = '%s%s' % (title, imgName)
+
     spectra = [gSpectra[spectrum] for spectrum in gSpectra if spectrum[:8] == 'Spectrum' and
                gSpectra[spectrum].attrs[cmWlName] != 'N/A']
     spectraSorted = sorted(spectra, key = lambda spectrum: spectrum.attrs[cmWlName])
 
-    gStackOutput.create_dataset('By C mode',
-                                data = plotStackedMap(spectraSorted, imgName = 'Stack (CM wavelength)',
-                                                      closeFigures = closeFigures))
+    plotStackedMap(spectraSorted, imgName = imgName, plotTitle = plotTitle, closeFigures = closeFigures)
 
     '''By TM wavelength'''
 
     tmWlName = 'Transverse mode wavelength'
+    imgName = 'Stack (TM wavelength)'
+    plotTitle = '%s%s' % (title, imgName)
 
-    try:
-        spectra = [gSpectra[spectrum] for spectrum in gSpectra if spectrum[:8] == 'Spectrum' and
-               gSpectra[spectrum].attrs[tmWlName] != 'N/A']
-
-    except:
-        tmWlName = 'Transverse mode wavelength)'
-        spectra = [gSpectra[spectrum] for spectrum in gSpectra if spectrum[:8] == 'Spectrum' and
+    spectra = [gSpectra[spectrum] for spectrum in gSpectra if spectrum[:8] == 'Spectrum' and
                gSpectra[spectrum].attrs[tmWlName] != 'N/A']
 
     spectraSorted = sorted(spectra, key = lambda spectrum: spectrum.attrs[tmWlName])
 
-    gStackOutput.create_dataset('By T mode',
-                                data = plotStackedMap(spectraSorted, imgName = 'Stack (TM wavelength)',
-                                                      closeFigures = closeFigures))
+    plotStackedMap(spectraSorted, imgName = imgName, plotTitle = plotTitle, closeFigures = closeFigures)
 
     '''By intensity ratio'''
 
     irName = 'Intensity ratio (raw)'
+    imgName = 'Stack (intensity ratio)'
+    plotTitle = '%s%s' % (title, imgName)
 
     spectra = [gSpectra[spectrum] for spectrum in gSpectra if spectrum[:8] == 'Spectrum' and
                gSpectra[spectrum].attrs[irName] != 'N/A']
     spectraSorted = sorted(spectra, key = lambda spectrum: spectrum.attrs[irName])
 
-    gStackOutput.create_dataset('By intensity ratio',
-                                data = plotStackedMap(spectraSorted, imgName = 'Stack (intensity ratio)',
-                                                      closeFigures = closeFigures))
+    plotStackedMap(spectraSorted, imgName = imgName, plotTitle = plotTitle, closeFigures = closeFigures)
 
     '''Doubles in order of measurement'''
 
@@ -1939,64 +2112,61 @@ def plotAllStacks(outputFile, closeFigures = False, filterWeird = True):
 
         '''By order of measurement'''
 
-        gStackOutput.create_dataset('All doubles',
-                                    data = plotStackedMap(spectraSorted, imgName = 'Stack (all doubles)',
-                                                          closeFigures = closeFigures))
+        imgName = 'Stack (all doubles)'
+        plotTitle = '%s%s' % (title, imgName)
+        plotStackedMap(spectraSorted, imgName = imgName, plotTitle = plotTitle, closeFigures = closeFigures)
 
         '''Doubles by CM wavelength'''
 
         cmWlName = 'Coupled mode wavelength'
+        imgName = 'Stack (Doubles by CM wavelength)'
+        plotTitle = '%s%s' % (title, imgName)
         spectra = [gSpectra[spectrum] for spectrum in gSpectra if spectrum[:8] == 'Spectrum' and
                    gSpectra[spectrum].attrs[cmWlName] != 'N/A' and
                    gSpectra[spectrum].attrs['Double Peak?'] == True]
         spectraSorted = sorted(spectra, key = lambda spectrum: spectrum.attrs[cmWlName])
 
-        gStackOutput.create_dataset('Doubles by C mode',
-                                    data = plotStackedMap(spectraSorted,
-                                                          imgName = 'Stack (Doubles by CM wavelength)',
-                                                          closeFigures = closeFigures))
+        plotStackedMap(spectraSorted, imgName = imgName, plotTitle = plotTitle, closeFigures = closeFigures)
 
         '''Doubles by TM wavelength'''
 
         tmWlName = 'Transverse mode wavelength'
+        imgName = 'Stack (Doubles by TM wavelength)'
+        plotTitle = '%s%s' % (title, imgName)
 
-        try:
-            spectra = [gSpectra[spectrum] for spectrum in gSpectra if spectrum[:8] == 'Spectrum' and
+        spectra = [gSpectra[spectrum] for spectrum in gSpectra if spectrum[:8] == 'Spectrum' and
                    gSpectra[spectrum].attrs[tmWlName] != 'N/A' and
                    gSpectra[spectrum].attrs['Double Peak?'] == True]
 
-        except:
-            tmWlName = 'Transverse mode wavelength)'
-
         spectraSorted = sorted(spectra, key = lambda spectrum: spectrum.attrs[tmWlName])
 
-        gStackOutput.create_dataset('Doubles by T mode',
-                                    data = plotStackedMap(spectraSorted,
-                                                          imgName = 'Stack (Doubles by TM wavelength)',
-                                                          closeFigures = closeFigures))
+        plotStackedMap(spectraSorted, imgName = imgName, plotTitle = plotTitle, closeFigures = closeFigures)
 
         '''Doubles by intensity ratio'''
 
         irName = 'Intensity ratio (raw)'
+        imgName = 'Stack (Doubles by intensity ratio)'
+        plotTitle = '%s%s' % (title, imgName)
 
         spectra = [gSpectra[spectrum] for spectrum in gSpectra if spectrum[:8] == 'Spectrum' and
                    gSpectra[spectrum].attrs[irName] != 'N/A' and
                    gSpectra[spectrum].attrs['Double Peak?'] == True]
         spectraSorted = sorted(spectra, key = lambda spectrum: spectrum.attrs[irName])
 
-        gStackOutput.create_dataset('Doubles by intensity ratio',
-                                    data = plotStackedMap(spectraSorted,
-                                                          imgName = 'Stack (Doubles by intensity ratio)',
-                                                          closeFigures = closeFigures))
+        plotStackedMap(spectraSorted, imgName = imgName, plotTitle = plotTitle, closeFigures = closeFigures)
 
     else:
         print '\tNo doubles to plot'
 
-    print '\tStacks plotted'
+    stackEndTime = time.time()
+
+    timeElapsed = stackEndTime - stackStartTime
+
+    print '\tStacks plotted in %s seconds' % timeElapsed
 
 def sortSpectra(outputFile, replace = False, method = 'basic', npomLower = 0.1, npomUpper = 2.5, NpomThreshold = 1.5,
-                doublesThreshold = 0.5, minDoublesDist = 30, cmPosThreshold = 650, monitorProgress = False, doublesPlot = False, returnAll = False,
-                weirdFactor = 1.3, weirdPlot = False):
+                doublesThreshold = 2, minDoublesDist = 30, cmPosThreshold = 650, monitorProgress = False, doublesPlot = False, returnAll = False,
+                weirdFactor = 1.3, weirdPlot = False, raiseExceptions = False):
 
     specSortStart = time.time()
     print '\nSorting spectra...'
@@ -2006,13 +2176,13 @@ def sortSpectra(outputFile, replace = False, method = 'basic', npomLower = 0.1, 
     if replace == False and method == 'basic':
 
         if 'NPoMs' in gAll:
-            print 'Spectra already sorted'
+            print '\tSpectra already sorted'
             return
 
     elif method == 'full' or replace == True:
 
         if method == 'full' and replace == False:
-            print 'Full sorting in place. Data will be overwritten'
+            print '\tFull sorting in place. Data will be overwritten'
 
         try:
 
@@ -2033,7 +2203,7 @@ def sortSpectra(outputFile, replace = False, method = 'basic', npomLower = 0.1, 
 
            if isNpom == True:
 
-               isDouble = testIfDouble(xRaw, yRaw, doublesThreshold = 2, midpoint = 680, plot = doublesPlot)
+               isNpom, isDouble = testIfDouble(xRaw, yRaw, doublesThreshold = doublesThreshold, plot = doublesPlot, raiseExceptions = raiseExceptions)
                isWeird = testIfWeirdPeak(xRaw, yRaw, factor = weirdFactor, plot = weirdPlot)
 
            else:
@@ -2051,6 +2221,7 @@ def sortSpectra(outputFile, replace = False, method = 'basic', npomLower = 0.1, 
     gWeirds = gNPoMs.create_group('Spectra with weird peaks')
     gNoWeird = gNPoMs.create_group('No weird peaks')
     gNormal = gNPoMs.create_group('\"Normal\" spectra')
+    gMisaligned = gAll.create_group('Misaligned NPs')
 
     for spectrumName in outputFile['Fitted spectra']:
         spectrum = outputFile['Fitted spectra'][spectrumName]
@@ -2085,63 +2256,77 @@ def sortSpectra(outputFile, replace = False, method = 'basic', npomLower = 0.1, 
             dNormal.attrs['wavelengths'] = dRaw.attrs['wavelengths']
             dNormal.attrs.update(spectrum.attrs)
 
+    for spectrumName in outputFile['All spectra/Raw']:
+
+        if outputFile['All spectra/Raw'][spectrumName].attrs['Aligned properly?'] == False:
+            dMisaligned = gMisaligned.create_dataset(spectrumName, data = dRaw)
+            dMisaligned.attrs['wavelengths'] = dRaw.attrs['wavelengths']
+            dMisaligned.attrs.update(spectrum.attrs)
+
     specSortEnd = time.time()
     timeElapsed = specSortEnd - specSortStart
     print '\tSpectra sorted in %s seconds' % timeElapsed
 
-def plotHistAndFit(outputFile, which = 'all', startWl = 450, endWl = 900, binNumber = 80, plot = True,
-                  minBinFactor = 5, closeFigures = False):
+def plotHistAndFit(outputFile, which = 'all', plotTitle = '', startWl = 450, endWl = 987, binNumber = 80, plot = True,
+                  minBinFactor = 5, closeFigures = False, irThreshold = 8):
 
-    frequencies, bins, yDataBinned, yDataRawBinned, binnedSpectraList, histyWl, histImg = plotHistogram(outputFile,
+    frequencies, bins, yDataBinned, yDataRawBinned, binnedSpectraList, histyWl, avgResonance, stderr, fwhm, sigma = plotHistogram(outputFile,
                                                               histName = 'Histogram (%s)' % which,
-                                                              minBinFactor = minBinFactor,
-                                                              closeFigures = closeFigures, which = which)
+                                                              minBinFactor = minBinFactor, plotTitle = plotTitle,
+                                                              closeFigures = closeFigures, which = which, irThreshold = irThreshold)
+
+    gHist = outputFile.create_group('Statistics/Histogram/%s' % which)
+    gHist.attrs['Average resonance'] = avgResonance
+    gHist.attrs['Error'] = stderr
+    gHist.attrs['FWHM'] = fwhm
+    gHist.attrs['Standard deviation'] = sigma
+
+    dBins = gHist.create_dataset('Bins', data = bins)
+    dFreq = gHist.create_dataset('Frequencies', data = frequencies)
+    dFreq.attrs['wavelengths'] = dBins
+    gSpectraBinned = gHist.create_group('Binned y data/')
+    binSize = bins[1] - bins[0]
+    binsSorted = sorted(bins, key = lambda binStart: float(binStart))
+
+    for binStart in binsSorted:
+        binnedSpectraList[binStart].sort(key = lambda spectrum: int(spectrum[9:]))
+
+    for n, binStart in enumerate(binsSorted):
+        if len(binnedSpectraList[binStart]) > 0:
+
+            binEnd = binStart + binSize
+
+            if n < 10:
+                binName = 'Bin 0%s' % n
+
+            else:
+                binName = 'Bin %s' % n
+
+            gBin = gSpectraBinned.create_group(binName)
+            gBin.attrs['Bin start (nm)'] = binStart
+            gBin.attrs['Bin end (nm)'] = binEnd
+            dSum = gBin.create_dataset('Sum', data = yDataRawBinned[n])
+            dSum.attrs['wavelengths'] = histyWl
+
+            for spectrum in binnedSpectraList[binStart]:
+                yDataBin = outputFile['Fitted spectra/%s/Raw/Raw data' % spectrum]
+                dSpec = gBin.create_dataset(spectrum, data = yDataBin)
+                dSpec.attrs['wavelengths'] = yDataBin.attrs['wavelengths']
+                dSpec.attrs.update(outputFile['Fitted spectra'][spectrum].attrs)
+
+def pointyPeakStats(outputFile, closeFigures = True, plotTitle = ''):
+    pointyPeakStart = time.time()
+
+    rootDir = os.getcwd()
 
     try:
-        avgResonance, stderr, fwhm = histyFit(frequencies, bins)
-        gHist = outputFile.create_group('Statistics/Histogram/%s' % which)
-        gHist.attrs['Average resonance'] = avgResonance
-        gHist.attrs['Error'] = stderr
-        gHist.attrs['FWHM'] = fwhm
+        os.stat('%s/Peak stats' % rootDir)
 
-        dBins = gHist.create_dataset('Bins', data = bins)
-        dFreq = gHist.create_dataset('Frequencies', data = frequencies)
-        dFreq.attrs['wavelengths'] = dBins
-        gHist.create_dataset('Histogram', data = histImg)
-        gSpectraBinned = gHist.create_group('Binned y data/')
-        binSize = bins[1] - bins[0]
-        binsSorted = sorted(bins, key = lambda binStart: float(binStart))
+    except:
+        os.mkdir('%s/Peak stats' % rootDir)
 
-        for binStart in binsSorted:
-            binnedSpectraList[binStart].sort(key = lambda spectrum: int(spectrum[9:]))
+    print '\nAnalysing funky peaks'
 
-        for n, binStart in enumerate(binsSorted):
-            if len(binnedSpectraList[binStart]) > 0:
-
-                binEnd = binStart + binSize
-
-                if n < 10:
-                    binName = 'Bin 0%s data, %s <= peakpos < %s' % (n, binStart, binEnd)
-
-                else:
-                    binName = 'Bin %s data, %s <= peakpos < %s' % (n, binStart, binEnd)
-
-                gBin = gSpectraBinned.create_group(binName)
-                dSum = gBin.create_dataset('Sum', data = yDataRawBinned[n])
-                dSum.attrs['wavelengths'] = histyWl
-
-                for spectrum in binnedSpectraList[binStart]:
-                    yDataBin = outputFile['Fitted spectra/%s/Raw/Raw data' % spectrum]
-                    dSpec = gBin.create_dataset(spectrum, data = yDataBin)
-                    dSpec.attrs['wavelengths'] = yDataBin.attrs['wavelengths']
-
-    except Exception as e:
-        print e
-        avgResonance = 'N/A'
-        stderr = 'N/A'
-        fwhm = 'N/A'
-
-def pointyPeakStats(outputFile, closeFigures = True):
     allNpoms = outputFile['All spectra/NPoMs/All NPoMs']
     gStats = outputFile['Statistics']
 
@@ -2152,20 +2337,25 @@ def pointyPeakStats(outputFile, closeFigures = True):
         except:
             pass
 
-    gPeakStats = gStats.create_group('Peak stats')
+    gStats.create_group('Peak stats')
 
-    weirdFwhms = []
+    weirdFwhmsRaw = []
+    weirdFwhmsNorm = []
     weirdPositions = []
-    weirdHeights = []
-    cmFwhms = []
+    weirdHeightsRaw = []
+    weirdHeightsNorm = []
+    cmFwhmsRaw = []
+    cmFwhmsNorm = []
     cmPositions = []
-    cmHeights = []
-    imgs = {}
+    cmHeightsRaw = []
+    cmHeightsNorm = []
 
     for spectraName in allNpoms:
-        attrNames = ['Weird peak FWHM', 'Weird peak wavelength', 'Weird peak intensity (raw)', 'Coupled mode FWHM',
-                     'Coupled mode wavelength', 'Coupled mode intensity (raw)']
-        attrLists = [weirdFwhms, weirdPositions, weirdHeights, cmFwhms, cmPositions, cmHeights]
+        attrNames = ['Weird peak FWHM (raw)', 'Weird peak FWHM (norm)', 'Weird peak wavelength', 'Weird peak intensity (raw)',
+                     'Weird peak intensity (norm)', 'Coupled mode FWHM (raw)', 'Coupled mode FWHM (norm)',
+                     'Coupled mode wavelength', 'Coupled mode intensity (raw)', 'Coupled mode intensity (norm)']
+        attrLists = [weirdFwhmsRaw, weirdFwhmsNorm, weirdPositions, weirdHeightsRaw, weirdHeightsNorm, cmFwhmsRaw, cmFwhmsNorm,
+                     cmPositions, cmHeightsRaw, cmHeightsNorm]
 
         for n, attrName in enumerate(attrNames):
             attr = allNpoms[spectraName].attrs[attrName]
@@ -2178,14 +2368,15 @@ def pointyPeakStats(outputFile, closeFigures = True):
     for n, attrName in enumerate(attrNames):
 
         for m, attrlist in enumerate(attrLists):
+            xName = attrNames[m]
+            yName = attrNames[n]
 
-            if m <= n:
+            if m <= n or xName[:-6] == yName[:-6]:
                 continue
 
             else:
-                xName = attrNames[m]
-                yName = attrNames[n]
                 imgName = '%s vs %s.png' % (xName, yName)
+                plotTitle = '%s%s' % (plotTitle, imgName)
                 y = attrLists[n]
                 x = attrLists[m]
 
@@ -2193,60 +2384,96 @@ def pointyPeakStats(outputFile, closeFigures = True):
                 plt.scatter(x, y, s = 14)
                 plt.xlabel(xName, fontsize = 14)
                 plt.ylabel(yName, fontsize = 14)
+                plt.title(plotTitle)
 
-                fig.tight_layout()
-                fig.savefig('%s' % imgName, bbox_inches = 'tight')
+                try:
+                    fig.tight_layout()
+
+                except:
+                    pass
+
+                fig.savefig('%s/Peak stats/%s' % (rootDir, imgName), bbox_inches = 'tight')
 
                 if closeFigures == True:
-                    plt.close(fig)
+                    plt.close('all')
 
-                img = Image.open(imgName)
-                img = np.array(img)
-                img = img.transpose((1, 0, 2))
+    pointyPeakEnd = time.time()
+    timeElapsed = pointyPeakEnd - pointyPeakStart
 
-                imgs[imgName] = img
+    print '\tFunky peaks analysed in %s seconds' % timeElapsed
 
-                dPlot = gPeakStats.create_dataset(imgName, data = img)
-                dPlot.attrs[xName] = x
-                dPlot.attrs[yName] = y
+def doubBoolsHists(outputFile, binNumber = 80, plot = True, closeFigures = False, plotTitle = ''):
+    doubBoolsStart = time.time()
 
-def doubBoolsHists(outputFile, binNumber = 80, plot = True, closeFigures = False):
+    print '\nAnalysing doubles stats'
+
+    rootDir = os.getcwd()
+
+    try:
+        os.stat('%s/Doubles stats' % rootDir)
+
+    except:
+        os.mkdir('%s/Doubles stats' % rootDir)
+
     allNpoms = outputFile['All spectra/NPoMs/All NPoMs']
     gStats = outputFile['Statistics']
 
     if 'Doubles stats' in gStats:
+        print 'Doubles stats exists'
+
         try:
             del gStats['Double stats']
+            gDoubleStats = gStats.create_group('Double stats')
 
         except:
             pass
 
-    gDoubleStats = gStats.create_group('Double stats')
+        try:
+            gDoubleStats = gStats.create_group('Double stats')
 
-    weirdFwhms = []
+        except:
+            pass
+    try:
+        del gStats['Double stats']
+        gDoubleStats = gStats.create_group('Double stats')
+
+    except:
+        pass
+
+    try:
+        gDoubleStats = gStats.create_group('Double stats')
+
+    except:
+        pass
+
+    weirdFwhmsRaw = []
+    weirdFwhmsNorm = []
     weirdPositions = []
-    weirdHeights = []
+    weirdHeightsRaw = []
+    weirdHeightsNorm = []
     doubBools = []
-    imgs = {}
 
     for spectraName in allNpoms:
-        attrNames = ['Weird peak FWHM', 'Weird peak wavelength', 'Weird peak intensity (raw)', 'Double Peak?']
-        attrNamesShort = ['FWHM', 'Peakpos', 'Peak height']
-        attrLists = [weirdFwhms, weirdPositions, weirdHeights, doubBools]
+        attrNames = ['Weird peak FWHM (raw)', 'Weird peak FWHM (norm)', 'Weird peak wavelength', 'Weird peak intensity (raw)',
+                     'Weird peak intensity (norm)', 'Double Peak?']
+        attrNamesShort = ['FWHM', 'FWHM', 'Peakpos', 'Peak height', 'Peak height']
+        attrLists = [weirdFwhmsRaw, weirdFwhmsNorm, weirdPositions, weirdHeightsRaw, weirdHeightsNorm, doubBools]
 
         for n, attrName in enumerate(attrNames):
             attr = allNpoms[spectraName].attrs[attrName]
 
-            if attr == 'N/A':
-                attr = np.nan
+            if attr == 'N/A' or attr < 0:
+                attr = 0
 
             attrLists[n].append(attr)
 
-    for i, attrList in enumerate(attrLists[:-1]):
+    start = 0
+
+    for i, attrList in enumerate(attrLists[start:-1]):
+        i += start
 
         startWl = min(attrList)
         endWl = max(attrList)
-
         binSize = (endWl - startWl) / binNumber
         bins = np.linspace(startWl, endWl, num = binNumber)
         totalFreqs = np.zeros(len(bins))
@@ -2256,6 +2483,7 @@ def doubBoolsHists(outputFile, binNumber = 80, plot = True, closeFigures = False
         for n, spectraName in enumerate(allNpoms):
 
             for nn, binStart in enumerate(bins):
+                #print binStart
 
                 #print [attr for attr in spectra[spectrum].attrs]
                 attrValue = allNpoms[spectraName].attrs[attrNames[i]]
@@ -2275,22 +2503,20 @@ def doubBoolsHists(outputFile, binNumber = 80, plot = True, closeFigures = False
         plt.ylim(0, max(frequencies)*1.05)
         plt.xlabel(attrNames[i], fontsize = 14)
         plt.ylabel('Frequency', fontsize = 14)
-        fig.tight_layout()
         imgName = 'P(Double) vs %s.png' % attrNames[i]
-        fig.savefig(imgName, bbox_inches = 'tight')
+        plotTitle = plotTitle + imgName
+        plt.title(plotTitle)
 
-        if closeFigures == True:
-            plt.close(fig)
+        try:
+            fig.tight_layout()
 
-        img = Image.open(imgName)
-        img = np.array(img)
-        img = img.transpose((1, 0, 2))
+        except:
+            pass
 
-        imgs[imgName] = img
+        fig.savefig('%s/Doubles stats/%s' % (rootDir, imgName), bbox_inches = 'tight')
 
         gPlot = gDoubleStats.create_group(attrNames[i])
         gPlot.attrs[attrNames[i]] = attrList
-        gPlot.create_dataset(imgName, data = img)
         gSpectraBinned = gPlot.create_group('Binned spectra')
         binSize = bins[1] - bins[0]
         binsSorted = sorted(bins, key = lambda binStart: float(binStart))
@@ -2317,11 +2543,225 @@ def doubBoolsHists(outputFile, binNumber = 80, plot = True, closeFigures = False
                     dSpec = gBin.create_dataset(spectrumName, data = yDataBin)
                     dSpec.attrs['wavelengths'] = yDataBin.attrs['wavelengths']
 
+    if closeFigures == True:
+        plt.close('all')
+
+    doubBoolsEnd = time.time()
+    timeElapsed = doubBoolsEnd - doubBoolsStart
+    print '\tDoubles stats done in %s seconds' % timeElapsed
+
+def peakAverages(outputFile, singleBin = False, peakPos = 0):
+    '''If singleBin = False, function averages peak data from all NPoM spectra'''
+    '''If True, specify wavelength and function will average peak data from all spectra contained in that histogram bin'''
+
+    peakAvgStart = time.time()
+
+    print '\nCollecting peak averages'
+
+    allNpoms = outputFile['All spectra/NPoMs/All NPoMs']
+
+    hists = ['all', 'no doubles', 'filtered', 'aligned only']
+
+    for histName in hists:
+
+        yDataBinned = outputFile['Statistics/Histogram/%s/Binned y data' % histName]
+
+        if singleBin == False:
+
+            npomList = [yDataBinned[binName] for binName in yDataBinned]
+            yDataBinned = outputFile['Statistics/Histogram/%s/Binned y data' % histName]
+
+            npomList.append(allNpoms)
+
+            for listName in npomList:
+                weirdFwhmsRaw = []
+                weirdFwhmsNorm = []
+                weirdPositions = []
+                weirdHeightsRaw = []
+                weirdHeightsNorm = []
+                cmFwhmsRaw = []
+                cmFwhmsNorm = []
+                cmPositions = []
+                cmHeightsRaw = []
+                cmHeightsNorm = []
+                tmHeightsRaw = []
+                irsNorm = []
+                irsRaw = []
+                attrAvgs = {}
+
+                for spectraName in listName:
+
+                    if spectraName != 'Sum':
+                        attrNames = ['Weird peak FWHM (raw)', 'Weird peak FWHM (norm)', 'Weird peak wavelength', 'Weird peak intensity (raw)',
+                                     'Weird peak intensity (norm)', 'Coupled mode FWHM (raw)', 'Coupled mode FWHM (norm)', 'Coupled mode wavelength',
+                                     'Coupled mode intensity (raw)', 'Coupled mode intensity (norm)', 'Transverse mode intensity (raw)',
+                                     'Intensity ratio (from norm)', 'Intensity ratio (raw)']
+                        attrLists = [weirdFwhmsRaw, weirdFwhmsNorm, weirdPositions, weirdHeightsRaw, weirdHeightsNorm, cmFwhmsRaw, cmFwhmsNorm,
+                                     cmPositions, cmHeightsRaw, cmHeightsNorm, tmHeightsRaw, irsNorm, irsRaw]
+
+                        for n, attrName in enumerate(attrNames):
+                            attr = allNpoms[spectraName].attrs[attrName]
+
+                            if attr != 'N/A':
+                                attrLists[n].append(attr)
+
+                for n, attrList in enumerate(attrLists):
+                    attrList = np.array(attrList)
+
+                    if len(attrList) != 0:
+                        attrAvg = np.average(attrList)
+
+                    else:
+
+                        if 'Weird peak intensity' in attrNames[n]:
+                            attrAvg = 0
+
+                        else:
+                            attrAvg = 'N/A'
+
+                    attrAvgs[attrNames[n] + '(average)'] = attrAvg
+
+                listName.attrs.update(attrAvgs)
+
+        elif singleBin == True:
+
+            for binName in yDataBinned:
+                binStart = yDataBinned[binName].attrs['Bin start (nm)']
+                binEnd = yDataBinned[binName].attrs['Bin end (nm)']
+
+                if binStart < peakPos < binEnd:
+                    npomList = yDataBinned[binName]
+                    break
+
+            weirdFwhmsRaw = []
+            weirdFwhmsNorm = []
+            weirdPositions = []
+            weirdHeightsRaw = []
+            weirdHeightsNorm = []
+            cmFwhmsRaw = []
+            cmFwhmsNorm = []
+            cmPositions = []
+            cmHeightsRaw = []
+            cmHeightsNorm = []
+            tmHeightsRaw = []
+            attrAvgs = {}
+
+            for spectraName in npomList:
+                attrNames = ['Weird peak FWHM (raw)', 'Weird peak FWHM (norm)', 'Weird peak wavelength', 'Weird peak intensity (raw)',
+                             'Weird peak intensity (norm)', 'Coupled mode FWHM (raw)', 'Coupled mode FWHM (norm)', 'Coupled mode wavelength',
+                             'Coupled mode intensity (raw)', 'Coupled mode intensity (norm)', 'Transverse mode intensity (raw)',
+                             'Intensity ratio (from norm)', 'Intensity ratio (raw)']
+                attrLists = [weirdFwhmsRaw, weirdFwhmsNorm, weirdPositions, weirdHeightsRaw, weirdHeightsNorm, cmFwhmsRaw, cmFwhmsNorm,
+                             cmPositions, cmHeightsRaw, cmHeightsNorm, tmHeightsRaw, irsNorm, irsRaw]
+
+                for n, attrName in enumerate(attrNames):
+                    print attrName
+                    attr = allNpoms[spectraName].attrs[attrName]
+
+                    if attr != 'N/A':
+                        attrLists[n].append(attr)
+
+            for n, attrList in enumerate(attrLists):
+                attrList = np.array(attrList)
+                attrAvgs[attrNames[n]] = np.average(attrList)
+
+            npomList.attrs.update(attrAvgs)
+
+    peakAvgEnd = time.time()
+    timeElapsed = peakAvgEnd - peakAvgStart
+
+    print '\tPeak averages collected in %s seconds' % timeElapsed
+
+def analyseRepresentative(outputFile):
+    print '\nCollecting representative spectrum info'
+
+    hists = ['all', 'filtered', 'no doubles', 'aligned only']
+
+    for histName in hists:
+        gHist = outputFile['Statistics/Histogram'][histName]
+        cmPeakPos = gHist.attrs['Average resonance']
+        gBins = gHist['Binned y data']
+        binNames = [binName for binName in gBins]
+        binPops = np.array([len(gBins[gBin]) for gBin in gBins])
+        biggestBin = binNames[binPops.argmax()]
+        print '\t%s' % histName
+        print '\t\tBin with largest population:', biggestBin
+        avgBin = False
+
+        for binName in gBins:
+            binStart = gBins[binName].attrs['Bin start (nm)']
+            binEnd = gBins[binName].attrs['Bin end (nm)']
+
+            if binStart < cmPeakPos < binEnd:
+                print '\t\tMain/average peak in %s\n' % binName
+                avgBin = binName
+
+                break
+
+        analStyles = ['Average', 'Max']
+        binStyles = [avgBin, biggestBin]
+
+        for n, binName in enumerate(binStyles):
+
+            if binName != False:
+
+                representativeSpectrum = gBins[binName]['Sum']
+                ySmooth = butterLowpassFiltFilt(representativeSpectrum)
+                x = representativeSpectrum.attrs['wavelengths']
+                repMetadata = analyseNpomPeaks(x, representativeSpectrum)
+                cmRegMinWl = cmPeakPos - 25
+                cmRegMaxWl = cmPeakPos + 25
+                cmRegion = truncateSpectrum(x, ySmooth, cmRegMinWl, cmRegMaxWl)
+                cmHeightRaw = cmRegion[1].max()
+                repSpecNorm = representativeSpectrum / cmHeightRaw
+                weirdHeight = gBins[binName].attrs['Weird peak intensity (raw)(average)']
+                weirdHeight /= cmHeightRaw
+
+                try:
+                   del outputFile['Statistics/Representative spectrum (%s, %s)' % (analStyles[n], histName)]
+
+                except:
+                    pass
+
+                dRep = outputFile['Statistics'].create_dataset('Representative spectrum (%s, %s)' % (analStyles[n], histName), data = repSpecNorm)
+                dRep.attrs['Bin number'] = binName
+                dRep.attrs['wavelengths'] = x
+                dRep.attrs['Raw'] = representativeSpectrum[()]
+                dRep.attrs['Weird peak height (norm to CM)'] = weirdHeight
+                dRepAttrs = {key : gBins[binName].attrs[key] for key in gBins[binName].attrs.keys()}
+                dRep.attrs.update(dRepAttrs)
+                dRep.attrs.update(repMetadata)
+
+    print '\tRepresentative spectrum info collected'
+
 def doStats(outputFile, minBinFactor = 5, sortSpec = True, replaceWhenSorting = False, sortMethod = 'basic', stacks = True,
-            hist = True, intensityRatios = True, pointyPeaks = True, raiseExceptions = False, closeFigures = False):
+            hist = True, intensityRatios = True, pointyPeaks = True, doubBools = True, peakAvgs = True, analRep = True, raiseExceptions = False,
+            closeFigures = False, irThreshold = 8):
 
     if 'Statistics' not in outputFile:
         outputFile.create_group('Statistics')
+
+    try:
+        gSpectra = outputFile['Fitted spectra']
+        datePrepared = gSpectra.attrs['Date']
+        metalCentre = gSpectra.attrs['Metal centre']
+        subs = bool(gSpectra.attrs['Substituted?'])
+
+        if subs == True:
+            subs = '(Subs)'
+
+        solvent = gSpectra.attrs['Deposition solvent']
+        depositionTime = gSpectra.attrs['Deposition time']
+
+        plotTitle = '%s: %s %s %s %s min\n' % (datePrepared, metalCentre, subs, solvent, depositionTime)
+
+    except Exception as e:
+
+        if 'date' in e:
+            e = 'no date was specified'
+
+        print 'Couldn\'t extract plot title because %s' % e
+        plotTitle = ''
 
     if sortSpec == True:
         sortSpectra(outputFile, replace = replaceWhenSorting, method = sortMethod)
@@ -2335,74 +2775,120 @@ def doStats(outputFile, minBinFactor = 5, sortSpec = True, replaceWhenSorting = 
             except:
                 pass
 
-        plotAllStacks(outputFile, closeFigures = closeFigures)
+        plotAllStacks(outputFile, closeFigures = closeFigures, plotTitle = plotTitle)
 
     if hist == True:
 
+        histStartTime = time.time()
+
         if 'Histogram' in outputFile['Statistics']:
+
             try:
                 del outputFile['Statistics/Histogram']
 
             except:
                 pass
 
-        for histyWhich in ['all', 'no doubles', 'filtered']:
-            plotHistAndFit(outputFile, which = histyWhich, minBinFactor = minBinFactor, closeFigures = closeFigures)
+        for histyWhich in ['all', 'no doubles', 'filtered', 'aligned only']:
+            plotHistAndFit(outputFile, which = histyWhich, minBinFactor = minBinFactor, plotTitle = plotTitle,
+                           closeFigures = closeFigures, irThreshold = irThreshold)
 
-        print '\nAll histograms plotted (hopefully)'
+        histEndTime = time.time()
+        timeElapsed = histEndTime - histStartTime
+
+        print '\n\tAll histograms plotted (hopefully) in %s seconds' % timeElapsed
 
     if intensityRatios == True:
 
-        if 'Intensity ratios' in outputFile['Statistics']:
-            try:
-                del outputFile['Statistics/Intensity ratios']
+        irStart = time.time()
 
-            except:
-                pass
+        try:
+            del outputFile['Statistics/Intensity ratios']
 
-        if 'Intensity ratios (filtered)' in outputFile['Statistics']:
-            try:
-                del outputFile['Statistics/Intensity ratios (filtered)']
+        except:
+            pass
 
-            except:
-                pass
+        gIr = outputFile.create_group('Statistics/Intensity ratios')
 
         numberOfSpectra = len(outputFile['Fitted spectra'])
         xBins = numberOfSpectra / 12
         yBins = numberOfSpectra / 12
 
-        intensityRatios, cmPeakPositions, irImg = plotIntensityRatios(outputFile, plot = True, xBins = xBins,
+        intensityRatios, cmPeakPositions = plotIntensityRatios(outputFile, plot = True, xBins = xBins,
                                                                       yBins = yBins, closeFigures = closeFigures,
-                                                                      filterWeird = False)
+                                                                      normalised = True, filterWeird = False,
+                                                                      plotTitle = plotTitle)
 
-        outputFile['Statistics/Intensity ratios'] = irImg
-        dIr = outputFile['Statistics/Intensity ratios']
+        dIr = gIr.create_dataset('Normalised', data = intensityRatios)
         dIr.attrs['Intensity ratios'] = intensityRatios
         dIr.attrs['Peak positions'] = cmPeakPositions
+        dIr.attrs['wavelengths'] = dIr.attrs['Peak positions']
 
-
-        intensityRatios, cmPeakPositions, irImg = plotIntensityRatios(outputFile, plot = True, xBins = xBins,
+        intensityRatios, cmPeakPositions = plotIntensityRatios(outputFile, plot = True, xBins = xBins,
                                                                       yBins = yBins, closeFigures = closeFigures,
-                                                                      filterWeird = True)
+                                                                      normalised = True, filterWeird = True,
+                                                                      plotTitle = plotTitle)
 
-        outputFile['Statistics/Intensity ratios (filtered)'] = irImg
-        dIr = outputFile['Statistics/Intensity ratios']
+        dIr = gIr.create_dataset('Filtered, normalised', data = intensityRatios)
         dIr.attrs['Intensity ratios'] = intensityRatios
         dIr.attrs['Peak positions'] = cmPeakPositions
+        dIr.attrs['wavelengths'] = dIr.attrs['Peak positions']
+
+        intensityRatios, cmPeakPositions = plotIntensityRatios(outputFile, plot = True, xBins = xBins,
+                                                                      yBins = yBins, closeFigures = closeFigures,
+                                                                      normalised = False, filterWeird = False,
+                                                                      plotTitle = plotTitle)
+
+        dIr = gIr.create_dataset('Raw', data = intensityRatios)
+        dIr.attrs['Intensity ratios'] = intensityRatios
+        dIr.attrs['Peak positions'] = cmPeakPositions
+        dIr.attrs['wavelengths'] = dIr.attrs['Peak positions']
+
+        intensityRatios, cmPeakPositions = plotIntensityRatios(outputFile, plot = True, xBins = xBins,
+                                                                      yBins = yBins, closeFigures = closeFigures,
+                                                                      normalised = False, filterWeird = True,
+                                                                      plotTitle = plotTitle)
+
+        dIr = gIr.create_dataset('Filtered, raw', data = intensityRatios)
+        dIr.attrs['Intensity ratios'] = intensityRatios
+        dIr.attrs['Peak positions'] = cmPeakPositions
+        dIr.attrs['wavelengths'] = dIr.attrs['Peak positions']
+
+        intensityRatios, cmPeakPositions = plotIntensityRatios(outputFile, plot = True, xBins = xBins,
+                                                                      yBins = yBins, closeFigures = closeFigures,
+                                                                      normalised = False, filterWeird = False, alignedOnly = True,
+                                                                      plotTitle = plotTitle)
+
+        dIr = gIr.create_dataset('Aligned only', data = intensityRatios)
+        dIr.attrs['Intensity ratios'] = intensityRatios
+        dIr.attrs['Peak positions'] = cmPeakPositions
+        dIr.attrs['wavelengths'] = dIr.attrs['Peak positions']
+
+        irEnd = time.time()
+        timeElapsed = irEnd - irStart
+        print '\n\tAll intensity ratios plotted in %s seconds' % timeElapsed
 
         visualiseIntensityRatios(outputFile)
 
     if pointyPeaks == True:
+        pointyPeakStats(outputFile, closeFigures = True, plotTitle = plotTitle)
 
-        print '\nAnalysing funky peaks'
-        pointyPeakStats(outputFile, closeFigures = True)
-        doubBoolsHists(outputFile, binNumber = 80, plot = True, closeFigures = False)
-        print '\tFunky peaks analysed'
+    if doubBools == True:
+        doubBoolsHists(outputFile, binNumber = 80, plot = True, closeFigures = False, plotTitle = plotTitle)
+
+    if peakAvgs == True:
+        peakAverages(outputFile, singleBin = False)
+
+    if analRep == True:
+        analyseRepresentative(outputFile)
+
+    if closeFigures == True:
+        plt.close('all')
 
     print '\nStats done'
 
-def fitAllSpectra(x, yData, outputFile, startSpec = 0, monitorProgress = False, plot = False,
-                  raiseExceptions = False, closeFigures = False, fukkit = False, simpleFit = True):
+def fitAllSpectra(x, yData, outputFile, summaryAttrs = {}, startSpec = 0, monitorProgress = False, plot = False, irThreshold = 8,
+                  raiseExceptions = False, doublesThreshold = 2, closeFigures = False, fukkit = False, simpleFit = True, stats = True):
 
     absoluteStartTime = time.time()
 
@@ -2416,7 +2902,6 @@ def fitAllSpectra(x, yData, outputFile, startSpec = 0, monitorProgress = False, 
 
     '''SPECIFY INITIAL FIT PARAMETERS HERE'''
 
-    doublesThreshold = 0.4
     detectionThreshold = 0
     doublesDist = 0
 
@@ -2431,6 +2916,8 @@ def fitAllSpectra(x, yData, outputFile, startSpec = 0, monitorProgress = False, 
 
     gFitted = outputFile.create_group('Fitted spectra/')
     gAll = outputFile.create_group('All spectra')
+    gFitted.attrs.update(summaryAttrs)
+    gFitted.attrs.update(summaryAttrs)
     gCrap = gAll.create_group('Non-NPoMs')
     gSpecOnly = gAll.create_group('Raw')
 
@@ -2452,10 +2939,15 @@ def fitAllSpectra(x, yData, outputFile, startSpec = 0, monitorProgress = False, 
         if raiseExceptions == False:
 
             try:
-                fittedSpectrum = fitNpomSpectrum(x, y, detectionThreshold = detectionThreshold,
-                                                  doublesThreshold = doublesThreshold,
-                                                  doublesDist = doublesDist,
-                                                  monitorProgress = monitorProgress, plot = plot, fukkit = fukkit, simpleFit = simpleFit)
+
+                if simpleFit == True:
+                    fittedSpectrum = analyseNpomPeaks(x, y, cutoff = 1500, fs = 60000, doublesThreshold = doublesThreshold, doublesDist = 0,
+                                                      monitorProgress = False, raiseExceptions = False, transPeakPos = 533, plot = plot)
+
+                else:
+                    fittedSpectrum = fitNpomSpectrum(x, y, detectionThreshold = detectionThreshold, doublesThreshold = doublesThreshold,
+                                                     doublesDist = doublesDist, monitorProgress = monitorProgress, plot = plot, fukkit = fukkit,
+                                                     simpleFit = simpleFit, raiseExceptions = raiseExceptions)
                 fittedSpectra.append(fittedSpectrum)
                 fitError = 'N/A'
 
@@ -2470,77 +2962,108 @@ def fitAllSpectra(x, yData, outputFile, startSpec = 0, monitorProgress = False, 
                 print 'Spectrum %s failed because: \n\t"%s"' % (n, e)
 
         elif raiseExceptions == True:
-            fittedSpectrum = fitNpomSpectrum(x, y, detectionThreshold = detectionThreshold,
-                                              doublesThreshold = doublesThreshold,
-                                              doublesDist = doublesDist, monitorProgress = monitorProgress,
-                                              plot = plot, fukkit = fukkit, simpleFit = simpleFit)
+            #print n
+
+            if simpleFit == True:
+
+                fittedSpectrum = analyseNpomPeaks(x, y, cutoff = 1500, fs = 60000, doublesThreshold = doublesThreshold, doublesDist = 0,
+                                                  monitorProgress = False, raiseExceptions = raiseExceptions, transPeakPos = 533, plot = plot)
+
+            else:
+                fittedSpectrum = fitNpomSpectrum(x, y, detectionThreshold = detectionThreshold, doublesThreshold = doublesThreshold,
+                                                 doublesDist = doublesDist, monitorProgress = monitorProgress, plot = plot, fukkit = fukkit,
+                                                 simpleFit = simpleFit, raiseExceptions = raiseExceptions)
             fittedSpectra.append(fittedSpectrum)
             fitError = 'N/A'
 
         '''Adds data to open HDF5 file'''
 
         if fittedSpectrum['NPoM?'] == True:
-            rawData = fittedSpectrum['rawData']
+            rawData = fittedSpectrum['Raw data']
 
         else:
             rawData = y
 
         mainRawSpec = gSpecOnly.create_dataset('Spectrum %s' % n, data = rawData)
         mainRawSpec.attrs['wavelengths'] = x
+        mainRawSpec.attrs['NPoM test failure'] = fittedSpectrum['NPoM test failure']
+
+        #try:
+        if n in summaryAttrs['Misaligned particle numbers']:
+            mainRawSpec.attrs['Aligned properly?'] = False
+        else:
+            mainRawSpec.attrs['Aligned properly?'] = True
+        #except:
+            #mainRawSpec.attrs['Aligned properly?'] = True
 
         if fittedSpectrum['NPoM?'] == True:
             g = gFitted.create_group('Spectrum %s/' % n)
 
             g.attrs['NPoM?'] = fittedSpectrum['NPoM?']
-            g.attrs['Double Peak?'] = fittedSpectrum['doublePeak?']
-            g.attrs['Weird Peak?'] = fittedSpectrum['weirdPeak?']
-            g.attrs['Weird peak intensity (norm)'] = fittedSpectrum['weirdPeakIntensity']
-            g.attrs['Weird peak intensity (raw)'] = fittedSpectrum['rawWeirdPeakIntensity']
-            g.attrs['Weird peak wavelength'] = fittedSpectrum['weirdPeakPosition']
-            g.attrs['Weird peak FWHM'] = fittedSpectrum['weirdPeakFwhm']
-            g.attrs['Transverse mode intensity (norm)'] = fittedSpectrum['transverseModeIntensity']
-            g.attrs['Transverse mode intensity (raw)'] = fittedSpectrum['rawTransverseModeIntensity']
-            g.attrs['Transverse mode wavelength'] = fittedSpectrum['transverseModePosition']
-            g.attrs['Coupled mode intensity (norm)'] = fittedSpectrum['coupledModeIntensity']
-            g.attrs['Coupled mode intensity (raw)'] = fittedSpectrum['rawCoupledModeIntensity']
-            g.attrs['Coupled mode wavelength'] = fittedSpectrum['coupledModePosition']
-            g.attrs['Coupled mode FWHM'] = fittedSpectrum['coupledModeFwhm']
-            g.attrs['Intensity ratio (from norm)'] = fittedSpectrum['intensityRatio']
-            g.attrs['Intensity ratio (raw)'] = fittedSpectrum['rawIntensityRatio']
+
+            #try:
+            if n in summaryAttrs['Misaligned particle numbers']:
+                g.attrs['Aligned properly?'] = False
+            else:
+                g.attrs['Aligned properly?'] = True
+            #except:
+            #    g.attrs['Aligned properly?'] = True
+
+            g.attrs['NPoM test failure'] = fittedSpectrum['NPoM test failure']
+            g.attrs['Double Peak?'] = fittedSpectrum['Double Peak?']
+            g.attrs['Weird Peak?'] = fittedSpectrum['Weird Peak?']
+            g.attrs['Weird peak intensity (norm)'] = fittedSpectrum['Weird peak intensity (norm)']
+            g.attrs['Weird peak intensity (raw)'] = fittedSpectrum['Weird peak intensity (raw)']
+            g.attrs['Weird peak wavelength'] = fittedSpectrum['Weird peak wavelength']
+            g.attrs['Weird peak FWHM (norm)'] = fittedSpectrum['Weird peak FWHM (norm)']
+            g.attrs['Weird peak FWHM (raw)'] = fittedSpectrum['Weird peak FWHM (raw)']
+            g.attrs['Transverse mode intensity (norm)'] = fittedSpectrum['Transverse mode intensity (norm)']
+            g.attrs['Transverse mode intensity (raw)'] = fittedSpectrum['Transverse mode intensity (raw)']
+            g.attrs['Transverse mode wavelength'] = fittedSpectrum['Transverse mode wavelength']
+            g.attrs['Coupled mode intensity (norm)'] = fittedSpectrum['Coupled mode intensity (norm)']
+            g.attrs['Coupled mode intensity (raw)'] = fittedSpectrum['Coupled mode intensity (raw)']
+            g.attrs['Coupled mode wavelength'] = fittedSpectrum['Coupled mode wavelength']
+            g.attrs['Coupled mode FWHM (norm)'] = fittedSpectrum['Coupled mode FWHM (norm)']
+            g.attrs['Coupled mode FWHM (raw)'] = fittedSpectrum['Coupled mode FWHM (raw)']
+            g.attrs['Intensity ratio (from norm)'] = fittedSpectrum['Intensity ratio (from norm)']
+            g.attrs['Intensity ratio (raw)'] = fittedSpectrum['Intensity ratio (raw)']
             g.attrs['Error(s)'] = str(fitError)
 
             gRaw = g.create_group('Raw/')
 
             dRaw = gRaw.create_dataset('Raw data', data = rawData)
-            dRaw.attrs['wavelengths'] = fittedSpectrum['fullWavelengths']
+            dRaw.attrs['wavelengths'] = fittedSpectrum['Full Wavelengths']
+            dRaw.attrs['NPoM test failure'] = fittedSpectrum['NPoM test failure']
 
-            dRawNorm = gRaw.create_dataset('Raw data (normalised)', data = fittedSpectrum['normalisedSpectrum'])
+            dRawNorm = gRaw.create_dataset('Raw data (normalised)', data = fittedSpectrum['Raw data (normalised)'])
             dRawNorm.attrs['wavelengths'] = dRaw.attrs['wavelengths']
+            dRawNorm.attrs['NPoM test failure'] = fittedSpectrum['NPoM test failure']
 
             gFit = g.create_group('Fit/')
 
             dRawTrunc = gFit.create_dataset('Raw data (truncated, normalised)',
-                                               data = fittedSpectrum['truncatedSpectrum'])
-            dRawTrunc.attrs['wavelengths'] = fittedSpectrum['truncatedWavelengths']
+                                               data = fittedSpectrum['Raw data (truncated, normalised)'])
+            dRawTrunc.attrs['wavelengths'] = fittedSpectrum['Wavelengths (truncated)']
+            dRawTrunc.attrs['NPoM test failure'] = fittedSpectrum['NPoM test failure']
 
-            dSmooth = gFit.create_dataset('Smoothed data', data = fittedSpectrum['smoothedSpectrum'])
+            dSmooth = gFit.create_dataset('Smoothed data (truncated, normalised)', data = fittedSpectrum['Smoothed data (truncated, normalised)'])
             dSmooth.attrs['wavelengths'] = dRawTrunc.attrs['wavelengths']
             dSmooth.attrs['secondDerivative'] = fittedSpectrum['secondDerivative']
 
-            dBestFit = gFit.create_dataset('Best fit', data = fittedSpectrum['bestFit'])
+            dBestFit = gFit.create_dataset('Best fit', data = fittedSpectrum['Best fit'])
             dBestFit.attrs['wavelengths'] = dRawTrunc.attrs['wavelengths']
-            dBestFit.attrs['Initial guess'] = fittedSpectrum['initialGuess']
-            dBestFit.attrs['Residuals'] = fittedSpectrum['residuals']
+            dBestFit.attrs['Initial guess'] = fittedSpectrum['Initial guess']
+            dBestFit.attrs['Residuals'] = fittedSpectrum['Residuals']
 
             gComps = gFit.create_group('Final components/')
 
-            comps = fittedSpectrum['finalComponents']
+            comps = fittedSpectrum['Final components']
 
             if comps != 'N/A':
 
                 for i in range(len(comps.keys())):
                     component = gComps.create_dataset(str(i), data = comps['g%s_' % i])
-                    componentParams = fittedSpectrum['finalParams']['g%s' % i]
+                    componentParams = fittedSpectrum['Final parameters']['g%s' % i]
                     component.attrs['center'] = componentParams['center']
                     component.attrs['height'] = componentParams['height']
                     component.attrs['amplitude'] = componentParams['amplitude']
@@ -2551,6 +3074,15 @@ def fitAllSpectra(x, yData, outputFile, startSpec = 0, monitorProgress = False, 
         else:
             dCrap = gCrap.create_dataset('Spectrum %s' % n, data = mainRawSpec)
             dCrap.attrs['wavelengths'] = mainRawSpec.attrs['wavelengths']
+            dCrap.attrs['NPoM test failure'] = fittedSpectrum['NPoM test failure']
+
+            #try:
+            if n in summaryAttrs['Misaligned particle numbers']:
+                dCrap.attrs['Aligned properly?'] = False
+            else:
+                dCrap.attrs['Aligned properly?'] = True
+            #except:
+            #    dCrap.attrs['Aligned properly?'] = True
 
         if fitError != 'N/A':
             mainRawSpec.attrs['Fitting error'] = str(fitError)
@@ -2566,7 +3098,8 @@ def fitAllSpectra(x, yData, outputFile, startSpec = 0, monitorProgress = False, 
 
     print '\n%s spectra fitted in %s min %s sec' % (nn + 1, mins, secs)
 
-    doStats(outputFile, closeFigures = closeFigures)
+    if stats == True:
+        doStats(outputFile, closeFigures = closeFigures, doubBools = False, pointyPeaks = False, irThreshold = irThreshold)
 
     absoluteEndTime = time.time()
     timeElapsed = absoluteEndTime - absoluteStartTime
@@ -2585,7 +3118,6 @@ def fitAllSpectra(x, yData, outputFile, startSpec = 0, monitorProgress = False, 
     elif len(failedSpectra) > len(fittedSpectra):
         print '\nHmmm... finished in %s min %s sec but with %s failures and only %s successful fits' % (mins, secs, len(failedSpectra),
                                                                                                         len(fittedSpectra))
-
     elif mins > 30:
         print '\nM8 that took ages. %s min %s sec' % (mins, secs)
 
@@ -2597,35 +3129,62 @@ def fitAllSpectra(x, yData, outputFile, startSpec = 0, monitorProgress = False, 
 if __name__ == '__main__':
     print '\tFunctions initialised'
 
-    method = 'All'
+    '''Set basic initial parameters'''
 
-    startSpec = 0
-    finishSpec = 0
-    #Set to 0 if you want to analyse all spectra
+    method = 'All'
+    summaryNameFormat = 'summary'
+    outputNameFormat = 'MultiPeakFitOutput'
+
+    '''The options below are for post-fitting analysis'''
+
+    minBinFactor = 6 #Factor for displaying averaged spectra in histogram. e.g. 6 => only spectra from bins with > 1/6 the population of largest bin will be plotted
+    sortSpec = True #Re-sorts spectra into correspoinging groups
+    replaceWhenSorting = True #If false and spectra have already been sorted, command will be ignored
+    sortMethod = 'full' #If 'full', re-calculates parameters required for sorting. otherwise write 'basic'
+    stacks = True #Plot stacked maps
+    hist = True #Calculate and plot histograms
+    irThreshold = 10
+    intensityRatios = True #Calculate and plot intensity ratios
+    pointyPeaks = True #Calculate (and plot correlations between) height, position and FWHM of coupled mode and abnormal quadrupolar modes
+    doubBools = False #Calculate and plot relationship between split coupled mode and abnormal quadrupolar mode
+    #Doesn't actually work and is very slow. I'll fix it later...
+    peakAvgs = True #Collects peak metadata for each spectrum and calculates average across all NPoMs and for each histogram bin
+    analRep = True #Collects and analyses metadata for "representative" spectra, i.e. those with near-average coupled modes
+    raiseExceptions = False #If True, code will stop if anything goes wrong; useful for debugging
+    closeFigures = True #Set this equal to True unless you want a fuckton of open, unresponsive Spyder windows during analysis
+    plotOption = False #Useful for debugging
+    startSpec = 0 #Use these values to truncate the dataset before fitting; useful for testing/debugging new functions
+    finishSpec = 0 #Set to 0 if you want to analyse all spectra
 
     if method == 'All':
 
-        print '\nRetrieving data...'
-
-        spectra, wavelengths, background, reference = retrieveData('summary', startSpec, finishSpec)
+        summaryFile = findH5File(os.getcwd(), nameFormat = summaryNameFormat)
+        spectra, wavelengths, background, reference, summaryAttrs = retrieveData(summaryFile, startSpec = startSpec, finishSpec = finishSpec)
         x, yData = prepareData(spectra, wavelengths, reference)
         initImg = plotInitStack(x, yData, imgName = 'Initial Stack', closeFigures = True)
 
-        outputFile = createOutputFile('MultiPeakFitOutput')
+        outputFile = createOutputFile(outputNameFormat)
 
         with h5py.File(outputFile, 'a') as f:
-            fitAllSpectra(x, yData, f, startSpec = startSpec, raiseExceptions = False, closeFigures = True, fukkit = True, simpleFit = False)
+            fitAllSpectra(x, yData, f, summaryAttrs = summaryAttrs, startSpec = startSpec, raiseExceptions = raiseExceptions, closeFigures = closeFigures,
+                          fukkit = True, simpleFit = True, stats = True, plot = plotOption)
 
     elif method == 'Stats':
-        outputFile = 'MultiPeakFitOutput_0.h5'
+
+        summaryFile = findH5File(os.getcwd(), nameFormat = summaryNameFormat)
+        summaryAttrs = retrieveData(summaryFile, startSpec = startSpec, finishSpec = finishSpec, attrsOnly = True)
+        outputFile = findH5File(os.getcwd(), nameFormat = outputNameFormat)
 
         with h5py.File(outputFile, 'a') as f:
-            doStats(f, minBinFactor = 6, sortSpec = True, replaceWhenSorting = True, sortMethod = 'full', stacks = False, hist = False,
-                    intensityRatios = False, closeFigures = True)
+            f['All spectra'].attrs.update(summaryAttrs)
+            f['Fitted spectra'].attrs.update(summaryAttrs)
+            doStats(f, minBinFactor = minBinFactor, sortSpec = sortSpec, replaceWhenSorting = replaceWhenSorting, sortMethod = sortMethod,
+                    stacks = stacks, hist = hist, intensityRatios = intensityRatios, pointyPeaks = pointyPeaks, doubBools = doubBools,
+                    peakAvgs = peakAvgs, analRep = analRep, raiseExceptions = raiseExceptions, closeFigures = closeFigures, irThreshold = irThreshold)
 
     elif method == 'Stack':
         print '\nRetrieving data...'
 
-        spectra, wavelengths, background, reference = retrieveData('summary', startSpec, finishSpec)
+        spectra, wavelengths, background, reference, summaryAttrs = retrieveData(summaryNameFormat, startSpec = startSpec, finishSpec = finishSpec)
         x, yData = prepareData(spectra, wavelengths, reference)
         initImg = plotInitStack(x, yData, imgName = 'Initial Stack', closeFigures = False)

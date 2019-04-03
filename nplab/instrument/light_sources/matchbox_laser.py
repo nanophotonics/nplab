@@ -23,6 +23,14 @@ class MatchboxLaser(SerialInstrument, LightSource):
         SerialInstrument.__init__(self, port=port)
         self.turn_on()
         
+    def __del__(self):
+        self.turn_off()
+        return 
+
+    def close(self):
+        self.turn_off()
+        self.__del__()
+
     def turn_on(self):
         """change laser status from off to on"""
         self.query("e 1")
@@ -61,16 +69,18 @@ class MatchboxLaser(SerialInstrument, LightSource):
         return readout
         
     def set_power(self, power):
-        """set the power output in mW"""
-        self.query("c u 1 1234")
-        #self.query("c 4 %.2f" % power)
-        number='{0:012b}'.format(power)
-        self.query("c 6 %int" % int(number))
+        """Set optical power DAC in 12 bit full range"""
+        '''Max value: 8191, min value 0
+        Note: this does not turn off the laser
+        '''
+        power = abs(int(power))
+        print "Setting power:{} (min:0, max: 8191)".format(power)
+        self.query("c 6 {}".format(power))
         return self.readpower()
         
 if __name__ == "__main__":
-    laser = MatchboxLaser("COM9")
+    laser = MatchboxLaser("/dev/ttyUSB0")
     laserID=laser.query("ID?")
     laserName=laser.query("NM?")
-    #laser.show_gui()
-    #laser.close()
+    laser.show_gui()
+    laser.close()

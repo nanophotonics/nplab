@@ -1,72 +1,26 @@
-__author__ = 'alansanders, chrisgrosse'
+__author__ = 'alansanders'
 
 from nplab.instrument.visa_instrument import VisaInstrument
 from nplab.instrument.stage import Stage, StageUI
-
-#StageUI
 import time
 import numpy as np
 from functools import partial
-
-
-
-class PIStageError(Exception):
-    def __init__(self, error_code):
-        self.error_code = error_code
-
-    def __str__(self):
-        return "Code %s: %s" % (self.error_code, self.get_error_message(self.error_code))
-
-    def get_error_message(self, error_code):
-        print "ERROR CODE:", error_code
-        if (error_code == '1'):
-            msg = 'PARAMETER SYNTAX ERROR!'
-        elif (error_code == '5'):
-            msg = 'CANNOT SET POSITION WHEN SERVO IS OFF!'
-        elif (error_code == '10'):
-            msg = 'CONTROLLER WAS STOPPED!'
-        elif (error_code == '18'):
-            msg = 'INVALID MACRO NAME!'
-        elif (error_code == '19'):
-            msg = 'ERROR WHILE RECORDING MACRO!'
-        elif (error_code == '20'):
-            msg = 'MACRO NOT FOUND!'
-        elif (error_code == '23'):
-            msg = 'ILLEGAL AXIS IDENTIFIER!'
-        elif (error_code == '26'):
-            msg = 'PARAMETER MISSING!'
-        elif (error_code == '301'):
-            msg = 'SEND BUFFER OVERFLOW!'
-        elif (error_code == '302'):
-            msg = 'VOLTAGE OUT OF LIMITS!'
-        elif (error_code == '303'):
-            msg = 'CANNOT SET VOLTAGE WHEN SERVO-MODE ON!'
-        elif (error_code == '304'):
-            msg = 'RECEIVED COMMAND IN TOO LONG!'
-        elif (error_code == '307'):
-            msg = 'TIMEOUT WHILE RECEIVING COMMAND'
-        elif (error_code == '309'):
-            msg = 'INSUFFICIENT SPACE TO STORE MACRO'
-        else:
-            msg = 'UNKNOWN ERROR'
-        return msg
 
 
 class PIStage(VisaInstrument, Stage):
     """
     Control interface for PI stages.
     """
-    def __init__(self, address='ASRL3::INSTR',timeout = 10,baud_rate = 57600):
+    def __init__(self, address='ASRL8::INSTR',timeout = 10,baud_rate = 57600):
         super(PIStage, self).__init__(address=address)
         self.instr.read_termination = '\n'
         self.instr.write_termination = '\n'
         self.instr.baud_rate = 57600
-        self.instr.timeout = timeout
+   #     self.instr.timeout = 10
         self.axis_names = ('a', 'b')
         self.positions = [0 for ch in xrange(3)]
         self._stage_id = None
-        self.unit ='m'
-        #self.startup()
+        self.startup()
 
     def move(self, pos, axis=None, relative=False):
         if relative:
@@ -75,67 +29,15 @@ class PIStage(VisaInstrument, Stage):
             self.set_axis_param(self.move_axis, pos, axis)
 
     def move_axis(self, pos, axis, relative=False):
-#        if not self.get_loop_mode(axis): # check whether servo-control mode is on
-#            self.set_loop_mode(1,axis)
         if relative:
             self.write('mvr {0}{1}'.format(axis, 1e6*pos))
         else:
             self.write('mov {0}{1}'.format(axis, 1e6*pos))
         self.wait_until_stopped(axis)
-        self.check_status()
-
-    def stop(self):
-        """
-        stops any ongoing movement of the positioner
-        """
-        self.write('#24')
 
     def get_position(self, axis=None):
-        return self.get_piezo_position(axis=axis)
-
-    def get_piezo_position(self, axis=None):
-        if axis not in self.axis_names and not axis == None:
-            raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
-        txt = self.get_axis_param(lambda axis: 1e-6*float(self.float_query('pos? {0}'.format(axis))), axis)
-        self.check_status()
-        return txt
-
-    def set_piezo_position(self, pos, axis, relative=False):
-        if axis == None:
-           if relative:
-            self.set_axis_param(partial(self.move_axis, relative=True), pos, axis)
-        else:
-            self.set_axis_param(self.move_axis, pos, axis)
-        return self.check_status()
-
-
-    def get_piezo_voltage(self, axis=None):
-        if axis not in self.axis_names and not axis == None:
-            raise ValueError("{0} is not a valid axis, must be one of {1}".format(axis, self.axis_names))
-        txt = self.get_axis_param(lambda axis: self.float_query('vol? {0}'.format(axis)),axis)
-        self.check_status()
-        return txt
-
-
-    def set_piezo_voltage(self, voltage, axis):
-        if self.get_loop_mode(axis): # servo-control mode needs to be switched off to set voltage!
-            self.set_loop_mode(0,axis)
-        self.set_axis_param(lambda value, axis: self.write('sva {0}{1}'.format(axis, voltage)), voltage, axis)
-        self.check_status()
-
-    def get_piezo_level(self, axis=None):
-        return self.get_piezo_voltage(axis)
-
-    def set_piezo_level(self, level, axis):
-        return self.set_piezo_voltage(level, axis)
-
-
-    def check_status(self):
-        error_code = self.query('err?')
-        if (error_code != '0'):
-            raise PIStageError(error_code)
-        return error_code
-
+        return self.get_axis_param(lambda axis: 1e-6*float(self.query('pos? {0}'.format(axis))), axis)
+    position = property(fget=get_position, doc="Current position of the stage")
 
     def is_moving(self, axes=None):
         """
@@ -154,7 +56,7 @@ class PIStage(VisaInstrument, Stage):
         else:
             return False
 
-    def wait_until_stopped(self, axes=None): # same as in super class Stage
+    def wait_until_stopped(self, axes=None):
         """Block until the stage is no longer moving."""
         while self.is_moving(axes=axes):
             time.sleep(0.01)
@@ -175,44 +77,20 @@ class PIStage(VisaInstrument, Stage):
         self.loop_mode = 0
         self.online = 0
 
-    def get_min_voltage(self, axis=None):
-        txt = self.get_axis_param(lambda axis: float(self.float_query('vmi? {0}'.format(axis))), axis)
-        self.check_status()
-        return txt
-    def set_min_voltage(self, voltage, axis=None):
-        self.set_axis_param(lambda voltage, axis: self.write('vmi {0}{1}'.format(axis, voltage)), voltage, axis)
-        self.check_status()
-    min_voltage = property(fget=get_min_voltage)
-
-
-    def get_max_voltage(self, axis=None):
-        txt = self.get_axis_param(lambda axis: float(self.float_query('vma? {0}'.format(axis))), axis)
-        self.check_status()
-        return txt
-    def set_max_voltage(self, voltage, axis=None):
-        self.set_axis_param(lambda voltage, axis: self.write('vma {0}{1}'.format(axis, voltage)), voltage, axis)
-        self.check_status()
-    max_voltage = property(fget=get_max_voltage)
-
     def get_velocity(self, axis=None):
-        return self.get_axis_param(lambda axis: float(self.float_query('vel? {0}'.format(axis))), axis)
-
+        return self.get_axis_param(lambda axis: float(self.query('vel? {0}'.format(axis))), axis)
     def set_velocity(self, value, axis=None):
         self.set_axis_param(lambda value, axis: self.write('vel {0}{1}'.format(axis, value)), value, axis)
-        self.check_status()
     velocity = property(get_velocity, set_velocity)
 
     def get_drift_compensation(self, axis=None):
-        return self.get_axis_param(lambda axis: bool(self.int_query('dco? {0}'.format(axis))), axis)
+        return self.get_axis_param(lambda axis: bool(self.query('dco? {0}'.format(axis))), axis)
     def set_drift_compensation(self, value, axis=None):
         self.set_axis_param(lambda value, axis: self.write('dco {0}{1}'.format(axis, value)), value, axis)
-        self.check_status()
     drift_compensation = property(get_drift_compensation, set_drift_compensation)
 
     def get_loop_mode(self, axis=None):
-        txt = self.get_axis_param(lambda axis: bool(self.int_query('svo? {0}'.format(axis))), axis)
-        self.check_status()
-        return txt
+        return self.get_axis_param(lambda axis: bool(self.query('svo? {0}'.format(axis))), axis)
     def set_loop_mode(self, value, axis=None):
         """
         Set the mode of each axis control loop
@@ -221,11 +99,10 @@ class PIStage(VisaInstrument, Stage):
         :return:
         """
         self.set_axis_param(lambda value, axis: self.write('svo {0}{1}'.format(axis, value)), value, axis)
-        self.check_status()
     loop_mode = property(get_loop_mode, set_loop_mode)
 
     def get_speed_mode(self, axis=None):
-        return self.get_axis_param(lambda axis: bool(self.int_query('vco? {0}'.format(axis))), axis)
+        return self.get_axis_param(lambda axis: bool(self.query('vco? {0}'.format(axis))), axis)
     def set_speed_mode(self, value, axis=None):
         """
         Set the mode of each axis control loop
@@ -234,18 +111,16 @@ class PIStage(VisaInstrument, Stage):
         :return:
         """
         self.set_axis_param(lambda value, axis: self.write('vco {0}{1}'.format(axis, value)), value, axis)
-        self.check_status()
     speed_mode = property(get_speed_mode, set_speed_mode)
 
     def get_online(self):
-        return bool(self.int_query('onl?'))
+        return bool(self.query('onl?'))
     def set_online(self, value):
         self.write('onl {0}'.format(value))
-        self.check_status()
     online = property(get_online, set_online)
 
     def get_on_target(self):
-       return bool(self.int_query('ont?'))
+       return bool(self.query('ont?'))
     on_target = property(get_on_target)
 
     def get_id(self):
@@ -257,77 +132,9 @@ class PIStage(VisaInstrument, Stage):
     def get_qt_ui(self):
         return StageUI(self, stage_step_min=0.1e-9, stage_step_max=100e-6)
 
-    ### Useful Properties ###
-    piezo_voltages = property(fget=get_piezo_voltage, fset=set_piezo_voltage, doc="Current voltage of the stage")
-    piezo_position = property(get_position)
-    piezo_levels = property(get_piezo_level)
-
-
-class PIStageViaArduino(PIStage):
-    """
-    This class allows to control a PI stage via an RS-323 board of an Arduino
-    Due.
-    
-    It inherets from the original PIStage and overwrites the read(), write(),
-    and quere() methods such that all commands are sent via the PyCmdMessenger/
-    CmdMessenger interface.
-    """
-    
-    def __init__(self, arduino_instance, pi_command='pi_cmd'):
-        """
-        pi_command: String of the CmdMessenger command that is used to send PI
-                    commands to the Arduino.
-        """
-        self.arduino = arduino_instance
-        self.pi_command = pi_command
-        self.read_termination = '\n'
-        self.write_termination = '\n'
-        self.axis_names = ('a', 'b', 'c') # axis order for AFM experiment
-        self.positions = [0 for ch in xrange(3)]
-        self._stage_id = None
-        
-    def write(self, msg):
-        msg+=self.write_termination
-        self.arduino.send(self.pi_command, msg)
-        
-    def query(self, msg):
-        msg+=self.write_termination
-#        print 'message send to query:', msg
-        self.arduino.send(self.pi_command, msg)
-        # wait for answer from Arduino ..
-        t0 = time.clock()
-        while self.arduino.pi_message == None:
-            if time.clock()-t0 > 1:
-                err = "PI stage timeout. PI stage does not respond!"
-                print err
-                break
-                #raise ValueError(err)
-#        print 'response took:', time.clock()-t0
-        answer = self.arduino.pi_message
-        print "query answer:", answer
-        self.arduino.pi_message = None
-        return answer
-
-
-#    def check_status(self):
-#        self.arduino.pi_error = None
-#        self.write('err?')
-#        t0 = time.clock()
-#        error_code = self.arduino.pi_error
-#        while  error_code == None:
-#            if time.clock()-t0 > 1:
-#                err = "PI stage does not respond!"
-#                raise ValueError(err)
-#        if error_code != '0':
-#            raise PIStageError(error_code)
-#        else: print "no PI stage errors."
-#        return error_code
-
-
 
 if __name__ == '__main__':
-#    stage = PIStage(address='COM4')
-    PIStageViaArduino(address='COM4')
+    stage = PIStage()
   #  stage.move((5e-6, 10e-6))
 #    print stage.position
 #    print stage.get_position()

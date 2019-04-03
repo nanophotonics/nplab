@@ -58,6 +58,11 @@ class Maitai(SerialInstrument):
     def get_power(self):
         '''Returns the IR power
         '''
+        return self.query('READ:POWER?')
+    
+    def get_green_power(self):
+        '''Returns the IR power
+        '''
         return self.query('READ:PLASER:POWER?')
     def get_current_wavelength(self):
         ''' The current real time wavelength - allowing you to check if the maitai ahs moved to the set wavelength yet

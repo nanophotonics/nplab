@@ -14,16 +14,10 @@ import types
 import time
 
 DC_status_motors = {'BBD102/BBD103': [], 'TDC001': []}
-
+DEBUG = False
 
 class APT_parameter(NotifiedProperty):
-    """A quick way of creating a property that alters a camera parameter.
-
-    The majority of cameras have some sort of mechanism for setting parameters
-    like gain, integration time, etc. etc. that involves calling an API
-    function that takes the property name as an argument.  This is a way
-    of nicely wrapping up the boilerplate code so that these properties map
-    onto properties of the camera object.
+    """A quick way of creating a property that alters an apt parameter.
 
     NB the property will be read immediately after it's written, to ensure
     that the value we send to any listening controls/indicators is correct
@@ -55,7 +49,7 @@ class APT_parameter(NotifiedProperty):
 
 class APT_VCP_motor(APT_VCP, Stage):
     """
-    This class handles all the basic communication with APT virtual com ports
+    This class handles all the basic communication with APT virtual com for motors
     """
 
     axis_names = ('x', )
@@ -85,18 +79,18 @@ class APT_VCP_motor(APT_VCP, Stage):
             self.velocity_scaling_factor = 204.8  # for converting velocity to mm/sec
         else:
             # Set the bit mask for normal motor controllers
-            self.status_bit_mask = {0x00000001: 'forward (CW) hardware limit switch is active',
-                                    0x00000002: 'reverse (CCW) hardware limit switch is active',
-                                    0x00000004: 'forward (CW) software limit switch is active',
-                                    0x00000008: 'reverse (CCW) software limit switch is active',
-                                    0x00000010: 'in motion, moving forward (CW)',
-                                    0x00000020: 'in motion, moving reverse (CCW)',
-                                    0x00000040: 'in motion, jogging forward (CW)',
-                                    0x00000080: 'in motion, jogging reverse (CCW)',
-                                    0x00000100: 'motor connected',
-                                    0x00000200: 'in motion, homing',
-                                    0x00000400: 'homed (homing has been completed)',
-                                    0x00001000: 'interlock state (1 = enabled)'}
+            self.status_bit_mask = np.array([[0x00000001, 'forward (CW) hardware limit switch is active'],
+                                    [0x00000002, 'reverse (CCW) hardware limit switch is active'],
+                                    [0x00000004, 'forward (CW) software limit switch is active'],
+                                    [0x00000008, 'reverse (CCW) software limit switch is active'],
+                                    [0x00000010, 'in motion, moving forward (CW)'],
+                                    [0x00000020, 'in motion, moving reverse (CCW)'],
+                                    [0x00000040, 'in motion, jogging forward (CW)'],
+                                    [0x00000080, 'in motion, jogging reverse (CCW)'],
+                                    [0x00000100, 'motor connected'],
+                                    [0x00000200, 'in motion, homing'],
+                                    [0x00000400, 'homed (homing has been completed)'],
+                                    [0x00001000, 'interlock state (1 = enabled)']])
 
             # delattr(self, 'get_qt_ui')
         if type(destination) != dict and len(self.destination)==1:
@@ -119,19 +113,23 @@ class APT_VCP_motor(APT_VCP, Stage):
 #                return False
 #        return True
 
-    def _waitFinishMove(self,axis = None):
+    def _waitFinishMove(self,axis = None,debug=False):
+        """A simple function to force movement to block the console """
         if axis == None:
             destination_ids = self.destination.keys()
         else:
             destination_ids = [axis]
         for dest in destination_ids:
             status = self.get_status_update(axis = dest)
+            if debug > 0 or DEBUG == True:
+                print status
             while any(map(lambda x: 'in motion' in x[1], status)):
                 time.sleep(0.1)
                 status = self.get_status_update(axis = dest)
           #      print status
 
     def home(self,axis = None):
+        """Rehome the stage with an axis input """
         if axis == None:
             destination_ids = self.axis_names
         else:
@@ -142,6 +140,8 @@ class APT_VCP_motor(APT_VCP, Stage):
             self._waitFinishMove()
 
     def move(self, pos, axis=None, relative=False,channel_number = None,block = True):
+        """ Move command allowing specification of axis, 
+        relative, channel and if we want the function to be blocking"""
         if channel_number is None:
             channel_number = 1
         if not hasattr(pos, '__iter__'):
@@ -155,51 +155,35 @@ class APT_VCP_motor(APT_VCP, Stage):
                 self._logger.warn('What axis shall I move?')
         else:
             axes = tuple(axis)
-        axis_number = 0
+        #create list of positions for each axis
+        pos_list = [0]*len(self.axis_names)
+        for i,axis  in enumerate(axes):
+            axis_number = np.where(np.array(self.axis_names)==[axis])[0][0]
+            pos_list[axis_number] = pos[i]
+        pos = pos_list
         for axis in axes:
-      #      pos_in_counts = int(np.round(self.convert(pos[axis_number],'position','counts'),decimals = 0))
-        #    data = bytearray(struct.pack('<HL', self.channel_number_to_identity[channel_number], pos_in_counts))
+            axis_number = np.where(np.array(self.axis_names)==[axis])[0][0]
             if relative:
                 pos[axis_number] = self.position[axis_number]+pos[axis_number]
-                
-       #         data = bytearray(struct.pack('<HL', self.channel_number_to_identity[channel_number], pos_in_counts))
-      #          self.write(0x0448, data=data,destination_id=axis)
- #           else:
- #               new_pos = 
-      #          data = bytearray(struct.pack('<HL', self.channel_number_to_identity[channel_number], pos_in_counts))
-    #            self.write(0x0453, data=data,destination_id=axis)
+
             pos_in_counts = int(np.round(self.convert(pos[axis_number],'position','counts'),decimals = 0))
             data = bytearray(struct.pack('<HL', self.channel_number_to_identity[channel_number], pos_in_counts))
-            self.write(0x0453, data=data,destination_id=axis)
-            if block ==True:
-                self._waitFinishMove()
+            try:
+                self.write(0x0453, data=data,destination_id=axis)
+                if block ==True:
+                    self._waitFinishMove()
+                self._recusive_move_num = 0
+            except struct.error as e:
+                self.log('Move failed with '+str(e),'warning')
+                self._recusive_move_num+=1
+                if self._recusive_move_num>10:
+                    raise Exception('Stage mode failed!')
+                self.move(pos[axis_number],axis=axis,channel_number=channel_number,block = block)
             axis_number += 1
+
 
     '''PARAMETERS'''
 
-    # def convert_to_SI_position(position):
-    #     '''This is motor and controller specific and therefore need to be subclassed '''
-    #     raise NotImplementedError
-    #
-    # def convert_to_APT_position(position):
-    #     '''This is motor and controller specific and therefore need to be subclassed '''
-    #     raise NotImplementedError
-    #
-    # def convert_to_SI_velocity(velocity):
-    #     '''This is motor and controller specific and therefore need to be subclassed '''
-    #     raise NotImplementedError
-    #
-    # def convert_to_APT_velocity(velocity):
-    #     '''This is motor and controller specific and therefore need to be subclassed '''
-    #     raise NotImplementedError
-    #
-    # def convert_to_SI_acceleration(acceleration):
-    #     '''This is motor and controller specific and therefore need to be subclassed '''
-    #     raise NotImplementedError
-    #
-    # def convert_to_APT_acceleration(acceleration):
-    #     '''This is motor and controller specific and therefore need to be subclassed '''
-    #     raise NotImplementedError
 
     def get_status_update(self, channel_number=1,axis = None):
         if self.model[1] in DC_status_motors:
@@ -208,7 +192,7 @@ class APT_VCP_motor(APT_VCP, Stage):
             returned_message = self.query(0x0480, param1=self.channel_number_to_identity[channel_number],destination_id = axis)
         return self.update_status(returned_message['data'])
 
-    def update_status(self, returned_message):
+    def update_status(self, returned_message,debug=False):
         '''This command should update device properties from the update message
             however this has to be defined for every device as the status update format
             and commands vary,
@@ -216,15 +200,24 @@ class APT_VCP_motor(APT_VCP, Stage):
             Args:
                 The returned message from a status update request           (dict)
         '''
+        if debug > 0 or DEBUG == True:
+            N = len(returned_message)
+            print "returned_message length:",N
         if self.model[1] in DC_status_motors:
             channel, position, velocity, Reserved, status_bits = struct.unpack('<HLHHI', returned_message)
+            #HLHHI
+            #H - 2, L - 4, I - 4
             # self.position = position
             # self.velocity = velocity / self.velocity_scaling_factor
         else:
-            channel, position, EncCnt, status_bits = struct.unpack(returned_message, '<ILLH')
-   #         self.position = position  #
-   #         self.EncCnt = EncCnt
-        self.status = self.status_bit_mask[np.where(self._bit_mask_array(status_bits, self.status_bit_mask[:, 0]))]
+            
+            channel, position, EncCnt,status_bits, ChanIdent2,_,_,_ = struct.unpack('<HILIHLLL',returned_message)
+            # print "Status bits",status_bits
+            # print "self.status_bit_mask",self.status_bit_mask[:, 0]
+        bitmask = self._bit_mask_array(status_bits, [int(i) for i in self.status_bit_mask[:, 0]])
+        self.status = self.status_bit_mask[np.where(bitmask)]
+        if debug > 0 or DEBUG == True:
+            print self.status
         return self.status
 
 
@@ -267,169 +260,7 @@ class APT_VCP_motor(APT_VCP, Stage):
 
     position = property(get_position, set_position)
 
-    # def get_encoder_counts(self, channel_number=1):
-    #     '''Sets/Gets the live encoder count in the controller
-    #         generally this should not be used to set the encoder value
-    #         instead the controller should determine its own position by
-    #         performing a homing manoeuvre
-    #         Args:
-    #             encoder_counts:    (int) this is the encoder counts
-    #             channel_number:     (int) This defaults to 1
-    #     '''
-    #     returned_message = self.query(0x040A, param1=self.channel_number_to_identity[channel_number])
-    #     data = returned_message['data']
-    #     channel_id, encoder_counts = struct.unpack('<HL', data)
-    #     return encoder_counts
-    #
-    # def set_encoder_counts(self, encoder_counts, channel_number=1):
-    #     data = bytearray(struct.pack('<HL', self.channel_number_to_identity[channel_number], encoder_counts))
-    #     self.write(0x0409, data=data)
-    #
-    # encoder_counts = property(get_encoder_counts, set_encoder_counts)
 
-    # def get_velocity_params(self, channel_number=1):
-    #     """Trapezoidal velocity parameters for the specified
-    #     motor channel. For DC servo controllers, the velocity is set in
-    #     encoder counts/sec and acceleration is set in encoder
-    #     counts/sec/sec.For stepper motor controllers the velocity
-    #     is set in microsteps/sec and acceleration is set in microsteps/sec/sec.
-    #     However, we have handled the conversions therefore SI are used.
-    #     Args:
-    #         velocity_params(dict) containing:
-    #             channel_num (int)       :   the channel number
-    #             min_velocity(float)     :   Minimum velocity in SI units
-    #             acceleration(float)     :   acceleration in SI units
-    #             max_velocity(float)     :   maximum velocity in SI units
-    #         """
-    #     returned_message = self.query(0x0414, param1=self.channel_number_to_identity[channel_number])
-    #     data = returned_message['data']
-    #     channel_id, min_vel, acceleration, maximum_vel = struct.unpack('<HLLL', data)
-    #     velocity_parms = {'channel_num': channel_number, 'min_velocity': self.convert_to_SI_velocity(min_vel),
-    #                       'acceleration': self.convert_to_SI_acceleration(acceleration),
-    #                       'max_velocity': self.convert_to_SI_velocity(maximum_vel)}
-    #     return velocity_parms
-    #
-    # def set_velocity_params(self, velocity_params, channel_number=1):
-    #
-    #     data = struct.pack('<HLLL',
-    #                        self.channel_number_to_identity[velocity_params['channel_num']],
-    #                        self.convert_to_APT_velocity(velocity_params['min_velocity']),
-    #                        self.convert_to_APT_acceleration(velocity_params['acceleration']),
-    #                        self.convert_to_APT_velocity(velocity_params['max_velocity']),
-    #                        )
-    #     self.write(0x0413, data=data)
-    #
-    # velocity_params = property(get_velocity_params,
-    #                            set_velocity_params)  # not sure how this will work with channel inputs may only work when channel = 1
-    #
-    # def get_jog_params(self, channel_number=1):
-    #     """Used to set the velocity jog parameters for the specified motor
-    #         channel, For DC servo controllers, values set in encoder counts.
-    #         For stepper motor controllers the values is set in microsteps. However,
-    #         here we have converted them to SI units
-    #     Args:
-    #         jog_param(dict) contains
-    #             channel_num (int)       :   channel number
-    #             jog_mode (int)          :   jog mode 1 for cont 2 for single step
-    #             jog_step_size (float)   :   jog step size converted to SI
-    #             jog_min_velocity(float) :   minimum velocity converted to SI
-    #             jog_max_velovity(float) :   maximum velocity converted to SI
-    #             jog_stop_mode(int)      :   1 for immediate 2 for profiled stop
-    #
-    #     """
-    #     returned_message = self.query(0x0417, param1=self.channel_number_to_identity[channel_number])
-    #     data = returned_message['data']
-    #     data = struct.unpack('<HHLLLLH', data)
-    #     jog_params = {'channel_num': data[0], 'jog_mode': data[1],
-    #                   'jog_step_size': self.convert_to_SI_position(data[2]),
-    #                   'jog_min_velocity': self.convert_to_SI_velocity(data[3]),
-    #                   'jog_acceleration': self.convert_to_SI_acceleration(data[4]),
-    #                   'jog_max_velocity': self.convert_to_SI_velocity(data[5]),
-    #                   'jog_stop_mode': data[6]}
-    #     return jog_params
-    #
-    # def set_jog_params(self, jog_params, channel_number=1):
-    #     data = struct.pack('<HHLLLLH',
-    #                        self.channel_number_to_identity[jog_params['channel_num']],
-    #                        jog_params['jog_mode'],
-    #                        self.convert_to_APT_position(jog_params['jog_step_size']),
-    #                        self.convert_to_APT_velocity(jog_params['jog_min_velocity']),
-    #                        self.convert_to_APT_acceleration(jog_params['jog_acceleration']),
-    #                        self.convert_to_APT_velocity(jog_params['jog_max_velocity']),
-    #                        jog_params['jog_stop_mode'])
-    #     self.write(0x0416, data=data)
-    #
-    # jog_params = property(get_jog_params, set_jog_params)
-
-    # def get_power_params(self, channel_number=1):
-    #     """
-    #     The power needed to hold a motor in a fixed position is much smaller than that required for a move. It is good
-    #     practice to decrease the power in a stationary motor in order to reduce heating, and thereby minimize thermal
-    #     movements caused by expansion. This message sets a reduction factor for the rest power and the move power values
-    #     as a percentage of full power. Typically, move power should be set to 100% and rest power to a value
-    #     significantly less than this.
-    #
-    #     Args:
-    #         channel_number:
-    #
-    #     Returns:
-    #         power_params (dict):
-    #             channel_num (int)   : channel being addressed
-    #             RestFactor (int)    : the phase power value when the motor is at rest, in the range 1 to 100
-    #                                   (i.e. 1% to 100% of full power)
-    #             MoveFactor (int)    : the phase power value when the motor is moving, in the range 1 to 100
-    #     """
-    #     returned_message = self.query(0x0427, param1=self.channel_number_to_identity[channel_number])
-    #     data = returned_message['data']
-    #     data = struct.unpack('<HHH', data)
-    #     power_params = {'channel_num': data[0],
-    #                   'RestFactor': data[1],
-    #                   'MoveFactor': data[2]}
-    #     return power_params
-    #
-    # def set_power_params(self, power_params, channel_number=None):
-    #     if channel_number is None:
-    #         channel_number = power_params['channel_num']
-    #     data = struct.pack('<HHH',
-    #                        self.channel_number_to_identity[channel_number],
-    #                        power_params['RestPower'],
-    #                        power_params['MovePower'])
-    #     self.write(0x0426, data=data)
-    #
-    # power_params = property(get_power_params, set_power_params)
-
-    # def get_gen_move_params(self, channel_number=1):
-    #     """
-    #     Used to set the general move parameters for the specified motor
-    #     channel. At this time this refers specifically to the backlash settings.
-    #
-    #     Args:
-    #         channel_number:
-    #
-    #     Returns:
-    #         gen_move_params (dict):
-    #             channel_num (int)       :   channel being addressed
-    #             backlash_distance (int) :   The value of the backlash distance as a 4 byte signed
-    #                                         integer, which specifies the relative distance in position
-    #                                         counts. The scaling between real time values and this
-    #                                         parameter is detailed in Section 8.
-    #     """
-    #     returned_message = self.query(0x043B, param1=self.channel_number_to_identity[channel_number])
-    #     data = returned_message['data']
-    #     data = struct.unpack('<HL', data)
-    #     gen_move_params = {'channel_num': data[0],
-    #                     'backlash_distance': data[1]}
-    #     return gen_move_params
-    #
-    # def set_gen_move_params(self, gen_params, channel_number=None):
-    #     if channel_number is None:
-    #         channel_number = gen_params['channel_num']
-    #     data = struct.pack('<HL',
-    #                        self.channel_number_to_identity[channel_number],
-    #                        gen_params['backlash_distance'])
-    #     self.write(0x043C, data=data)
-    #
-    # gen_move_params = property(get_gen_move_params, set_gen_move_params)
     def convert(self, value, from_, to_):
         print 'Not doing anything from ', from_, ' to ', to_
         return value
@@ -710,10 +541,11 @@ class Stepper_APT_trinamics(APT_VCP_motor):
              'acceleration' : acc_to_counts}
     
 if __name__ == '__main__':
+    print "pass"
     # microscope_stage = APT_VCP_motor(port='COM12', source=0x01, destination=0x21)
 
-    tdc_cube = APT_VCP_motor(port='COM21', source=0x00, destination=0x50)
-    tdc_cube2 = APT_VCP_motor(port='COM20', source=0x01, destination=0x50)
+    tdc_cube = Stepper_APT_trinamics(port='/dev/ttyUSB1', source=0x01, destination=0x50)
+    # tdc_cube2 = APT_VCP_motor(port='COM20', source=0x01, destination=0x50)
 
     tdc_cube.show_gui()
     # print tdc_cube.position

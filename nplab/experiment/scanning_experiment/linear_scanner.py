@@ -13,12 +13,13 @@ class LinearScan(ScanningExperiment, TimedScan):
 
     """
 
-    def __init__(self, start=None, stop=None, num_steps=None, repetitions=1):
+    def __init__(self, start=None, stop=None, step=None):
         ScanningExperiment.__init__(self)
         TimedScan.__init__(self)
         self.scanner = None
-        self.start, self.stop, self.num_steps, self.repetitions = (start, stop, num_steps, repetitions)
+        self.start, self.stop, self.step = (start, stop, step)
         self.parameter = None
+        # underscored attributes are made into properties
         self.status = 'inactive'
         self.abort_requested = False
         self.estimated_step_time = 0.001
@@ -26,7 +27,7 @@ class LinearScan(ScanningExperiment, TimedScan):
 
     def run(self):
         """
-        Starts the parameter scan in its own thread and runs the update function at the specified
+        Starts the grid scan in its own thread and runs the update function at the specified
         rate whilst acquiring the data.
 
         :param rate: the update period in seconds
@@ -37,37 +38,28 @@ class LinearScan(ScanningExperiment, TimedScan):
             return
         self.init_scan()
         self.acquisition_thread = threading.Thread(target=self.scan,
-                                                   args=(self.start, self.stop,
-                                                         self.num_steps, self.repetitions))
+                                                   args=(self.start, self.stop, self.step))
         self.acquisition_thread.start()
 
-    def init_parameter(self, start, stop, num_steps, endpoint=True):
+    def init_parameter(self, start, stop, step):
         """Create an parameter array to scan."""
-#        x = np.arange(start, stop, step)
-        x = np.linspace(start, stop, num_steps, endpoint=endpoint)
+        x = np.arange(start, stop, step)
         self.total_points = x.size
         self.parameter = x
         return x
 
     def init_current_parameter(self):
         """Convenience method that initialises a grid based on current parameters."""
-        self.init_parameter(self.start, self.stop, self.num_steps)
+        self.init_parameter(self.start, self.stop, self.step)
 
     def set_parameter(self, value):
         """Vary the independent parameter."""
         raise NotImplementedError
 
-    def scan(self, start, stop, num_steps, repetitions=1):
-        """
-        Scans a parameter specified in set_parameter() and applies
-        scan_function() at each position.
-
-        :param repetitions: number of scans that should be performed; if -1,
-                            the scan is repeated continously until abort_requested
-                            is set to true
-        """
+    def scan(self, start, stop, step):
+        """Scans a grid, applying a function at each position."""
         self.abort_requested = False
-        p = self.init_parameter(start, stop, num_steps)
+        p = self.init_parameter(start, stop, step)
         self.open_scan()
         # get the indices of points along each of the scan axes for use with snaking over array
         pnts = range(p.size)
@@ -80,36 +72,21 @@ class LinearScan(ScanningExperiment, TimedScan):
         self.acquiring.set()
         scan_start_time = time.time()
 
-        if repetitions > 0:
-            n=0
-        elif repetitions == -1:
-            n=-2
-        else:
-            raise ValueError("{0} is not a valid repetition number. It must be >0 or -1.".format(repetitions))
-
-        while n<repetitions:
-            for i in pnts:
-                if self.abort_requested:
-                    break
-                self.index = i
-                self.set_parameter(p[i])
-                self.scan_function(i)
-                self._index += 1
+        for i in pnts:
             if self.abort_requested:
                 break
-            if repetitions > 0:
-                n+=1
-        self.acquiring.clear()
+            self.index = i
+            self.set_parameter(p[i])
+            self.scan_function(i)
+            self._index += 1
         self.print_scan_time(time.time() - scan_start_time)
+        self.acquiring.clear()
         # move back to initial positions
         #self.set_parameter(p[0])
         # finish the scan
         self.analyse_scan()
         self.close_scan()
         self.status = 'scan complete'
-
-    def analyse_scan(self):
-        self.print_scan_time(time.time() - scan_start_time)
 
 
 class LinearScanQt(LinearScan, QtCore.QObject):
@@ -121,8 +98,8 @@ class LinearScanQt(LinearScan, QtCore.QObject):
     status_updated = QtCore.Signal(str)
     timing_updated = QtCore.Signal(str)
 
-    def __init__(self, start=None, stop=None, step=None, repetitions=1):
-        LinearScan.__init__(self, start, stop, step, repetitions)
+    def __init__(self, start=None, stop=None, step=None):
+        LinearScan.__init__(self, start, stop, step)
         QtCore.QObject.__init__(self)
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.update)
@@ -139,8 +116,8 @@ class LinearScanQt(LinearScan, QtCore.QObject):
     def get_qt_ui_cls():
         return LinearScanUI
 
-    def init_parameter(self, start, stop, num_steps):
-        parameter = super(LinearScanQt, self).init_parameter(start, stop, num_steps)
+    def init_parameter(self, start, stop, step):
+        parameter = super(LinearScanQt, self).init_parameter(start, stop, step)
         self.total_points_updated.emit(self.total_points)
         return parameter
 
@@ -179,8 +156,7 @@ class LinearScanUI(QtWidgets.QWidget, UiTools):
 
         self.start.setText(str(self.linear_scanner.start))
         self.stop.setText(str(self.linear_scanner.stop))
-#        self.step.setText(str(self.linear_scanner.step))
-        self.step.setText(str(self.linear_scanner.num_steps))
+        self.step.setText(str(self.linear_scanner.step))
         self.status.setText(self.linear_scanner.status)
 
     def on_click(self):
@@ -188,15 +164,12 @@ class LinearScanUI(QtWidgets.QWidget, UiTools):
         if sender == self.start_button:
             self.linear_scanner.run(self.rate)
         elif sender == self.step_up:
-#            self.linear_scanner.step *= 2
-#            self.step.setText(str(self.linear_scanner.step))
-            self.linear_scanner.num_step +=1
-            self.num_steps.setText(str(self.linear_scanner.num_steps))
+            self.linear_scanner.step *= 2
+            self.step.setText(str(self.linear_scanner.step))
         elif sender == self.step_down:
-#            self.linear_scanner.step /= 2
-#            self.step.setText(str(self.linear_scanner.step))
-            self.linear_scanner.num_step -=1
-            self.num_steps.setText(str(self.linear_scanner.num_steps))
+            self.linear_scanner.step /= 2
+            self.step.setText(str(self.linear_scanner.step))
+
     def on_text_change(self, value):
         sender = self.sender()
         if sender.validator() is not None:
@@ -207,10 +180,8 @@ class LinearScanUI(QtWidgets.QWidget, UiTools):
             self.linear_scanner.start = float(value)
         elif sender == self.stop:
             self.linear_scanner.stop = float(value)
-#        elif sender == self.step:
-#            self.linear_scanner.step = float(value)
         elif sender == self.step:
-            self.linear_scanner.num_steps = float(value)
+            self.linear_scanner.step = float(value)
 
     def update_parameters(self):
         self.total_points.setText(str(self.linear_scanner.total_points))
@@ -242,7 +213,7 @@ if __name__ == '__main__':
     class DummyLinearScan(template):
         def __init__(self):
             super(DummyLinearScan, self).__init__()
-            self.start, self.stop, self.num_step = (0, 1, 100)
+            self.start, self.stop, self.step = (0, 1, 0.01)
             self.estimated_step_time = 0.0005
             self.fig = Figure()
             self.data = None

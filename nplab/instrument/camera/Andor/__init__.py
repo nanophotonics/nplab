@@ -111,6 +111,12 @@ class AndorBase:
             raise Exception("Cannot detect operating system for Andor")
             #       self.channel = (0,)
         self.parameters = parameters
+        self._parameters = dict()
+        for key, value in parameters.items():
+            if 'value' in value:
+                self._parameters[key] = value['value']
+            else:
+                self._parameters[key] = None
         # , Inputs=(c_int, c_int,)
         self.Initialize()
 
@@ -125,7 +131,7 @@ class AndorBase:
         This can be modified to include other cameras that are safe to shutdown when cold
         :return:
         """
-        if self.parameters['Capabilities']['value']['CameraType'] != 8:
+        if self._parameters['Capabilities']['CameraType'] != 8:
             waitThread = WaitThread(self)
             waitThread.start()
             waitThread.wait()
@@ -242,8 +248,10 @@ class AndorBase:
 
             if len(inputs) == 1:
                 self.parameters[param_loc]['value'] = inputs[0]
+                self._parameters[param_loc] = inputs[0]
             else:
                 self.parameters[param_loc]['value'] = inputs
+                self._parameters[param_loc] = inputs
 
             if 'Finally' in self.parameters[param_loc]:
                 self.GetParameter(self.parameters[param_loc]['Finally'])
@@ -255,6 +263,7 @@ class AndorBase:
             else:
                 setattr(self, '_' + param_loc, inputs)
             self.parameters[param_loc]['value'] = getattr(self, '_' + param_loc)
+            self._parameters[param_loc] = getattr(self, '_' + param_loc)
 
     def GetParameter(self, param_loc, *inputs):
         """Parameter getter
@@ -296,18 +305,22 @@ class AndorBase:
             # if len(vals) == 1:
             #     vals = vals[0]
             self.parameters[param_loc]['value'] = vals
+            self._parameters[param_loc] = vals
             return vals
         elif 'Get_from_prop' in self.parameters[param_loc].keys() and hasattr(self, '_' + param_loc):
             vals = getattr(self, self.parameters[param_loc]['Get_from_prop'])[getattr(self, '_' + param_loc)]
             self.parameters[param_loc]['value'] = vals
+            self._parameters[param_loc] = vals
             return vals
         elif 'Get_from_fixed_prop' in self.parameters[param_loc].keys():
             vals = getattr(self, self.parameters[param_loc]['Get_from_fixed_prop'])[0]
             self.parameters[param_loc]['value'] = vals
+            self._parameters[param_loc] = vals
             return vals
 
         elif hasattr(self, '_' + param_loc):
             self.parameters[param_loc]['value'] = getattr(self, '_' + param_loc)
+            self._parameters[param_loc] = getattr(self, '_' + param_loc)
             return getattr(self, '_' + param_loc)
         else:
             self._logger.info('The ' + param_loc + ' has not previously been set!')
@@ -321,7 +334,7 @@ class AndorBase:
         param_dict = dict()
         for param in self.parameters:
             param_dict[param] = getattr(self, param)
-        return param_dict
+        return
 
     def SetAllParameters(self, Param_dict):
         """Sets the values of the parameters listed within the dict Param_dict, It can take any number of parameters
@@ -384,10 +397,14 @@ class AndorBase:
         self.SetParameter('Image', 1, 1, 1, self.DetectorShape[0], 1,
                           self.DetectorShape[1])
         self.SetParameter('Shutter', 1, 0, 1, 1)
-        self.SetParameter('SetTemperature', -60)
+        self.SetParameter('SetTemperature', -90)
         self.SetParameter('CoolerMode', 0)
         self.SetParameter('FanMode', 0)
-        self.SetParameter('OutAmp', 1)
+        try:
+            self.SetParameter('OutAmp', 1)
+        except:
+            self.OutAmp = 0
+            self.log('This CCD does not have em mode','WARN')
         self.CoolerON()
         #      self.GetAllParameters()
 
@@ -411,43 +428,43 @@ class AndorBase:
         self._dllWrapper('WaitForAcquisition')
         self.WaitForDriver()
 
-        if self.parameters['AcquisitionMode']['value'] == 4:
+        if self._parameters['AcquisitionMode'] == 4:
             num_of_images = 1  # self.parameters['FastKinetics']['value'][1]
-            image_shape = (self.parameters['FastKinetics']['value'][-1], self.parameters['DetectorShape']['value'][0])
+            image_shape = (self._parameters['FastKinetics'][-1], self._parameters['DetectorShape'][0])
         else:
-            if self.parameters['AcquisitionMode']['value'] == 1:
+            if self._parameters['AcquisitionMode'] == 1:
                 num_of_images = 1
-            elif self.parameters['AcquisitionMode']['value'] == 2:
+            elif self._parameters['AcquisitionMode'] == 2:
                 num_of_images = 1
-            elif self.parameters['AcquisitionMode']['value'] == 3:
-                num_of_images = self.parameters['NKin']['value']
+            elif self._parameters['AcquisitionMode'] == 3:
+                num_of_images = self._parameters['NKin']
             else:
-                raise NotImplementedError('Acquisition Mode %g' % self.parameters['AcquisitionMode']['value'])
+                raise NotImplementedError('Acquisition Mode %g' % self._parameters['AcquisitionMode'])
 
-            if self.parameters['ReadMode']['value'] == 0:
-                if self.parameters['IsolatedCropMode']['value'][0]:
+            if self._parameters['ReadMode'] == 0:
+                if self._parameters['IsolatedCropMode'][0]:
                     image_shape = (
-                        self.parameters['IsolatedCropMode']['value'][2] / self.parameters['IsolatedCropMode']['value'][
+                        self._parameters['IsolatedCropMode'][2] / self._parameters['IsolatedCropMode'][
                             4],)
                 else:
-                    image_shape = (self.parameters['DetectorShape']['value'][0] / self.parameters['FVBHBin']['value'],)
-            elif self.parameters['ReadMode']['value'] == 3:
-                image_shape = (self.parameters['DetectorShape']['value'][0],)
-            elif self.parameters['ReadMode']['value'] == 4:
-                if self.parameters['IsolatedCropMode']['value'][0]:
+                    image_shape = (self._parameters['DetectorShape'][0] / self._parameters['FVBHBin'],)
+            elif self._parameters['ReadMode'] == 3:
+                image_shape = (self._parameters['DetectorShape'][0],)
+            elif self._parameters['ReadMode'] == 4:
+                if self._parameters['IsolatedCropMode'][0]:
                     image_shape = (
-                        self.parameters['IsolatedCropMode']['value'][1] / self.parameters['IsolatedCropMode']['value'][
+                        self._parameters['IsolatedCropMode'][1] / self._parameters['IsolatedCropMode'][
                             3],
-                        self.parameters['IsolatedCropMode']['value'][2] / self.parameters['IsolatedCropMode']['value'][
+                        self._parameters['IsolatedCropMode'][2] / self._parameters['IsolatedCropMode'][
                             4])
                 else:
                     image_shape = (
-                        (self.parameters['Image']['value'][5] - self.parameters['Image']['value'][4] + 1) /
-                        self.parameters['Image']['value'][1],
-                        (self.parameters['Image']['value'][3] - self.parameters['Image']['value'][2] + 1) /
-                        self.parameters['Image']['value'][0],)
+                        (self._parameters['Image'][5] - self._parameters['Image'][4] + 1) /
+                        self._parameters['Image'][1],
+                        (self._parameters['Image'][3] - self._parameters['Image'][2] + 1) /
+                        self._parameters['Image'][0],)
             else:
-                raise NotImplementedError('Read Mode %g' % self.parameters['ReadMode']['value'])
+                raise NotImplementedError('Read Mode %g' % self._parameters['ReadMode'])
 
         dim = num_of_images * np.prod(image_shape)
         cimageArray = c_int * dim
@@ -481,9 +498,9 @@ class AndorBase:
         -------
 
         """
-        if self.parameters['IsolatedCropMode']['value'][0]:
+        if self._parameters['IsolatedCropMode'][0]:
             if len(params) == 0:
-                params += (self.parameters['IsolatedCropMode']['value'])
+                params += (self._parameters['IsolatedCropMode'])
             elif len(params) != 5:
                 raise ValueError('Wrong number of parameters (need bool, cropheight, cropwidth, vbin, hbin')
 
@@ -494,7 +511,7 @@ class AndorBase:
             self.SetParameter('IsolatedCropMode', *params)
         else:
             if len(params) == 0:
-                params = self.parameters['Image']['value']
+                params = self._parameters['Image']
             elif len(params) != 6:
                 raise ValueError('Wrong number of parameters (need hbin, vbin, hstart, hend, vstart, vend')
 
@@ -508,7 +525,7 @@ class AndorBase:
     def SetROI(self, *params):
         if len(params) != 4:
             raise ValueError('Wrong number of inputs')
-        current_binning = self.parameters['Image']['value'][:2]
+        current_binning = self._parameters['Image'][:2]
         self.SetImage(*(current_binning + params))
 
     # @locked_action
@@ -517,7 +534,7 @@ class AndorBase:
             raise ValueError('Wrong number of inputs')
         if len(params) == 1:
             params += params
-        current_ROI = self.parameters['Image']['value'][2:]
+        current_ROI = self._parameters['Image'][2:]
         self.SetImage(*(params + current_ROI))
 
     @locked_action
@@ -537,14 +554,14 @@ class AndorBase:
         """
 
         if n_rows is None:
-            n_rows = self.parameters['FastKinetics']['value'][0]
+            n_rows = self._parameters['FastKinetics'][0]
 
-        series_Length = int(self.parameters['DetectorShape']['value'][1] / n_rows) - 1
-        expT = self.parameters['AcquisitionTimings']['value'][0]
-        mode = self.parameters['ReadMode']['value']
-        hbin = self.parameters['Image']['value'][0]
-        vbin = self.parameters['Image']['value'][1]
-        offset = self.parameters['DetectorShape']['value'][1] - n_rows
+        series_Length = int(self._parameters['DetectorShape'][1] / n_rows) - 1
+        expT = self._parameters['AcquisitionTimings'][0]
+        mode = self._parameters['ReadMode']
+        hbin = self._parameters['Image'][0]
+        vbin = self._parameters['Image'][1]
+        offset = self._parameters['DetectorShape'][1] - n_rows
 
         self.SetParameter('FastKinetics', n_rows, series_Length, expT, mode, hbin, vbin, offset)
 
@@ -617,6 +634,7 @@ class AndorBase:
 
 
 parameters = dict(
+    AvailableCameras=dict(Get=dict(cmdName='GetAvailableCameras', Outputs=(c_uint, )), value=None),
     channel=dict(value=0),
     backgrounded=dict(value=False),
     background=dict(value=None),
@@ -717,15 +735,15 @@ class Andor(Camera, AndorBase):
         try:
             imageArray, num_of_images, image_shape = self.capture()
 
-            self.imageArray = imageArray
+            # self.imageArray = imageArray
 
             # The image is reversed depending on whether you read in the conventional CCD register or the EM register, so we reverse it back
-            if self.parameters['OutAmp']['value']:
-                self.CurImage = np.reshape(self.imageArray, (num_of_images,) + image_shape)[..., ::-1]
+            if self._parameters['OutAmp']:
+                reshaped = np.reshape(imageArray, (num_of_images,) + image_shape)[..., ::-1]
             else:
-                self.CurImage = np.reshape(self.imageArray, (num_of_images,) + image_shape)
-            self.CurImage = self.bundle_metadata(self.CurImage)
-            if len(self.CurImage) == 1:
+                reshaped = np.reshape(imageArray, (num_of_images,) + image_shape)
+            self.CurImage = self.bundle_metadata(reshaped)
+            if len(reshaped) == 1:
                 return 1, self.CurImage[0]
             else:
                 return 1, self.CurImage
@@ -739,9 +757,8 @@ class Andor(Camera, AndorBase):
         try:
             self.SetParameter(parameter_name, parameter_value)
         except Exception as e:
-            self.log('paramter' +parameter_name+' could not be set with the value '+parameter_value+
-                     'due to error '+str(e))
-            
+            self.log('parameter %s could not be set with the value %s due to error %s' % (parameter_name,
+                                                                                          parameter_value, e))
 
     def get_qt_ui(self):
         if not hasattr(self, 'ui'):
@@ -809,6 +826,8 @@ class AndorUI(QtWidgets.QWidget, UiTools):
             self._func_dict[param] = func
             register_for_property_changes(self.Andor, param, self._func_dict[param])
         #self.Andor.updateGUI.connect(self.updateGUI)
+        self.autoLevel=True
+        self.autoRange=False
 
     def __del__(self):
         self._stopTemperatureThread = True
@@ -849,8 +868,8 @@ class AndorUI(QtWidgets.QWidget, UiTools):
     def _constantlyUpdateTemperature(self):
         self._stopTemperatureThread = False
         self.Andor.GetParameter('CurrentTemperature')
-        while np.abs(self.Andor.parameters['CurrentTemperature']['value'] -
-                             self.Andor.parameters['SetTemperature']['value']) > 2:
+        while np.abs(self.Andor._parameters['CurrentTemperature'] -
+                             self.Andor._parameters['SetTemperature']) > 2:
             if self._stopTemperatureThread:
                 break
             temp = self.Andor.GetParameter('CurrentTemperature')
@@ -863,19 +882,21 @@ class AndorUI(QtWidgets.QWidget, UiTools):
     # GUI FUNCTIONS
     def updateGUI(self):
         trig_modes = {0: 0, 1: 1, 6: 2}
-        self.comboBoxAcqMode.setCurrentIndex(self.Andor.parameters['AcquisitionMode']['value'] - 1)
+        # print self.Andor.parameters
+        # print self.Andor._parameters
+        self.comboBoxAcqMode.setCurrentIndex(self.Andor._parameters['AcquisitionMode'] - 1)
         self.AcquisitionModeChanged()
-        self.comboBoxReadMode.setCurrentIndex(self.Andor.parameters['ReadMode']['value'])
+        self.comboBoxReadMode.setCurrentIndex(self.Andor._parameters['ReadMode'])
         self.ReadModeChanged()
-        self.comboBoxTrigMode.setCurrentIndex(trig_modes[self.Andor.parameters['TriggerMode']['value']])
+        self.comboBoxTrigMode.setCurrentIndex(trig_modes[self.Andor._parameters['TriggerMode']])
         self.TrigChanged()
-        self.comboBoxBinning.setCurrentIndex(np.log2(self.Andor.parameters['Image']['value'][0]))
+        self.comboBoxBinning.setCurrentIndex(np.log2(self.Andor._parameters['Image'][0]))
         self.BinningChanged()
-        self.spinBoxNumFrames.setValue(self.Andor.parameters['NKin']['value'])
+        self.spinBoxNumFrames.setValue(self.Andor._parameters['NKin'])
 
         self.Andor.GetParameter('AcquisitionTimings')
         self.lineEditExpT.setText(
-            str(float('%#e' % self.Andor.parameters['AcquisitionTimings']['value'][0])).rstrip('0'))
+            str(float('%#e' % self.Andor._parameters['AcquisitionTimings'][0])).rstrip('0'))
 
     def Cooler(self):
         if self.checkBoxCooler.isChecked():
@@ -968,15 +989,15 @@ class AndorUI(QtWidgets.QWidget, UiTools):
 
     def BinningChanged(self):
         current_binning = int(self.comboBoxBinning.currentText()[0])
-        if self.Andor.parameters['IsolatedCropMode']['value'][0]:
-            params = list(self.Andor.parameters['IsolatedCropMode']['value'])
+        if self.Andor._parameters['IsolatedCropMode'][0]:
+            params = list(self.Andor._parameters['IsolatedCropMode'])
             params[3] = current_binning
             params[4] = current_binning
             self.Andor._logger.debug('BinningChanged: %s' % str(params))
             self.Andor.SetImage(*params)
         else:
-            self.Andor.SetImage(current_binning, current_binning, *self.Andor.parameters['Image']['value'][2:])
-        self.Andor.SetParameter('FVBHBin', current_binning)
+            self.Andor.SetImage(current_binning, current_binning, *self.Andor._parameters['Image'][2:])
+        self.Andor.set_camera_parameter('FVBHBin', current_binning)
 
     def NumFramesChanged(self):
         num_frames = self.spinBoxNumFrames.value()
@@ -989,9 +1010,9 @@ class AndorUI(QtWidgets.QWidget, UiTools):
 
     def NumRowsChanged(self):
         num_rows = self.spinBoxNumRows.value()
-        if self.Andor.parameters['AcquisitionMode']['value'] == 4:
+        if self.Andor._parameters['AcquisitionMode'] == 4:
             self.Andor.SetFastKinetics(num_rows)
-        elif self.Andor.parameters['ReadMode']['value'] == 3:
+        elif self.Andor._parameters['ReadMode'] == 3:
             center_row = self.spinBoxCenterRow.value()
             if center_row - num_rows < 0:
                 self.Andor._logger.info(
@@ -1026,7 +1047,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
             current_binning = int(self.comboBoxBinning.currentText()[0])
             pos1 = self.DisplayWidget.CrossHair1.pos()
             pos2 = self.DisplayWidget.CrossHair2.pos()
-            shape = self.Andor.parameters['DetectorShape']['value']
+            shape = self.Andor._parameters['DetectorShape']
             if self.checkBoxEMMode.isChecked():
                 minx, maxx = map(lambda x: int(x),
                                  (min(pos1[0], pos2[0]), max(pos1[0], pos2[0])))
@@ -1040,7 +1061,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
             if self.checkBoxCrop.isChecked():
                 if self.checkBoxROI.isChecked():
                     self.checkBoxROI.setChecked(False)
-                self.Andor.parameters['IsolatedCropMode']['value'] = (1,)
+                self.Andor._parameters['IsolatedCropMode'] = (1,)
                 self.Andor.SetImage(1, maxy, maxx, current_binning, current_binning)
                 # if self.checkBoxEMMode.isChecked():
                 #     self.Andor.SetImage(1, maxy, maxx, current_binning, current_binning)
@@ -1074,7 +1095,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         else:
             filename = 'Andor_data'
         if self.group_comboBox.currentText() == 'AndorData':
-            if df._use_current_group == True:
+            if df._use_current_group == True and df._current_group is not None:
                 group = df._current_group
             elif 'AndorData' in self.data_file.keys():
                 group = self.data_file['AndorData']
@@ -1113,13 +1134,13 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         if self.DisplayWidget is None:
             return
         if hasattr(self.DisplayWidget, 'CrossHair1') and hasattr(self.DisplayWidget, 'CrossHair2'):
-            hbin, vbin = self.Andor.parameters['Image']['value'][:2]
+            hbin, vbin = self.Andor._parameters['Image'][:2]
             if self.checkBoxROI.isChecked():
                 if self.checkBoxCrop.isChecked():
                     self.checkBoxCrop.setChecked(False)
                 pos1 = self.DisplayWidget.CrossHair1.pos()
                 pos2 = self.DisplayWidget.CrossHair2.pos()
-                shape = self.Andor.parameters['DetectorShape']['value']
+                shape = self.Andor._parameters['DetectorShape']
                 # print 'GUI ROI. CrossHair: ', pos1, pos2
                 maxx, minx = map(lambda x: shape[0] - int(x),
                                  (min(pos1[0], pos2[0]), max(pos1[0], pos2[0])))
@@ -1135,8 +1156,8 @@ class AndorUI(QtWidgets.QWidget, UiTools):
                 # print 'GUI ROI. ShapeInfo: ', self.Andor.parameters['Image']
                 # self.Andor.SetImage()
             else:
-                self.Andor.SetParameter('Image', hbin, vbin, 1, self.Andor.parameters['DetectorShape']['value'][0],
-                                        1, self.Andor.parameters['DetectorShape']['value'][1])
+                self.Andor.SetParameter('Image', hbin, vbin, 1, self.Andor._parameters['DetectorShape'][0],
+                                        1, self.Andor._parameters['DetectorShape'][1])
                 # self.Andor.parameters['Image'] = [1, 1, self.Andor.parameters['DetectorShape'][0],
                 #                                   self.Andor.parameters['DetectorShape'][1]]
                 # self.Andor.SetImage()
@@ -1180,19 +1201,19 @@ class AndorUI(QtWidgets.QWidget, UiTools):
 
         # The offset is designed so that image ends up being displayed at the correct crosshair coordinates
         # The scale is used for scaling the image according to the binning, hence also preserving the crosshair coordinates
-        if self.Andor.parameters['IsolatedCropMode']['value'][0]:
+        if self.Andor._parameters['IsolatedCropMode'][0]:
             # If the camera is in IsolatedCropMode, which side of the camera is being cropped depends on the amplifier being used
             if self.checkBoxEMMode.isChecked():
                 offset = (0, 0)
             else:
                 offset = (
-                    (self.Andor.parameters['DetectorShape']['value'][0] -
-                     self.Andor.parameters['IsolatedCropMode']['value'][2]), 0)
-            scale = self.Andor.parameters['IsolatedCropMode']['value'][-2:]
+                    (self.Andor._parameters['DetectorShape'][0] -
+                     self.Andor._parameters['IsolatedCropMode'][2]), 0)
+            scale = self.Andor._parameters['IsolatedCropMode'][-2:]
         else:
-            offset = ((self.Andor.parameters['DetectorShape']['value'][0] - self.Andor.parameters['Image']['value'][3]),
-                      self.Andor.parameters['Image']['value'][4] - 1)
-            scale = self.Andor.parameters['Image']['value'][:2]
+            offset = ((self.Andor._parameters['DetectorShape'][0] - self.Andor._parameters['Image'][3]),
+                      self.Andor._parameters['Image'][4] - 1)
+            scale = self.Andor._parameters['Image'][:2]
         data = np.copy(self.Andor.CurImage)
         if np.shape(data[0]) == np.shape(self.Andor.background) and self.Andor.backgrounded == True:
             if self.Andor.backgrounded == True:
@@ -1220,7 +1241,8 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         if len(self.Andor.CurImage.shape) == 2:
             if self.Andor.CurImage.shape[0] > self.DisplayWidget._max_num_line_plots:
                 self.DisplayWidget.splitter.setSizes([1, 0])
-                self.DisplayWidget.ImageDisplay.setImage(data.T, pos=tuple(map(operator.add, offset, (xvals[0],0))), autoRange=False,
+                self.DisplayWidget.ImageDisplay.setImage(data.T, pos=tuple(map(operator.add, offset, (xvals[0], 0))),
+                                                         autoRange=self.autoRange,
                                                          scale=(scale[0]*wavelengthScale[0],scale[1]*wavelengthScale[1]))
             else:
                 self.DisplayWidget.splitter.setSizes([0, 1])
@@ -1233,19 +1255,28 @@ class AndorUI(QtWidgets.QWidget, UiTools):
             zvals = 0.99 * np.linspace(0, image.shape[0] - 1, image.shape[0])
             if image.shape[0] == 1:
                 image = image[0]
-                if self.DisplayWidget.ImageDisplay.image is None:
-                    self.DisplayWidget.ImageDisplay.setImage(image, xvals=zvals,
-                                                         pos=tuple(map(operator.add, offset, (xvals[0],0))), autoRange=False,
-                                                         scale=(scale[0]*wavelengthScale[0],scale[1]*wavelengthScale[1]), autoLevels=True)
-                else:
-                    self.DisplayWidget.ImageDisplay.setImage(image, xvals=zvals,
-                                                         pos=tuple(map(operator.add, offset, (xvals[0],0))), autoRange=False,
-                                                         scale=(scale[0]*wavelengthScale[0],scale[1]*wavelengthScale[1]), autoLevels=False)
+                # if self.DisplayWidget.ImageDisplay.image is None:
+                #     self.DisplayWidget.ImageDisplay.setImage(image, xvals=zvals,
+                #                                              pos=tuple(map(operator.add, offset, (xvals[0], 0))),
+                #                                              autoRange=self.autoRange,
+                #                                              scale=(scale[0]*wavelengthScale[0],
+                #                                                     scale[1]*wavelengthScale[1]),
+                #                                              autoLevels=True)
+                # else:
+                #     self.DisplayWidget.ImageDisplay.setImage(image, xvals=zvals,
+                #                                              pos=tuple(map(operator.add, offset, (xvals[0], 0))),
+                #                                              autoRange=self.autoRange,
+                #                                              scale=(scale[0] * wavelengthScale[0],
+                #                                                     scale[1] * wavelengthScale[1]),
+                #                                              autoLevels=self.autoLevel)
 
-            else:
-                self.DisplayWidget.ImageDisplay.setImage(image, xvals=zvals,
-                                                         pos=tuple(map(operator.add, offset, (xvals[0],0))), autoRange=False,
-                                                         scale=(scale[0]*wavelengthScale[0],scale[1]*wavelengthScale[1]))
+            # else:
+            self.DisplayWidget.ImageDisplay.setImage(image, xvals=zvals,
+                                                     pos=tuple(map(operator.add, offset, (xvals[0], 0))),
+                                                     autoRange=self.autoRange,
+                                                     scale=(scale[0] * wavelengthScale[0],
+                                                            scale[1] * wavelengthScale[1]),
+                                                         autoLevels=self.autoLevel)
 
         chxmin = xvals[0]
         chxmax = xvals[-1]
@@ -1403,14 +1434,14 @@ class CaptureThread(QtCore.QThread):
 
     def SingleAcquire(self):
         self.Andor.raw_snapshot()
-        if self.Andor.parameters['AcquisitionMode']['value'] in [1, 2] and self.Andor.parameters['NKin']['value'] > 1:
-            if self.Andor.parameters['SoftwareWaitBetweenCaptures']['value']:
-                time.sleep(self.Andor.parameters['SoftwareWaitBetweenCaptures']['value'])
+        if self.Andor._parameters['AcquisitionMode'] in [1, 2] and self.Andor._parameters['NKin'] > 1:
+            if self.Andor._parameters['SoftwareWaitBetweenCaptures']:
+                time.sleep(self.Andor._parameters['SoftwareWaitBetweenCaptures'])
 
             final_array = np.zeros(
-                (self.Andor.parameters['NKin']['value'],) + self.Andor.CurImage.shape[1:])
+                (self.Andor._parameters['NKin'],) + self.Andor.CurImage.shape[1:])
             final_array[0] = self.Andor.CurImage[0]
-            for ii in range(1, self.Andor.parameters['NKin']['value']):
+            for ii in range(1, self.Andor._parameters['NKin']):
                 if self.Andor.isAborted:
                     break
                 self.Andor.raw_snapshot()
@@ -1496,7 +1527,7 @@ ERROR_CODE = {
     20992: "DRV_NOT_AVAILABLE"
 }
 
-if __name__ == '__main__':
+def main():
     andor = Andor()  # wvl_to_pxl=32.5 / 1600, magnification=30, pxl_size=16)
     app = QtWidgets.QApplication([])
     ui1 = andor.get_control_widget()
@@ -1505,4 +1536,7 @@ if __name__ == '__main__':
 
     ui1.show()
     ui2.show()
-    # andor.show_gui(True)
+    andor.show_gui(True) 
+
+if __name__ == '__main__':
+    main()

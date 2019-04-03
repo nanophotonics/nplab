@@ -6,3 +6,8 @@ Experimental data is managed by the class `DataFile`, a wrapper for h5py that ma
 
 Instrument scripts should be subclasses of `nplab.instrument.Instrument`, though usually this is done indirectly.  Most instruments will be subclasses of either or both of a generic instrument class (defining an instrument for standard instrument types such as stages, spectrometers, etc.) and also a bus-specific class (e.g. SerialInstrument).  The `Instrument` base class takes care of a number of generic boilerplate things, such as keeping track of instances of a given class, and being able to retrieve active instances with the `instance()` and `instances()` methods.  The `nplab` module also defines some decorators to make threading tasks easier, commonly used by instrument classes.
 
+
+When installing:
+
+install pyqtgraph before trying to open_browser_cmd.bat or open_browser_cmd.py
+ 

@@ -303,8 +303,17 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
             e = ctypes.c_int()
             read_tec_temperature = seabreeze.seabreeze_read_tec_temperature
             read_tec_temperature.restype = c_double
-            temperature = read_tec_temperature(self.index, byref(e))
-            check_error(e)
+            temperature_0 = read_tec_temperature(self.index, byref(e))
+            for i in range(100):
+                temperature = read_tec_temperature(self.index, byref(e))
+                check_error(e)
+                if temperature==temperature_0:
+                    break
+                else:
+                    temperature_0=temperature
+                if i==99:
+                    self.log('Temperature reading inconsitent after 100 attmpets','WARN')
+           
             return temperature
         except OceanOpticsError as error:
             print error
@@ -358,7 +367,6 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
             seabreeze.seabreeze_get_formatted_spectrum(self.index, byref(e), byref(spectrum_carray), N)
         check_error(e)  # throw an exception if something went wrong
         new_spectrum = np.array(list(spectrum_carray))
-
         if(self.spectra_to_save>0):
             self.spectra_buffer = np.concatenate((self.spectra_buffer,new_spectrum))
 #            if(self.spectra_saved==0):
@@ -398,7 +406,7 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
     def get_control_widget(self):
         """Convenience function """
         return self.get_qt_ui(control_only=True)
-
+        
     def get_preview_widget(self):
         """Convenience function """
         return self.get_qt_ui(display_only=True)

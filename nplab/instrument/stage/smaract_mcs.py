@@ -57,15 +57,14 @@ class MCSError(Exception):
             print "MCS error {:d}".format(value)
 
 
-class SmaractError(Exception): #?? why two different types of errors: MCSError and SmaractError??
-    def __init__(self, msg):
-        print "SmarAct error: %s" % msg
+#class SmaractError(Exception): #?? why two different types of errors: MCSError and SmaractError??
+#    def __init__(self, msg):
+#        print "SmarAct error: %s" % msg
 
 
 class SmaractMCS(PiezoStage):
     """
-    Smaract MCS controller interface for SmarAct stages.
-
+    Smaract MCS controller interface for Smaract stages.
     Check SmarAct's MCS Progammer's Guide for mor information.
     """
 

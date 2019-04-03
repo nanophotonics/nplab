@@ -106,7 +106,7 @@ class ExperimentWithProgressBar(Experiment):
         self._progress_bar.canceled.disconnect()
         self._progress_bar.canceled.connect(self.stop_and_cancel_dialog)
         self._experiment_thread = self.run_in_background(*args, **kwargs)
-        self._progress_bar.exec_()
+   #     self._progress_bar.exec_()
 
     def stop_and_cancel_dialog(self):
         """Abort the experiment and cancel the dialog once done."""
@@ -154,5 +154,6 @@ def run_function_modally(function, progress_maximum, *args, **kwargs):
     Positional and keyword arguments are passed through, the only other argument needed is
     progress_maximum, which sets the final value of progress.
     """
+ #   function(*args, **kwargs)
     e = RunFunctionWithProgressBar(function, progress_maximum = progress_maximum)
     e.run_modally(*args, **kwargs)

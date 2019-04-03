@@ -4,6 +4,7 @@ from qtconsole.inprocess import QtInProcessKernelManager
 # from IPython.qt.inprocess import QtInProcessKernelManager
 from nplab.utils.gui import QtCore
 import sys
+from IPython.lib import guisupport
 
 class ipython:
     def __init__(self):
@@ -58,3 +59,52 @@ class ipython:
 
     def run_script(self, scriptname):
         return self.control.execute('run -i scripts/%s' %scriptname)
+
+
+class QIPythonWidget(RichJupyterWidget):
+    """
+    Convenience class for a live IPython console widget. We can replace the standard banner using the customBanner
+    argument. Modified from https://stackoverflow.com/questions/11513132/embedding-ipython-qt-console-in-a-pyqt-application
+    """
+
+    def __init__(self, customBanner=None, *args, **kwargs):
+        if not customBanner is None: self.banner = customBanner
+        super(QIPythonWidget, self).__init__(*args, **kwargs)
+        self.kernel_manager = kernel_manager = QtInProcessKernelManager()
+        kernel_manager.start_kernel()
+        kernel_manager.kernel.gui = 'qt'
+        self.kernel_client = kernel_client = self._kernel_manager.client()
+        kernel_client.start_channels()
+
+        def stop():
+            kernel_client.stop_channels()
+            kernel_manager.shutdown_kernel()
+            guisupport.get_app_qt4().exit()
+
+        self.exit_requested.connect(stop)
+
+        self.execute_command("import numpy as np")
+        self.execute_command("from matplotlib import pyplot as plt")
+        self.execute_command("%matplotlib")
+
+    def push_vars(self, variableDict):
+        """ Given a dictionary containing name / value pairs, push those variables to the IPython console widget """
+        self.kernel_manager.kernel.shell.push(variableDict)
+
+    def clear(self):
+        """ Clears the terminal """
+        self._control.clear()
+
+    def print_text(self, text):
+        """ Prints some plain text to the console """
+        self._append_plain_text(text)
+
+    def execute_command(self, command):
+        """ Execute a command in the frame of the console widget """
+        self._execute(command, False)
+
+    def run_script(self, scriptname):
+        try:
+            self._execute('run -i scripts/%s' % scriptname, False)
+        except Exception as e:
+            print 'Failed because ', e
