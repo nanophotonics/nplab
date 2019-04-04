@@ -32,6 +32,23 @@ class Andor(CameraRoiScale, AndorBase):
 
     '''Used functions'''
 
+    def get_metadata(self,
+                     property_names=[],
+                     include_default_names=True,
+                     exclude=None
+                     ):
+        """
+        Prevents printing a load of statements everytime the metadata is called.
+        TODO: rewrite the AndorProperties so that they are not unnecessarily verbose
+        """
+        level = self._logger.level
+        self._logger.setLevel('WARN')
+        diction = super(Andor, self).get_metadata(property_names, include_default_names, exclude)
+        self._logger.setLevel(level)
+        return diction
+
+    metadata = property(get_metadata)
+
     def raw_snapshot(self):
         try:
             imageArray, num_of_images, image_shape = self.capture()
@@ -50,9 +67,11 @@ class Andor(CameraRoiScale, AndorBase):
             self._logger.warn("Couldn't Capture because %s" % e)
 
     def filter_function(self, frame):
+        frame = np.transpose(frame, (-2, -1))
         if self.backgrounded:
-            frame -= self.background
-        return frame
+            return frame - self.background
+        else:
+            return frame
 
     def get_camera_parameter(self, parameter_name):
         return self.get_andor_parameter(parameter_name)
@@ -122,7 +141,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         uic.loadUi((os.path.dirname(__file__) + '/andornplab.ui'), self)
 
         self._setup_signals()
-        self.updateGUI()
+        self.init_gui()
         self.BinningChanged()
         self.data_file = None
         self.save_all_parameters = False
@@ -134,7 +153,6 @@ class AndorUI(QtWidgets.QWidget, UiTools):
             func = self.callback_to_update_prop(param)
             self._func_dict[param] = func
             register_for_property_changes(self.Andor, param, self._func_dict[param])
-        # self.Andor.updateGUI.connect(self.updateGUI)
         self.autoLevel = True
         self.autoRange = False
 
@@ -157,7 +175,6 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         self.checkBoxROI.stateChanged.connect(self.ROI)
         self.checkBoxCrop.stateChanged.connect(self.IsolatedCrop)
         self.checkBoxCooler.stateChanged.connect(self.Cooler)
-        # self.checkBoxAutoExp.stateChanged.connect(self.AutoExpose)
         self.checkBoxEMMode.stateChanged.connect(self.OutputAmplifierChanged)
         self.spinBoxEMGain.valueChanged.connect(self.EMGainChanged)
         self.lineEditExpT.editingFinished.connect(self.ExposureChanged)
@@ -173,8 +190,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         self.checkBoxRemoveBG.stateChanged.connect(self.remove_background)
         self.referesh_groups_pushButton.clicked.connect(self.update_groups_box)
 
-    # GUI FUNCTIONS
-    def updateGUI(self):
+    def init_gui(self):
         trig_modes = {0: 0, 1: 1, 6: 2}
         self.comboBoxAcqMode.setCurrentIndex(self.Andor._parameters['AcquisitionMode'] - 1)
         self.AcquisitionModeChanged()
@@ -263,7 +279,6 @@ class AndorUI(QtWidgets.QWidget, UiTools):
             self.Andor.set_camera_parameter('OutAmp', 1)
         if self.checkBoxCrop.isChecked():
             self.checkBoxCrop.setChecked(False)
-            # self.ROI()
 
     def BinningChanged(self):
         current_binning = int(self.comboBoxBinning.currentText()[0])
@@ -283,7 +298,6 @@ class AndorUI(QtWidgets.QWidget, UiTools):
 
     def NumAccumChanged(self):
         num_frames = self.spinBoxNumAccum.value()
-        # self.Andor.SetNumberAccumulations(num_frames)
         self.Andor.set_camera_parameter('NAccum', num_frames)
 
     def NumRowsChanged(self):
@@ -308,11 +322,6 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         elif input == '/':
             expT = float(self.lineEditExpT.text()) / 5
         self.Andor.Exposure = expT
-        # self.Andor.SetExposureTime(expT)
-        #    self.Andor.SetParameter('Exposure', expT)
-        # self.Andor.GetAcquisitionTimings()
-        #    display_str = str(float('%#e' % self.Andor.parameters['AcquisitionTimings']['value'][0])).rstrip('0')
-        #   self.lineEditExpT.setText(self.Andor.Exposure)
 
     def EMGainChanged(self):
         gain = self.spinBoxEMGain.value()
@@ -349,7 +358,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
             self.Andor.backgrounded = False
 
     def Save(self):
-        if self.data_file == None:
+        if self.data_file is None:
             self.data_file = df.current()
         data = self.Andor.CurImage
         if self.filename_lineEdit.text() != 'Filename....':
@@ -367,7 +376,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
             group = self.data_file[self.group_comboBox.currentText()]
         if np.shape(data)[0] == 1:
             data = data[0]
-        if self.save_all_parameters == True:
+        if self.save_all_parameters:
             attrs = self.Andor.get_andor_parameters()
         else:
             attrs = dict()
@@ -383,7 +392,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
             del data_set.attrs['background']
 
     def update_groups_box(self):
-        if self.data_file == None:
+        if self.data_file is None:
             self.data_file = df.current()
         self.group_comboBox.clear()
         if 'AndorData' not in self.data_file.values():
