@@ -283,21 +283,22 @@ class Pixis256EUI(QtWidgets.QWidget, UiTools):
     def __init__(self, pixis):
         if not isinstance(pixis, Pixis256EQt):
             raise TypeError('pixis is not an instance of Pixis256EQt')
+        super(Pixis256EUI, self).__init__()
         self.pixis = pixis
 
-        self.exposure.setValidator(QtWidgets.QIntValidator())
-        self.exposure.textChanged.connect(self.check_state)
-        self.exposure.textChanged.connect(self.on_text_change)
-        self.mode.activated.connect(self.on_activated)
-        self.timing.activated.connect(self.on_activated)
-        self.cont_clears.stateChanged.connect(self.on_state_change)
-        self.take_image_button.clicked.connect(self.on_click)
-        self.take_bkgd_button.clicked.connect(self.on_click)
-        self.clear_bkgd_button.clicked.connect(self.on_click)
-        self.take_ref_button.clicked.connect(self.on_click)
-        self.clear_ref_button.clicked.connect(self.on_click)
+        # self.exposure.setValidator(QtWidgets.QIntValidator())
+        # self.exposure.textChanged.connect(self.check_state)
+        # self.exposure.textChanged.connect(self.on_text_change)
+        # self.mode.activated.connect(self.on_activated)
+        # self.timing.activated.connect(self.on_activated)
+        # self.cont_clears.stateChanged.connect(self.on_state_change)
+        # self.take_image_button.clicked.connect(self.on_click)
+        # self.take_bkgd_button.clicked.connect(self.on_click)
+        # self.clear_bkgd_button.clicked.connect(self.on_click)
+        # self.take_ref_button.clicked.connect(self.on_click)
+        # self.clear_ref_button.clicked.connect(self.on_click)
 
-        self.pixis.image_taken.connect()
+        # self.pixis.image_taken.connect()
 
     def on_text_change(self, text):
         sender = super(Pixis256EUI, self).on_text_change(text)
@@ -369,10 +370,18 @@ if __name__ == '__main__':
         print 'done'
         plt.show()
 
-    p.read_image(p.exposure, timing='timed', mode='kinetics', new=True, end= False, k_size=1)
-    img = p.read_image(p.exposure, timing='timed', mode='kinetics', new=False, end= True, k_size=1)
-    plt.imshow(img)
-    plt.show()
-    # print img.shape
+    print "one"
+    app = get_qt_app()
+    ui = Pixis256EUI(pixis=p)
+    print "two"
 
-#    test()
+    ui.show()
+    sys.exit(app.exec_())
+
+    # p.read_image(p.exposure, timing='timed', mode='kinetics', new=True, end= False, k_size=1)
+    # img = p.read_image(p.exposure, timing='timed', mode='kinetics', new=False, end= True, k_size=1)
+    # plt.imshow(img)
+    # plt.show()
+    
+
+
