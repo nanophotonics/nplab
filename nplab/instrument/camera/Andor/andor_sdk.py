@@ -580,7 +580,7 @@ class AndorBase:
 parameters = dict(
     AvailableCameras=dict(Get=dict(cmdName='GetAvailableCameras', Outputs=(c_uint,)), value=None),
     channel=dict(value=0),
-    PixelSize=dict(Get=dict(cmdName='GetAvailableCameras', Outputs=(c_float, c_float))),
+    PixelSize=dict(Get=dict(cmdName='GetPixelSize', Outputs=(c_float, c_float))),
     SoftwareWaitBetweenCaptures=dict(value=0),
     DetectorShape=dict(Get=dict(cmdName='GetDetector', Outputs=(c_int, c_int)), value=None),
     SerialNumber=dict(Get=dict(cmdName='GetCameraSerialNumber', Outputs=(c_int,)), value=None),
