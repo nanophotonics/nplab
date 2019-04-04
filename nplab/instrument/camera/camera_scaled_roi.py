@@ -12,6 +12,8 @@ import os
 from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 
 
+# TODO: make the camera so that it creates a filter function by default when selecting a GUI
+
 class CameraRoiScale(Camera):
     """
     Camera with two main features:
@@ -26,6 +28,7 @@ class CameraRoiScale(Camera):
         super(CameraRoiScale, self).__init__()
         self.axis_values = dict(bottom=None, left=None, top=None, right=None)
         self.axis_units = dict(bottom=None, left=None, top=None, right=None)
+        self._roi = (0, 1000, 0, 1000)
 
     @property
     def x_axis(self):
@@ -46,10 +49,23 @@ class CameraRoiScale(Camera):
     @property
     def roi(self):
         """
+        If the camera supports setting a ROI in hardware, the user should overwrite this property
 
         :return: 4-tuple of integers. Pixel positions xmin, xmax, ymin, ymax
         """
-        return 0, 1, 0, 1
+        return self._roi
+
+    @roi.setter
+    def roi(self, value):
+        """
+        By default, setting a ROI will make a filter function that indexes the frame to the given ROI.
+
+        :return: 4-tuple of integers. Pixel positions xmin, xmax, ymin, ymax
+        """
+        self._roi = value
+        def fltr(img):
+            return img[self._roi[2]:self._roi[3], self._roi[0]:self._roi[1]]
+        setattr(self, 'filter_function', fltr)
 
     @property
     def gui_roi(self):
@@ -89,9 +105,12 @@ class CameraRoiScale(Camera):
                     widgt._pxl_scale = self.binning
                     # Set the axes values and units
                     widgt.axis_values = self.axis_values
+                    widgt.axis_units = self.axis_units
                     widgt.x_axis = self.x_axis
                     widgt.y_axis = self.y_axis
-                    widgt.axis_units = self.axis_units
+                    if not self.live_view:  # not sure why it doesn't work in live view
+                        widgt.update_axes()
+                    widgt.mouseMoved()
 
                     # Resize the crosshairs, so that they are always 1/40th of the total size of the image
                     size = min(((roi[1] - roi[0])/40., (roi[3]-roi[2])/40.))
@@ -370,8 +389,6 @@ class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
                                        scale=scale)
         else:
             raise ValueError('Cannot display. Array shape unrecognised')
-        self.mouseMoved()
-        self.update_axes()
 
     def fix_aspect_ratio(self):
         boolean = self.checkbox_aspectratio.isChecked()
