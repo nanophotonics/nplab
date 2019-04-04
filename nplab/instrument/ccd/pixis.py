@@ -1,7 +1,8 @@
 __author__ = 'alansanders'
-
 import ctypes as ct
-pvcam = ct.windll.pvcam32
+
+PVCAM = ct.WinDLL("DLL/Pvcam32.dll")
+
 import nplab.instrument.ccd.pvcam_h as pv
 import numpy as np
 import time
@@ -25,7 +26,7 @@ class Pixis256E(CCD):
     def __init__(self):
         super(Pixis256E, self).__init__()
         try:
-            self.pvcam = ct.windll.pvcam32
+            self.pvcam = PVCAM #ct.windll.pvcam32
         except WindowsError as e:
             print 'pvcam not found'
         cam_selection = ct.c_int16()
@@ -370,6 +371,8 @@ if __name__ == '__main__':
 
     p.read_image(p.exposure, timing='timed', mode='kinetics', new=True, end= False, k_size=1)
     img = p.read_image(p.exposure, timing='timed', mode='kinetics', new=False, end= True, k_size=1)
-    print img
+    plt.imshow(img)
+    plt.show()
+    # print img.shape
 
 #    test()
