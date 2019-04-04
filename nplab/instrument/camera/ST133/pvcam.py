@@ -416,14 +416,6 @@ class PvcamSdk:
         self._exposure_time = value
 
     @NotifiedProperty
-    def binning(self):
-        return self._binning
-
-    @binning.setter
-    def binning(self, value):
-        self._binning = value
-
-    @NotifiedProperty
     def number_frames(self):
         return self._number_frames
 
@@ -1436,6 +1428,8 @@ class Pvcam(CameraRoiScale, PvcamSdk):
         # super(Pvcam, self).__init__(device, logger=self._logger)
         CameraRoiScale.__init__(self)
         PvcamSdk.__init__(self, device, logger=self._logger)
+        self.background = None
+        self.backgrounded = False
 
     def raw_snapshot(self):
         """
@@ -1447,6 +1441,12 @@ class Pvcam(CameraRoiScale, PvcamSdk):
         if array.shape[0] == 1:
             array = array[0]
         return True, array
+
+    def filter_function(self, frame):
+        if self.backgrounded:
+            return np.asarray(frame, float) - np.asarray(self.background, float)
+        else:
+            return frame
 
     def get_camera_parameter(self, parameter_name):
         return self.get_param(getattr(pv, parameter_name))
@@ -1478,6 +1478,13 @@ class Pvcam(CameraRoiScale, PvcamSdk):
     def roi(self, value):
         self._image_rect = value
 
+    @property
+    def binning(self):
+        return self._binning
+
+    @binning.setter
+    def binning(self, value):
+        self._binning = value
 
 class pvcamUI(QtWidgets.QWidget, UiTools):
     # ImageUpdated = QtCore.Signal()
@@ -1790,9 +1797,9 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
 
     def remove_background(self):
         if self.checkBoxRemoveBG.isChecked():
-            self.backgrounded = True
+            self.camera.backgrounded = True
         else:
-            self.backgrounded = False
+            self.camera.backgrounded = False
 
     def Save(self):
         if self.data_file is None:
