@@ -7,14 +7,12 @@ Created on Thu May 31 01:11:45 2018
 if __name__ == '__main__':
     print 'Importing modules...'
 
-import h5py
 import os
 import numpy as np
 import time
 import matplotlib.pyplot as plt
 from nplab.analysis import DF_MultipeakfitBeta as mpf
 from nplab.analysis import Condense_DF_Spectra as cdf
-#from charlie import UpdateNpomAttrs as unpa
 
 if __name__ == '__main__':
     absoluteStartTime = time.time()
@@ -22,39 +20,29 @@ if __name__ == '__main__':
 
     startSpec = 0
     finishSpec = 0
+    raiseExceptions = True #If the code keeps returning errors, try setting this to False. This will ignore and discard individual spectra that cause errors
 
-    summaryFile = cdf.extractAllSpectra(os.getcwd(), returnIndividual = True, start = startSpec, finish = finishSpec)
-    #summaryFile = 'summary.h5'
-    #overviewFile = r'C:\Users\car72\University Of Cambridge\OneDrive - University Of Cambridge\Documents\PhD\Data\NP\ArV CB\NPoM\DF\ArV CB NPoM Sample Details Overview.csv'
-    #dateMeasured = cdf.findH5File(os.getcwd(), nameFormat = 'date')[:10]
-    #npomAttrs = unpa.collectNpomAttrs(overviewFile, date = dateMeasured)
-    #npomAttrs = npomAttrs[0]
-    #unpa.updateSummaryAttrs(summaryFile, npomAttrs)
+    summaryFile = 'summary.h5'
 
-    raiseExceptions = True
+    if summaryFile not in os.listdir('.'):
+        summaryFile = cdf.extractAllSpectra(os.getcwd(), returnIndividual = True, start = startSpec, finish = finishSpec)
 
     if raiseExceptions == True:
         x, yData, summaryAttrs = mpf.retrieveData(os.getcwd())
         initImg = mpf.plotInitStack(x, yData, imgName = 'Initial Stack', closeFigures = True)
         outputFileName = mpf.createOutputFile('MultiPeakFitOutput')
         mpf.fitAllSpectra(x, yData, outputFileName, summaryAttrs = summaryAttrs, stats = True, raiseExceptions = True)
-        #outputFileName = mpf.findH5File(os.getcwd(), nameFormat = 'MultiPeakFitOutput', mostRecent = True)
-        #mpf.doStats(outputFileName, closeFigures = True, stacks = True, hist = True, irThreshold = 8, minBinFactor = 5, intensityRatios = True,
-        #        peakAvgs = True, analRep = True)
+        #mpf.doStats('MultiPeakFitOutput.h5', closeFigures = True)
 
         print '\nData fitting complete'
 
     else:
         try:
-            spectra, wavelengths, background, reference, summaryAttrs = mpf.retrieveData(summaryFile, startSpec, finishSpec)
-            x, yData = mpf.prepareData(spectra, wavelengths, reference)
+            x, yData, summaryAttrs = mpf.retrieveData(os.getcwd())
             initImg = mpf.plotInitStack(x, yData, imgName = 'Initial Stack', closeFigures = True)
-
-            outputFile = mpf.createOutputFile('MultiPeakFitOutput')
-
-            with h5py.File(outputFile, 'a') as f:
-                mpf.fitAllSpectra(x, yData, f, startSpec, raiseExceptions = raiseExceptions,
-                                  closeFigures = True, fukkit = True, simpleFit = True, summaryAttrs = summaryAttrs)
+            outputFileName = mpf.createOutputFile('MultiPeakFitOutput')
+            mpf.fitAllSpectra(x, yData, outputFileName, summaryAttrs = summaryAttrs, stats = True, raiseExceptions = raiseExceptions)
+            #mpf.doStats('MultiPeakFitOutput.h5', closeFigures = True)
 
             print '\nData fitting complete'
 
@@ -62,8 +50,6 @@ if __name__ == '__main__':
             print '\nData fitting failed because %s' % (e)
 
     plt.close('all')
-
-    #unpa.updateOutputAttrs(summaryFile)
 
     absoluteEndTime = time.time()
     timeElapsed = absoluteEndTime - absoluteStartTime

@@ -915,7 +915,11 @@ def plotAllStacks(outputFileName, fullSort = False, closeFigures = True, vmin = 
         for groupName in opf['NPoMs'].keys():
             gSpectra = opf['NPoMs/%s/Normalised' % groupName]
             spectraNames = sorted(gSpectra.keys(), key = lambda spectrumName: int(spectrumName[9:]))
-            x = gSpectra[spectraNames[0]].attrs['wavelengths']
+            try:
+                x = gSpectra[spectraNames[0]].attrs['wavelengths']
+            except:
+                print 'No data for %s' % groupName
+                continue
             yData = [gSpectra[spectrumName][()] for spectrumName in spectraNames]
 
             if fullSort == True:
@@ -1164,8 +1168,8 @@ def plotAllHists(outputFileName, closeFigures = True, irThreshold = 8, minBinFac
         try:
             plotHistAndFit(outputFileName, npomType = npomType, irThreshold = irThreshold, minBinFactor = minBinFactor,
                        closeFigures = closeFigures)
-        except Exception as e:
-            print 'Histogram plotting failed for %s because %s' % (npomType, e)
+        except:
+            print 'No data for %s' % (npomType, e)
 
     histPlotEnd = time.time()
     histTimeElapsed = histPlotEnd - histPlotStart
