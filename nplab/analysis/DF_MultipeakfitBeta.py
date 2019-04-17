@@ -1169,7 +1169,7 @@ def plotAllHists(outputFileName, closeFigures = True, irThreshold = 8, minBinFac
             plotHistAndFit(outputFileName, npomType = npomType, irThreshold = irThreshold, minBinFactor = minBinFactor,
                        closeFigures = closeFigures)
         except:
-            print 'No data for %s' % (npomType, e)
+            print 'No data for %s' % (npomType)
 
     histPlotEnd = time.time()
     histTimeElapsed = histPlotEnd - histPlotStart
@@ -1440,7 +1440,13 @@ def analyseRepresentative(outputFileName):
 
         for npType in npTypes:
 
-            gHist = gNPoMs['%s/Histogram data' % npType]
+            try:
+                gHist = gNPoMs['%s/Histogram data' % npType]
+
+            except:
+                print 'Data not found for %s' % npType
+                continue
+
             cmPeakPos = gHist.attrs['Average resonance']
             histBins = gHist['Binned y data']
             binNames = histBins.keys()
