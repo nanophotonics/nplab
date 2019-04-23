@@ -19,10 +19,10 @@ Calibration_Arrays[1].append([-5.65248674e-06, -3.01056645e-06, -1.99047684e-06,
 Calibration_Arrays[1].append([-1.75115459, -1.79100089, -1.79852965, -1.59951646, -1.85506506,-1.98678881])
 Calibration_Arrays[1].append([7601.12273137,  8563.71071556,  8849.60197977,  9361.94861663,11023.31118393, 12621.76193336])
 
-Calibration_Arrays[0].append([546.,614.,708.19,880.])
-Calibration_Arrays[0].append([-2.02247482e-5,-7.16741408e-6,-9.12063528e-6,-9.82434124e-6])
-Calibration_Arrays[0].append([-1.71481326,-1.74103985,-1.7359061,-1.73065953])
-Calibration_Arrays[0].append([2.54994622e3,2.76367171e3,3.06119413e3,3.49263429e3])
+Calibration_Arrays[2].append([546.,614.,708.19,880.])
+Calibration_Arrays[2].append([-2.02247482e-5,-7.16741408e-6,-9.12063528e-6,-9.82434124e-6])
+Calibration_Arrays[2].append([-1.71481326,-1.74103985,-1.7359061,-1.73065953])
+Calibration_Arrays[2].append([2.54994622e3,2.76367171e3,3.06119413e3,3.49263429e3])
 
 
 Calibration_Arrays=np.array(Calibration_Arrays)
