@@ -113,10 +113,10 @@ class Triax(VisaInstrument):
             time.sleep(1)
             self.waitTillReady()
             self.Grating_Number = Set_To
-            try:
-                self.Wavelength_Array=self.Convert_Pixels_to_Wavelengths(np.array(range(self.Number_of_Pixels))) #Update wavelength array
-            except:
-                Dump=1
+            #try:
+            self.Wavelength_Array=self.Convert_Pixels_to_Wavelengths(np.array(range(self.Number_of_Pixels))) #Update wavelength array
+            #except:
+                #Dump=1
 
     def Motor_Steps(self):
         """
@@ -183,8 +183,13 @@ class Triax(VisaInstrument):
         #----calculate new wavelength array--------
 
         Coefficents=np.transpose(np.sum(Changing_Coefficents*np.array([[Steps**2],[Steps],[1]]).astype(np.float64),axis=1))
-
-        return (-Coefficents[1]+np.sqrt((Coefficents[1]**2)-(4*Coefficents[0]*(Coefficents[2]-Pixel_Array))))/(2*Coefficents[0])
+        try:
+            Lambda=(-Coefficents[1]+np.sqrt((Coefficents[1]**2)-(4*Coefficents[0]*(Coefficents[2]-Pixel_Array))))/(2*Coefficents[0])
+            if np.sum(np.isnan(Lambda))>0:
+                raise Exception('NANs in Lambda array')
+            return Lambda
+        except:
+            return None
 
 
     def Convert_Pixels_to_Wavelengths(self,Pixel_Array):
@@ -210,6 +215,8 @@ class Triax(VisaInstrument):
 
         try:
             Lambda=(-Coefficents[1]+np.sqrt((Coefficents[1]**2)-(4*Coefficents[0]*(Coefficents[2]-Pixel_Array))))/(2*Coefficents[0])
+            if np.sum(np.isnan(Lambda))>0:
+                raise Exception('NANs in Lambda array')
     
             #----Use Iterate_Pixels_to_Wavelengths() to update the wavelength approximation to use quadratic spline rather than fixed quadratics--------
     
@@ -217,9 +224,14 @@ class Triax(VisaInstrument):
             Counter=0
             while End is False and Counter<self.Maximum_Calibration_Iterations:
                 New_Lambda=self.Iterate_Pixels_to_Wavelengths(Pixel_Array,Steps,Lambda)
-                if np.max(np.abs(New_Lambda-Lambda))<self.Calibration_Iteration_Threshold:
+                if New_Lambda is None:
                     End=True
-                Lambda=New_Lambda
+                    Lambda=Pixel_Array
+                else:
+                    if np.max(np.abs(New_Lambda-Lambda))<self.Calibration_Iteration_Threshold:
+                        End=True
+                        Lambda=New_Lambda
+                Counter+=1
     
             return Lambda
         except:
@@ -275,10 +287,7 @@ class Triax(VisaInstrument):
             self.write("F0,%i\r" % Steps)
             time.sleep(1)
             self.waitTillReady()
-        try:
-            self.Wavelength_Array=self.Convert_Pixels_to_Wavelengths(np.array(range(self.Number_of_Pixels))) #Update wavelength array
-        except:
-            Dump=1 
+        self.Wavelength_Array=None
 
     def Slit(self, Width=None):
         """
