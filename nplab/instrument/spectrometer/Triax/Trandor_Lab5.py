@@ -14,6 +14,11 @@ Calibration_Arrays.append([])
 Calibration_Arrays.append([])
 Calibration_Arrays.append([])
 
+Calibration_Arrays[0].append([546.,614.,708.19,880.])
+Calibration_Arrays[0].append([-1.54766997e-05, 3.12560316e-06, 1.26048704e-05 ,2.43945244e-05])
+Calibration_Arrays[0].append([-1.63503325e+00, -1.94141892e+00, -2.17431238e+00, -2.60909451e+00,])
+Calibration_Arrays[0].append([1.44780946e+04, 1.75785703e+04,  2.17816013e+04, 3.03183653e+04])
+
 Calibration_Arrays[1].append([546.,614.,633.,708.19,785.,880.])
 Calibration_Arrays[1].append([-5.65248674e-06, -3.01056645e-06, -1.99047684e-06, -2.24562594e-05, 2.02336235e-06,  1.15803962e-05])
 Calibration_Arrays[1].append([-1.75115459, -1.79100089, -1.79852965, -1.59951646, -1.85506506,-1.98678881])
