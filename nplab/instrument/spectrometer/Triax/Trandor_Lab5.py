@@ -109,3 +109,8 @@ class Trandor(Andor):#Andor
 
     x_axis=NotifiedProperty(Generate_Wavelength_Axis) #This is grabbed by the Andor code 
 
+    def read_spectrum(self):
+            return np.array(self.capture()[0])
+
+    def integration_time(self):
+            return self.Exposure
