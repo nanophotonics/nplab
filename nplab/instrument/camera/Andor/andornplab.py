@@ -26,6 +26,8 @@ class Andor(CameraRoiScale, AndorBase):
             self.load_params_from_file(settings_filepath)
         self.isAborted = False
 
+        self.detector_shape = self.DetectorShape  # passing the Andor parameter to the CameraRoiScale class
+
     def __del__(self):
         # Need to explicitly call this method so that the shutdown procedure is followed correctly
         AndorBase.__del__(self)
@@ -67,7 +69,6 @@ class Andor(CameraRoiScale, AndorBase):
             self._logger.warn("Couldn't Capture because %s" % e)
 
     def filter_function(self, frame):
-        frame = np.transpose(frame, (-2, -1))
         if self.backgrounded:
             return frame - self.background
         else:
