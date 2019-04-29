@@ -349,6 +349,80 @@ class AndorBase:
 
     '''Used functions'''
 
+    @property
+    def capabilities(self):
+        """Parsing the Capabilities parameter"""
+        capabilities = dict(AcqModes=[], ReadModes=[], FTReadModes=[], TriggerModes=[], CameraType=None, PixelMode=[],
+                            SetFunctions=[], GetFunctions=[], Features=[], PCICard=None, EMGainCapability=[])
+
+        bits = bin(self.Capabilities['AcqModes'])[2:]
+        keys = ['Single', 'Video', 'Accumulate', 'Kinetic', 'FrameTransfer', 'FastKinetic', 'Overlap']
+        for bit, key in zip(bits, keys):
+            if bool(bit):
+                capabilities['AcqModes'] += [key]
+
+        bits = bin(self.Capabilities['ReadModes'])[2:]
+        keys = ['FullImage', 'SubImage', 'SingleTrack', 'FVB', 'MultiTrack', 'RandomTrack']
+        for bit, key in zip(bits, keys):
+            if bool(bit):
+                capabilities['ReadModes'] += [key]
+
+        bits = bin(self.Capabilities['FTReadModes'])[2:]  # Frame transfer read modes
+        keys = ['FullImage', 'SubImage', 'SingleTrack', 'FVB', 'MultiTrack', 'RandomTrack']
+        for bit, key in zip(bits, keys):
+            if bool(bit):
+                capabilities['FTReadModes'] += [key]
+
+        bits = bin(self.Capabilities['TriggerModes'])[2:]
+        keys = ['Internal', 'External', 'External_FVB_EM', 'Continuous',
+                'ExternalStart', 'Bulb', 'ExternalExposure', 'Inverted']
+        for bit, key in zip(bits, keys):
+            if bool(bit):
+                capabilities['TriggerModes'] += [key]
+
+        keys = ['PDA', 'iXon', 'iCCD', 'EMCCD', 'CCD', 'iStar', 'Video', 'iDus', 'Newton',
+                'Surcam', 'USBiStar', 'Luca', 'Reserved', 'iKon', 'InGaAs', 'iVac', 'Clara']
+        capabilities['CameraType'] = keys[int(self.Capabilities['CameraType'])]
+
+        bits = bin(self.Capabilities['PixelMode'])[2:]
+        keys = ['8bit', '14bit', '16bit', '32bit', 'mono', 'RGB', 'CMY']
+        for bit, key in zip(bits, keys):
+            if bool(bit):
+                capabilities['PixelMode'] += [key]
+
+        bits = bin(self.Capabilities['SetFunctions'])[2:]
+        keys = ['VSSpeed', 'HSSpeed', 'Temperature', 'MCPGain', 'EMCCDGain', 'BaselineClamp', 'VSAmplitude',
+                'HighCapacity', 'BaselineOffset', 'PreAmpGain', 'CropMode/IsolatedCropMode', 'DMAParameters',
+                'HorizontalBin', 'MultiTrackHRange', 'RandomTracks', 'EMAdvanced']
+        for bit, key in zip(bits, keys):
+            if bool(bit):
+                capabilities['SetFunctions'] += [key]
+
+        bits = bin(self.Capabilities['GetFunctions'])[2:]
+        keys = ['Temperature', 'TemperatureRange', 'Detector', 'MCPGain', 'EMCCDGain', 'BaselineClamp']
+        for bit, key in zip(bits, keys):
+            if bool(bit):
+                capabilities['GetFunctions'] += [key]
+
+        bits = bin(self.Capabilities['Features'])[2:]
+        keys = ['Status', 'DriverEvent', 'Spool', 'Shutter', 'ShutterEx', 'I2C', 'SaturationEvent', 'FanMode',
+                'LowFanMode', 'TemperatureDuringAcquitisition', 'KeepClean', 'Internal', 'FTandExternalExposure',
+                'KineticAndExternalExposure', 'Internal', 'Internal', 'IOcontrol', 'PhotonCounting', 'CountConvert',
+                'DualMode']
+        for bit, key in zip(bits, keys):
+            if bool(bit):
+                capabilities['Features'] += [key]
+
+        capabilities['PCICard'] = int(self.Capabilities['PCICard'])
+
+        bits = bin(self.Capabilities['EMGainCapability'])[2:]
+        keys = ['8bit', '12bit', 'Linear12', 'Real12']
+        for bit, key in zip(bits, keys):
+            if bool(bit):
+                capabilities['EMGainCapability'] += [key]
+
+        return capabilities
+
     def abort(self):
         try:
             self._dll_wrapper('AbortAcquisition')
@@ -582,6 +656,7 @@ parameters = dict(
     channel=dict(value=0),
     PixelSize=dict(Get=dict(cmdName='GetPixelSize', Outputs=(c_float, c_float))),
     SoftwareWaitBetweenCaptures=dict(value=0),
+    SoftwareVersion=dict(Get=dict(cmdName='GetSoftwareVersion', Outputs=(c_int, c_int, c_int, c_int, c_int, c_int))),
     DetectorShape=dict(Get=dict(cmdName='GetDetector', Outputs=(c_int, c_int)), value=None),
     SerialNumber=dict(Get=dict(cmdName='GetCameraSerialNumber', Outputs=(c_int,)), value=None),
     HeadModel=dict(Get=dict(cmdName='GetHeadModel', Outputs=(c_char,) * 20), value=None),
