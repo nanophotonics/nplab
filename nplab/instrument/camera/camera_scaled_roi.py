@@ -12,8 +12,6 @@ import os
 from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 
 
-# TODO: make the camera so that it creates a filter function by default when selecting a GUI
-
 class CameraRoiScale(Camera):
     """
     Camera with two main features:
@@ -24,11 +22,13 @@ class CameraRoiScale(Camera):
 
     This class also handles binning, and keeps the scaled axes and ROI selection unaffected by the binning
     """
-    def __init__(self):
+    def __init__(self, crosshair_origin='top_left'):
         super(CameraRoiScale, self).__init__()
         self.axis_values = dict(bottom=None, left=None, top=None, right=None)
         self.axis_units = dict(bottom=None, left=None, top=None, right=None)
         self._roi = (0, 1000, 0, 1000)
+        self.detector_shape = (1000, 1000)
+        self.crosshair_origin = crosshair_origin
 
     @property
     def x_axis(self):
@@ -113,10 +113,21 @@ class CameraRoiScale(Camera):
                     widgt.mouseMoved()
 
                     # Resize the crosshairs, so that they are always 1/40th of the total size of the image
-                    size = min(((roi[1] - roi[0])/40., (roi[3]-roi[2])/40.))
+                    size = max(((roi[1] - roi[0])/40., (roi[3]-roi[2])/40.))
                     for idx in [1, 2]:
                         xhair = getattr(widgt, 'CrossHair%d' % idx)
                         xhair._size = size
+                        if self.crosshair_origin == 'top_left':
+                            xhair._origin = [0, 0]
+                        elif self.crosshair_origin == 'top_right':
+                            xhair._origin = [self.detector_shape[0], 0]
+                        elif self.crosshair_origin == 'bottom_left':
+                            xhair._origin = [0, self.detector_shape[1]]
+                        elif self.crosshair_origin == 'top_right':
+                            xhair._origin = [self.detector_shape[0], self.detector_shape[1]]
+                        else:
+                            self._logger.info('Not recognised: crosshair_origin = %s. Needs to be top_left, top_right, '
+                                              'bottom_left or bottom_right' % self.crosshair_origin)
                         xhair.update()
 
         super(CameraRoiScale, self).update_widgets()
@@ -172,6 +183,7 @@ class Crosshair(pyqtgraph.GraphicsObject):
         super(Crosshair, self).__init__(*args)
         self.color = color
         self._size = size
+        self._origin = [0, 0]
 
     def paint(self, p, *args):
         p.setPen(pyqtgraph.mkPen(self.color))
@@ -193,6 +205,10 @@ class Crosshair(pyqtgraph.GraphicsObject):
         else:
             self.setPos(self.startPos + ev.pos() - ev.buttonDownPos())
         self.Released.emit()
+
+    def referenced_pos(self):
+        pos = self.pos()
+        return [np.abs(pos[x] - self._origin[x]) for x in [0, 1]]
 
 
 class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
@@ -322,7 +338,7 @@ class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
             positions = ()
             for idx in [1, 2]:
                 xhair = getattr(self, "CrossHair%d" % idx)
-                pos = tuple(xhair.pos())
+                pos = tuple(xhair.referenced_pos())
                 positions += pos
             diff = np.linalg.norm(np.array(positions[:2]) - np.array(positions[2:]))
             positions += (diff, )
@@ -336,7 +352,7 @@ class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
                 scaled_positions = ()
                 for idx in [1, 2]:
                     xhair = getattr(self, "CrossHair%d" % idx)
-                    pos = tuple(xhair.pos())
+                    pos = tuple(xhair.referenced_pos())
                     scaled_positions += self.pos_to_unit(pos)
                 units = ()
                 for ax in ['bottom', 'left']:
@@ -422,8 +438,8 @@ class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
         assert hasattr(self, 'CrossHair1')
         assert hasattr(self, 'CrossHair2')
 
-        pos1 = self.CrossHair1.pos()
-        pos2 = self.CrossHair2.pos()
+        pos1 = self.CrossHair1.referenced_pos()
+        pos2 = self.CrossHair2.referenced_pos()
         if pos1 == pos2:
             return None
 
