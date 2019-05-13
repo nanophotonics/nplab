@@ -26,8 +26,8 @@ import ctypes as ct
 import numpy as np
 from matplotlib import pyplot as plt
 from nplab.instrument.camera import Camera
-import sys,os
-from picam_constants import PicamParameter,PicamValueType,PicamError,transpose_dictionary,PI_V,PicamConstraintType
+import sys,os, time
+from picam_constants import PicamSensorTemperatureStatus,PicamParameter,PicamValueType,PicamError,transpose_dictionary,PI_V,PicamConstraintType
 import logging
 PARENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -97,7 +97,7 @@ class Pixis(Camera):
 
         if self.debug > 0:
             print "pixis.get_parameter::parameter_name:{}".format(parameter_name)
-
+        self.picam.PicamAdvanced_RefreshParametersFromCameraDevice(self.CameraHandle)
         assert(parameter_name in PicamParameter.keys()) #Check that the passed parameter name is valid (ie. in constants file)
         param_type, constraint_type, n = PicamParameter[parameter_name]
         if self.debug > 0:
@@ -154,7 +154,6 @@ class Pixis(Camera):
             print "pixis.get_parameter::value: {}".format(value)
         if value is not None:
             response = getter(self.CameraHandle,param_id, ct.pointer(value))
-            print response, value
             if response != 0:
                 print("Could not GET value of parameter {0} [label:{1}]".format(parameter_name,label))
                 print("[Code:{0}] {1}".format(response, PicamError[response]))
@@ -276,7 +275,7 @@ class Pixis(Camera):
         self.y_max = self.FrameHeight = self.get_parameter(parameter_name="PicamParameter_SensorActiveHeight", label="frame height")
         print "Frame size:", self.x_max, self.y_max
         self.bolRunning = True
-        self.SetSensorTemperatureSetPoint(-80.0)
+        self.SetTemperatureWithLock(-80.0)
     
     def ShutDown(self):
         if self.bolRunning == False:
@@ -295,21 +294,34 @@ class Pixis(Camera):
         param_value = time #in milliseconds
         self.set_parameter(parameter_name=param_name,parameter_value=param_value)
 
-    #TODO        
-    # def GetCoolingFanStatus(self):
-    #     param_name = "PicamParameter_CoolingFanStatus"
-    #     status = self.get_parameter(parameter_name=param_name)
-    #     print status 
+    def SetTemperatureWithLock(self,temperature):
+        self.__SetSensorTemperatureSetPoint(temperature)
+        status_code = p.GetTemperatureStatus()
+        while PicamSensorTemperatureStatus[status_code] != "PicamSensorTemperatureStatus_Locked":
+            print "TemperatureStatus: {3}[{2}] (current: {0}, target:{1})".format(p.GetSensorTemperatureReading(), temperature,status_code, PicamSensorTemperatureStatus[status_code])
+            time.sleep(0.5)
+            status_code = p.GetTemperatureStatus()
+
+        status_code = p.GetTemperatureStatus()
+        print "TemperatureStatus: {0} [{1}]".format(PicamSensorTemperatureStatus[status_code], status_code)
+        return
 
     def GetSensorTemperatureReading(self):
         param_name = "PicamParameter_SensorTemperatureReading"
         return self.get_parameter(param_name)
 
-    def SetSensorTemperatureSetPoint(self,temperature):
+    def __SetSensorTemperatureSetPoint(self,temperature):
+        '''
+            Do not use this method if you want to wait for temperature to stabilize, use SetTemperatureWithLock
+        '''
         param_name = "PicamParameter_SensorTemperatureSetPoint"
         return self.set_parameter(parameter_name=param_name,parameter_value=temperature)
 
     def GetTemperatureStatus(self):
+        '''
+        See picam_constants.PicamSensorTemperatureStatus for
+            int <-> status mappings
+        '''
         param_name = "PicamParameter_SensorTemperatureStatus"
         return self.get_parameter(param_name)
 
@@ -363,15 +375,20 @@ if __name__ == "__main__":
     # print p.GetExposureTime()
     # print p.GetTemperature()
     
-    p.SetSensorTemperatureSetPoint(-60)
-    print p.GetSensorTemperatureReading()
-    print p.GetTemperatureStatus()
-    
-    # import sys
-    # sys.exit(0)
-
+    p.SetTemperatureWithLock(-75)
     # import time
 
+    # for i in range(500):
+       
+    #     # p.picam.PicamAdvanced_RefreshParameterFromCameraDevice(17039376)
+    #     # p.picam.PicamAdvanced_RefreshParameterFromCameraDevice(16908303)
+    #     print i,p.GetSensorTemperatureReading(), p.GetTemperatureStatus()
+        
+    #     time.sleep(0.5)    
+    #     # import sys
+    # sys.exit(0)
+
+      
     # for i in range(10):
         
     #     print i
