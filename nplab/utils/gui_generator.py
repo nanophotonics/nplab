@@ -22,7 +22,7 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
     """
 
     def __init__(self, instrument_dict, parent=None, dock_settings_path=None,
-                 scripts_path=None, working_directory=None):  #
+                 scripts_path=None, working_directory=None, file_path=None):  #
         """Args:
             instrument_dict(dict) :     This is a dictionary containing the
                                         instruments objects where the key is the 
@@ -30,12 +30,15 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
                                         console
             dock_settings_path(str):    A path for loading a previous dock widget
                                         configuration
-            script_path(str):           The path of any scripts the user may want to
+            scripts_path(str):          The path of any scripts the user may want to
                                         run using the drop down menu at the top
                                         of the gui
             working_directory(str):     A path to the requested working directory - 
                                         handy if you always wish to save data to 
                                         the same directories
+            file_path(str):             A path to the file for saving data. If None,
+                                        a dialog will ask for one. Can be a relative
+                                        path (from working_directory) or an absolute path
                                 """
         super(GuiGenerator, self).__init__(parent)
         self._logger = LOGGER
@@ -44,7 +47,15 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
             self.working_directory = os.path.join(os.getcwd())
         else:
             self.working_directory = working_directory
-        self.data_file = df.current(working_directory=working_directory)
+        if file_path is None:
+            self.data_file = df.current(working_directory=working_directory)
+        elif os.path.isabs(file_path):
+            df.set_current(file_path)
+            self.data_file = df.current()
+        else:
+            df.set_current(self.working_directory + '/' + file_path)
+            self.data_file = df.current()
+
         self.instr_dict["HDF5"] = self.data_file
         self.setDockNestingEnabled(1)
 
