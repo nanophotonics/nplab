@@ -27,7 +27,7 @@ if __name__ == '__main__':
 
 def findH5File(rootDir, mostRecent = True, nameFormat = 'date'):
     '''
-    Finds either oldest or most recent .h5 file in a folder containing specified string
+    Finds either oldest or most recent .h5 file in a folder whose name contains a specified string
     '''
 
     os.chdir(rootDir)
@@ -220,16 +220,16 @@ def retrieveData(directory, summaryNameFormat = 'summary', first = 0, last = 0, 
 
         return wavelengths, spectra, summaryAttrs
 
-def truncateSpectrum(wavelengths, spectrum, startWl = 450, finishWl = 900):
+def truncateSpectrum(x, y, startWl = 450, finishWl = 900):
     '''
-    Truncates spectrum within a certain wavelength range. Useful for removing high and low-end noise.
+    Truncates xy data spectrum within a specified wavelength range. Useful for removing high and low-end noise.
     Default range is 450-900 nm
     '''
-    wavelengths = np.array(wavelengths)
-    spectrum = np.array(spectrum)
+    x = np.array(x)
+    y = np.array(y)
 
-    startIndex = abs(wavelengths - startWl).argmin()
-    finishIndex = abs(wavelengths - finishWl).argmin()
+    startIndex = abs(x - startWl).argmin()
+    finishIndex = abs(x - finishWl).argmin()
 
     if startIndex > finishIndex:
         ind1 = finishIndex
@@ -237,9 +237,9 @@ def truncateSpectrum(wavelengths, spectrum, startWl = 450, finishWl = 900):
         startIndex = ind1
         finishIndex = ind2
 
-    wavelengthsTrunc = np.array(wavelengths[startIndex:finishIndex])
-    spectrumTrunc = np.array(spectrum[startIndex:finishIndex])
-    return np.array([wavelengthsTrunc, spectrumTrunc])
+    xTrunc = np.array(x[startIndex:finishIndex])
+    yTrunc = np.array(y[startIndex:finishIndex])
+    return np.array([xTrunc, yTrunc])
 
 def plotStackedMap(x, yData, imgName = 'Stack', plotTitle = 'Stack', closeFigures = False, init = False, vmin = 0, vmax = 6):
 
