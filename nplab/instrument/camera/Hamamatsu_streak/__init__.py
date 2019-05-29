@@ -12,7 +12,7 @@ import numpy as np
 from nplab.utils.gui import QtWidgets, QtCore, uic
 from nplab.instrument import Instrument
 from nplab.instrument.message_bus_instrument import MessageBusInstrument
-from nplab.instrument.camera import DisplayWidget
+from nplab.instrument.camera.camera_scaled_roi import DisplayWidgetRoiScale
 
 PrettyPrinter = pprint.PrettyPrinter(indent=4)
 
@@ -1094,7 +1094,7 @@ class StreakUI(QtWidgets.QWidget):
 
     def updateImage(self):
         if self.DisplayWidget is None:
-            self.DisplayWidget = DisplayWidget()
+            self.DisplayWidget = DisplayWidgetRoiScale()
         if self.DisplayWidget.isHidden():
             self.DisplayWidget.show()
         if len(self.Streak.image.shape) == 0:
