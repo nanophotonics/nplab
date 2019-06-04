@@ -14,20 +14,20 @@ Calibration_Arrays.append([])
 Calibration_Arrays.append([])
 Calibration_Arrays.append([])
 
-Calibration_Arrays[0].append([546.,614.,708.19,880.])
-Calibration_Arrays[0].append([-1.54766997e-05, 3.12560316e-06, 1.26048704e-05 ,2.43945244e-05])
-Calibration_Arrays[0].append([-1.63503325e+00, -1.94141892e+00, -2.17431238e+00, -2.60909451e+00,])
-Calibration_Arrays[0].append([1.44780946e+04, 1.75785703e+04,  2.17816013e+04, 3.03183653e+04])
+Calibration_Arrays[0].append([546.,614.,633.,708.19,785.,880.])
+Calibration_Arrays[0].append([-1.54766997e-05, 3.12560316e-06, 7.48822074e-06, 1.26048704e-05 , 4.21666043e-06, 2.43945244e-05])
+Calibration_Arrays[0].append([-1.63503325e+00, -1.94141892e+00, -2.02516092e+00, -2.17431238e+00, -1.87265593e+00, -2.60909451e+00])
+Calibration_Arrays[0].append([1.44780946e+04, 1.75785703e+04, 1.85922568e+04, 2.17816013e+04, 1.10551705e+04, 3.03183653e+04])
 
 Calibration_Arrays[1].append([546.,614.,633.,708.19,785.,880.])
 Calibration_Arrays[1].append([-5.65248674e-06, -3.01056645e-06, -1.99047684e-06, -2.24562594e-05, 2.02336235e-06,  1.15803962e-05])
 Calibration_Arrays[1].append([-1.75115459, -1.79100089, -1.79852965, -1.59951646, -1.85506506,-1.98678881])
 Calibration_Arrays[1].append([7601.12273137,  8563.71071556,  8849.60197977,  9361.94861663,11023.31118393, 12621.76193336])
 
-Calibration_Arrays[2].append([546.,614.,708.19,880.])
-Calibration_Arrays[2].append([-2.02247482e-5,-7.16741408e-6,-9.12063528e-6,-9.82434124e-6])
-Calibration_Arrays[2].append([-1.71481326,-1.74103985,-1.7359061,-1.73065953])
-Calibration_Arrays[2].append([2.54994622e3,2.76367171e3,3.06119413e3,3.49263429e3])
+Calibration_Arrays[2].append([546.,614.,633.,708.19,785.,880.])
+Calibration_Arrays[2].append([-2.02247482e-5,-7.16741408e-6,-5.93121258e-06,-9.12063528e-6, -1.15701586e-06, -9.82434124e-6])
+Calibration_Arrays[2].append([-1.71481326,-1.74103985,-1.74327267,-1.7359061, -1.75752998, -1.73065953])
+Calibration_Arrays[2].append([2.54994622e+03,2.76367171e+03,2.83490517e+03,3.06119413e+03, 3.30852775e+03, 3.49263429e+03])
 
 
 Calibration_Arrays=np.array(Calibration_Arrays)
@@ -62,7 +62,7 @@ class Trandor(Andor):#Andor
         return self.triax.Grating(Set_To)
 
     def Generate_Wavelength_Axis(self):
-        return self.triax.Get_Wavelength_Array()
+        return np.flipud(self.triax.Get_Wavelength_Array())
 
     def Set_Center_Wavelength(self,Wavelength):  
         Centre_Pixel=int(CCD_Size/2)
