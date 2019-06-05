@@ -239,12 +239,15 @@ class GuiGenerator(QtWidgets.QMainWindow,UiTools):
     def menuNewExperiment(self):
         """A start new experiement button casuing the gui to close ask for a new file
             and reopen"""
-        dock_state = self.dockWidgetArea.saveState()
-        self.toggle_browser()
-        self.data_file = df.current()
+#        dock_state = self.dockWidgetArea.saveState()
+   #     self.toggle_browser()
+        self.data_file.close()
+        self.data_file = df.current(working_directory=self.working_directory)
         self.instr_dict['HDF5'] = self.data_file
-        self._open_one_gui('HDF5')
-        self.dockWidgetArea.restoreState(dock_state)
+        self.allWidgets['HDF5'].data_file = self.data_file
+        self.allWidgets['HDF5'].treeWidget.model.refresh_tree()
+   #     self._open_one_gui('HDF5')
+   #     self.dockWidgetArea.restoreState(dock_state)
 #
     def menuSaveExperiment(self):
         """push to data to hard drive """
@@ -303,7 +306,7 @@ class GuiGenerator(QtWidgets.QMainWindow,UiTools):
             for fn in filenames:
                 if fn != '__init__.py':
                     menuitem = current.addAction(fn)
-                    menuitem.triggered.connect(partial(self.menuScriptClicked, fn))
+                    menuitem.triggered.connect(partial(self.menuScriptClicked, '\\'.join((dirpath,fn))))
 
         script_menu.addSeparator()
         refreshScripts = script_menu.addAction('Refresh')
