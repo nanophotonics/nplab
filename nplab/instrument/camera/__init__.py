@@ -17,6 +17,7 @@ import time
 from PIL import Image
 import warnings
 import pyqtgraph as pg
+from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 from weakref import WeakSet
 
 from nplab.instrument import Instrument
@@ -235,6 +236,10 @@ class Camera(Instrument):
             self._latest_frame_update_condition.notify_all()
         
         # TODO: use the NotifiedProperty to do this with less code?
+        self.update_widgets()
+
+    def update_widgets(self):
+        """Iterates over the preview widgets and updates them. It's a good method to override in subclasses"""
         if self._preview_widgets is not None:
             for w in self._preview_widgets:
                 try:
@@ -242,7 +247,7 @@ class Camera(Instrument):
                 except Exception as e:
                     print "something went wrong updating the preview widget"
                     print e
-                
+
     @property
     def latest_frame(self):
         """The last frame acquired (in live view/from GUI), after filtering."""
@@ -295,7 +300,10 @@ class Camera(Instrument):
                     getattr(self,p)
                     p_list.append(p)
             except:
-                delattr(self.__class__,p)
+                try:
+                    delattr(self.__class__,p)
+                except:
+                    pass
                 pass
         return p_list
    #     return [p for p in dir(self.__class__)
@@ -640,8 +648,8 @@ class CameraPreviewWidget(pg.GraphicsView):
         """Move the crosshair to centre on a given pixel coordinate."""
         self.crosshair['h_line'].setValue(pos[0])
         self.crosshair['v_line'].setValue(pos[1])
-        
-        
+
+
 class DummyCamera(Camera):
     exposure = CameraParameter("exposure", "The exposure time in ms.")
     gain = CameraParameter("gain", "The gain in units of bananas.")
