@@ -129,10 +129,11 @@ class Shamrock(Instrument):
     Grating_offset = NotifiedProperty(GetGratingOffset,SetGratingOffset)
     
     def GetDetectorOffset(self):
-        DetectorOffset = c_int() #not this is in steps, so int
-        error = self.dll.ShamrockGetDetectorOffset(self.current_shamrock,byref(self.DetectorOffset))
+        DetectorOffset = c_int() #note this is in steps, so int
+        #error = self.dll.ShamrockGetDetectorOffset(self.current_shamrock,byref(self.DetectorOffset))
+        error = self.dll.ShamrockGetDetectorOffset(self.current_shamrock,byref(DetectorOffset))
         self.verbose(ERROR_CODE[error], sys._getframe().f_code.co_name)
-        return DetectorOffset
+        return DetectorOffset.value
     def SetDetectorOffset(self,offset):
         error = self.dll.ShamrockSetDetectorOffset(self.current_shamrock,self.current_grating,c_int(offset))
         self.verbose(ERROR_CODE[error], sys._getframe().f_code.co_name)
