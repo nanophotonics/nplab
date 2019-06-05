@@ -57,4 +57,4 @@ class ipython:
         self.control.execute(cmd)
 
     def run_script(self, scriptname):
-        return self.control.execute('run -i scripts/%s' %scriptname)
+        return self.control.execute('run -i %s' %scriptname)
