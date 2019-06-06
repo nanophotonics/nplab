@@ -261,6 +261,7 @@ class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
         self.checkbox_aspectratio.stateChanged.connect(self.fix_aspect_ratio)
         self.checkbox_tools.stateChanged.connect(self.show_tools)
         self.checkbox_axes.stateChanged.connect(self.hide_axes)
+        self.checkbox_autolevel.stateChanged.connect(self.autoLevel)
         self.splitter.setSizes([1, 0])
         self.hide_axes()
 
@@ -304,9 +305,20 @@ class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
     def autoRange(self):
         return self.checkbox_autorange.isChecked()
 
-    @property
     def autoLevel(self):
-        return self.checkbox_autolevel.isChecked()
+        if self.checkbox_autolevel.isChecked():
+            self.lineEdit_minLevel.setText('0')
+            self.lineEdit_maxLevel.setText('100')
+            self.lineEdit_minLevel.setReadOnly(True)
+            self.lineEdit_maxLevel.setReadOnly(True)
+        else:
+            self.lineEdit_minLevel.setReadOnly(False)
+            self.lineEdit_maxLevel.setReadOnly(False)
+
+    def levels(self):
+        min_level = float(self.lineEdit_minLevel.text())
+        max_level = float(self.lineEdit_maxLevel.text())
+        return min_level, max_level
 
     def pos_to_unit(self, positions):
         """
@@ -385,10 +397,11 @@ class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
         elif len(newimage.shape) == 2:
             if newimage.shape[0] > self._max_num_line_plots:
                 self.splitter.setSizes([1, 0])
+                levels = map(lambda x: np.percentile(newimage, x), self.levels())
                 self.ImageDisplay.setImage(newimage,
                                            pos=offset,
                                            autoRange=self.autoRange,
-                                           autoLevels=self.autoLevel,
+                                           levels=levels,
                                            scale=scale)
             else:
                 self.splitter.setSizes([0, 1])
@@ -399,10 +412,11 @@ class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
             zvals = 0.99 * np.linspace(0, newimage.shape[0] - 1, newimage.shape[0])
             if newimage.shape[0] == 1:
                 newimage = newimage[0]
+            levels = map(lambda x: np.percentile(newimage, x), self.levels())
             self.ImageDisplay.setImage(newimage, xvals=zvals,
                                        pos=offset,
                                        autoRange=self.autoRange,
-                                       autoLevels=self.autoLevel,
+                                       levels=levels,
                                        scale=scale)
         else:
             raise ValueError('Cannot display. Array shape unrecognised')
