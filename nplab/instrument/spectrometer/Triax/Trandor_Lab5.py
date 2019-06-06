@@ -12,8 +12,6 @@ Calibration_Arrays=[]
 
 Calibration_Arrays.append(np.array([[ 6.00379272e-10, -6.78228336e-07,  2.05777889e-04], [-1.34194138e-05,  1.45370324e-02, -6.02706470e+00],[ 9.92195985e-02, -8.09189163e+01,  3.08091562e+04]]))
 Calibration_Arrays.append(np.array([[ 4.94388732e-11, -2.16939715e-08, -1.13540608e-05], [-1.31783914e-06,  1.27606623e-03, -2.03620149e+00],[ 4.72696666e-03,  7.87338518e+00,  1.84807750e+03]]))
-Calibration_Arrays.append(np.array([]))
-
 
 Calibration_Arrays=np.array(Calibration_Arrays)
 
@@ -78,3 +76,5 @@ class Trandor(Andor):#Andor
 
     x_axis=NotifiedProperty(Generate_Wavelength_Axis) #This is grabbed by the Andor code 
 
+    def read_spectrum(self):
+        return np.array(self.capture()[0])
