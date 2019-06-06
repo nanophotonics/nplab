@@ -112,8 +112,9 @@ class CameraRoiScale(Camera):
                         widgt.update_axes()
                     widgt.mouseMoved()
 
-                    # Resize the crosshairs, so that they are always 1/40th of the total size of the image
-                    size = max(((roi[1] - roi[0])/40., (roi[3]-roi[2])/40.))
+                    # Resize the crosshairs, so that they are always 1/40th of the total size of the image, but never
+                    # less than 5 pixels
+                    size = max(((roi[1] - roi[0])/40., (roi[3]-roi[2])/40., 5))
                     for idx in [1, 2]:
                         xhair = getattr(widgt, 'CrossHair%d' % idx)
                         xhair._size = size
