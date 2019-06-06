@@ -127,7 +127,7 @@ class Andor(CameraRoiScale, AndorBase):
         -------
 
         """
-        AndorBase.set_image(*params)
+        AndorBase.set_image(self, *params)
 
 
 class AndorUI(QtWidgets.QWidget, UiTools):
@@ -143,7 +143,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
 
         self._setup_signals()
         self.init_gui()
-        self.BinningChanged()
+        self.binning()
         self.data_file = None
         self.save_all_parameters = False
 
@@ -154,8 +154,6 @@ class AndorUI(QtWidgets.QWidget, UiTools):
             func = self.callback_to_update_prop(param)
             self._func_dict[param] = func
             register_for_property_changes(self.Andor, param, self._func_dict[param])
-        self.autoLevel = True
-        self.autoRange = False
 
     def __del__(self):
         self._stopTemperatureThread = True
@@ -164,24 +162,24 @@ class AndorUI(QtWidgets.QWidget, UiTools):
             self.DisplayWidget.close()
 
     def _setup_signals(self):
-        self.comboBoxAcqMode.activated.connect(self.AcquisitionModeChanged)
-        self.comboBoxBinning.activated.connect(self.BinningChanged)
-        self.comboBoxReadMode.activated.connect(self.ReadModeChanged)
-        self.comboBoxTrigMode.activated.connect(self.TrigChanged)
-        self.spinBoxNumFrames.valueChanged.connect(self.NumFramesChanged)
+        self.comboBoxAcqMode.activated.connect(self.acquisition_mode)
+        self.comboBoxBinning.activated.connect(self.binning)
+        self.comboBoxReadMode.activated.connect(self.read_mode)
+        self.comboBoxTrigMode.activated.connect(self.trigger)
+        self.spinBoxNumFrames.valueChanged.connect(self.number_frames)
         self.spinBoxNumFrames.setRange(1, 1000000)
-        self.spinBoxNumAccum.valueChanged.connect(self.NumAccumChanged)
-        self.spinBoxNumRows.valueChanged.connect(self.NumRowsChanged)
-        self.spinBoxCenterRow.valueChanged.connect(self.NumRowsChanged)
+        self.spinBoxNumAccum.valueChanged.connect(self.number_accumulations)
+        self.spinBoxNumRows.valueChanged.connect(self.number_rows)
+        self.spinBoxCenterRow.valueChanged.connect(self.number_rows)
         self.checkBoxROI.stateChanged.connect(self.ROI)
-        self.checkBoxCrop.stateChanged.connect(self.IsolatedCrop)
-        self.checkBoxCooler.stateChanged.connect(self.Cooler)
-        self.checkBoxEMMode.stateChanged.connect(self.OutputAmplifierChanged)
-        self.spinBoxEMGain.valueChanged.connect(self.EMGainChanged)
-        self.lineEditExpT.editingFinished.connect(self.ExposureChanged)
+        self.checkBoxCrop.stateChanged.connect(self.isolated_crop)
+        self.checkBoxCooler.stateChanged.connect(self.cooler)
+        self.checkBoxEMMode.stateChanged.connect(self.output_amplifier)
+        self.spinBoxEMGain.valueChanged.connect(self.em_gain)
+        self.lineEditExpT.editingFinished.connect(self.exposure)
         self.lineEditExpT.setValidator(QtGui.QDoubleValidator())
-        self.pushButtonDiv5.clicked.connect(lambda: self.ExposureChanged('/'))
-        self.pushButtonTimes5.clicked.connect(lambda: self.ExposureChanged('x'))
+        self.pushButtonDiv5.clicked.connect(lambda: self.exposure('/'))
+        self.pushButtonTimes5.clicked.connect(lambda: self.exposure('x'))
 
         self.pushButtonCapture.clicked.connect(self.Capture)
         self.pushButtonLive.clicked.connect(self.Live)
@@ -194,23 +192,23 @@ class AndorUI(QtWidgets.QWidget, UiTools):
     def init_gui(self):
         trig_modes = {0: 0, 1: 1, 6: 2}
         self.comboBoxAcqMode.setCurrentIndex(self.Andor._parameters['AcquisitionMode'] - 1)
-        self.AcquisitionModeChanged()
+        self.acquisition_mode()
         self.comboBoxReadMode.setCurrentIndex(self.Andor._parameters['ReadMode'])
-        self.ReadModeChanged()
+        self.read_mode()
         self.comboBoxTrigMode.setCurrentIndex(trig_modes[self.Andor._parameters['TriggerMode']])
-        self.TrigChanged()
+        self.trigger()
         self.comboBoxBinning.setCurrentIndex(np.log2(self.Andor._parameters['Image'][0]))
-        self.BinningChanged()
+        self.binning()
         self.spinBoxNumFrames.setValue(self.Andor._parameters['NKin'])
 
         self.Andor.get_camera_parameter('AcquisitionTimings')
         self.lineEditExpT.setText(
             str(float('%#e' % self.Andor._parameters['AcquisitionTimings'][0])).rstrip('0'))
 
-    def Cooler(self):
+    def cooler(self):
         self.Andor.cooler = self.checkBoxCooler.isChecked()
 
-    def AcquisitionModeChanged(self):
+    def acquisition_mode(self):
         available_modes = ['Single', 'Accumulate', 'Kinetic', 'Fast Kinetic']
         currentMode = self.comboBoxAcqMode.currentText()
         self.Andor.set_camera_parameter('AcquisitionMode', available_modes.index(currentMode) + 1)
@@ -228,7 +226,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
             self.spinBoxNumAccum.hide()
             self.labelNumAccum.hide()
 
-    def ReadModeChanged(self):
+    def read_mode(self):
         available_modes = ['FVB', 'Multi-track', 'Random track', 'Single track', 'Image']
         currentMode = self.comboBoxReadMode.currentText()
         self.Andor.set_camera_parameter('ReadMode', available_modes.index(currentMode))
@@ -268,12 +266,12 @@ class AndorUI(QtWidgets.QWidget, UiTools):
 
         return callback
 
-    def TrigChanged(self):
+    def trigger(self):
         available_modes = {'Internal': 0, 'External': 1, 'ExternalStart': 6}
         currentMode = self.comboBoxTrigMode.currentText()
         self.Andor.set_camera_parameter('TriggerMode', available_modes[currentMode])
 
-    def OutputAmplifierChanged(self):
+    def output_amplifier(self):
         if self.checkBoxEMMode.isChecked():
             self.Andor.set_camera_parameter('OutAmp', 0)
         else:
@@ -281,27 +279,27 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         if self.checkBoxCrop.isChecked():
             self.checkBoxCrop.setChecked(False)
 
-    def BinningChanged(self):
+    def binning(self):
         current_binning = int(self.comboBoxBinning.currentText()[0])
         if self.Andor._parameters['IsolatedCropMode'][0]:
             params = list(self.Andor._parameters['IsolatedCropMode'])
             params[3] = current_binning
             params[4] = current_binning
-            self.Andor._logger.debug('BinningChanged: %s' % str(params))
+            self.Andor._logger.debug('binning: %s' % str(params))
             self.Andor.set_image(*params)
         else:
             self.Andor.binning = current_binning
         self.Andor.FVBHBin = current_binning
 
-    def NumFramesChanged(self):
+    def number_frames(self):
         num_frames = self.spinBoxNumFrames.value()
         self.Andor.set_camera_parameter('NKin', num_frames)
 
-    def NumAccumChanged(self):
+    def number_accumulations(self):
         num_frames = self.spinBoxNumAccum.value()
         self.Andor.set_camera_parameter('NAccum', num_frames)
 
-    def NumRowsChanged(self):
+    def number_rows(self):
         num_rows = self.spinBoxNumRows.value()
         if self.Andor._parameters['AcquisitionMode'] == 4:
             self.Andor.set_fast_kinetics(num_rows)
@@ -315,7 +313,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         else:
             self.Andor._logger.info('Changing the rows only works in Fast Kinetic or in Single Track mode')
 
-    def ExposureChanged(self, input=None):
+    def exposure(self, input=None):
         if input is None:
             expT = float(self.lineEditExpT.text())
         elif input == 'x':
@@ -324,11 +322,11 @@ class AndorUI(QtWidgets.QWidget, UiTools):
             expT = float(self.lineEditExpT.text()) / 5
         self.Andor.Exposure = expT
 
-    def EMGainChanged(self):
+    def em_gain(self):
         gain = self.spinBoxEMGain.value()
         self.Andor.set_camera_parameter('EMGain', gain)
 
-    def IsolatedCrop(self):
+    def isolated_crop(self):
         current_binning = int(self.comboBoxBinning.currentText()[0])
         gui_roi = self.Andor.gui_roi
         shape = self.Andor._parameters['DetectorShape']
