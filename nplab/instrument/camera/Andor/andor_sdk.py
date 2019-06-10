@@ -214,8 +214,6 @@ class AndorBase:
 
                 if 'Finally' in self.parameters[param_loc]:
                     self.get_andor_parameter(self.parameters[param_loc]['Finally'])
-                    #       if 'GetAfterSet' in self.parameters[param_loc]:
-                    #          self.GetParameter(param_loc, *inputs)
             except AndorWarning:
                 if self.parameters[param_loc]['value'] is None:
                     self._logger.error('Not supported parameter and None value in the parameter dictionary')
@@ -270,8 +268,6 @@ class AndorBase:
                 for i in range(getattr(self, func['Iterator'])):
                     form_in_iterator = form_in + ({'value': i, 'type': c_int},)
                     vals += (self._dll_wrapper(func['cmdName'], inputs=form_in_iterator, outputs=form_out),)
-            # if len(vals) == 1:
-            #     vals = vals[0]
             self.parameters[param_loc]['value'] = vals
             self._parameters[param_loc] = vals
             return vals
@@ -671,9 +667,8 @@ parameters = dict(
     NumVSSpeed=dict(Get=dict(cmdName='GetNumberVSSpeeds', Outputs=(c_int,)), value=None),
     NumHSSpeed=dict(Get=dict(cmdName='GetNumberHSSpeeds', Outputs=(c_int,),
                              Input_params=(('channel', c_int), ('OutAmp', c_int))), value=None),
-    VSSpeed=dict(Set=dict(cmdName='SetVSSpeed', Inputs=(c_int,)), Get_from_prop='VSSpeeds', GetAfterSet=True),
-    VSSpeeds=dict(Get=dict(cmdName='GetVSSpeed', Inputs=(c_int,), Outputs=(c_float,), Iterator='NumVSSpeed'),
-                  GetAfterSet=True),
+    VSSpeed=dict(Set=dict(cmdName='SetVSSpeed', Inputs=(c_int,)), Get_from_prop='VSSpeeds'),
+    VSSpeeds=dict(Get=dict(cmdName='GetVSSpeed', Inputs=(c_int,), Outputs=(c_float,), Iterator='NumVSSpeed')),
     # why no work?
     HSSpeed=dict(Set=dict(cmdName='SetHSSpeed', Inputs=(c_int,), Input_params=(('OutAmp', c_int),)),
                  Get_from_prop='HSSpeeds'),
@@ -681,44 +676,13 @@ parameters = dict(
                            Input_params=(('channel', c_int), ('OutAmp', c_int),))),
     NumPreAmp=dict(Get=dict(cmdName='GetNumberPreAmpGains', Outputs=(c_int,))),
     PreAmpGains=dict(Get=dict(cmdName='GetPreAmpGain', Inputs=(c_int,), Outputs=(c_float,), Iterator='NumPreAmp')),
-    PreAmpGain=dict(Set=dict(cmdName='SetPreAmpGain', Inputs=(c_int,)), Get_from_prop='PreAmpGains', GetAfterSet=True),
+    PreAmpGain=dict(Set=dict(cmdName='SetPreAmpGain', Inputs=(c_int,)), Get_from_prop='PreAmpGains'),
     NumADChannels=dict(Get=dict(cmdName='GetNumberADChannels', Outputs=(c_int,))),
     ADChannel=dict(Set=dict(cmdName='SetADChannel', Inputs=(c_int,))),
     BitDepth=dict(Get=dict(cmdName='GetBitDepth', Inputs=(c_int,), Outputs=(c_int,), Iterator='NumADChannels'))
 )
 for param_name in parameters:
     setattr(AndorBase, param_name, AndorParameter(param_name))
-
-
-class WaitThread(QtCore.QThread):
-    def __init__(self, andor):
-        QtCore.QThread.__init__(self, parent=None)
-        self.Andor = andor
-
-    def run(self):
-        self.Andor._logger.info('Waiting for temperature to come up')
-        temp = 30
-        try:
-            temp = self.Andor._dllWrapper('GetTemperature', outputs=(c_int(),))[0]
-        except AndorWarning as warn:
-            if warn.error_name != 'DRV_TEMP_OFF':
-                raise warn
-        if self.Andor.IsCoolerOn():
-            self.Andor.CoolerOFF()
-        if temp < 30:
-            toggle = windll.user32.MessageBoxA(0, 'Camera is cold (%g), do you want to wait before ShutDown? '
-                                                  '\n Not waiting can cause irreversible damage' % temp, '', 4)
-            if toggle == 7:
-                return
-            else:
-                while temp < -20:
-                    self.Andor._logger.info('Waiting for temperature to come up. %g' % temp)
-                    time.sleep(10)
-                    try:
-                        temp = self.Andor._dllWrapper('GetTemperature', outputs=(c_int(),))[0]
-                    except AndorWarning as warn:
-                        if warn.error_name != 'DRV_TEMP_OFF':
-                            raise warn
 
 
 ERROR_CODE = {
