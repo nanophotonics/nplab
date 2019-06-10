@@ -139,7 +139,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         self.Andor = andor
         self.DisplayWidget = None
 
-        uic.loadUi((os.path.dirname(__file__) + '/andornplab.ui'), self)
+        uic.loadUi((os.path.dirname(__file__) + '/andor.ui'), self)
 
         self._setup_signals()
         self.init_gui()
