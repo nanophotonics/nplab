@@ -11,13 +11,10 @@ import h5py
 import numpy as np
 import os
 import matplotlib.pyplot as plt
-from scipy import sparse
-import scipy.sparse.linalg as splu
 from scipy.signal import butter, filtfilt
 from lmfit.models import GaussianModel
 import time
 from random import randint
-import scipy.optimize as spo
 import re
 
 if __name__ == '__main__':
@@ -239,6 +236,17 @@ def truncateSpectrum(x, y, startWl = 450, finishWl = 900):
 
     xTrunc = np.array(x[startIndex:finishIndex])
     yTrunc = np.array(y[startIndex:finishIndex])
+
+    if xTrunc.size <= 10 and x.size <= 100:
+
+        if startWl > finishWl:
+            wl1 = finishWl
+            wl2 = startWl
+            startWl = wl1
+            finishWl = wl2
+
+        xTrunc, yTrunc = np.transpose(np.array([[i, y[n]] for n, i in enumerate(x) if startWl < i < finishWl]))
+
     return np.array([xTrunc, yTrunc])
 
 def plotStackedMap(x, yData, imgName = 'Stack', plotTitle = 'Stack', closeFigures = False, init = False, vmin = 0, vmax = 6):
