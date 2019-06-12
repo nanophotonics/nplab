@@ -247,6 +247,7 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
         self._open_one_gui('HDF5')
         self.dockWidgetArea.restoreState(dock_state)
 
+
     def menuSaveExperiment(self):
         """push to data to hard drive """
         self.data_file.flush()
@@ -319,7 +320,7 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
             for fn in filenames:
                 if fn != '__init__.py':
                     menuitem = current.addAction(fn)
-                    menuitem.triggered.connect(partial(self.menuScriptClicked, fn))
+                    menuitem.triggered.connect(partial(self.menuScriptClicked, '\\'.join((dirpath,fn))))
 
         script_menu.addSeparator()
         refreshScripts = script_menu.addAction('Refresh')

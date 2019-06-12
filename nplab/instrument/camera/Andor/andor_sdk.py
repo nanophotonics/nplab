@@ -5,30 +5,22 @@ from nplab.instrument.camera import CameraParameter
 from nplab.utils.thread_utils import locked_action, background_action
 from nplab.utils.log import create_logger
 import nplab.datafile as df
-from nplab.utils.notified_property import NotifiedProperty
 import os
 import platform
 import time
 from ctypes import *
 import numpy as np
 
-# TODO:
-# Add a transpose checkbox for displaying (or maybe an option to rotate by 90, 180 or 270 degrees), without messing up the ROI and the axis
-# Add unit transformation options for changing between real space, k-space, energy
-#
-# Can we use the pyqtgraph ROI that comes with the ImageDisplay instead of CrossHairs?
 
 LOGGER = create_logger('Andor SDK')
 
 
-def to_bits(integer, bits):
-    """
-    Returns a list of bits representing the integer in base 2. Can be used to parse over the capabilities
+def to_bits(integer):
+    """ Returns a list of bits representing the integer in base 2. Used to parse over the capabilities
     :param integer:
-    :param bits:
-    :return:
+    :return: list of 1s and 0s
     """
-    assert integer < 2**bits
+    bits = integer.bit_length()
     return [1 if integer & (1 << (bits-1-n)) else 0 for n in range(bits)]
 
 
@@ -81,7 +73,8 @@ class AndorParameter(CameraParameter):
 
 
 class AndorBase:
-    """
+    """Base code handling the Andor SDK
+
     Most of the code for this class is setting up a general way of reading and writing parameters, which are then set up
     from the parameters dictionary after class definition.
 
@@ -90,11 +83,11 @@ class AndorBase:
     name and datatype (from the .dll).
 
     Most parameters are straightforward, since the Andor dll either has inputs (for setting parameters) or outputs
-    (for getting parameters). So you can just intuitively call Andor.GetParameter(name) or Andor.SetParameter(name, value)
-    with name and value provided by the user.
+    (for getting parameters). So you can just intuitively call GetParameter(name) or SetParameter(name, value) with name
+    and value provided by the user.
     Some parameters, like VSSpeed, HSSpeed..., require inputs to get outputs, so the user must say, e.g.,
         Andor.GetParameter('VSSpeed', 0)
-    Which does not return the current VSSpeed, but the VSSpeed (in us) of the setting 0.
+    Which does not return the current VSSpeed, but the VSSpeed (in microseconds) of the setting 0.
     """
 
     def __init__(self):
@@ -123,11 +116,9 @@ class AndorBase:
 
     @background_action
     def __del__(self):
-        """
-        If the camera is a Classic or iCCD, you have to wait for the temperature to be higher than -20 before shutting
-        down
-        :return:
-        """
+        """ Safe shutdown procedure """
+        # If the camera is a Classic or iCCD, you have to wait for the temperature to be higher than -20 before shutting
+        # down
         if self.Capabilities['CameraType'] in [3, 4]:
             if self.cooler:
                 self.cooler = 0
@@ -143,17 +134,13 @@ class AndorBase:
     def _dll_wrapper(self, funcname, inputs=(), outputs=(), reverse=False):
         """Handler for all the .dll calls of the Andor
 
-        Parameters
-        ----------
-        funcname    Name of the dll function to be called
-        inputs      Inputs to be handed in to the dll function
-        outputs     Outputs to be expected from the dll
-        reverse     Whether to have the inputs first or the outputs first when calling the dll
-
-        Returns
-        -------
-
+        :param funcname:    name of the dll function to be called
+        :param inputs:      inputs to be handed in to the dll function
+        :param outputs:     outputs to be expected from the dll
+        :param reverse:     bool. whether to have the inputs first or the outputs first when calling the dll
+        :return:
         """
+
         dll_input = ()
         if reverse:
             for output in outputs:
@@ -168,19 +155,19 @@ class AndorBase:
         error = getattr(self.dll, funcname)(*dll_input)
         self._error_handler(error, funcname, *(inputs + outputs))
 
-        returnVals = ()
+        return_values = ()
         for output in outputs:
             if hasattr(output, 'value'):
-                returnVals += (output.value,)
+                return_values += (output.value,)
             if isinstance(output, AndorCapabilities):
                 dicc = {}
                 for key, value in output._fields_:
                     dicc[key[2:]] = getattr(output, key)
-                returnVals += (dicc,)
-        if len(returnVals) == 1:
-            return returnVals[0]
+                return_values += (dicc,)
+        if len(return_values) == 1:
+            return return_values[0]
         else:
-            return returnVals
+            return return_values
 
     def _error_handler(self, error, funcname='', *args):
         self._logger.debug("[%s]: %s %s" % (funcname, ERROR_CODE[error], str(args)))
@@ -195,14 +182,9 @@ class AndorBase:
         Using the information contained in the self.parameters dictionary, send a general parameter set command to the
         Andor. The command name, and number of inputs and their types are stored in the self.parameters
 
-        Parameters
-        ----------
-        param_loc   dictionary key of self.parameters
-        inputs      inputs required to set the particular parameter. Must be at least one
-
-        Returns
-        -------
-
+        :param param_loc: dictionary key of self.parameters
+        :param inputs: inputs required to set the particular parameter. Must be at least one
+        :return:
         """
         if len(inputs) == 1 and type(inputs[0]) == tuple:
             if len(np.shape(inputs)) == 2:
@@ -232,8 +214,6 @@ class AndorBase:
 
                 if 'Finally' in self.parameters[param_loc]:
                     self.get_andor_parameter(self.parameters[param_loc]['Finally'])
-                    #       if 'GetAfterSet' in self.parameters[param_loc]:
-                    #          self.GetParameter(param_loc, *inputs)
             except AndorWarning:
                 if self.parameters[param_loc]['value'] is None:
                     self._logger.error('Not supported parameter and None value in the parameter dictionary')
@@ -257,14 +237,9 @@ class AndorBase:
         Using the information contained in the self.parameters dictionary, send a general parameter get command to the
         Andor. The command name, and number of inputs and their types are stored in the self.parameters
 
-        Parameters
-        ----------
-        param_loc   dictionary key of self.parameters
-        inputs      optional inputs for getting the specific parameter
-
-        Returns
-        -------
-
+        :param param_loc: dictionary key of self.parameters
+        :param inputs: optional inputs for getting the specific parameter
+        :return:
         """
         if 'not_supported' in self.parameters[param_loc]:
             self._logger.debug('Ignoring get %s because it is not supported' % param_loc)
@@ -293,8 +268,6 @@ class AndorBase:
                 for i in range(getattr(self, func['Iterator'])):
                     form_in_iterator = form_in + ({'value': i, 'type': c_int},)
                     vals += (self._dll_wrapper(func['cmdName'], inputs=form_in_iterator, outputs=form_out),)
-            # if len(vals) == 1:
-            #     vals = vals[0]
             self.parameters[param_loc]['value'] = vals
             self._parameters[param_loc] = vals
             return vals
@@ -318,18 +291,22 @@ class AndorBase:
             return None
 
     def get_andor_parameters(self):
-        '''Gets all the parameters that can be gotten
-        Returns:
-            An up to date paramters dict containing only values and names
-        '''
+        """Gets all the parameters that can be gotten
+
+        :return: an up to date parameters dict containing only values and names
+        """
         param_dict = dict()
         for param in self.parameters:
             param_dict[param] = getattr(self, param)
         return
 
     def set_andor_parameters(self, parameter_dictionary):
-        """Sets the values of the parameters listed within the dict Param_dict, It can take any number of parameters
+        """Sets all parameters tha can be set
+
+        :param parameter_dictionary: dictionary of parameters to be set
+        :return:
         """
+
         assert isinstance(parameter_dictionary, dict)
         for name, value in parameter_dictionary.items():
             if not hasattr(self, name):
@@ -351,74 +328,80 @@ class AndorBase:
 
     @property
     def capabilities(self):
-        """Parsing the Capabilities parameter"""
+        """Parsing of the Andor capabilities
+
+        Transforming bit values contained in the self.Capabilities attribute into human-understandable parameters, as
+        given by the manual
+
+        :return:
+        """
         capabilities = dict(AcqModes=[], ReadModes=[], FTReadModes=[], TriggerModes=[], CameraType=None, PixelMode=[],
                             SetFunctions=[], GetFunctions=[], Features=[], PCICard=None, EMGainCapability=[])
 
-        bits = bin(self.Capabilities['AcqModes'])[2:]
+        bits = to_bits(self.Capabilities['AcqModes'])
         keys = ['Single', 'Video', 'Accumulate', 'Kinetic', 'FrameTransfer', 'FastKinetic', 'Overlap']
         for bit, key in zip(bits, keys):
-            if bool(bit):
+            if bit:
                 capabilities['AcqModes'] += [key]
 
-        bits = bin(self.Capabilities['ReadModes'])[2:]
+        bits = to_bits(self.Capabilities['ReadModes'])
         keys = ['FullImage', 'SubImage', 'SingleTrack', 'FVB', 'MultiTrack', 'RandomTrack']
         for bit, key in zip(bits, keys):
-            if bool(bit):
+            if bit:
                 capabilities['ReadModes'] += [key]
 
-        bits = bin(self.Capabilities['FTReadModes'])[2:]  # Frame transfer read modes
+        bits = to_bits(self.Capabilities['FTReadModes'])  # Frame transfer read modes
         keys = ['FullImage', 'SubImage', 'SingleTrack', 'FVB', 'MultiTrack', 'RandomTrack']
         for bit, key in zip(bits, keys):
-            if bool(bit):
+            if bit:
                 capabilities['FTReadModes'] += [key]
 
-        bits = bin(self.Capabilities['TriggerModes'])[2:]
+        bits = to_bits(self.Capabilities['TriggerModes'])
         keys = ['Internal', 'External', 'External_FVB_EM', 'Continuous',
                 'ExternalStart', 'Bulb', 'ExternalExposure', 'Inverted']
         for bit, key in zip(bits, keys):
-            if bool(bit):
+            if bit:
                 capabilities['TriggerModes'] += [key]
 
         keys = ['PDA', 'iXon', 'iCCD', 'EMCCD', 'CCD', 'iStar', 'Video', 'iDus', 'Newton',
                 'Surcam', 'USBiStar', 'Luca', 'Reserved', 'iKon', 'InGaAs', 'iVac', 'Clara']
         capabilities['CameraType'] = keys[int(self.Capabilities['CameraType'])]
 
-        bits = bin(self.Capabilities['PixelMode'])[2:]
+        bits = to_bits(self.Capabilities['PixelMode'])
         keys = ['8bit', '14bit', '16bit', '32bit', 'mono', 'RGB', 'CMY']
         for bit, key in zip(bits, keys):
-            if bool(bit):
+            if bit:
                 capabilities['PixelMode'] += [key]
 
-        bits = bin(self.Capabilities['SetFunctions'])[2:]
+        bits = to_bits(self.Capabilities['SetFunctions'])
         keys = ['VSSpeed', 'HSSpeed', 'Temperature', 'MCPGain', 'EMCCDGain', 'BaselineClamp', 'VSAmplitude',
                 'HighCapacity', 'BaselineOffset', 'PreAmpGain', 'CropMode/IsolatedCropMode', 'DMAParameters',
                 'HorizontalBin', 'MultiTrackHRange', 'RandomTracks', 'EMAdvanced']
         for bit, key in zip(bits, keys):
-            if bool(bit):
+            if bit:
                 capabilities['SetFunctions'] += [key]
 
-        bits = bin(self.Capabilities['GetFunctions'])[2:]
+        bits = to_bits(self.Capabilities['GetFunctions'])
         keys = ['Temperature', 'TemperatureRange', 'Detector', 'MCPGain', 'EMCCDGain', 'BaselineClamp']
         for bit, key in zip(bits, keys):
-            if bool(bit):
+            if bit:
                 capabilities['GetFunctions'] += [key]
 
-        bits = bin(self.Capabilities['Features'])[2:]
+        bits = to_bits(self.Capabilities['Features'])
         keys = ['Status', 'DriverEvent', 'Spool', 'Shutter', 'ShutterEx', 'I2C', 'SaturationEvent', 'FanMode',
                 'LowFanMode', 'TemperatureDuringAcquitisition', 'KeepClean', 'Internal', 'FTandExternalExposure',
                 'KineticAndExternalExposure', 'Internal', 'Internal', 'IOcontrol', 'PhotonCounting', 'CountConvert',
                 'DualMode']
         for bit, key in zip(bits, keys):
-            if bool(bit):
+            if bit:
                 capabilities['Features'] += [key]
 
         capabilities['PCICard'] = int(self.Capabilities['PCICard'])
 
-        bits = bin(self.Capabilities['EMGainCapability'])[2:]
+        bits = to_bits(self.Capabilities['EMGainCapability'])
         keys = ['8bit', '12bit', 'Linear12', 'Real12']
         for bit, key in zip(bits, keys):
-            if bool(bit):
+            if bit:
                 capabilities['EMGainCapability'] += [key]
 
         return capabilities
@@ -430,6 +413,7 @@ class AndorBase:
             pass
 
     def initialize(self):
+        """Sets the initial parameters for the Andor typical for our experiments"""
         self._dll_wrapper('Initialize', outputs=(c_char(),))
         self.set_andor_parameter('ReadMode', 4)
         self.set_andor_parameter('AcquisitionMode', 1)
@@ -447,19 +431,18 @@ class AndorBase:
 
     @locked_action
     def capture(self):
-        """Capture function for Andor
+        """Capture an image
 
         Wraps the three steps required for a camera acquisition: StartAcquisition, WaitForAcquisition and
         GetAcquiredData. The function also takes care of ensuring that the correct shape of array is passed to the
         GetAcquiredData call, according to the currently set parameters of the camera.
 
-        Returns
-        -------
-        A numpy array containing the captured image(s)
-        The number of images taken
-        The shape of the images taken
-
+        :return:
+            np.array    2D or 3D array of the captured image(s)
+            int         number of images taken
+            tuple       shape of the images taken
         """
+
         self._dll_wrapper('StartAcquisition')
         self._dll_wrapper('WaitForAcquisition')
         self.wait_for_driver()
@@ -523,14 +506,10 @@ class AndorBase:
     def set_image(self, *params):
         """Set camera parameters for either the IsolatedCrop mode or Image mode
 
-        Parameters
-        ----------
-        params  optional, inputs for either the IsolatedCrop mode or Image mode
-
-        Returns
-        -------
-
+        :param params: optional, inputs for either the IsolatedCrop mode or Image mode
+        :return:
         """
+
         if self._parameters['IsolatedCropMode'][0]:
             if len(params) == 0:
                 params += (self._parameters['IsolatedCropMode'])
@@ -561,13 +540,8 @@ class AndorBase:
         Uses the already set parameters of exposure time, ReadMode, and binning as defaults to be passed to the Fast
         Kinetic parameter setter
 
-        Parameters
-        ----------
-        n_rows
-
-        Returns
-        -------
-
+        :param n_rows: int. Number of rows to use
+        :return:
         """
 
         if n_rows is None:
@@ -589,13 +563,7 @@ class AndorBase:
 
     @locked_action
     def wait_for_driver(self):
-        """
-        This function is here because the dll.WaitForAcquisition does not work when in Accumulate mode
-
-        Returns
-        -------
-
-        """
+        """This function is here because the dll.WaitForAcquisition does not work when in Accumulate mode"""
         status = c_int()
         self.dll.GetStatus(byref(status))
         while ERROR_CODE[status.value] == 'DRV_ACQUIRING':
@@ -632,7 +600,7 @@ class AndorBase:
             return None
 
     def save_params_to_file(self, filepath=None):
-        if filepath == None:
+        if filepath is None:
             data_file = df.create_file(set_current=False, mode='a')
         else:
             data_file = df.DataFile(filepath)
@@ -640,7 +608,7 @@ class AndorBase:
         data_file.close()
 
     def load_params_from_file(self, filepath=None):
-        if filepath == None:
+        if filepath is None:
             data_file = df.open_file(set_current=False, mode='r')
         else:
             data_file = df.DataFile(filepath)
@@ -699,9 +667,8 @@ parameters = dict(
     NumVSSpeed=dict(Get=dict(cmdName='GetNumberVSSpeeds', Outputs=(c_int,)), value=None),
     NumHSSpeed=dict(Get=dict(cmdName='GetNumberHSSpeeds', Outputs=(c_int,),
                              Input_params=(('channel', c_int), ('OutAmp', c_int))), value=None),
-    VSSpeed=dict(Set=dict(cmdName='SetVSSpeed', Inputs=(c_int,)), Get_from_prop='VSSpeeds', GetAfterSet=True),
-    VSSpeeds=dict(Get=dict(cmdName='GetVSSpeed', Inputs=(c_int,), Outputs=(c_float,), Iterator='NumVSSpeed'),
-                  GetAfterSet=True),
+    VSSpeed=dict(Set=dict(cmdName='SetVSSpeed', Inputs=(c_int,)), Get_from_prop='VSSpeeds'),
+    VSSpeeds=dict(Get=dict(cmdName='GetVSSpeed', Inputs=(c_int,), Outputs=(c_float,), Iterator='NumVSSpeed')),
     # why no work?
     HSSpeed=dict(Set=dict(cmdName='SetHSSpeed', Inputs=(c_int,), Input_params=(('OutAmp', c_int),)),
                  Get_from_prop='HSSpeeds'),
@@ -709,44 +676,13 @@ parameters = dict(
                            Input_params=(('channel', c_int), ('OutAmp', c_int),))),
     NumPreAmp=dict(Get=dict(cmdName='GetNumberPreAmpGains', Outputs=(c_int,))),
     PreAmpGains=dict(Get=dict(cmdName='GetPreAmpGain', Inputs=(c_int,), Outputs=(c_float,), Iterator='NumPreAmp')),
-    PreAmpGain=dict(Set=dict(cmdName='SetPreAmpGain', Inputs=(c_int,)), Get_from_prop='PreAmpGains', GetAfterSet=True),
+    PreAmpGain=dict(Set=dict(cmdName='SetPreAmpGain', Inputs=(c_int,)), Get_from_prop='PreAmpGains'),
     NumADChannels=dict(Get=dict(cmdName='GetNumberADChannels', Outputs=(c_int,))),
     ADChannel=dict(Set=dict(cmdName='SetADChannel', Inputs=(c_int,))),
     BitDepth=dict(Get=dict(cmdName='GetBitDepth', Inputs=(c_int,), Outputs=(c_int,), Iterator='NumADChannels'))
 )
 for param_name in parameters:
     setattr(AndorBase, param_name, AndorParameter(param_name))
-
-
-class WaitThread(QtCore.QThread):
-    def __init__(self, andor):
-        QtCore.QThread.__init__(self, parent=None)
-        self.Andor = andor
-
-    def run(self):
-        self.Andor._logger.info('Waiting for temperature to come up')
-        temp = 30
-        try:
-            temp = self.Andor._dllWrapper('GetTemperature', outputs=(c_int(),))[0]
-        except AndorWarning as warn:
-            if warn.error_name != 'DRV_TEMP_OFF':
-                raise warn
-        if self.Andor.IsCoolerOn():
-            self.Andor.CoolerOFF()
-        if temp < 30:
-            toggle = windll.user32.MessageBoxA(0, 'Camera is cold (%g), do you want to wait before ShutDown? '
-                                                  '\n Not waiting can cause irreversible damage' % temp, '', 4)
-            if toggle == 7:
-                return
-            else:
-                while temp < -20:
-                    self.Andor._logger.info('Waiting for temperature to come up. %g' % temp)
-                    time.sleep(10)
-                    try:
-                        temp = self.Andor._dllWrapper('GetTemperature', outputs=(c_int(),))[0]
-                    except AndorWarning as warn:
-                        if warn.error_name != 'DRV_TEMP_OFF':
-                            raise warn
 
 
 ERROR_CODE = {
