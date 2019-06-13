@@ -6,6 +6,8 @@ from nplab.instrument.visa_instrument import VisaInstrument
 import numpy as np
 import time
 import copy
+import scipy.optimize as spo
+
 
 """
 This is the base class for the Triax spectrometer. This should be wrapped for each lab use, due to the differences in calibrations.
@@ -14,7 +16,7 @@ This is the base class for the Triax spectrometer. This should be wrapped for ea
 class Triax(VisaInstrument):
     metadata_property_names = ('wavelength', )
 
-    def __init__(self, Address, Calibration_Data=[], CCD_Horizontal_Resolution=2000, Maximum_Calibration_Iterations=20, Calibration_Iteration_Threshold=1e-5):  
+    def __init__(self, Address, Calibration_Data=[], CCD_Horizontal_Resolution=2000):  
         """
         Initialisation function for the triax class. Address in the port address of the triax connection.
 
@@ -23,13 +25,14 @@ class Triax(VisaInstrument):
 
         CCD_Horizontal_Resolution is an integer for the horizontal size of the camera used with the triax.
 
-        To calculate the wavelengths hitting each pixel, an iterative process is used. This will iterate a maximum of Maximum_Calibration_Iterations times.
-        These iterations will automatically break is the maximum changes of the wavelength associated with any pixel is less than Calibration_Iteration_Threshold.
+        To calculate the wavelengths hitting each pixel, an inverse process is used. It is possible to find (approximate) the grating stepper motor position 
+        required to put a wavelength on a given pixel. To calculate the wavelength array, a quadratic curve is returned such that the motor position required to 
+        put each wavelength on each pixel is as close as possible to the real stepper motor position.
         """
         
         #--------Attempt to open communication------------
 
-        #try:
+        try:
 
         VisaInstrument.__init__(self, Address, settings=dict(timeout=4000, write_termination='\n'))
         Attempts=0
@@ -44,8 +47,8 @@ class Triax(VisaInstrument):
                 if Attempts==5:
                     raise Exception('Triax communication error!')
 
-       # except:
-            #raise Exception('Triax communication error!')
+       except:
+            raise Exception('Triax communication error!')
 
         #----Generate initial 3x3 calibration arrays for the gratings used for initial estimate of wavelengths on each CCD pixel--------
         
@@ -70,16 +73,17 @@ class Triax(VisaInstrument):
                     for k in range(len(self.Spline_Data[-1][0]))[1:-1]:
                         self.Spline_Data[-1][-1].append(np.polyfit(self.Spline_Data[-1][0][k-1:k+2],j[k-1:k+2],2))
 
-        self.Maximum_Calibration_Iterations=Maximum_Calibration_Iterations
-        self.Calibration_Iteration_Threshold=Calibration_Iteration_Threshold
-
-
         #---print regions each grating is calibrated over
+
+        self.Regions=[]
 
         print 'This Triax spectrometer is calibrated for use over the following ranges:'
         for i in range(len(Calibration_Data)):
             if len(Calibration_Data[i])==4:
                 print 'Grating',i,':',np.min(Calibration_Data[i][0]),'nm - ',np.max(Calibration_Data[i][0]),'nm'
+                self.Regions.append([np.min(Calibration_Data[i][0]),np.max(Calibration_Data[i][0])])
+            else:
+                self.Regions.append(None)
 
         self.Wavelength_Array=None #Not intially set. Updated with a change of grating or stepper motor position
         self.Number_of_Pixels=CCD_Horizontal_Resolution
@@ -126,119 +130,60 @@ class Triax(VisaInstrument):
         self.write("H0\r")
         return int(self.read()[1:])
 
-    def Iterate_Pixels_to_Wavelengths(self,Pixel_Array,Steps,Current_Wavelength_Estimation_Array):
-        """
-        Given a guess for the wavelengths (Current_Wavelength_Estimation_Array) represented by a set of pixels (Pixel_Array)
-        at a given stepper motor step (Steps), this function uses a quadratic spline to generate a different 3x3 calibration matrix for each pixel.
-        new wavelength array is returned. 
-        """
-        Spline_Data=self.Spline_Data[self.Grating_Number] #[Calibration_Wavelength,Square_Coefficents,Linear_Coefficents,Constant_Coefficents]
-        
-        #----Split wavelength array into different regions of the quadratic spline----
-
-        Coefficent_Blocks=[]
-        for i in range(len(Spline_Data[1])):
-            Coefficent_Blocks.append(np.array([Spline_Data[1][i],Spline_Data[2][i],Spline_Data[3][i]]))
-
-        Chunks=[]
-        Counter=0
-        while Counter<len(Current_Wavelength_Estimation_Array):
-            Region=0
-            while Region<len(Spline_Data[0]) and Spline_Data[0][Region]<Current_Wavelength_Estimation_Array[Counter]:
-                Region+=1
-            if Region==0:
-                Start=-np.inf
-            else:
-                Start=Spline_Data[0][Region-1]
-            if Region==len(Spline_Data[0]):
-                End=np.inf
-            else:
-                End=Spline_Data[0][Region]
-            m=0
-            while Counter+m<len(Current_Wavelength_Estimation_Array) and Current_Wavelength_Estimation_Array[Counter+m]>=Start and Current_Wavelength_Estimation_Array[Counter+m]<=End:
-                m+=1
-            Chunks.append([Region,Counter,Counter+m])
-            Counter+=m
-
-        #---- Calculate the 3x3 calibration matrix for each pixel
-
-        Changing_Coefficents=[]
-        for i in Chunks:
-           # print i
-            Chunk=np.array(Current_Wavelength_Estimation_Array[i[1]:i[2]])
-            if i[0]<=1:
-                for q in Chunk:
-                    Changing_Coefficents.append(Coefficent_Blocks[0])
-            elif i[0]>=len(Spline_Data)-1:
-                 for q in Chunk:
-                    Changing_Coefficents.append(Coefficent_Blocks[-1])
-            else:
-                Chunk-=Spline_Data[0][i[0]-1]
-                Chunk/=Spline_Data[0][i[0]]-Spline_Data[0][i[0]-1]
-                for q in Chunk:
-                    Changing_Coefficents.append((1-q)*Coefficent_Blocks[i[0]-2]+q*Coefficent_Blocks[i[0]-1])
-
-        Changing_Coefficents=np.array(Changing_Coefficents)
-
-        #----calculate new wavelength array--------
-
-        Coefficents=np.transpose(np.sum(Changing_Coefficents*np.array([[Steps**2],[Steps],[1]]).astype(np.float64),axis=1))
-        try:
-            Lambda=(-Coefficents[1]+np.sqrt((Coefficents[1]**2)-(4*Coefficents[0]*(Coefficents[2]-Pixel_Array))))/(2*Coefficents[0])
-            if np.sum(np.isnan(Lambda))>0:
-                raise Exception('NANs in Lambda array')
-            return Lambda
-        except:
-            return None
-
-
     def Convert_Pixels_to_Wavelengths(self,Pixel_Array):
         """
-        Function to convert a 1-D array of pixel values (Pixel Array) into corresponding wavelengths
+        A function to convert a given Pixel Array into a wavelength array depending on the current Grating and Grating Position.
+
+        Achieves this by optimising wavelengths on each pixel that would require the current grating motor stepper position.
+
+        Result is always a quadratic approximation.
         """
-            
+
         Steps=self.Motor_Steps() #Check grating position
-            
+
         if self.Grating_Number>=len(self.Calibration_Arrays): #Check calibration exists
             if len(self.Calibration_Arrays)==0 or len(self.Calibration_Arrays[self.Grating_Number])==0:
                 return Pixel_Array
             else:
                 raise ValueError('Current grating is not calibrated! No calibration supplied!')
-            
-        #Perform conversion using quadratic estimation
-            
-        Coefficents=np.transpose(copy.deepcopy(self.Calibration_Arrays[self.Grating_Number]))
-        Step_Array=np.array([Steps**2,Steps,1]).astype(np.float64)
-            
-        Coefficents*=Step_Array
-        Coefficents=np.sum(Coefficents,axis=1)
 
-        try:
-            Lambda=(-Coefficents[1]+np.sqrt((Coefficents[1]**2)-(4*Coefficents[0]*(Coefficents[2]-Pixel_Array))))/(2*Coefficents[0])
-            if np.sum(np.isnan(Lambda))>0:
-                raise Exception('NANs in Lambda array')
-    
-            #----Use Iterate_Pixels_to_Wavelengths() to update the wavelength approximation to use quadratic spline rather than fixed quadratics--------
-    
-            End=False
-            Counter=0
-            while End is False and Counter<self.Maximum_Calibration_Iterations:
-                New_Lambda=self.Iterate_Pixels_to_Wavelengths(Pixel_Array,Steps,Lambda)
-                if New_Lambda is None:
-                    End=True
-                    Lambda=Pixel_Array
-                else:
-                    if np.max(np.abs(New_Lambda-Lambda))<self.Calibration_Iteration_Threshold:
-                        End=True
-                        Lambda=New_Lambda
-                Counter+=1
-    
-            return Lambda
-        except:
-            return Pixel_Array
-        
-            
-    def Find_Required_Step(self,Wavelength,Pixel):
+        Sample_Pixels=np.linspace(np.min(Pixel_Array),np.max(Pixel_Array),10) #Make some estimates to the nearest 0.1nm
+        Sample_Wavelengths=[np.mean(self.Regions[self.Grating_Number])]
+        while len(Sample_Wavelengths)<len(Sample_Pixels):
+            Sample_Wavelengths.append(Sample_Wavelengths[0])
+        Range=0.5*(self.Regions[self.Grating_Number][1]-self.Regions[self.Grating_Number][0])
+        Spacing=[10.,1.,0.1]
+
+        while len(Spacing)>0:
+            for i in range(len(Sample_Pixels)):
+                To_Test=np.arange(Sample_Wavelengths[i]-Range,Sample_Wavelengths[i]+Range,Spacing[0])
+                Results=[]
+                for j in To_Test:
+                    Results.append(self.Find_Required_Step(j,Sample_Pixels[i],False))
+                Sample_Wavelengths[i]=To_Test[np.argmin(np.abs(np.array(Results)-Steps))]
+            Range=Spacing[0]
+            Spacing=Spacing[1:]
+
+        #Use estimates to find a quadratic relation
+
+        Coefficents=np.polyfit(Sample_Pixels,Sample_Wavelengths,2)
+
+        #Optimise this relation over all pixels
+
+        def Loss(Coefficents):
+            Wavelengths=np.polyval(np.polyfit(Sample_Pixels,Sample_Wavelengths,2),Pixel_Array)
+            Diff=[]
+            for i in range(len(Pixel_Array)):
+                Diff.append(self.Find_Required_Step(Wavelengths[i],Pixel_Array[i],False)-Steps)
+            return np.sum(np.abs(Diff))
+
+        Coefficents=spo.minimize(Loss,Coefficents).x
+
+        Wavelengths=np.polyval(np.polyfit(Sample_Pixels,Sample_Wavelengths,2),Pixel_Array)
+
+        return Wavelengths
+           
+    def Find_Required_Step(self,Wavelength,Pixel,Require_Integer=True):
         """
         Function to return the required motor step value that would place a given Wavelength on a given Pixel of the CCD
         """
@@ -269,8 +214,12 @@ class Triax(VisaInstrument):
         #Perform Conversion
         
         Coefficents=np.sum(Coefficents*np.array([Wavelength**2,Wavelength,1.]),axis=1)
+
+        Output=(-Coefficents[1]-np.sqrt((Coefficents[1]**2)-(4*Coefficents[0]*(Coefficents[2]-Pixel))))/(2*Coefficents[0])
+        if Require_Integer is True:
+            Output=int(Output)
        
-        return int((-Coefficents[1]-np.sqrt((Coefficents[1]**2)-(4*Coefficents[0]*(Coefficents[2]-Pixel))))/(2*Coefficents[0]))
+        return Output
 
     def Move_Steps(self, Steps):
         """
@@ -287,7 +236,7 @@ class Triax(VisaInstrument):
             self.write("F0,%i\r" % Steps)
             time.sleep(1)
             self.waitTillReady()
-        self.Wavelength_Array=None
+        self.Wavelength_Array=self.Convert_Pixels_to_Wavelengths(np.array(range(self.Number_of_Pixels))) #Update wavelength array
 
     def Slit(self, Width=None):
         """
