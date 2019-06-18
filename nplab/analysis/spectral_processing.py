@@ -43,3 +43,6 @@ def process_datafile_spectrum(h5object):
 def wavelength2wavenumber(wavelengths,laser_wavelength):
     """Input in nm output in cm^-1 """
     return 1.0/(laser_wavelength*1E-7)-(1.0/(wavelengths*1E-7))
+def wavenumber2wavelength(wavenumbers,laser_wavelength):
+    """Input in nm and cm^-1 output in nm """
+    return 1.0/(1.0/(laser_wavelength)-(wavenumbers*1E-7))

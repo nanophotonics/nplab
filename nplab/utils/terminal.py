@@ -106,7 +106,7 @@ class QIPythonWidget(RichJupyterWidget):
 
     def run_script(self, scriptname):
         try:
-            self._execute('run -i scripts/%s' % scriptname, False)
+            self._execute('run -i %s' % scriptname, False)
         except Exception as e:
             print 'Failed because ', e
 

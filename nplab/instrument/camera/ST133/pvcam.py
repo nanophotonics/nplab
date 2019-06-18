@@ -2,7 +2,7 @@
 """
 @author: YagoDel
 
-Modified from Odemis
+Modified from Odemis and patched together with nplab.instrument.Andor code
 Copyright © 2012-2013 Éric Piel, Delmic
 
 Useful links:
@@ -49,47 +49,6 @@ def index_closest(val, l):
     else:
         return min(enumerate(l), key=lambda x: abs(x[1] - val))[0]
 
-
-# class PVCamParameter(NotifiedProperty):
-#     """A quick way of creating a property that alters an Andor parameter.
-#
-#     NB the property will be read immediately after it's written, to ensure
-#     that the value we send to any listening controls/indicators is correct
-#     (otherwise we'd send them the value that was requested, even if it was
-#     not valid).  This behaviour can be disabled by setting read_back to False
-#     in the constructor.
-#     """
-#
-#     def __init__(self, parameter_name, doc=None, read_back=True):
-#         """Create a property that reads and writes the given parameter.
-#
-#         This internally uses the `get_camera_parameter` and
-#         `set_camera_parameter` methods, so make sure you override them.
-#         """
-#         if doc is None:
-#             doc = "Adjust the camera parameter '{0}'".format(parameter_name)
-#         super(PVCamParameter, self).__init__(fget=self.fget,
-#                                              fset=self.fset,
-#                                              doc=doc,
-#                                              read_back=read_back)
-#         self.parameter_id = parameter_name
-#
-#     def fget(self, obj):
-#         value = obj.get_param(self.parameter_id)
-#         # if (type(value) == tuple) and (len(value) == 1):
-#         #     return value[0]
-#         # else:
-#         return value
-#
-#     def fset(self, obj, value):
-#         # if type(value) != tuple:
-#         #     value = (value,)
-#         obj.set_param(self.parameter_id, value)
-
-
-# This python file is automatically generated from the pvcam.h include file by:
-# h2xml pvcam.h -c -I . -o pvcam_h.xml
-# xml2py pvcam_h.xml -o pvcam_h.py
 
 class PVCamError(Exception):
     def __init__(self, errno, strerror, *args, **kwargs):
@@ -1422,7 +1381,7 @@ class PvcamSdk:
 
 
 class Pvcam(CameraRoiScale, PvcamSdk):
-    metadata_property_names = ('exposure', 'binning', 'unit_scale')
+    metadata_property_names = ('exposure', 'binning', 'roi')
 
     def __init__(self, device, **kwargs):
         # super(Pvcam, self).__init__(device, logger=self._logger)
@@ -1486,8 +1445,8 @@ class Pvcam(CameraRoiScale, PvcamSdk):
     def binning(self, value):
         self._binning = value
 
+
 class pvcamUI(QtWidgets.QWidget, UiTools):
-    # ImageUpdated = QtCore.Signal()
 
     def __init__(self, camera):
         assert isinstance(camera, Pvcam), "instrument must be an camera"
@@ -1497,16 +1456,12 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
         self.captureThread = None
         self.camera = camera
         self.DisplayWidget = None
-        # self._unit_offset = self.camera.unit_offset
-        # self._scaling()
 
         self._binning_changed = False
         self._prev_bin = camera.binning
 
         uic.loadUi((os.path.dirname(__file__) + '/camera.ui'), self)
         self._setup_signals()
-        # self.updateGUI()
-        # self.BinningChanged()
         self.data_file = None
         self.save_all_parameters = False
         self.backgrounded = False
@@ -1520,7 +1475,6 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
             except AssertionError:
                 self._logger.info("%s is not a property so cannot be monitored" % param)
         # register_for_property_changes(self.camera, "latest_raw_frame", self.update_image)
-        # self.camera.ImageUpdated.connect(self.update_image)
 
     def __del__(self):
         self._stopTemperatureThread = True
@@ -1558,80 +1512,6 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
         self.checkBoxRemoveBG.stateChanged.connect(self.remove_background)
         # self.referesh_groups_pushButton.clicked.connect(self.update_groups_box)
 
-    # # GUI FUNCTIONS
-    # def updateGUI(self):
-    #     pass
-
-    #     trig_modes = {0: 0, 1: 1, 6: 2}
-    #     self.comboBoxAcqMode.setCurrentIndex(self.camera.parameters['AcquisitionMode']['value'] - 1)
-    #     self.AcquisitionModeChanged()
-    #     self.comboBoxReadMode.setCurrentIndex(self.camera.parameters['ReadMode']['value'])
-    #     self.ReadModeChanged()
-    #     self.comboBoxTrigMode.setCurrentIndex(trig_modes[self.camera.parameters['TriggerMode']['value']])
-    #     self.TrigChanged()
-    #     self.comboBoxBinning.setCurrentIndex(np.log2(self.camera.parameters['Image']['value'][0]))
-    #     self.BinningChanged()
-    #     self.spinBoxNumFrames.setValue(self.camera.parameters['NKin']['value'])
-    #
-    #     self.camera.GetParameter('AcquisitionTimings')
-    #     self.lineEditExpT.setText(
-    #         str(float('%#e' % self.camera.parameters['AcquisitionTimings']['value'][0])).rstrip('0'))
-    #
-    # def Cooler(self):
-    #     if self.checkBoxCooler.isChecked():
-    #         if not self.camera.IsCoolerOn():
-    #             self.camera.CoolerON()
-    #             self.TemperatureUpdateThread = self._constantlyUpdateTemperature()
-    #     else:
-    #         if self.camera.IsCoolerOn():
-    #             self.camera.CoolerOFF()
-    #             if self.TemperatureUpdateThread.isAlive():
-    #                 self._stopTemperatureThread = True
-    #
-    # def AcquisitionModeChanged(self):
-    #     available_modes = ['Single', 'Accumulate', 'Kinetic', 'Fast Kinetic']
-    #     currentMode = self.comboBoxAcqMode.currentText()
-    #     self.camera.SetParameter('AcquisitionMode', available_modes.index(currentMode) + 1)
-    #
-    #     if currentMode == 'Fast Kinetic':
-    #         self.spinBoxNumRows.show()
-    #         self.labelNumRows.show()
-    #     elif self.comboBoxReadMode.currentText() != 'Single track':
-    #         self.spinBoxNumRows.hide()
-    #         self.labelNumRows.hide()
-    #     if currentMode == 'Accumulate':
-    #         self.spinBoxNumAccum.show()
-    #         self.labelNumAccum.show()
-    #     else:
-    #         self.spinBoxNumAccum.hide()
-    #         self.labelNumAccum.hide()
-    #
-    # def ReadModeChanged(self):
-    #     available_modes = ['FVB', 'Multi-track', 'Random track', 'Single track', 'Image']
-    #     currentMode = self.comboBoxReadMode.currentText()
-    #     self.camera.SetParameter('ReadMode', available_modes.index(currentMode))
-    #     if currentMode == 'Single track':
-    #         self.spinBoxNumRows.show()
-    #         self.labelNumRows.show()
-    #         self.spinBoxCenterRow.show()
-    #         self.labelCenterRow.show()
-    #     elif self.comboBoxAcqMode.currentText() != 'Fast Kinetic':
-    #         self.spinBoxNumRows.hide()
-    #         self.labelNumRows.hide()
-    #         self.spinBoxCenterRow.hide()
-    #         self.labelCenterRow.hide()
-    #     else:
-    #         self.spinBoxCenterRow.hide()
-    #         self.labelCenterRow.hide()
-    #
-    # def update_ReadMode(self, index):
-    #     self.comboBoxReadMode.setCurrentIndex(index)
-    #
-    # def update_TriggerMode(self, value):
-    #     available_modes = {0: 0, 1: 1, 6: 2}
-    #     index = available_modes[value]
-    #     self.comboBoxTrigMode.setCurrentIndex(index)
-
     def update_exposure(self, value):
         self.lineEditExpT.setText(str(value))
 
@@ -1639,126 +1519,6 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
         self._binning_changed = True
         self.spinBox_binx.setValue(value[0])
         self.spinBox_biny.setValue(value[1])
-
-    # def update_image(self):
-    #     if self.DisplayWidget is None:
-    #         self.DisplayWidget = DisplayWidget(self.camera.unit_scale, self.camera.unit_offset)
-    #
-    #     if self.DisplayWidget.isHidden():
-    #         self.DisplayWidget.show()
-    #
-    #     # The offset is designed so that image ends up being displayed at the correct crosshair coordinates
-    #     # The scale is used for scaling the image according to the binning, hence also preserving the crosshair coordinates
-    #     # offset = (self.camera._image_rect[0], self.camera._image_rect[2])
-    #     # offset = tuple(map(lambda x, y: x + y, offset, self.camera.unit_offset))
-    #     # scale = self.camera.parameters['Image']['value'][:2]
-    #     try:
-    #         data = np.array(self.camera.current_image, dtype="float")
-    #         background = self.camera.background
-    #         if np.shape(data) == np.shape(background) and self.backgrounded:
-    #             data -= background
-    #         elif np.shape(data)[1:] == np.shape(background)[1:] and self.backgrounded:
-    #             self._logger.info("Do not have enough background frames. Using the average background")
-    #             data -= np.array([np.mean(background, 0)] * np.shape(data)[0])
-    #         elif self.backgrounded:
-    #             self._logger.info(
-    #                 'The background (%s) and the current image (%s) are different shapes and therefore cannot be subtracted'
-    #                 % (str(background.shape), str(data.shape)))
-    #
-    #         # try:
-    #         #     if (self.camera._current_x_axis is None or
-    #         #             np.shape(self.camera.CurImage)[-1] != np.shape(self.camera._current_x_axis)[0]
-    #         #             or not np.all(self.camera._current_x_axis)):
-    #         #         xvals = np.linspace(0, self.camera.CurImage.shape[-1] - 1, self.camera.CurImage.shape[-1])
-    #         #     else:
-    #         #         xvals = self.camera._current_x_axis
-    #         # except Exception as e:
-    #         #     print e
-    #
-    #         # wavelengthScale = ((xvals[-1] - xvals[0]) / len(xvals), 1)
-    #
-    #         # if len(self.camera.CurImage.shape) == 2:
-    #         #     if self.camera.CurImage.shape[0] > self.DisplayWidget._max_num_line_plots:
-    #         #         self.DisplayWidget.splitter.setSizes([1, 0])
-    #         #         self.DisplayWidget.ImageDisplay.setImage(data.T, pos=tuple(map(operator.add, offset, (xvals[0], 0))),
-    #         #                                                  autoRange=False,
-    #         #                                                  scale=(
-    #         #                                                  scale[0] * wavelengthScale[0], scale[1] * wavelengthScale[1]))
-    #         #     else:
-    #         #         self.DisplayWidget.splitter.setSizes([0, 1])
-    #         #         for ii in range(self.camera.CurImage.shape[0]):
-    #         #             self.DisplayWidget.plot[ii].setData(x=xvals, y=data[ii])
-    #         # else:
-    #         #     self.DisplayWidget.splitter.setSizes([1, 0])
-    #         #     image = np.transpose(data, (0, 2, 1))
-    #         #     zvals = 0.99 * np.linspace(0, image.shape[0] - 1, image.shape[0])
-    #         #     if image.shape[0] == 1:
-    #         #         image = image[0]
-    #         #         if self.DisplayWidget.ImageDisplay.image is None:
-    #         #             self.DisplayWidget.ImageDisplay.setImage(image, xvals=zvals,
-    #         #                                                      pos=tuple(map(operator.add, offset, (xvals[0], 0))),
-    #         #                                                      autoRange=False,
-    #         #                                                      scale=(scale[0] * wavelengthScale[0],
-    #         #                                                             scale[1] * wavelengthScale[1]), autoLevels=True)
-    #         #         else:
-    #         #             self.DisplayWidget.ImageDisplay.setImage(image, xvals=zvals,
-    #         #                                                      pos=tuple(map(operator.add, offset, (xvals[0], 0))),
-    #         #                                                      autoRange=False,
-    #         #                                                      scale=(scale[0] * wavelengthScale[0],
-    #         #                                                             scale[1] * wavelengthScale[1]), autoLevels=False)
-    #         #
-    #         #     else:
-    #         #         self.DisplayWidget.ImageDisplay.setImage(image, xvals=zvals,
-    #         #                                                  pos=tuple(map(operator.add, offset, (xvals[0], 0))),
-    #         #                                                  autoRange=False,
-    #         #                                                  scale=(
-    #         #                                                  scale[0] * wavelengthScale[0], scale[1] * wavelengthScale[1]))
-    #
-    #         # offset = (0, 0)
-    #         # print "OFFSET: ", offset, tuple(map(operator.add, offset, (xvals[0], 0)))
-    #         # self._scaling()
-    #
-    #         # pos = tuple(map(operator.mul, offset, self.camera.unit_scale))
-    #         # self.DisplayWidget.ImageDisplay.setImage(data, pos=pos, autoRange=False, autoLevels=True)  # , scale=self.camera.unit_scale
-    #
-    #         data = np.swapaxes(data, 1, 2)
-    #         if data.shape[0] == 1:
-    #             data = data[0]
-    #         self.DisplayWidget.ImageDisplay.setImage(data, autoRange=True, autoLevels=True)  # , scale=self.camera.unit_scale
-    #         self._scaling()
-    #
-    #         if self._binning_changed:
-    #             for idx in [1, 2]:
-    #                 xhair = getattr(self.DisplayWidget, "CrossHair%d" % idx)
-    #                 pos = xhair.pos()
-    #                 xhair.setPos(*map(lambda x, y, z: float(x) / (float(y) / float(z)), pos, self.camera.binning, self._prev_bin))
-    #             self._binning_changed = False
-    #
-    #         self.DisplayWidget.ImageDisplay.autoRange()
-    #     except Exception as e:
-    #         self._logger.warn('Failed to update image because: %s' % e)
-    #
-    #     # self.ImageUpdated.emit()
-
-    # def _scaling(self):
-    #     if self.DisplayWidget is not None:
-    #         self.DisplayWidget._pxl_offset = self.camera.unit_offset
-    #         self.DisplayWidget._pxl_scale = tuple(map(lambda x, y: x * y, self.camera.unit_scale, self.camera.binning))
-    #
-    #         offset = (self.camera._image_rect[0], self.camera._image_rect[2])
-    #         pos = tuple(map(operator.div, offset, self.camera.binning))
-    #         self.DisplayWidget.ImageDisplay.getImageItem().setPos(*pos)
-    #
-    #         self.DisplayWidget._rescale()
-
-    # def update_Cooler(self, value):
-    #     self.checkBoxCooler.setCheckState(value)
-    #
-    # def update_OutAmp(self, value):
-    #     self.checkBoxEMMode.setCheckState(value)
-    #
-    # #    def update_IsolatedCropMode(self,value):
-    # #        self.checkBoxCrop.setChecked()
 
     def callback_to_update_prop(self, propname):
         """Return a callback function that refreshes the named parameter."""
@@ -1832,7 +1592,6 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
                     attrs[param] = getattr(self.camera, param)
                 if self.description_plainTextEdit.toPlainText():
                     attrs['Description'] = self.description_plainTextEdit.toPlainText()
-                # attrs['scaling'] = self.camera.unit_scale
                 df.attributes_from_dict(data_set, attrs)
         except Exception as e:
             self._logger.warn(e)
@@ -1852,80 +1611,3 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
 
     def Abort(self):
         self.camera.live_view = False
-
-
-# class CaptureThread(QtCore.QThread):
-#     updateImage = QtCore.Signal()
-#
-#     def __init__(self, camera, live=False):
-#         QtCore.QThread.__init__(self, parent=None)
-#         #        self.updateImage = QtCore.SIGNAL("UpdateImage")
-#         self.camera = camera
-#         self.live = live
-#         self.isAborted = False
-#
-#     def stop(self):
-#         self.isAborted = True
-#         self.wait()
-#
-#     def run(self):
-#         # self.camera._current_x_axis = self.camera.x_axis
-#         self.isAborted = False
-#         if self.live:
-#             while not self.isAborted:
-#                 try:
-#                     self.SingleAcquire()
-#                 except Warning as e:
-#                     print e
-#         else:
-#             self.SingleAcquire()
-#
-#     def SingleAcquire(self):
-#         self.camera.raw_snapshot(update_gui=False)
-#
-#         # if self.camera.parameters['AcquisitionMode']['value'] in [1, 2] and self.camera.parameters['NKin']['value'] > 1:
-#         #     if self.camera.parameters['SoftwareWaitBetweenCaptures']['value']:
-#         #         time.sleep(self.camera.parameters['SoftwareWaitBetweenCaptures']['value'])
-#         #
-#         #     final_array = np.zeros(
-#         #         (self.camera.parameters['NKin']['value'],) + self.camera.CurImage.shape[1:])
-#         #     final_array[0] = self.camera.CurImage[0]
-#         #     for ii in range(1, self.camera.parameters['NKin']['value']):
-#         #         if self.camera.isAborted:
-#         #             break
-#         #         self.camera.raw_snapshot()
-#         #         final_array[ii] = self.camera.CurImage[0]
-#         #     self.camera.CurImage = final_array
-#
-#         self.updateImage.emit()
-#
-#
-# class WaitThread(QtCore.QThread):
-#     def __init__(self, camera):
-#         QtCore.QThread.__init__(self, parent=None)
-#         self.camera = camera
-#
-#     def run(self):
-#         self.camera._self._logger.infor('Waiting for temperature to come up')
-#         temp = 30
-#         try:
-#             temp = self.camera._dllWrapper('GetTemperature', outputs=(ct.c_int(),))[0]
-#         except Warning as warn:
-#             # if warn.error_name != 'DRV_TEMP_OFF':
-#             raise warn
-#         if self.camera.IsCoolerOn():
-#             self.camera.CoolerOFF()
-#         # if temp < 30:
-#         #     toggle = windll.user32.MessageBoxA(0, 'Camera is cold (%g), do you want to wait before ShutDown? '
-#         #                                           '\n Not waiting can cause irreversible damage' % temp, '', 4)
-#         #     if toggle == 7:
-#         #         return
-#         #     else:
-#         #         while temp < -20:
-#         #             self.camera._self._logger.info('Waiting for temperature to come up. %g' % temp)
-#         #             time.sleep(10)
-#         #             try:
-#         #                 temp = self.camera._dllWrapper('GetTemperature', outputs=(c_int(),))[0]
-#         #             except cameraWarning as warn:
-#         #                 if warn.error_name != 'DRV_TEMP_OFF':
-#         #                     raise warn
