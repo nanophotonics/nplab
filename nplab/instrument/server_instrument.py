@@ -56,16 +56,48 @@ BUFFER_SIZE = 3131894
 message_end = 'tcp_termination'
 
 
+def parse_arrays(value):
+    if type(value) == ArrayWithAttrs:
+        reply = repr(dict(array=value.tolist(), attrs=value.attrs))
+    elif type(value) == np.ndarray:
+        reply = repr(dict(array=value.tolist()))
+    else:
+        reply = repr(value)
+    return reply
+
+
+def parse_strings(value):
+    if not isinstance(value, dict):
+        parse1 = ast.literal_eval(value)
+    if isinstance(parse1, dict):
+        if 'array' in parse1 and 'attrs' in parse1:
+            return ArrayWithAttrs(parse1['array'], parse1['attrs'])
+        elif 'array' in parse1:
+            return np.array(parse1['array'])
+    else:
+        return parse1
+
+
+def subselect(string, size=100):
+    if len(string) > size:
+        return '%s ... %s' % (string[:size/2], string[-size/2:])
+    else:
+        return string
+
+
 class ServerHandler(SocketServer.BaseRequestHandler):
     def handle(self):
         try:
             raw_data = self.request.recv(BUFFER_SIZE).strip()
-            self.server._logger.debug("Server received: %s" % raw_data)
+            while message_end not in raw_data:
+                raw_data += self.request.recv(BUFFER_SIZE).strip()
+            raw_data = re.sub(re.escape(message_end) + '$', '', raw_data)
+            self.server._logger.debug("Server received: %s" % subselect(raw_data))
+
             if raw_data == "list_attributes":
-                instr_reply = repr(self.server.instrument.__dict__.keys())
+                instr_reply = self.server.instrument.__dict__.keys()
             else:
                 command_dict = ast.literal_eval(raw_data)
-
                 if "command" in command_dict:
                     if "args" in command_dict and "kwargs" in command_dict:
                         instr_reply = getattr(self.server.instrument,
@@ -79,14 +111,15 @@ class ServerHandler(SocketServer.BaseRequestHandler):
                 elif "variable_get" in command_dict:
                     instr_reply = getattr(self.server.instrument, command_dict["variable_get"])
                 elif "variable_set" in command_dict:
-                    setattr(self.server.instrument, command_dict["variable_set"], command_dict["variable_value"])
+                    setattr(self.server.instrument, command_dict["variable_set"],
+                            parse_strings(command_dict["variable_value"]))
                     instr_reply = ''
                 else:
                     instr_reply = "Dictionary did not contain a 'command' or 'variable' key"
         except Exception as e:
             self.server._logger.warn(e)
             instr_reply = dict(error=e)
-        self.server._logger.debug("Instrument reply: %s" % str(instr_reply))
+        self.server._logger.debug("Instrument reply: %s" % subselect(str(instr_reply)))
 
         try:
             if type(instr_reply) == ArrayWithAttrs:
@@ -101,7 +134,7 @@ class ServerHandler(SocketServer.BaseRequestHandler):
         reply += message_end
         self.request.sendall(reply)
         self.server._logger.debug(
-            "Server replied %s %s: %s ... %s" % (len(reply), sys.getsizeof(reply), reply[:10], reply[-10:]))
+            "Server replied %s %s: %s" % (len(reply), sys.getsizeof(reply), subselect(reply)))
 
 
 def create_server_class(original_class):
@@ -148,8 +181,11 @@ def create_server_class(original_class):
     return Server
 
 
-def create_client_class(original_class, tcp_methods=None, excluded_methods=('get_qt_ui',),
-                        tcp_attributes=None, excluded_attributes=('ui', '_ShowGUIMixin__gui_instance')):
+def create_client_class(original_class,
+                        tcp_methods=None,
+                        excluded_methods=('get_qt_ui', "get_control_widget", "get_preview_widget"),
+                        tcp_attributes=None,
+                        excluded_attributes=('ui', '_ShowGUIMixin__gui_instance')):
     """
     Given an nplab instrument, returns a class that overrides a series of class methods, so that instead of running
     those methods, it sends a string over TCP an instrument server of the same type. It is also able to get and set
@@ -222,8 +258,8 @@ def create_client_class(original_class, tcp_methods=None, excluded_methods=('get
                 original_class.__setattr__(self, item, value)
             # If the item is an attribute of the server instrument, send it over TCP. Note this if needs to happen after
             # the previous one, since it needs to use the self.instance_attributes
-            elif item in self.instance_attributes:
-                self.send_to_server(repr(dict(variable_set=item, variable_value=value)))
+            elif item in self.instance_attributes or item in tcp_attributes:
+                self.send_to_server(repr(dict(variable_set=item, variable_value=parse_arrays(value))))
             else:
                 original_class.__setattr__(self, item, value)
 
@@ -238,18 +274,20 @@ def create_client_class(original_class, tcp_methods=None, excluded_methods=('get
             """
             if address is None:
                 address = self.address
-            self._logger.debug("Client sending: %s" % tcp_string[:50])
+            self._logger.debug("Client sending: %s" % subselect(tcp_string))
             try:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sock.connect(address)
-                sock.sendall(tcp_string)
-                self._logger.debug("Client sent: %s" % tcp_string[:50])
+                sock.sendall(tcp_string + message_end)
+                self._logger.debug("Client sent: %s" % subselect(tcp_string))
                 received = sock.recv(BUFFER_SIZE)
                 while message_end not in received:
                     received += sock.recv(BUFFER_SIZE)
                 received = re.sub(re.escape(message_end) + '$', '', received)
-                self._logger.debug("Client received: %s" % received[:20])
+                self._logger.debug("Client received: %s" % subselect(received))
                 sock.close()
+                if 'error' in received:
+                    raise RuntimeError('Server error: %s' % subselect(received))
             except Exception as e:
                 raise e
             return ast.literal_eval(received)
@@ -274,12 +312,15 @@ def create_client_class(original_class, tcp_methods=None, excluded_methods=('get
         # print "Getting: ", item, item in ["address", "instance_attributes"]
         if item in ["address", "instance_attributes", "method_list", "_logger", "__init__"] + excluded_attributes:
             return object.__getattribute__(self, item)
+            # return object.__getattr__(self, item)
         elif item in self.instance_attributes or item in tcp_attributes:
             return self.send_to_server(repr(dict(variable_get=item)))
         elif item in excluded_methods:
-            return original_class.__getattribute__(self, item)
+            # return original_class.__getattribute__(self, item)
+            return original_class.__getattr__(self, item)
         else:
-            super(NewClass, self).__getattr__(item)
+            return super(NewClass, self).__getattr__(item)
 
     setattr(NewClass, "__getattr__", my_getattr)
+
     return NewClass

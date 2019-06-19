@@ -268,11 +268,11 @@ class SHOT(VisaInstrument, Stage):
         """
         return self.query("?:V")
 
-    def _go(self):
+    def _go(self, wait=True):
         """
         Moves the stages. To be used internally.
         """
-        self._write_check('G:')
+        self._write_check('G:', wait=wait)
 
     @locked_action
     def _write_check(self, command, wait=False):
@@ -342,13 +342,18 @@ class SHOT(VisaInstrument, Stage):
             else:
                 command += '-P%d' % -count
 
-        self._write_check(command)
-        self._go()
+        self._write_check(command, wait=wait)
+        self._go(wait=wait)
 
     def get_position(self, axis=None):
         status = self.status()
         counts = map(int, status.split(',')[:2])
-        return counts
+        if axis is None:
+            return counts
+        elif hasattr(axis, '__iter__'):
+            return [counts[int(ax)-1] for ax in axis]
+        else:
+            return counts[int(axis)-1]
 
     def jog(self, axis="W", direction="+", timeout=2):
         """
@@ -448,7 +453,7 @@ class SHOT(VisaInstrument, Stage):
         """
         reply = self.query("!:")
 
-        if reply == "B":
+        if "B" in reply:
             return True
         else:
             return False

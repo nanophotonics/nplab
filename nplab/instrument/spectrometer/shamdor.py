@@ -7,14 +7,13 @@ Created on Sat Jul 08 19:47:22 2017
 from nplab.instrument.camera.Andor import Andor
 from nplab.instrument.spectrometer.shamrock import Shamrock
 
-
 class Shamdor(Andor):
     ''' Wrapper class for the shamrock and the andor
     '''
-    def __init__(self):
+    def __init__(self,pixel_number = 1600):
         self.shamrock = Shamrock()
         super(Shamdor, self).__init__()
-        self.shamrock.pixel_number = 1600
+        self.shamrock.pixel_number = pixel_number
         self.shamrock.pixel_width = 16
 
     def get_xaxis(self):

@@ -58,7 +58,8 @@ class ipython:
         self.control.execute(cmd)
 
     def run_script(self, scriptname):
-        return self.control.execute('run -i scripts/%s' %scriptname)
+        return self.control.execute('run -i %s' %scriptname)
+
 
 
 class QIPythonWidget(RichJupyterWidget):
@@ -105,6 +106,7 @@ class QIPythonWidget(RichJupyterWidget):
 
     def run_script(self, scriptname):
         try:
-            self._execute('run -i scripts/%s' % scriptname, False)
+            self._execute('run -i %s' % scriptname, False)
         except Exception as e:
             print 'Failed because ', e
+

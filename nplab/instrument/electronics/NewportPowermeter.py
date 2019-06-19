@@ -7,7 +7,7 @@ Modified from https://github.com/plasmon360/python_newport_1918_powermeter
 from nplab.instrument import Instrument
 from ctypes import *
 import time
-import os, sys
+import numpy as np
 
 
 class NewportPowermeter(Instrument):
@@ -72,7 +72,7 @@ class NewportPowermeter(Instrument):
         arInstrumentsSN = c_int()
         nArraySize = c_int()
         self._dllWrapper("GetInstrumentList", byref(arInstruments), byref(arInstrumentsModel), byref(arInstrumentsSN),
-                                                byref(nArraySize))
+                         byref(nArraySize))
         instrument_list = [arInstruments.value, arInstrumentsModel.value, arInstrumentsSN.value]
         return instrument_list
 
@@ -171,20 +171,16 @@ class NewportPowermeter(Instrument):
         return [actualwavelength, mean_power, std_power]
 
     @property
-    def power(self, wavelength=700):
+    def power(self):
         """
         Reads the instantaneous power
-        :param wavelength: in nanometers
-        :return: [actualwavelength, power]
         """
-        self.wavelength = wavelength  # setting wavelength
-        actualwavelength = self.wavelength  # querying wavelength
+
         power = self.query('PM:Power?')
-        return [actualwavelength, power]
+        return float(power)
 
 
 if __name__ == '__main__':
-    # Initialze a instrument object. You might have to change the LIBname or product_id.
     nd = NewportPowermeter(0xCEC7)
     nd._logger.setLevel("DEBUG")
 
@@ -193,39 +189,3 @@ if __name__ == '__main__':
     print nd.power
     print nd.wavelength
     print nd.power
-
-    # Print the status of the newport detector.
-    # print nd.status
-    #
-    # if nd.status == 'Connected':
-    #     print 'Serial number is ' + str(nd.serial_number)
-    #     print 'Model name is ' + str(nd.model_number)
-    #
-    #     # Print the IDN of the newport detector.
-    #     print 'Connected to ' + nd.query('*IDN?')
-    #
-    #     print "Power: ", nd.read_instant_power(780)
-    #
-    #     # # 100 reading of the newport detector at 500 nm wavelength and plot them
-    #     # [actualwavelength, mean_power, std_power] = nd.read_buffer(wavelength=500, buff_size=10, interval_ms=1)
-    #     # dark_data = nd.sweep(510, 550, 10, buff_size=10, interval_ms=1)
-    #     # nd.plotter(dark_data)
-    #     #
-    #     # # sweep the wavelength of the detector from 500 to 550 with an interval of 10 nm. At each wavelength the buffer size is 10 and the time between samples is 1 ms
-    #     # light_data = nd.sweep(500, 550, 10, buff_size=10, interval_ms=1)
-    #     # nd.plotter_spectra(dark_data, light_data)
-    #     #
-    #     # # Give the instant_power
-    #     # data = nd.sweep_instant_power(400, 410, 2)
-    #     # nd.plotter_instantpower(data)
-    #     #
-    #     # # opens a console
-    #     # nd.console()
-    #     #
-    #     # # Close the device
-    #     # nd.close_device()
-    #
-    # else:
-    #     nd.status != 'Connected'
-    #     print 'Cannot connect.'
-

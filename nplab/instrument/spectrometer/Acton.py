@@ -20,8 +20,8 @@ class SP2750(VisaInstrument):
         """
         Simple query wrapper that checks whether the command was received properly
         :param args:
-        :param kwarg
-        :rets:urn:
+        :param kwargs:
+        :return:
         """
         full_reply = self.instr.query(*args, **kwargs)
 
@@ -30,7 +30,8 @@ class SP2750(VisaInstrument):
 
         if "?" in full_reply:
             self._logger.warn("Message  %s" % full_reply)
-        elif status == "ok":
+
+        if status == "ok":
             return reply.rstrip("").lstrip("")
         else:
             self._logger.info("Multiple reads")
