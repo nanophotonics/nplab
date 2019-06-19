@@ -1,0 +1,9 @@
+WARNING!!!
+
+The first spectrum of the OceanOptics (spectrum0 in dataset) appears different from all others
+We think that this is due to spectrometer heating(?) when it starts to record spectra?
+...Maybe
+...Don't use it!!!
+
+
+Or maybe it's the incorrect initialization of the spectrometer.
