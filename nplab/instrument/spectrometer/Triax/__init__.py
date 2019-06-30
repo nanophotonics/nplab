@@ -34,20 +34,20 @@ class Triax(VisaInstrument):
 
         try:
 
-        VisaInstrument.__init__(self, Address, settings=dict(timeout=4000, write_termination='\n'))
-        Attempts=0
-        End=False
-        while End is False:
-            if self.query(" ")=='F':
-                End=True
-            else:
-                self.instr.write_raw('\x4f\x32\x30\x30\x30\x00') #Move from boot program to main program
-                time.sleep(2)
-                Attempts+=1
-                if Attempts==5:
-                    raise Exception('Triax communication error!')
+            VisaInstrument.__init__(self, Address, settings=dict(timeout=4000, write_termination='\n'))
+            Attempts=0
+            End=False
+            while End is False:
+                if self.query(" ")=='F':
+                    End=True
+                else:
+                    self.instr.write_raw('\x4f\x32\x30\x30\x30\x00') #Move from boot program to main program
+                    time.sleep(2)
+                    Attempts+=1
+                    if Attempts==5:
+                        raise Exception('Triax communication error!')
 
-       except:
+        except:
             raise Exception('Triax communication error!')
 
         #----Generate initial 3x3 calibration arrays for the gratings used for initial estimate of wavelengths on each CCD pixel--------
@@ -141,11 +141,9 @@ class Triax(VisaInstrument):
 
         Steps=self.Motor_Steps() #Check grating position
 
-        if self.Grating_Number>=len(self.Calibration_Arrays): #Check calibration exists
+        if self.Grating_Number<=len(self.Calibration_Arrays): #Check calibration exists
             if len(self.Calibration_Arrays)==0 or len(self.Calibration_Arrays[self.Grating_Number])==0:
                 return Pixel_Array
-            else:
-                raise ValueError('Current grating is not calibrated! No calibration supplied!')
 
         Sample_Pixels=np.linspace(np.min(Pixel_Array),np.max(Pixel_Array),10) #Make some estimates to the nearest 0.1nm
         Sample_Wavelengths=[np.mean(self.Regions[self.Grating_Number])]
