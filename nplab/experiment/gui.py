@@ -102,6 +102,7 @@ class ExperimentWithProgressBar(Experiment):
                                                    "Abort",
                                                    self.progress_minimum,
                                                    self.progress_maximum)
+        self._progress_bar.show()
         self._progress_bar.setAutoClose(True)
         self._progress_bar.canceled.disconnect()
         self._progress_bar.canceled.connect(self.stop_and_cancel_dialog)
