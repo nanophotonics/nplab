@@ -49,6 +49,8 @@ class Bentham_DTMc300(Instrument):
 		print "BI_load_setup:",response
 		response = self.dll.BI_initialise(None)
 		print "BI_initialise:",response
+		response = self.dll.BI_park(None)
+		print "BI_park:",response
 
 		self.components = self.get_component_list()
 
