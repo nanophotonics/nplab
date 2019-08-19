@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.inprocess import QtInProcessKernelManager
 # from IPython.qt.console.rich_ipython_widget import RichIPythonWidget
@@ -8,7 +10,7 @@ import os
 from IPython.lib import guisupport
 
 
-class ipython:
+class Ipython:
     def __init__(self, scripts_path=''):
         self.kernel_manager = QtInProcessKernelManager()
         self.kernel_manager.start_kernel()
@@ -32,7 +34,6 @@ class ipython:
         self.execute('import numpy as np')
         self.execute('from matplotlib import pyplot as plt')
         self.execute('%matplotlib')
-        # self.execute('clear')
         self.execute('')
 
     def __del__(self):
@@ -70,8 +71,9 @@ class QIPythonWidget(RichJupyterWidget):
     argument. Modified from https://stackoverflow.com/questions/11513132/embedding-ipython-qt-console-in-a-pyqt-application
     """
 
-    def __init__(self, customBanner=None, scripts_path='', *args, **kwargs):
-        if not customBanner is None: self.banner = customBanner
+    def __init__(self, custom_banner=None, scripts_path='', *args, **kwargs):
+        if custom_banner is not None:
+            self.banner = custom_banner
         self.scripts_path = scripts_path
         super(QIPythonWidget, self).__init__(*args, **kwargs)
         self.kernel_manager = kernel_manager = QtInProcessKernelManager()
@@ -91,9 +93,9 @@ class QIPythonWidget(RichJupyterWidget):
         self.execute_command("from matplotlib import pyplot as plt")
         self.execute_command("%matplotlib")
 
-    def push_vars(self, variableDict):
+    def push_vars(self, variable_dict):
         """ Given a dictionary containing name / value pairs, push those variables to the IPython console widget """
-        self.kernel_manager.kernel.shell.push(variableDict)
+        self.kernel_manager.kernel.shell.push(variable_dict)
 
     def clear(self):
         """ Clears the terminal """

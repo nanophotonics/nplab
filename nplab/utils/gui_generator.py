@@ -274,7 +274,7 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
                 self.terminalWindow.execute_command('')
                 handle = logging.StreamHandler(self.terminalWindow.kernel_manager.kernel.stdout)
             else:
-                self.terminalWindow = terminal.ipython()
+                self.terminalWindow = terminal.Ipython()
                 self.terminalWindow.push({'gui': self, 'exper': self.instr_dict})
                 self.terminalWindow.push(self.instr_dict)
                 self.terminalWindow.execute('import nplab.datafile as df')
