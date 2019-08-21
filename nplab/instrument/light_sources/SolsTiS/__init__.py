@@ -51,6 +51,7 @@ class SolsTiS(Instrument):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.settimeout(TIMEOUT)
         self.socket.connect(address)
+       
         self.computerIP = socket.gethostbyname(socket.gethostname())
 
         self.laser_status = {}
@@ -129,14 +130,14 @@ class SolsTiS(Instrument):
         return self.message_in_history[-1]['message']['parameters']['text_out']
 
     def change_wavelength(self, l):
-        self.send_command("move_wave_t", {"wavelength": [l]})
+        self.send_command("set_wave_m", {"wavelength": [l]})
 
         time.sleep(1)
         if self.message_in_history[-1]['message']['parameters']['status'][0] == 0:
             self.system_status()
 
     def check_wavelength(self):
-        self.send_command("poll_move_wave_t")
+        self.send_command("poll_wave_m")
 
         if self.message_in_history[-1]['message']['parameters']['status'][0] == 0:
             self.laser_status['wavelength'] = \
@@ -463,7 +464,9 @@ id_dictionary = {'move_wave_t': {'status': {0: 'Successful', 1: 'Failed', 2: 'Ou
                  'etalon_lock_status': {'status': {0: 'Completed', 1: 'Failed'}},
                  'cavity_lock': {'status': {0: 'Completed', 1: 'Failed'}},
                  'cavity_lock_status': {'status': {0: 'Completed', 1: 'Failed'}},
-                 'get_status': {'status': {0: 'Completed', 1: 'Failed'}}
+                 'get_status': {'status': {0: 'Completed', 1: 'Failed'}},
+                 'set_wave_m' : {'status':{0:"success",1:"no link",2:"out of range",3:"unknown error"}},
+                 'poll_wave_m': {'status': {0: 'Tuning completed', 1: 'Tuning in progress', 2: 'Tuning failed'}}
                  }
 
 if __name__ == '__main__':

@@ -4,6 +4,7 @@ Created on Sun Oct 07 12:43:44 2018
 
 @author: wmd22, ydb20
 """
+from nplab.experiment.gui import run_function_modally
 import numpy as np
 from scipy.interpolate import interp1d
 from scipy.optimize import minimize
@@ -126,9 +127,12 @@ class PowerWheelMixin(object):
         rand_indices = np.random.choice(old_calibration.shape[1], points)
         raw_vals = old_calibration[0, rand_indices]
         old_cal = old_calibration[1, rand_indices]
+        run_function_modally(self._recalibrate, points, power_meter, raw_vals, old_cal)
 
+    def _recalibrate(self, power_meter, raw_vals, old_cal, update_progress=lambda p: p):
         new_cal = []
-        for raw in raw_vals:
+        for idx, raw in enumerate(raw_vals):
+            update_progress(idx)
             self.raw_power = raw
             new_cal += [power_meter.power]
 
@@ -138,6 +142,7 @@ class PowerWheelMixin(object):
         results = minimize(minimise, np.array([1]))
 
         self.calibration[1] *= results.x[0]
+        self._calibration_functions()
 
     def calibrate(self, power_meter, points=51, min_power=None, max_power=None):
         """
@@ -155,8 +160,12 @@ class PowerWheelMixin(object):
             max_power = self._raw_max
 
         raw_powers = np.linspace(min_power, max_power, points)
+        run_function_modally(self._calibrate, points, power_meter, raw_powers)
+
+    def _calibrate(self, power_meter, raw_powers, update_progress=lambda p: p):
         powers = np.array([])
-        for raw in raw_powers:
+        for idx, raw in enumerate(raw_powers):
+            update_progress(idx)
             self.raw_power = raw
             powers = np.append(powers, power_meter.power)
         self._raw_calibration = np.array([raw_powers, powers])
