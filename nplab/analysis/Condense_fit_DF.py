@@ -5,7 +5,7 @@ Created on Thu May 31 01:11:45 2018
 @author: car72
 """
 if __name__ == '__main__':
-    print 'Importing modules...'
+    print('Importing modules...')
 
 import os
 import numpy as np
@@ -16,7 +16,7 @@ from nplab.analysis import Condense_DF_Spectra as cdf
 
 if __name__ == '__main__':
     absoluteStartTime = time.time()
-    print '\tModules imported'
+    print('\tModules imported')
 
     startSpec = 0
     finishSpec = 0
@@ -34,7 +34,7 @@ if __name__ == '__main__':
         mpf.fitAllSpectra(x, yData, outputFileName, summaryAttrs = summaryAttrs, stats = True, raiseExceptions = True)
         #mpf.doStats('MultiPeakFitOutput.h5', closeFigures = True)
 
-        print '\nData fitting complete'
+        print('\nData fitting complete')
 
     else:
         try:
@@ -44,10 +44,10 @@ if __name__ == '__main__':
             mpf.fitAllSpectra(x, yData, outputFileName, summaryAttrs = summaryAttrs, stats = True, raiseExceptions = raiseExceptions)
             #mpf.doStats('MultiPeakFitOutput.h5', closeFigures = True)
 
-            print '\nData fitting complete'
+            print('\nData fitting complete')
 
         except Exception as e:
-            print '\nData fitting failed because %s' % (e)
+            print('\nData fitting failed because %s' % (e))
 
     plt.close('all')
 
@@ -59,7 +59,7 @@ if __name__ == '__main__':
     secs = int(np.round(timeElapsed % 60))
 
     if hours > 0:
-        print '\nM8 that took ages. %s hours %s min %s sec' % (hours, mins, secs)
+        print('\nM8 that took ages. %s hours %s min %s sec' % (hours, mins, secs))
 
     else:
-        print '\nFinished in %s min %s sec' % (mins, secs)
+        print('\nFinished in %s min %s sec' % (mins, secs))

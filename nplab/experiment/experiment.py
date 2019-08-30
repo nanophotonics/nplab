@@ -141,7 +141,7 @@ class Experiment(Instrument):
         """Log a message to the current HDF5 file and to the experiment's history"""
         self.log_messages += message + "\n"
         if self.log_to_console:
-            print message
+            print(message)
         super(Experiment, self).log(message)
 
 

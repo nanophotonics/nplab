@@ -50,7 +50,7 @@ class StaticTuner(Controller):
 		actuator_positions = [ac0] 
 		for i in range(1,calibration_samples,2):
 			actuator_positions = actuator_positions + [ac0+i*size_step, ac0-i*size_step]
-			print actuator_positions
+			print(actuator_positions)
 
 		pass
 

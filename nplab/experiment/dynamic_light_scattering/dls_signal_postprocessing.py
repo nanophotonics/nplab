@@ -57,7 +57,7 @@ def threshold(voltages, count_threshold = 0.5):
 	nonzero_indices = np.flatnonzero(pulses)
  
 	assert(len(nonzero_indices) == int(np.sum(np.absolute(pulses)))),"NONZERO LENGTH:{0},ABS SUM PULSES:{1}".format(len(nonzero_indices),np.sum(np.absolute(pulses)))
-	for i in xrange(len(nonzero_indices)): #DELETE LOOP
+	for i in range(len(nonzero_indices)): #DELETE LOOP
 		assert(pulses[nonzero_indices[i]] != 0)
 
 	#Clean up consecutive pulses that are +ve,+ve or -ve,-ve:
@@ -92,7 +92,7 @@ def binning(thresholded, index_bin_width):
 	#length of output [int]
 	outp_len = binned_data_len(thresholded_len, index_bin_width)
 	output = np.zeros(outp_len)
-	for i in xrange(outp_len):
+	for i in range(outp_len):
 		output[i] = np.sum(np.absolute(thresholded[i*index_bin_width:min(thresholded_len,(i+1)*index_bin_width)]))
 
 	return output

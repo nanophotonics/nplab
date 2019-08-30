@@ -36,12 +36,12 @@ def Iterative_Step(Data,Current_Params,Degree,Return_BG=False):
 	INPUT coefficents is also returned.
 	"""
 
-	Background=np.polyval(Current_Params,range(len(Data)))
+	Background=np.polyval(Current_Params,list(range(len(Data))))
 	Background*=(Background>0)  #For a Poisson distribution, negative values are meaningless
 
 	Weights=Find_Weights(Background,Data)
 	
-	Poly_Params=np.polyfit(range(len(Data)),Data,Degree,w=Weights)
+	Poly_Params=np.polyfit(list(range(len(Data))),Data,Degree,w=Weights)
 
 	if Return_BG is False:
 		return Poly_Params
@@ -63,7 +63,7 @@ def Run(Data,Degree,Threshold=0.0001,Max_Steps=None,Auto_Remove=True):
 	Intial_Difference=None
 	End=False
 
-	Params=np.polyfit(range(len(Data)),Data,Degree)
+	Params=np.polyfit(list(range(len(Data))),Data,Degree)
 
 	Steps=0
 
@@ -85,7 +85,7 @@ def Run(Data,Degree,Threshold=0.0001,Max_Steps=None,Auto_Remove=True):
 				End=True
 		Steps+=1
 
-	Background=np.polyval(Params,range(len(Data)))
+	Background=np.polyval(Params,list(range(len(Data))))
 	Background*=(Background>0)
 
 	if Auto_Remove is True:

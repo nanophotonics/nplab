@@ -36,4 +36,4 @@ if __name__ == "__main__":
     try:
         test_metadata_slicing()
     except Exception as e:
-        print e
+        print(e)

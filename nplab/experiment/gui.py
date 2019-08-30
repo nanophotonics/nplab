@@ -120,12 +120,12 @@ class ExperimentWithProgressBar(Experiment):
         """Update the progress bar (NB should only be called from within run()"""
         if not self.running:
             # if run was called directly, fail gracefully
-            print "Progress: {}".format(progress)
+            print("Progress: {}".format(progress))
             return
         try:
             self._progress_bar.setValueLater(progress)
         except AttributeError:
-            print "Error setting progress bar to {} (are you running via run_modally()?)".format(progress)
+            print("Error setting progress bar to {} (are you running via run_modally()?)".format(progress))
         if self._stop_event.is_set():
             raise ExperimentStopped()
 
@@ -138,7 +138,7 @@ class RunFunctionWithProgressBar(ExperimentWithProgressBar):
         self.progress_maximum = progress_maximum
 
     def run(self, *args, **kwargs):
-        print "running function {}".format(self.target)
+        print("running function {}".format(self.target))
         #, update_progress=self.update_progress,
         self.target(update_progress=self.update_progress,*args, **kwargs)
         self.update_progress(self.progress_maximum) # Ensure the progress dialog closes unless we're aborted.

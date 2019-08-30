@@ -121,7 +121,7 @@ class XYPositionWidget(pg.PlotWidget):
         x1 = self.crosshair.pos()[0]
         y1 = self.crosshair.pos()[1]
 #        xu1, yu1 = self.pxl_to_unit((x1, y1))
-        print "cursor moved to pixel: [%i,%i]" % (x1,y1)
+        print("cursor moved to pixel: [%i,%i]" % (x1,y1))
 
 
 
@@ -149,7 +149,7 @@ class CrossHair(pg.GraphicsObject):
         if ev.isStart():
             self.startPos = self.pos()
         elif ev.isFinish():
-            self.setPos(*map(int, self.pos()))
+            self.setPos(*list(map(int, self.pos())))
         else:
             self.setPos(self.startPos + ev.pos() - ev.buttonDownPos())
         self.CrossHairMoved.emit()

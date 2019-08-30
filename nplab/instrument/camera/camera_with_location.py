@@ -98,7 +98,7 @@ class CameraWithLocation(Instrument):
             iwl.attrs['pixel_to_sample_matrix'] = self.pixel_to_sample_matrix
         else:
             iwl.attrs['pixel_to_sample_matrix'] = np.identity(4)
-            print 'Stage is not yet calbirated'
+            print('Stage is not yet calbirated')
         return iwl
 
 
@@ -138,10 +138,10 @@ class CameraWithLocation(Instrument):
         image = self.color_image()
         if (image.pixel_to_sample_matrix != np.identity(4)).any():
             #check if the image has been calibrated
-            print 'move coords', image.pixel_to_location([x,y])
-            print 'current position', self.stage.position
+            print('move coords', image.pixel_to_location([x,y]))
+            print('current position', self.stage.position)
             self.move(image.pixel_to_location([x,y]))
-            print 'post move position', self.stage.position
+            print('post move position', self.stage.position)
 
     @property
     def datum_location(self):
@@ -195,7 +195,7 @@ class CameraWithLocation(Instrument):
                 else:
                     self.move(feature.datum_location) #initial move to where we recorded the feature was
             except:
-                print "Warning: no position data in feature image, skipping initial move."
+                print("Warning: no position data in feature image, skipping initial move.")
         image = self.color_image()
         assert isinstance(image, ImageWithLocation), "CameraWithLocation should return an ImageWithLocation...?"
 
@@ -228,7 +228,7 @@ class CameraWithLocation(Instrument):
             self.last_feature = feature
             self.move_to_feature(feature)
         else:
-            print 'CameraWithLocation is not yet calibrated!!'
+            print('CameraWithLocation is not yet calibrated!!')
         
 
     def autofocus(self, dz=None, merit_function=af_merit_squared_laplacian,
@@ -274,7 +274,7 @@ class CameraWithLocation(Instrument):
             indices_of_maxima = argrelextrema(np.pad(weights, (1, 1), 'minimum'), np.greater)[0]-1
             number_of_maxima = indices_of_maxima.size
             if (np.sum(weights) == 0):
-                print "Warning, something went wrong and all the autofocus scores were identical! Returning to initial position."
+                print("Warning, something went wrong and all the autofocus scores were identical! Returning to initial position.")
                 new_position = here # Return to initial position if something fails
             elif (number_of_maxima == 1) and not (indices_of_maxima[0] == 0 or indices_of_maxima[-1] == (weights.size-1)):
                 new_position = np.dot(weights, positions) / np.sum(weights)
@@ -380,17 +380,17 @@ class CameraWithLocation(Instrument):
 #        location_shifts = np.array([ensure_2d(im.datum_location - starting_location) for im in images])#Does this need to be the datum_location... will this really work for when the stage has not previously been calibrated
         location_shifts = np.array([ensure_2d(im.attrs['stage_position'] - starting_location) for im in images])
         pixel_shifts = np.array(pixel_shifts)
-        print np.shape(pixel_shifts),np.shape(location_shifts)
+        print(np.shape(pixel_shifts),np.shape(location_shifts))
         A, res, rank, s = np.linalg.lstsq(pixel_shifts, location_shifts) # we solve pixel_shifts*A = location_shifts
 
         self.pixel_to_sample_displacement = np.zeros((3,3))
         self.pixel_to_sample_displacement[2,2] = 1 # just pass Z through unaltered
         self.pixel_to_sample_displacement[:2,:2] = A # A deals with xy only
         fractional_error = np.sqrt(np.sum(res)/np.prod(pixel_shifts.shape)) / np.std(pixel_shifts)
-        print fractional_error
-        print np.sum(res),np.prod(pixel_shifts.shape),np.std(pixel_shifts)
+        print(fractional_error)
+        print(np.sum(res),np.prod(pixel_shifts.shape),np.std(pixel_shifts))
         if fractional_error > 0.02: # Check it was a reasonably good fit
-            print "Warning: the error fitting measured displacements was %.1f%%" % (fractional_error*100)
+            print("Warning: the error fitting measured displacements was %.1f%%" % (fractional_error*100))
         self.log("Calibrated the pixel-location matrix.\nResiduals were {}% of the shift.\nStage positions:\n{}\n"
                  "Pixel shifts:\n{}\nResulting matrix:\n{}".format(fractional_error*100, location_shifts, pixel_shifts,
                                                                    self.pixel_to_sample_displacement))

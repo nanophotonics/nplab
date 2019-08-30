@@ -113,7 +113,7 @@ class Spectrometer(Instrument):
     def set_integration_time(self, value):
         """Set the integration time of the spectrometer (this is a stub)!"""
         warnings.warn("Using the default implementation for integration time: this should be overridden!",DeprecationWarning)
-        print 'setting 0'
+        print('setting 0')
 
     integration_time = property(get_integration_time, set_integration_time)
 
@@ -347,8 +347,8 @@ class Spectrometers(Instrument):
         return self._pool.map(lambda s: s.read_processed_spectrum(), self.spectrometers)
 
     def process_spectra(self, spectra):
-        pairs = zip(self.spectrometers, spectra)
-        return self._pool.map(lambda (s, spectrum): s.process_spectrum(spectrum), pairs)
+        pairs = list(zip(self.spectrometers, spectra))
+        return self._pool.map(lambda s_spectrum: s_spectrum[0].process_spectrum(s_spectrum[1]), pairs)
 
     def get_metadata_list(self):
         """Return a list of metadata for each spectrometer."""
@@ -476,7 +476,7 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
                 self.background_subtracted.setCheckState(QtCore.Qt.Checked)
                 self.background_subtracted.blockSignals(False)
             else:
-                print 'background not found in config file'
+                print('background not found in config file')
             if 'reference' in self.spectrometer.config_file:
                 self.spectrometer.reference = self.spectrometer.config_file['reference'][:]
                 if 'reference_int' in self.spectrometer.config_file:
@@ -485,7 +485,7 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
                 self.referenced.setCheckState(QtCore.Qt.Checked)
                 self.referenced.blockSignals(False)
             else:
-                print 'reference not found in config file'
+                print('reference not found in config file')
                 
 
     def state_changed(self, state):
@@ -578,7 +578,7 @@ class SpectrometerDisplayUI(QtWidgets.QWidget,UiTools):
         if isinstance(spectrometer,Spectrometer):
             spectrometer.num_spectrometers = 1
         self.spectrometer = spectrometer
-        print self.spectrometer
+        print(self.spectrometer)
 
         pg.setConfigOption('background', 'w')
         pg.setConfigOption('foreground', 'k')
@@ -612,7 +612,7 @@ class SpectrometerDisplayUI(QtWidgets.QWidget,UiTools):
         if sender is self.take_spectrum_button:
             #if self._display_thread.is_alive():
             if self._display_thread.isRunning():
-                print 'already acquiring'
+                print('already acquiring')
                 return
             #self._display_thread = Thread(target=self.update_spectrum)
             self._display_thread.single_shot = True
@@ -627,7 +627,7 @@ class SpectrometerDisplayUI(QtWidgets.QWidget,UiTools):
             if self.live_button.isChecked():
                 #if self._display_thread.is_alive():
                 if self._display_thread.isRunning():
-                    print 'already acquiring'
+                    print('already acquiring')
                     return
                 #self._display_thread = Thread(target=self.continuously_update_spectrum)
                 self._display_thread.single_shot = False
@@ -662,11 +662,11 @@ class SpectrometerDisplayUI(QtWidgets.QWidget,UiTools):
             self.plotdata = []
             if isinstance(self.spectrometer, Spectrometers):
                 for spectrometer_nom in range(self.spectrometer.num_spectrometers):
-                    self.plotdata.append(self.plots[spectrometer_nom].plot(x = self.spectrometer.wavelengths[spectrometer_nom],y = spectrum[spectrometer_nom],pen =(spectrometer_nom,len(range(self.spectrometer.num_spectrometers)))))
+                    self.plotdata.append(self.plots[spectrometer_nom].plot(x = self.spectrometer.wavelengths[spectrometer_nom],y = spectrum[spectrometer_nom],pen =(spectrometer_nom,len(list(range(self.spectrometer.num_spectrometers))))))
                     
    
             else:                
-                self.plotdata.append(self.plots[0].plot(x = self.spectrometer.wavelengths,y = spectrum,pen =(0,len(range(self.spectrometer.num_spectrometers)))))
+                self.plotdata.append(self.plots[0].plot(x = self.spectrometer.wavelengths,y = spectrum,pen =(0,len(list(range(self.spectrometer.num_spectrometers))))))
         else:
             if isinstance(self.spectrometer, Spectrometers):
                 for spectrometer_nom in range(self.spectrometer.num_spectrometers):

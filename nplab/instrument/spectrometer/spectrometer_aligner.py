@@ -135,20 +135,20 @@ class SpectrometerAligner(Instrument):
                 for i, a in enumerate(axes_with_motion):
                     quadratic[:,i+1+N] = pos[:,a] #put quadratic terms in the matrix (ignore cross terms for now...)
                 p = np.linalg.lstsq(quadratic, powers)[0] #use least squares to fast-fit a 2D parabola
-                print "quadratic fit: ", p
+                print("quadratic fit: ", p)
                 for i, a in enumerate(axes_with_motion):
                     if p[i+1+N] > 0:
                         mean_position[a] = np.Inf * p[i+1] #if the parabola is happy/flat, assume we are moving the maximum step
-                        print "warning: there is no maximum on axis %d" % a
+                        print("warning: there is no maximum on axis %d" % a)
                     else:
                         mean_position[a] = -p[i+1]/(2*p[i+N+1]) #if there's a maximum in the fitted curve, assume that's where we should be
-                        print "axis %d has a maximum at %.2f" % (a, mean_position[a])
+                        print("axis %d has a maximum at %.2f" % (a, mean_position[a]))
                 for i in range(mean_position.shape[0]):
                     if mean_position[i] > np.max(pos[:,i])/2: mean_position[i] = np.max(pos[:,i])/2 #constrain to lie within the positions supplied
                     if mean_position[i] < np.min(pos[:,i])/2: mean_position[i] = np.min(pos[:,i])/2 #so we don't move too far
                 mean_position += np.mean(positions,axis=0)
             except:
-                print "Quadratic fit failed, falling back to centroid."
+                print("Quadratic fit failed, falling back to centroid.")
                 fit_method="centroid"
         if fit_method=="gaussian":
             try:
@@ -161,12 +161,12 @@ class SpectrometerAligner(Instrument):
                     gaussian = p[0] + p[1] * np.exp(-np.sum((pos-p[2:2+N])**2/(2*p[2+N:2+2*N]**2),axis=1))
                     return np.mean((powers-gaussian)**2)
                 ret = scipy.optimize.minimize(error_from_gaussian, [0,np.max(powers)]+list(mean_position)+list(np.ones(N)*0.3))
-                print ret
+                print(ret)
                 assert ret.success
                 for i, a in enumerate(axes_with_motion):
                     mean_position[a] = ret.x[i+2]
             except:
-                print "Gaussian fit failed, falling back to centroid."
+                print("Gaussian fit failed, falling back to centroid.")
                 fit_method="centroid"
         if fit_method=="centroid":
             powers = np.array(powers) - np.min(powers)*1.1+np.max(powers)*0.1 #make sure no powers are <0
@@ -176,13 +176,13 @@ class SpectrometerAligner(Instrument):
             mean_position = np.array(positions)[powers.argmax(),:]
                     
         if print_move:
-            print "moving %.3f, %.3f, %.3f" % tuple(mean_position - here)
+            print("moving %.3f, %.3f, %.3f" % tuple(mean_position - here))
         try:
             self.stage.move(mean_position)
         except:
-            print "Positions:\n",positions
-            print "Powers: ",powers
-            print "Mean Position: ",mean_position
+            print("Positions:\n",positions)
+            print("Powers: ",powers)
+            print("Mean Position: ",mean_position)
         self._action_lock.release()
         self.plot_alignment(positions, powers, mean_position, **plot_args)
         return positions, powers, mean_position
@@ -211,7 +211,7 @@ class SpectrometerAligner(Instrument):
                 break
             else:
                 time.sleep(self.settling_time)
-        if verbose: print "performed %d iterations" % (len(positions)-1)
+        if verbose: print("performed %d iterations" % (len(positions)-1))
         self._action_lock.release()
         self.plot_alignment(positions, powers, [np.NaN,np.NaN])
         return positions, powers
@@ -234,7 +234,7 @@ class SpectrometerAligner(Instrument):
             powers.append(self.merit_function())
             if np.sqrt(np.sum((positions[-1] - positions[-2])**2)) < tolerance:
                 break
-        print "performed %d iterations" % (len(positions)-1)
+        print("performed %d iterations" % (len(positions)-1))
         self._action_lock.release()
         self.plot_alignment(positions, powers, [np.NaN,np.NaN], cla=False, fade=False, color="green")
         if reduce_integration_time == True:

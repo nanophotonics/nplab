@@ -162,7 +162,7 @@ class ArbitraryAxis(pyqtgraph.AxisItem):
         if not hasattr(value, '__iter__'):
             return func(value)
         else:
-            return map(func, value)
+            return list(map(func, value))
 
     def tickStrings(self, values, scale, spacing):
         try:
@@ -173,7 +173,7 @@ class ArbitraryAxis(pyqtgraph.AxisItem):
         except Exception as e:
             # pyqtgraph throws out a TypeError/RuntimeWarning when there's no ticks. We ignore it
             returnval = [''] * len(values)
-            print e
+            print(e)
         return returnval
 
 
@@ -201,7 +201,7 @@ class Crosshair(pyqtgraph.GraphicsObject):
         if ev.isStart():
             self.startPos = self.pos()
         elif ev.isFinish():
-            rounded_pos = map(lambda x: int(x) + 0.5, self.pos())
+            rounded_pos = [int(x) + 0.5 for x in self.pos()]
             self.setPos(*rounded_pos)
         else:
             self.setPos(self.startPos + ev.pos() - ev.buttonDownPos())
@@ -245,7 +245,7 @@ class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
         self.LineDisplay.showGrid(x=True, y=True)
         self.splitter.addWidget(self.LineDisplay)
         self.splitter.setHandleWidth(10)
-        self.ImageDisplay.getHistogramWidget().gradient.restoreState(Gradients.values()[1])
+        self.ImageDisplay.getHistogramWidget().gradient.restoreState(list(Gradients.values())[1])
         self.ImageDisplay.imageItem.setTransform(QtGui.QTransform())
 
         self.plot = ()
@@ -356,12 +356,12 @@ class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
             diff = np.linalg.norm(np.array(positions[:2]) - np.array(positions[2:]))
             positions += (diff, )
 
-            display_string = u"Pixels: <span style='color: red'>[%i,%i] </span> " \
-                             u"<span style='color: green'> [%i,%i] </span> " \
-                             u"\u0394px=%g" % positions
+            display_string = "Pixels: <span style='color: red'>[%i,%i] </span> " \
+                             "<span style='color: green'> [%i,%i] </span> " \
+                             "\u0394px=%g" % positions
 
             # If any units are given, get the positions and scale them using pos_to_unit
-            if any(map(lambda x: self.axis_units[x] is not None, ['bottom', 'left'])):
+            if any([self.axis_units[x] is not None for x in ['bottom', 'left']]):
                 scaled_positions = ()
                 for idx in [1, 2]:
                     xhair = getattr(self, "CrossHair%d" % idx)
@@ -373,19 +373,19 @@ class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
                         units += ('px', )
                     else:
                         units += (self.axis_units[ax],)
-                display_string += u"\t(%s, %s):" \
-                                  u"<span style='color: red'> (%g, %g)</span> " \
-                                  u"<span style='color: green'> (%g, %g)</span> " % (units + scaled_positions)
+                display_string += "\t(%s, %s):" \
+                                  "<span style='color: red'> (%g, %g)</span> " \
+                                  "<span style='color: green'> (%g, %g)</span> " % (units + scaled_positions)
 
                 # If the bottom and left axis have the same units, display the distance between the crosshairs
                 if self.axis_units['bottom'] == self.axis_units['left']:
                     difft = np.linalg.norm(np.array(scaled_positions[:2]) - np.array(scaled_positions[2:]))
                     unit = self.axis_units['bottom']
-                    display_string += u"\u0394%s=%g" % (unit, difft)
+                    display_string += "\u0394%s=%g" % (unit, difft)
 
             self.label_crosshairpos.setText(display_string)
         except Exception:
-            print 'Failed updating mouse'
+            print('Failed updating mouse')
 
     def update_image(self, newimage):
         scale = self._pxl_scale
@@ -397,7 +397,7 @@ class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
         elif len(newimage.shape) == 2:
             if newimage.shape[0] > self._max_num_line_plots:
                 self.splitter.setSizes([1, 0])
-                levels = map(lambda x: np.percentile(newimage, x), self.levels())
+                levels = [np.percentile(newimage, x) for x in self.levels()]
                 self.ImageDisplay.setImage(newimage,
                                            pos=offset,
                                            autoRange=self.autoRange,
@@ -412,7 +412,7 @@ class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
             zvals = 0.99 * np.linspace(0, newimage.shape[0] - 1, newimage.shape[0])
             if newimage.shape[0] == 1:
                 newimage = newimage[0]
-            levels = map(lambda x: np.percentile(newimage, x), self.levels())
+            levels = [np.percentile(newimage, x) for x in self.levels()]
             self.ImageDisplay.setImage(newimage, xvals=zvals,
                                        pos=offset,
                                        autoRange=self.autoRange,
@@ -458,10 +458,8 @@ class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
         if pos1 == pos2:
             return None
 
-        minx, maxx = map(lambda x: int(x),
-                         (min(pos1[0], pos2[0]), max(pos1[0], pos2[0])))
-        miny, maxy = map(lambda x: int(x),
-                         (min(pos1[1], pos2[1]), max(pos1[1], pos2[1])))
+        minx, maxx = [int(x) for x in (min(pos1[0], pos2[0]), max(pos1[0], pos2[0]))]
+        miny, maxy = [int(x) for x in (min(pos1[1], pos2[1]), max(pos1[1], pos2[1]))]
 
         return minx, maxx, miny, maxy
 

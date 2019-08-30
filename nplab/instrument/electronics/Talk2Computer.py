@@ -25,11 +25,11 @@ class Talk2Computer(Instrument):
         UDPSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         UDPSock.bind(addr)
             
-        print "Waiting to receive messages..."
+        print("Waiting to receive messages...")
         while True:
             #(data, addr) = UDPSock.recvfrom(buf)
             data = UDPSock.recv(buf)
-            print "Received message: " + data
+            print("Received message: " + data)
             if data == "exit":
                 break
             if data != " ":
@@ -60,7 +60,7 @@ class Talk2Computer(Instrument):
             particle_name = pretext + str(current_particle + offset)
             send("172.24.36.227",  {'cmd': 'start', 'filename': particle_name} )
         except exception as e:
-            print e      
+            print(e)      
         
         
     def send(ipadd = "172.24.36.227",  dict = {'cmd': 'start', 'filename': 'np1'}): # set to IP address of target computer

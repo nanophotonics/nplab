@@ -17,7 +17,7 @@ a = Acton("COM5")
 # 	except:
 # 		tries = tries + 1
 
-wavelengths = range(600,610,10)
+wavelengths = list(range(600,610,10))
 for wl in wavelengths:
 	
 	fig, ax = plt.subplots(1)

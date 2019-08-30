@@ -29,7 +29,7 @@ def get_unit_string(obj, default=None, warn=False, fail=False):
             return str(obj.units) #this works for Quantities
         except:
             if warn:
-                print "Warning: no unit string found on " + str(obj)
+                print("Warning: no unit string found on " + str(obj))
             if fail:
                 raise ValueError("No unit information was found on " + str(obj))
             return default
@@ -64,7 +64,7 @@ def get_units(obj, default=None, warn=False):
             return ureg(unit_string) #convert to a pint unit
     except:
         if warn:
-            print "Warning: no units found on " + str(obj)
+            print("Warning: no units found on " + str(obj))
         if default is not None:
             return ensure_unit(default)
         else:

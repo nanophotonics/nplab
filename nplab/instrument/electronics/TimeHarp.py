@@ -234,10 +234,10 @@ if __name__ == '__main__':
     th.TimeHarp_ShutDown()
     
     
-    print('The resolution is ' + str(resoltuion))
-    print('The Sync Rate is ' + str(syncrate))
-    print('The Count Rate is ' + str(countrate))
-    print('The total count is ' + str(total_count))
+    print(('The resolution is ' + str(resoltuion)))
+    print(('The Sync Rate is ' + str(syncrate)))
+    print(('The Count Rate is ' + str(countrate)))
+    print(('The total count is ' + str(total_count)))
     
     counts = []
     #

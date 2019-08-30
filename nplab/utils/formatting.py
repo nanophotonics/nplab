@@ -28,10 +28,10 @@ def engineering_format(number, base_unit='', significant_figures=None, digits_of
                 prefix = decPrefixes[-exponent/3]
         except IndexError:
             if print_errors:
-                print "mantissa",mantissa,"exponent",exponent
+                print("mantissa",mantissa,"exponent",exponent)
             raise ValueError("The number provided was too big (or too small) to convert to an SI prefix!")
     return "%.{0}g %s%s".format(digits_of_precision) % (mantissa,prefix,base_unit)
 
 
 if __name__ == '__main__':
-    print engineering_format(2.0001e-6, base_unit='m', significant_figures=None, digits_of_precision=6)
+    print(engineering_format(2.0001e-6, base_unit='m', significant_figures=None, digits_of_precision=6))

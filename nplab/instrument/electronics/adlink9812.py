@@ -183,7 +183,7 @@ class Adlink9812(Instrument):
 		
 		# uBs = [(c_double*user_buffer_size)()]*nbuff
 		uBs = []
-		print uBs
+		print(uBs)
 		# oBs = [(c_double*user_buffer_size)()]*nbuff
 		oBs = []
 		if verbose:
@@ -326,7 +326,7 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 	def set_bin_width(self):
 		try:
 			self.bin_width = float(self.binning_textbox.text())
-		except Exception, e:
+		except Exception as e:
 			self.log(message="Failed parsing binning_threshold: {0}".format(self.binning_textbox.text()))
 		return
 
@@ -334,7 +334,7 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 		MHz = 1e6
 		try:
 			self.sample_freq = int(float(self.sample_freq_textbox.text())*MHz)
-		except Exception,e:
+		except Exception as e:
 			self.log(message="Failed parsing sample_freq_textbox value to float:"+str(self.sample_freq_textbox.text()))
 			return
 		return
@@ -345,11 +345,11 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 
 			self.sample_count = int(float(self.sample_count_textbox.text()))
 			if self.verbose>0:
-				print "Sample Count: {0} [Counts]".format(self.sample_count)
+				print("Sample Count: {0} [Counts]".format(self.sample_count))
 
 			self.sample_count = int(float(self.sample_count_textbox.text()))
 
-		except Exception,e:
+		except Exception as e:
 			self.log(message="Failed parsing sample count to int:"+self.sample_freq_textbox.text())
 		return
 

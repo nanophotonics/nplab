@@ -33,7 +33,7 @@ def experiment():
         ax.relim()
         ax.autoscale_view()
         fig.canvas.draw()
-    print 'experiment took', time() - t0, 's, it should have taken', 0.01*len(x), 's'
+    print('experiment took', time() - t0, 's, it should have taken', 0.01*len(x), 's')
     plt.show(block=True)
 
 
@@ -81,7 +81,7 @@ def threaded_experiment():
         ax.relim()
         ax.autoscale_view()
         fig.canvas.draw()
-    print 'threaded experiment took', time() - t0, 's, it should have taken', 0.01*len(x), 's'
+    print('threaded experiment took', time() - t0, 's, it should have taken', 0.01*len(x), 's')
     plt.show(block=True)
 
 if __name__ == '__main__':

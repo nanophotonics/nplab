@@ -13,7 +13,7 @@ if __name__ == "__main__":
     try:
         nplab.datafile.set_current(args.filename, mode="r")
     except:
-        print "problem opening file from command line, popping up dialogue"
+        print("problem opening file from command line, popping up dialogue")
     df = nplab.current_datafile(mode="r")
     df.show_gui()
     nplab.close_current_datafile()

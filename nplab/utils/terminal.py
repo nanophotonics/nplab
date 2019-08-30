@@ -114,5 +114,5 @@ class QIPythonWidget(RichJupyterWidget):
             scriptpath = os.path.join(self.scripts_path, scriptname)
             self._execute('run -i %s' % scriptpath, False)
         except Exception as e:
-            print 'Failed because ', e
+            print('Failed because ', e)
 

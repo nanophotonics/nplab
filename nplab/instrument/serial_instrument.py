@@ -4,17 +4,17 @@ Serial Instrument interface
 
 @author: Richard Bowman
 """
-from traits.api import HasTraits, Bool, Int, Str, Button, Array, Enum, List
-import nplab
+# from traits.api import HasTraits, Bool, Int, Str, Button, Array, Enum, List
+# import nplab
 from nplab.instrument.message_bus_instrument import MessageBusInstrument
 import threading
 import serial
 import serial.tools.list_ports
-from serial import FIVEBITS, SIXBITS, SEVENBITS, EIGHTBITS
-from serial import PARITY_NONE, PARITY_EVEN, PARITY_ODD, PARITY_MARK, PARITY_SPACE
-from serial import STOPBITS_ONE, STOPBITS_ONE_POINT_FIVE, STOPBITS_TWO
+# from serial import FIVEBITS, SIXBITS, SEVENBITS, EIGHTBITS
+# from serial import PARITY_NONE, PARITY_EVEN, PARITY_ODD, PARITY_MARK, PARITY_SPACE
+# from serial import STOPBITS_ONE, STOPBITS_ONE_POINT_FIVE, STOPBITS_TWO
 import io
-import re
+# import re
 
 class SerialInstrument(MessageBusInstrument):
     """
@@ -66,7 +66,7 @@ class SerialInstrument(MessageBusInstrument):
         """
         with self.communications_lock:
             if hasattr(self,'ser') and self.ser.isOpen():
-                if not quiet: print "Warning: attempted to open an already-open port!"
+                if not quiet: print("Warning: attempted to open an already-open port!")
                 return
             if port is None: port=self.find_port()
             assert port is not None, "We don't have a serial port to open, meaning you didn't specify a valid port and autodetection failed.  Are you sure the instrument is connected?"
@@ -85,7 +85,7 @@ class SerialInstrument(MessageBusInstrument):
             try:
                 self.ser.close()
             except Exception as e:
-                print "The serial port didn't close cleanly:", e
+                print("The serial port didn't close cleanly:", e)
                 
     def __del__(self):
         self.close()
@@ -123,10 +123,10 @@ class SerialInstrument(MessageBusInstrument):
             success = False
             for port_name, _, _ in serial.tools.list_ports.comports(): #loop through serial ports, apparently 256 is the limit?!
                 try:
-                    print "Trying port",port_name
+                    print("Trying port",port_name)
                     self.open(port_name)
                     success = True
-                    print "Success!"
+                    print("Success!")
                 except:
                     pass
                 finally:

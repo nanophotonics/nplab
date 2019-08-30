@@ -22,7 +22,7 @@ class DynamicLightScattering(Instrument):
 		self.instruments = instruments
 		Instrument.__init__(self,)
 		self.ui = None
-		for k in instruments.keys():
+		for k in list(instruments.keys()):
 			assert(k in DynamicLightScattering.DEVICE_KEYS)
 
 		self.adc = instruments["adc"]
@@ -49,7 +49,7 @@ class DynamicLightScattering(Instrument):
 		}
 		self.fields = dict()
 
-		if "sample_rotation_stage" in instruments.keys():
+		if "sample_rotation_stage" in list(instruments.keys()):
 			self.sample_rotation_stage = instruments["sample_rotation_stage"]
 			self.sample_rotation_stage_ui = self.sample_rotation_stage.get_qt_ui()
 
@@ -57,15 +57,15 @@ class DynamicLightScattering(Instrument):
 			self.textboxes.update({"rotation_speed": self.sample_rotation_stage_ui.rotation_speed_textbox})
 			self.fields.update({"zero_angle":self.sample_rotation_stage.zero_pos})
 
-		checkbox_keys = self.checkboxes.keys()
-		textbox_keys = self.textboxes.keys()
-		field_keys = self.fields.keys()
+		checkbox_keys = list(self.checkboxes.keys())
+		textbox_keys = list(self.textboxes.keys())
+		field_keys = list(self.fields.keys())
 
 		#assert the keys in dict are UNIQUE - otherwise we can't guarantee same parameters are set
 		assert(len(list(set(checkbox_keys).intersection(set(textbox_keys))))==0)
 		assert(len(list(set(checkbox_keys).intersection(set(field_keys))))==0)
 		assert(len(list(set(field_keys).intersection(set(textbox_keys))))==0)
-		print "KEYS", checkbox_keys+textbox_keys+field_keys
+		print("KEYS", checkbox_keys+textbox_keys+field_keys)
 
 	#WHY DOES THIS WORK ONLY HERE - ELSEWHERE THIS ISNT NEEDED???
 	def get_qt_ui(self):
@@ -75,20 +75,20 @@ class DynamicLightScattering(Instrument):
 
 	#setters for checkboxes, textboxes, and fields
 	def set_checkboxes(self,settings):
-		for s in settings.keys():
-			if s in self.checkboxes.keys():
+		for s in list(settings.keys()):
+			if s in list(self.checkboxes.keys()):
 				on = bool(settings[s])
 				self.checkboxes[s].setChecked(on)
 				
 	def set_textboxes(self,settings):
-		for s in settings.keys():
-			if s in self.textboxes.keys():
+		for s in list(settings.keys()):
+			if s in list(self.textboxes.keys()):
 				self.textboxes[s].setText(settings[s])
 		return
 
 	def set_fields(self,settings):
-		for s in settings.keys():
-			if s in self.fields.keys():
+		for s in list(settings.keys()):
+			if s in list(self.fields.keys()):
 				self.fields[s] = settings[s]
 
 	def run_experiment(self,path,debug=False):
@@ -123,7 +123,7 @@ class DynamicLightScatteringUI(QtWidgets.QWidget, UiTools):
 		try:
 			t = threading.Thread(target=self.experiment.run_experiment, args=(self.run_path,))
 			t.start()
-		except Exception,e:
+		except Exception as e:
 			self.experiment.log("Error when running experiment - have you written the path?",level="error")
 			self.experiment.log(e)
 		return

@@ -3,10 +3,10 @@ import matplotlib.pyplot as plt
 
 from nplab.instrument.spectrometer.acton_2300i import Acton
 from nplab.instrument.camera.Picam.pixis import Pixis
-from Pacton import Pacton
+from .Pacton import Pacton
 from nplab import datafile as df 
 
-from spectrum_aligner_ir import grating_300gmm as get_wavelength_map #grating_300gmm
+from .spectrum_aligner_ir import grating_300gmm as get_wavelength_map #grating_300gmm
 mapper = get_wavelength_map()
 
 def SetSensorTemperatureSetPoint(self,temperature):
@@ -30,17 +30,17 @@ def initialize_datafile(path):
 
 
 def initialize_measurement(acton_port, exposure_time = 100):
-	print "Starting.."
+	print("Starting..")
 
-	print "Pixis..."
+	print("Pixis...")
 	p = Pixis(debug=1)
 
 	p.StartUp()
-	print "Acton..."
+	print("Acton...")
 	act = Acton(port=acton_port, debug=1)
-	print "Done..."
+	print("Done...")
 	pacton = Pacton(pixis=p,acton=act)
-	print "Measuring..."
+	print("Measuring...")
 	p.SetExposureTime(exposure_time)
 	# print pacton.acton.read_grating()
 	pacton.acton.set_grating(1)
@@ -68,9 +68,9 @@ def single_shot(pacton, file, center_wavelength = 0, show_ = True):
 def get_spectrum(pacton,file,y_roi,center_wavelength,exposure_time,show_= False, debug = 0, laser_wavelength = None):
 
 	if debug > 0:
-		print "y_roi",y_roi
-		print "center_wavelength",center_wavelength
-		print "exposure_time",exposure_time
+		print("y_roi",y_roi)
+		print("center_wavelength",center_wavelength)
+		print("exposure_time",exposure_time)
 	spectrum_group = file.require_group("spectrum")
 
 	#run calibration to get rid of low pixel value high intensity peaks due to camera response
@@ -80,17 +80,17 @@ def get_spectrum(pacton,file,y_roi,center_wavelength,exposure_time,show_= False,
 	xmin,xmax = [0,1024] #default to be over entire range!
 	roi = [xmin,xmax,ymin,ymax]
 	
-	if debug > 0: print "Fiddling with exposure..."
+	if debug > 0: print("Fiddling with exposure...")
 	previous_exposure_time = pacton.pixis.GetExposureTime()
 	pacton.pixis.SetExposureTime(exposure_time)
-	if debug > 0: print "Getting spectrum..."
+	if debug > 0: print("Getting spectrum...")
 	spectrum,_ = pacton.get_spectrum(center_wavelength=center_wavelength,roi=roi)
 	
 	pacton.pixis.SetExposureTime(previous_exposure_time)
 	
 	pixel_indices = np.arange(0,1014)
 	
-	if debug > 0: print "Starting wavelength map..." 
+	if debug > 0: print("Starting wavelength map...") 
 	wavelengths = [mapper(center_wavelength,i) for i in pixel_indices]
 	if laser_wavelength is not None:
 		raman_shifts = [nm_to_raman_shift(laser_wavelength=laser_wavelength,wavelength=wl) for wl in wavelengths]
@@ -101,7 +101,7 @@ def get_spectrum(pacton,file,y_roi,center_wavelength,exposure_time,show_= False,
 		"roi":roi,
 		"exposure_time[ms]": exposure_time
 	}
-	if debug > 0: print "writing data..."
+	if debug > 0: print("writing data...")
 	spectrum_group.create_dataset("series_%d",data=spectrum,attrs=attrs)
 
 	if show_ == True:
@@ -138,5 +138,5 @@ if __name__ == "__main__":
 	# experiment(pacton,file, [single_shot],[()],[({"show_":True})])
 	for i in range(30):
 		get_spectrum(pacton,file,y_roi=[514,600],center_wavelength=840,exposure_time=10000,laser_wavelength=785,debug=0)
-		print i
+		print(i)
 	#single_shot(pacton,file,show_ = True)

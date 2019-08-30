@@ -34,7 +34,7 @@ class ContinuousLinearScan(ScanningExperiment, TimedScan):
     @inherit_docstring(ScanningExperiment.run)
     def run(self, new=True):
         if isinstance(self.acquisition_thread, Thread) and self.acquisition_thread.is_alive():
-            print 'scan already running'
+            print('scan already running')
             return
         self.init_scan()
         self.acquisition_thread = Thread(target=self.scan, args=(new,))

@@ -84,7 +84,7 @@ def Attempt_To_Fit(Shift,Array,Peak_Shifts,Peak_Heights,Width,Minimum_Height=0):
 
 	def Generate_Peak_Selections(Number,Options):
 		Levels=Options-Number
-		Output=[range(Options)]
+		Output=[list(range(Options))]
 		for i in range(Levels):
 			New_Output=[]
 			for j in Output:

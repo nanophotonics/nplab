@@ -170,7 +170,7 @@ class StageUI(QtWidgets.QWidget, UiTools):
         self.stage = stage
         #self.setupUi(self)
         self.step_size_values = step_size_dict(stage_step_min, stage_step_max,unit = self.stage.unit)
-        self.step_size = [self.step_size_values[self.step_size_values.keys()[0]] for axis in stage.axis_names]
+        self.step_size = [self.step_size_values[list(self.step_size_values.keys())[0]] for axis in stage.axis_names]
         self.update_ui[int].connect(self.update_positions)
         self.update_ui[str].connect(self.update_positions)
         self.create_axes_layout(default_step)
@@ -242,10 +242,10 @@ class StageUI(QtWidgets.QWidget, UiTools):
                 layout.addWidget(zero_button, 1, 1)
 
             step_size_select = QtWidgets.QComboBox(self)
-            step_size_select.addItems(self.step_size_values.keys())
+            step_size_select.addItems(list(self.step_size_values.keys()))
             step_size_select.activated[str].connect(partial(self.on_activated, i))
             step_str = engineering_format(default_step, self.stage.unit)
-            step_index = self.step_size_values.keys().index(step_str)
+            step_index = list(self.step_size_values.keys()).index(step_str)
             step_size_select.setCurrentIndex(step_index)
             layout.addWidget(QtWidgets.QLabel(str(ax), self), i % 3, 5)
             layout.addWidget(step_size_select, i % 3, 6)
@@ -382,10 +382,10 @@ class PiezoStageUI(StageUI):
             self.info_layout.addWidget(set_position_button, i % 3, col + 3)
 
             step_size_select = QtWidgets.QComboBox(self)
-            step_size_select.addItems(self.step_size_values.keys())
+            step_size_select.addItems(list(self.step_size_values.keys()))
             step_size_select.activated[str].connect(partial(self.on_activated, i))
             step_str = engineering_format(default_step, self.stage.unit)
-            step_index = self.step_size_values.keys().index(step_str)
+            step_index = list(self.step_size_values.keys()).index(step_str)
             step_size_select.setCurrentIndex(step_index)
             layout.addWidget(QtWidgets.QLabel(str(ax), self), i % 3, 5)
             layout.addWidget(step_size_select, i % 3, 6)
@@ -593,10 +593,10 @@ if __name__ == '__main__':
     from nplab.utils.gui import get_qt_app
 
     stage = DummyStage()
-    print stage.move(2e-6, axis=('x1', 'x2'))
-    print stage.get_position()
-    print stage.get_position('x1')
-    print stage.get_position(['x1', 'y1'])
+    print(stage.move(2e-6, axis=('x1', 'x2')))
+    print(stage.get_position())
+    print(stage.get_position('x1'))
+    print(stage.get_position(['x1', 'y1']))
 
     app = get_qt_app()
     ui = stage.get_qt_ui()

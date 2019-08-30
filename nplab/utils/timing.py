@@ -15,13 +15,13 @@ def timed_execution(f,*args,**kwargs):
 
 	full_name = str(inspect.getmodule(f))+"."+f.__name__
 	start_time = timeit.default_timer()
-	print("-"*5+"Start timing"+"-"*5+"\n"+full_name+"\n"+"-"*20)
+	print(("-"*5+"Start timing"+"-"*5+"\n"+full_name+"\n"+"-"*20))
 	
 	out = f(*args,**kwargs)
 	
 	dt =timeit.default_timer() - start_time
-	print("-"*20)
-	print("Executed in: {1}\n[{0}]".format(full_name,dt))
-	print("-"*20)
+	print(("-"*20))
+	print(("Executed in: {1}\n[{0}]".format(full_name,dt)))
+	print(("-"*20))
 	return out,dt
 

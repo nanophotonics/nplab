@@ -7,7 +7,7 @@ from mpl_toolkits.axes_grid1 import ImageGrid
 from nputils.figure_setup import setup_figure
 from nputils.plot_functions import make_dummy_subplot
 from nputils.spectra_plotting import *
-from hyperspectral_plots import *
+from .hyperspectral_plots import *
 
 
 def plot_wavelength_images(hsimg, axslice, roi, fig, ax, subplot_spec, amp=5):

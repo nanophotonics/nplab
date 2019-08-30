@@ -37,7 +37,7 @@ class GSC01(SerialInstrument, Stage):
         if 'offsetOrigin' in kwargs:
             self.offsetOrigin(kwargs['offsetOrigin'])  # 20000)
 
-        if 'home_on_start' in kwargs.keys():
+        if 'home_on_start' in list(kwargs.keys()):
             if kwargs['home_on_start']:
                 self.MechanicalHome()
 
@@ -239,10 +239,10 @@ if __name__ == '__main__':
     # print 'Line: ', gsc01.readline()
     # gsc01.move(0)
     # print 'Line: ', gsc01.readline()
-    print 'Status: ', gsc01.getStatus()
+    print('Status: ', gsc01.getStatus())
     # print 'Line: ', gsc01.readline()
     gsc01.move(10)   # 265140
-    print 'Status: ', gsc01.getStatus()
+    print('Status: ', gsc01.getStatus())
     # gsc01.getStatus()
     # gsc01.move(10)
     # gsc01.getStatus()

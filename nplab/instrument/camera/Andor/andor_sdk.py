@@ -107,7 +107,7 @@ class AndorBase:
             raise Exception("Cannot detect operating system for Andor")
         self.parameters = parameters
         self._parameters = dict()
-        for key, value in parameters.items():
+        for key, value in list(parameters.items()):
             if 'value' in value:
                 self._parameters[key] = value['value']
             else:
@@ -123,7 +123,7 @@ class AndorBase:
             if self.cooler:
                 self.cooler = 0
             while self.CurrentTemperature < -20:
-                print 'Waiting'
+                print('Waiting')
                 time.sleep(1)
         self._logger.info('Shutting down')
         self._dll_wrapper('ShutDown')
@@ -223,7 +223,7 @@ class AndorBase:
                     if not isinstance(inputs, tuple):
                         inputs = (inputs, )
 
-        if 'Get' not in self.parameters[param_loc].keys():
+        if 'Get' not in list(self.parameters[param_loc].keys()):
             if len(inputs) == 1:
                 setattr(self, '_' + param_loc, inputs[0])
             else:
@@ -246,7 +246,7 @@ class AndorBase:
             self.parameters[param_loc]['value'] = getattr(self, '_' + param_loc)
             self._parameters[param_loc] = getattr(self, '_' + param_loc)
             return getattr(self, '_' + param_loc)
-        if 'Get' in self.parameters[param_loc].keys():
+        if 'Get' in list(self.parameters[param_loc].keys()):
             func = self.parameters[param_loc]['Get']
 
             form_out = ()
@@ -261,7 +261,7 @@ class AndorBase:
                     form_in += ({'value': getattr(self, input_param[0]), 'type': input_param[1]},)
             for ii in range(len(inputs)):
                 form_in += ({'value': inputs[ii], 'type': func['Inputs'][ii]},)
-            if 'Iterator' not in func.keys():
+            if 'Iterator' not in list(func.keys()):
                 vals = self._dll_wrapper(func['cmdName'], inputs=form_in, outputs=form_out)
             else:
                 vals = ()
@@ -271,12 +271,12 @@ class AndorBase:
             self.parameters[param_loc]['value'] = vals
             self._parameters[param_loc] = vals
             return vals
-        elif 'Get_from_prop' in self.parameters[param_loc].keys() and hasattr(self, '_' + param_loc):
+        elif 'Get_from_prop' in list(self.parameters[param_loc].keys()) and hasattr(self, '_' + param_loc):
             vals = getattr(self, self.parameters[param_loc]['Get_from_prop'])[getattr(self, '_' + param_loc)]
             self.parameters[param_loc]['value'] = vals
             self._parameters[param_loc] = vals
             return vals
-        elif 'Get_from_fixed_prop' in self.parameters[param_loc].keys():
+        elif 'Get_from_fixed_prop' in list(self.parameters[param_loc].keys()):
             vals = getattr(self, self.parameters[param_loc]['Get_from_fixed_prop'])[0]
             self.parameters[param_loc]['value'] = vals
             self._parameters[param_loc] = vals
@@ -308,7 +308,7 @@ class AndorBase:
         """
 
         assert isinstance(parameter_dictionary, dict)
-        for name, value in parameter_dictionary.items():
+        for name, value in list(parameter_dictionary.items()):
             if not hasattr(self, name):
                 self._logger.warn('The parameter ' + name + 'does not exist and therefore cannot be set')
                 continue
@@ -612,7 +612,7 @@ class AndorBase:
             data_file = df.open_file(set_current=False, mode='r')
         else:
             data_file = df.DataFile(filepath)
-        if 'AndorSettings' in data_file.keys():
+        if 'AndorSettings' in list(data_file.keys()):
             self.set_andor_parameters(dict(data_file['AndorSettings'].attrs))
         else:
             self._logger.error('Load settings failed as "AndorSettings" does not exist')

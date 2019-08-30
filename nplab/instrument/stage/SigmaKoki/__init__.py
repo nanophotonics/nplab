@@ -10,7 +10,7 @@ from nplab.utils.thread_utils import locked_action
 from nplab.instrument.stage import Stage, StageUI
 from nplab.instrument.serial_instrument import SerialInstrument
 from nplab.instrument.visa_instrument import VisaInstrument
-import exceptions, time, sys, re, os
+import time, sys, re, os
 import nplab.ui
 from nplab.utils.formatting import engineering_format
 from functools import partial
@@ -45,7 +45,7 @@ class GSC01(SerialInstrument, Stage):
         if 'offsetOrigin' in kwargs:
             self.offsetOrigin(kwargs['offsetOrigin'])  # 20000)
 
-        if 'home_on_start' in kwargs.keys():
+        if 'home_on_start' in list(kwargs.keys()):
             if kwargs['home_on_start']:
                 self.MechanicalHome()
 
@@ -113,7 +113,7 @@ class GSC01(SerialInstrument, Stage):
         counts = self.counts_per_degree * pos
         if relative:
             if not (-16777214 <= counts <= 16777214):
-                raise exceptions.ValueError('stage1 must be between -16777214 and 16777214.')
+                raise ValueError('stage1 must be between -16777214 and 16777214.')
 
             command = 'M:W'
             if counts >= 0:
@@ -185,10 +185,10 @@ class GSC01(SerialInstrument, Stage):
         :return:
         """
         if not (100 <= minSpeed1 <= maxSpeed1 <= 20000):
-            raise exceptions.ValueError('Must be 100 <= minSpeed1 <= maxSpeed1 <= 20000')
+            raise ValueError('Must be 100 <= minSpeed1 <= maxSpeed1 <= 20000')
 
         if not (0 <= accelerationTime1 <= 1000):
-            raise exceptions.ValueError('Must be 00 <= accelerationTime1 <= 1000.')
+            raise ValueError('Must be 00 <= accelerationTime1 <= 1000.')
 
         self.write('D:1S%dF%dR%d' % (minSpeed1, maxSpeed1, accelerationTime1))
 
@@ -328,7 +328,7 @@ class SHOT(VisaInstrument, Stage):
             counts = (counts, )
         for count in counts:
             if not (-16777214 <= count <= 16777214):
-                raise exceptions.ValueError('stage1 must be between -16777214 and 16777214.')
+                raise ValueError('stage1 must be between -16777214 and 16777214.')
 
         if relative:
             command = "M:"
@@ -347,7 +347,7 @@ class SHOT(VisaInstrument, Stage):
 
     def get_position(self, axis=None):
         status = self.status()
-        counts = map(int, status.split(',')[:2])
+        counts = list(map(int, status.split(',')[:2]))
         if axis is None:
             return counts
         elif hasattr(axis, '__iter__'):
@@ -399,9 +399,9 @@ class SHOT(VisaInstrument, Stage):
         """
 
         if not (1 <= min_speed <= max_speed <= 20000):
-            raise exceptions.ValueError('Must be 1 <= min_speed <= max_speed <= 20000')
+            raise ValueError('Must be 1 <= min_speed <= max_speed <= 20000')
         if not (0 <= accel_time <= 5000):
-            raise exceptions.ValueError('Must be 0 <= accel_time <= 5000')
+            raise ValueError('Must be 0 <= accel_time <= 5000')
         if not hasattr(min_speed, "__iter__"):
             min_speed = tuple(min_speed)
         if not hasattr(max_speed, "__iter__"):
@@ -410,7 +410,7 @@ class SHOT(VisaInstrument, Stage):
             accel_time = tuple(accel_time)
         if axes == "W":
             if len(min_speed) != 2 or len(min_speed) != 2 or len(min_speed) != 2:
-                raise exceptions.ValueError('You need to provide speeds and times for both axis')
+                raise ValueError('You need to provide speeds and times for both axis')
 
         command = "D:%s" %axes
         for mn, mx, at in zip(min_speed, max_speed, accel_time):
@@ -472,8 +472,8 @@ class HIT(SerialInstrument, Stage):
     # TODO: interpolation commands. They set a position in the plane of two axes and jog in a curved or straight path
     # TODO: add units
 
-    axis_names = map(str, range(8))
-    axis_LUT = dict(zip(map(str, range(8)), range(8)))
+    axis_names = list(map(str, list(range(8))))
+    axis_LUT = dict(list(zip(list(map(str, list(range(8)))), list(range(8)))))
 
     def __init__(self, address, **kwargs):
 
@@ -505,7 +505,7 @@ class HIT(SerialInstrument, Stage):
             axes = (axes, )
         axes_iter = []
         for ax in axes:
-            if ax in self.axis_LUT.keys():
+            if ax in list(self.axis_LUT.keys()):
                 axes_iter += [self.axis_LUT[ax]]
             elif type(ax) == int:
                 axes_iter += [ax]
@@ -530,7 +530,7 @@ class HIT(SerialInstrument, Stage):
             counts = [counts] * len(axes)
         for count in counts:
             assert -134217728 < count < +134217727
-        counts = map(int, counts)
+        counts = list(map(int, counts))
 
         if relative:
             command = 'M'
@@ -706,10 +706,10 @@ class HIT(SerialInstrument, Stage):
         """
 
         if not (1 <= start_speed <= max_speed <= 999999999):
-            raise exceptions.ValueError('Must be 1 <= start_speed <= max_speed <= 999999999')
+            raise ValueError('Must be 1 <= start_speed <= max_speed <= 999999999')
 
         if not (1 <= acceleration_time <= 1000):
-            raise exceptions.ValueError('Must be 00 <= acceleration_time <= 1000.')
+            raise ValueError('Must be 00 <= acceleration_time <= 1000.')
 
         axes = self._axes_iterable(axis)
         for axis in axes:

@@ -187,8 +187,8 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
             else:
                 self.setStyleSheet('')
         except Exception as e:
-            print e
-            print 'trying Qt 5'
+            print(e)
+            print('trying Qt 5')
             try:
                 if self.actionNightMode.isChecked():
                     import qdarkstyle
@@ -196,8 +196,8 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
                 else:
                     self.setStyleSheet('')
             except Exception as ee:
-                print ee
-                print 'Qt 5 style sheet failed'
+                print(ee)
+                print('Qt 5 style sheet failed')
 
     def menuSaveSettings(self):
         """A function for saving the current dock layout and settings to a numpy
@@ -356,7 +356,7 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
     def closeEvent(self, event):
         """A quick are you sure you want to quit function """
         quit_msg = "Are you sure you want to exit the program?"
-        print quit_msg
+        print(quit_msg)
         try:
             if os.environ["QT_API"] == "pyqt5":
                 reply = QtWidgets.QMessageBox.question(self, 'Message', quit_msg,
@@ -381,4 +381,4 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
             else:
                 event.ignore()
         except Exception as e:
-            print e
+            print(e)

@@ -42,7 +42,7 @@ elif ui_toolkit == 'native':
       from qtpy import QtGui,QtCore,QtWidgets, uic
     except Exception as e:
         warnings.warn("Warning: failed to load qtpy, are you sure qtpy is installed?, falling back to pyside", UserWarning)
-        print e
+        print(e)
         from PySide import QtCore, QtGui
 else:
     raise ImportError("Invalid ui_toolkit or QT_API")
@@ -119,7 +119,7 @@ if __name__ == '__main__':
     from matplotlib.figure import Figure
     import numpy as np
 
-    print "QT Backend: " + matplotlib.rcParams['backend.qt4']
+    print("QT Backend: " + matplotlib.rcParams['backend.qt4'])
 
     class Widget(QtGui.QWidget):
         def __init__(self):
@@ -145,7 +145,7 @@ if __name__ == '__main__':
         def plot(self):
             ''' plot some random stuff '''
             # random data
-            print 'plot'
+            print('plot')
             data = [np.random.random() for i in range(1000)]
             # create an axis
             #ax = self.figure.add_subplot(111)

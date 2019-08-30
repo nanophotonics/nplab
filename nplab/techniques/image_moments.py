@@ -80,7 +80,7 @@ if __name__ == '__main__':
     plt.pcolormesh(x,y,img)
 
     cx, cy = find_centroid(img, x, y)
-    print cy, cy
+    print(cy, cy)
     plt.plot([cx], [cy], 'wo')
 
     plt.show()

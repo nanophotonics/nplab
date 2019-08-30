@@ -22,6 +22,6 @@ if __name__ == "__main__":
 		
 		tune(wl,laser)
 		measured = get_wavelength(laser)
-		print wl, measured
+		print(wl, measured)
 
 	# laser.show_gui()

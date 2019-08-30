@@ -15,9 +15,9 @@ class VariableRetarder(SerialInstrument):
     termination_character = '\n'
     wait_time = 2
 
-    def __init__(self, port=None):
+    def __init__(self, port=None, channel=1):
         super(VariableRetarder, self).__init__(port)
-        self._channel = 1
+        self._channel = channel
 
     def write(self, query_string):
         """Re-writing the nplab.SerialInstrument.write because the instrument has different termination characters for
@@ -37,7 +37,7 @@ class VariableRetarder(SerialInstrument):
 
     def query(self, queryString, *args, **kwargs):
         reply = super(VariableRetarder, self).query(queryString, *args, **kwargs)
-
+        self._logger.debug('Received: %s' % reply)
         split_reply = reply.split(':')
         split_query = queryString.split(':')
         if split_reply[0] != split_query[0]:
@@ -91,8 +91,8 @@ class VariableRetarder(SerialInstrument):
         :return:
         """
         reply = self.query('ldd:?')
-        integers = map(int, reply.split(','))
-        voltages = map(lambda x: x / 6553.5, integers)
+        integers = list(map(int, reply.split(',')))
+        voltages = [x / 6553.5 for x in integers]
         return voltages
 
     @all_voltages.setter
@@ -107,7 +107,7 @@ class VariableRetarder(SerialInstrument):
         for val in value:
             assert 0 <= val <= 10
         voltages = tuple(value)
-        integers = map(lambda x: x * 6553.5, voltages)
+        integers = [x * 6553.5 for x in voltages]
         self.write('ldd:%d,%d,%d,%d' % integers)
 
     @property

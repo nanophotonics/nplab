@@ -23,7 +23,7 @@ TAG = "Raman_White_Light_0Order.*"
 TAGS = ["Infinity3_Bias_Image", "Infinity3_FirstBkgndWhiteLight_Image", "Infinity3_FirstWhiteLight_Image", "Infinity3_SecondWhiteLight_Image", "Infinity3_SecondWhiteLight_atBkgndLoc_Image", "Raman_Bias_0Order_int", "Raman_Bias_Spectrum_int", "Raman_Bias_Spectrum_wl", "Raman_Laser_0Order_atBkgndLoc_int", "Raman_Laser_0Order_int", "Raman_Laser_Spectrum_atBkgndLoc_int", "Raman_Laser_Spectrum_atBkgndLoc_wl", "Raman_Laser_Spectrum_int", "Raman_Laser_Spectrum_wl", "Raman_White_Light_0Order_int", "Raman_White_Light_Bkgnd_0Order_int", "Raman_White_Light_Bkgnd_Spectrum_int", "Raman_White_Light_Bkgnd_Spectrum_wl", "Raman_White_Light_Spectrum_int", "Raman_White_Light_Spectrum_wl"]
 TAG = TAGS[10]
 TAG = "Raman_Laser_0Order_int.*"
-print "TAG",TAG
+print("TAG",TAG)
 
 # for k in datafile[FOLDERPATH]["Particle_100"].keys():
 # 	print k
@@ -99,19 +99,19 @@ def get_ellipse_contour(input_image):
 
 
 def get_images():
-	particles = datafile[FOLDERPATH].keys()
+	particles = list(datafile[FOLDERPATH].keys())
 	regex = re.compile(TAG)
 	#laser zero order
 	outp = []
 	for particle in particles:
 		try:
-			measurements= datafile[FOLDERPATH][particle].keys()
+			measurements= list(datafile[FOLDERPATH][particle].keys())
 			for m in measurements:
 				if regex.match(m):
 					outp.append( datafile[FOLDERPATH][particle][m])
 		except Exception as e:
-			print e
-			print "Skipping:", particle
+			print(e)
+			print("Skipping:", particle)
 
 	return outp
 
@@ -241,9 +241,9 @@ def process_image(image,figname):
 	for i in range(1,len(gaussians)):
 		DoG.append(gaussians[i]-gaussians[i-1])
 
-	print "DoGs-------------------------", len(DoG)
+	print("DoGs-------------------------", len(DoG))
 	for d in DoG:
-		print d
+		print(d)
 	DoG = [d + np.min(d) for d in DoG]
 	DoG = [d-np.min(d) for d in DoG]
 	DoG = [d/np.max(d) for d in DoG]

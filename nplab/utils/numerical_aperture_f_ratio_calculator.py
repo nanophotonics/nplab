@@ -43,7 +43,7 @@ if __name__ == "__main__":
 	f = 75e-3
 	d = 13.14e-3
 	fratio = f/d
-	print fratio
+	print(fratio)
 	# telescope_lens_1 = 50e-3 
 	# telescope_lens_2 = 250e-3 
 	# d0 = 2e-3 

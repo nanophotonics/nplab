@@ -17,6 +17,7 @@ from functools import partial
 from nplab.utils.gui import *
 from nplab.ui.ui_tools import UiTools
 from nplab import inherit_docstring
+from functools import reduce
 
 
 class GridScan(ScanningExperiment, TimedScan):
@@ -107,7 +108,7 @@ class GridScan(ScanningExperiment, TimedScan):
         :return:
         """
         if isinstance(self.acquisition_thread, threading.Thread) and self.acquisition_thread.is_alive():
-            print 'scan already running'
+            print('scan already running')
             return
         self.init_scan()
         self.acquisition_thread = threading.Thread(target=self.scan,
@@ -176,10 +177,10 @@ class GridScan(ScanningExperiment, TimedScan):
         self.abort_requested = False
         axes, size, step, init = (axes[::-1], size[::-1], step[::-1], init[::-1])
         scan_axes = self.init_grid(axes, size, step, init)
-        print scan_axes
+        print(scan_axes)
         self.open_scan()
         # get the indices of points along each of the scan axes for use with snaking over array
-        pnts = [range(axis.size) for axis in scan_axes]
+        pnts = [list(range(axis.size)) for axis in scan_axes]
 
         self.indices = [-1,] * len(axes)
         self._index = 0
@@ -411,8 +412,8 @@ class GridScanUI(QtWidgets.QWidget, UiTools):
             self.grid_scanner.set_init_to_current_position()
 
     def update_axes(self):
-        print self.axes_view.model().stringList(), self.grid_scanner.axes,\
-            self.size_view.model().stringList(), self.grid_scanner.size
+        print(self.axes_view.model().stringList(), self.grid_scanner.axes,\
+            self.size_view.model().stringList(), self.grid_scanner.size)
 
     def update_grid(self):
         self.gridshape.setText(str(self.grid_scanner.grid_shape))
@@ -504,7 +505,7 @@ if __name__ == '__main__':
         def update(self, force=False):
             super(DummyGridScan, self).update(force)
             if self.data is None or self.fig.canvas is None:
-                print 'no canvas or data'
+                print('no canvas or data')
                 return
             if force:
                 data = (self.data,)
@@ -526,7 +527,7 @@ if __name__ == '__main__':
                         img_min = data[np.isfinite(data)].min()
                         img_max = data[np.isfinite(data)].max()
                     except ValueError:
-                        print 'There may have been a NaN error'
+                        print('There may have been a NaN error')
                         img_min=0
                         img_max=1
                     img.set_clim(img_min, img_max)
@@ -535,8 +536,8 @@ if __name__ == '__main__':
         def get_qt_ui(self):
             return DummyGridScanUI(self)
         def onclick(self, event):
-            print 'button=%d, x=%d, y=%d, xdata=%f, ydata=%f'%(
-            event.button, event.x, event.y, event.xdata, event.ydata)
+            print('button=%d, x=%d, y=%d, xdata=%f, ydata=%f'%(
+            event.button, event.x, event.y, event.xdata, event.ydata))
             init_scale = self._unit_conversion[self.size_unit] / self._unit_conversion[self.init_unit]
             self.init[:2] = (event.xdata * init_scale, event.ydata * init_scale)
             self.init_updated.emit(self.init)
@@ -545,7 +546,7 @@ if __name__ == '__main__':
             if isinstance(artist, matplotlib.image.AxesImage):
                 im = artist
                 A = im.get_array()
-                print('onpick4 image', A.shape)
+                print(('onpick4 image', A.shape))
 
     class DummyGridScanUI(GridScanUI):
         def __init__(self, grid_scanner):

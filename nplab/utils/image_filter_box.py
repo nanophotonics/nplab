@@ -129,7 +129,7 @@ def strided_rescale(g, bin_fac= 4):
         else:
             return np.copy(strided)
     except Exception as e:
-        print e
+        print(e)
         
 def StrBiThresOpen(g, bin_fac= 4,threshold =40,bilat_size = 3,bilat_height = 40,morph_kernel_size = 3):
     try:
@@ -148,7 +148,7 @@ def StrBiThresOpen(g, bin_fac= 4,threshold =40,bilat_size = 3,bilat_height = 40,
         strided[strided!=0]=255
         return np.copy(strided)
     except Exception as e:
-        print e
+        print(e)
         
 def STBOC_with_size_filter(g, bin_fac= 4,bilat_size = 3, bilat_height = 40,
                            threshold =20,min_size = 2,max_size = 6,morph_kernel_size = 3,
@@ -199,14 +199,14 @@ def STBOC_with_size_filter(g, bin_fac= 4,bilat_size = 3, bilat_height = 40,
     #    strided=strided.repeat(bin_fac, 1)
  #       return strided
     except Exception as e:
-        print e
+        print(e)
 
 def find_particles(self,img=None,border_pixels = 50):
     """find particles in the supplied image, or in the camera image"""
     self.threshold_image(self.denoise_image(
             cv2.cvtColor(frame,cv2.COLOR_RGB2GRAY)))[self.border_pixels:-self.border_pixels,self.border_pixels:-self.border_pixels] #ignore the edges
     labels, nlabels = ndimage.measurements.label(img)
-    return [np.array(p)+15 for p in ndimage.measurements.center_of_mass(img, labels, range(1,nlabels+1))] #add 15 onto all the positions
+    return [np.array(p)+15 for p in ndimage.measurements.center_of_mass(img, labels, list(range(1,nlabels+1)))] #add 15 onto all the positions
 
 #def STBOC_with_size_filter_switch(g, bin_fac= 4,bilat_size = 3, bilat_height = 40,
 #                           threshold =20,min_size = 2,max_size = 6,morph_kernel_size = 3):

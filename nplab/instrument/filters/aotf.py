@@ -29,7 +29,7 @@ class AOTF(serial.SerialInstrument):
 		'''
 		
 		r = self.query("dau en")
-		print "Daughter Board control enable, response:",r
+		print("Daughter Board control enable, response:",r)
 		
 		self.set_default_calibration()
 		
@@ -82,7 +82,7 @@ class AOTF(serial.SerialInstrument):
 		assert(int(amplitude) >= 0 and int(amplitude) <= 16383), "Channel amplitude in range 0-16383"
 		command = "dds a {0} {1}".format(channel,amplitude)
 		response = self.query(command)
-		print "AOTF.set_amplitude:", response
+		print("AOTF.set_amplitude:", response)
 		return
 
 	def set_wavelength(self,channel,wavelength):
@@ -112,7 +112,7 @@ class AOTF(serial.SerialInstrument):
 		assert(float(wavelength) >= 450.0 and float(wavelength) <= 1100.0), "Channel wavelength in range 450.0-690.0"
 		command = "dds w {0} {1:.1f}".format(channel,wavelength) #Notation: :.1f - show 'wavelength' to 1 float ('f') point places
 		response = self.query(command)
-		print "AOTF.set_wavelength:", response
+		print("AOTF.set_wavelength:", response)
 		return 
 
 	def set_frequency(self,channel,frequency):
@@ -120,7 +120,7 @@ class AOTF(serial.SerialInstrument):
 		assert(int(channel) >= 0 and int(channel) <= 7), "Channel index in range 0-7"
 		command = "dds f {0} {1:6f}".format(int(channel),frequency) #Notation: :.6f - show 'frequency' to 6 float ('f') point places
 		response = self.query(command)
-		print "AOTF.set_frequency:", response
+		print("AOTF.set_frequency:", response)
 
 
 	def set_default_calibration(self):
@@ -133,15 +133,15 @@ class AOTF(serial.SerialInstrument):
 		'''
 
 		r = self.query("cal tuning 0 397.46")
-		print "Calibration step1:",r
+		print("Calibration step1:",r)
 		r = self.query("cal tuning 1 -1.2232")
-		print "Calibration step2:",r
+		print("Calibration step2:",r)
 		r = self.query("cal tuning 2 1.4658e-3")
-		print "Calibration step3:",r
+		print("Calibration step3:",r)
 		r = self.query("cal tuning 3 -6.15e-7")
-		print "Calibration step4:",r
+		print("Calibration step4:",r)
 		r = self.query("cal save")
-		print "Calibration step5:",r
+		print("Calibration step5:",r)
 
 		return
 		#LOADING THIS CALIBRATION MAKES THE AOTF STOP WORKING???? 
@@ -209,9 +209,9 @@ class AOTF_UI(QtWidgets.QWidget, UiTools):
 			for i in range(len(self.wavelength_textboxes)):
 				wavelength = float(self.wavelength_textboxes[i].text())
 				self.settings[i][0] = wavelength
-			print self.settings
+			print(self.settings)
 		except ValueError as e:
-			print e
+			print(e)
 
 		return
 
@@ -221,18 +221,18 @@ class AOTF_UI(QtWidgets.QWidget, UiTools):
 				power = int(self.power_textboxes[i].text())
 				self.settings[i][1] = power
 		except ValueError as e:
-			print e
+			print(e)
 		return
 
 	def set_on(self):
-		print self.settings
+		print(self.settings)
 		channel_is_on = [bool(a.isChecked()) for a in self.active]
-		print channel_is_on
+		print(channel_is_on)
 		for i,is_on in enumerate(channel_is_on):
 			if is_on == True:
 				wl = self.settings[i][0]
 				pwr = self.settings[i][1]
-				print "wavelength:", wl
+				print("wavelength:", wl)
 				aotf.enable_channel_by_wavelength(i,wl,pwr)
 			else:
 				aotf.disable_channel(i)
@@ -289,7 +289,7 @@ def set_frequency(fs):
 def scan_frequency(freqs,t):
 	aotf = AOTF("/dev/ttyUSB2")
 	for f in freqs:
-		print "freq:",f
+		print("freq:",f)
 		aotf.enable_channel_by_frequency(1,f,8000)
 		say("{0:.3g} megahertz".format(f))
 		say("measure")

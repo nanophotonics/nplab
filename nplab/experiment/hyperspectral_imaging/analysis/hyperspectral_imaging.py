@@ -48,7 +48,7 @@ class HyperspectralImage(object):
         # Other attributes
         self.attrs = dict(scan.attrs)
         if 'num_spectrometers' not in self.attrs:
-            self.attrs['num_spectrometers'] = len([s for s in scan.keys() if 'spectra' in s])
+            self.attrs['num_spectrometers'] = len([s for s in list(scan.keys()) if 'spectra' in s])
 
     # ROI properties
     @property
@@ -83,7 +83,7 @@ class HyperspectralImage(object):
             a = (a - (a.min()+a.max())/2.0)
             self._z_roi = get_roi(a, value[0], value[1])
         else:
-            print 'There is no z dataset'
+            print('There is no z dataset')
     @property
     def wavelength_lims(self):
         return self._wavelength_lims
@@ -102,7 +102,7 @@ class HyperspectralImage(object):
             self._wavelength2_lims = value
             self._wavelength2_roi = get_roi(self.scan['wavelength2'][()], value[0], value[1])
         else:
-            print 'There is no wavelength2 dataset'
+            print('There is no wavelength2 dataset')
     # Axes data properties
     @property
     def x(self):
@@ -130,7 +130,7 @@ class HyperspectralImage(object):
                 a = (a - (a.min()+a.max())/2.0)
             return a
         else:
-            print 'There is no z dataset'
+            print('There is no z dataset')
     @property
     def wavelength(self): return self.scan['wavelength'][self._wavelength_roi]
     @property
@@ -140,13 +140,13 @@ class HyperspectralImage(object):
         if 'wavelength2' in self.scan:
             return self.scan['wavelength2'][self._wavelength2_roi]
         else:
-            print 'There is no wavelength2 dataset'
+            print('There is no wavelength2 dataset')
     @property
     def energy2(self):
         if 'wavelength2' in self.scan:
             return 1e9*(h*c/self.wavelength2)/e
         else:
-            print 'There is no wavelength2 dataset so cannot return energy2'
+            print('There is no wavelength2 dataset so cannot return energy2')
     # Data properties
     @property
     def spectra(self):
@@ -170,7 +170,7 @@ class HyperspectralImage(object):
             a = np.where(np.isfinite(a), a, 0.0)
             return a
         else:
-            print 'There is no hs_image2 dataset'
+            print('There is no hs_image2 dataset')
 
     def _load_calibrations(self):
         self.fitfunc = lambda x,a,b,c: a*x**2 + b*x + c
@@ -224,7 +224,7 @@ class HyperspectralImage(object):
         spectrum = np.mean(spectra, axis=(0,1))
         if return_patch:
             x, y = (self.x[x_roi], self.y[y_roi])
-            print 'averaged over a %dx%d grid' % (len(x), len(y))
+            print('averaged over a %dx%d grid' % (len(x), len(y)))
             patch = np.array([x.min(), y.min(), x.max()-x.min(), y.max()-y.min()])
             return wavelength, spectrum, patch
         else:
@@ -254,7 +254,7 @@ class HyperspectralImage(object):
             spectra = spectra[axslice,:,:,:]
         h, w, s = spectra.shape
         img = np.zeros((h,w))
-        for pos in product(range(h), range(w)):
+        for pos in product(list(range(h)), list(range(w))):
             i,j = pos
             spectrum = spectra[i,j,:]
             threshold = spectrum < 0.01*spectrum.max()

@@ -22,7 +22,7 @@ Calibration_Arrays.append(np.array([[2.254536467105263e-09, -1.5938649616776316e
 CCD_Size=2048 #Size of ccd in pixels
 
 #Make a deepcopy of the andor capture function, to add a white light shutter close command to if required later
-Andor_Capture_Function=types.FunctionType(Andor.capture.func_code, Andor.capture.func_globals, 'Unimportant_Name',Andor.capture.func_defaults, Andor.capture.func_closure)
+Andor_Capture_Function=types.FunctionType(Andor.capture.__code__, Andor.capture.__globals__, 'Unimportant_Name',Andor.capture.__defaults__, Andor.capture.__closure__)
 
 class Trandor(Andor):#Andor
     
@@ -36,11 +36,11 @@ class Trandor(Andor):#Andor
         self.SetParameter('SetTemperature',-90)  #Turn on andor cooler
         self.CoolerON()
         
-        print '---------------------------'
-        print 'Triax Information:'
-        print 'Current Grating:',self.triax.Grating()
-        print 'Current Slit Width:', self.triax.Slit(),'um'
-        print '---------------------------'
+        print('---------------------------')
+        print('Triax Information:')
+        print('Current Grating:',self.triax.Grating())
+        print('Current Slit Width:', self.triax.Slit(),'um')
+        print('---------------------------')
 
         self.Notch_Filters_Tested=True
         
@@ -61,16 +61,16 @@ class Trandor(Andor):#Andor
     def Test_Notch_Alignment(self):
         	Accepted=False
         	while Accepted is False:
-        		Input=raw_input('WARNING! A slight misalignment of the narrow band notch filters could be catastrophic! Has the laser thoughput been tested? [Yes/No]')
+        		Input=input('WARNING! A slight misalignment of the narrow band notch filters could be catastrophic! Has the laser thoughput been tested? [Yes/No]')
         		if Input.upper() in ['Y','N','YES','NO']:
         			Accepted=True
         			if len(Input)>1:
         				Input=Input.upper()[0]
         	if Input.upper()=='Y':
-        		print 'You are now free to capture spectra'
+        		print('You are now free to capture spectra')
         		self.Notch_Filters_Tested=True
         	else:
-        		print 'The next spectrum capture will be allowed for you to test this. Please LOWER the laser power and REDUCE the integration time.'
+        		print('The next spectrum capture will be allowed for you to test this. Please LOWER the laser power and REDUCE the integration time.')
         		self.Notch_Filters_Tested=None
 
          
@@ -82,7 +82,7 @@ class Trandor(Andor):#Andor
 
         if self.Notch_Filters_Tested is False:
             self.Test_Notch_Alignment()
-            return (np.array(range(CCD_Size))*0,1,(CCD_Size,))
+            return (np.array(list(range(CCD_Size)))*0,1,(CCD_Size,))
         	
         else:
 	        if self.Notch_Filters_Tested is None:

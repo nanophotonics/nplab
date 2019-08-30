@@ -88,11 +88,11 @@ class HyperspectralScan(GridScanQt, ScanningExperimentHDF5):
         super(HyperspectralScan, self).open_scan()
         group = self.f.require_group('hyperspectral_images')
         self.data = group.create_group('scan_%d', attrs=dict(description=self.description))
-        print 'Saving scan to: {}'.format(self.f.file.filename), self.data
+        print('Saving scan to: {}'.format(self.f.file.filename), self.data)
         raw_group = self.data.create_group('raw_data')
         for axis_name, axis_values in zip(self.axes_names, self.scan_axes):
             self.data.create_dataset(axis_name, data=axis_values)
-        for i in xrange(self.num_spectrometers):
+        for i in range(self.num_spectrometers):
             suffix = self._suffix(i)
             spectrometer = self.spectrometer.spectrometers[i]\
                 if isinstance(self.spectrometer, Spectrometers) else self.spectrometer
@@ -140,7 +140,7 @@ class HyperspectralScan(GridScanQt, ScanningExperimentHDF5):
 
     def set_latest_view(self, *indices):
         view_data = []
-        for i in xrange(self.num_spectrometers):
+        for i in range(self.num_spectrometers):
             suffix = self._suffix(i)
             spectrometer = self.spectrometer.spectrometers[i]\
                 if isinstance(self.spectrometer, Spectrometers) else self.spectrometer
@@ -216,7 +216,7 @@ class HyperspectralScan(GridScanQt, ScanningExperimentHDF5):
         else:
             data = self.request_data()
         if data is not False:
-            grouped_data = [data[i:i+3] for i in xrange(0,len(data),3)]
+            grouped_data = [data[i:i+3] for i in range(0,len(data),3)]
             colours = ['r', 'b', 'g']
             for i, data_group in enumerate(grouped_data):
                 img, wavelengths, spectrum = data_group
@@ -267,7 +267,7 @@ class HyperspectralScan(GridScanQt, ScanningExperimentHDF5):
 
     @estimated_step_time.setter
     def estimated_step_time(self, value):
-        print value
+        print(value)
 
     def get_qt_ui(self):
         return HyperspectralScanUI(self)
@@ -340,7 +340,7 @@ class HyperspectralScanUI(QtWidgets.QWidget, UiTools):
             self.grid_scanner.description = self.scan_description.toPlainText().encode('utf8')
 
     def select_stage(self, name):
-        print name
+        print(name)
 
     def on_click(self):
         sender = self.sender()
@@ -356,7 +356,7 @@ class HyperspectralScanUI(QtWidgets.QWidget, UiTools):
             pass
         elif sender == self.open_browser:
             if self.grid_scanner.f is not None:
-                print self.grid_scanner.f
+                print(self.grid_scanner.f)
                 self.browser = HDF5Browser(self.grid_scanner.f)
                 self.browser.show()
 
@@ -376,7 +376,7 @@ class HyperspectralScanUI(QtWidgets.QWidget, UiTools):
         :param kwargs:
         :return:
         """
-        print self.view_wavelength.text()
+        print(self.view_wavelength.text())
         value = int(self.view_wavelength.text())
         # self.wavelength_range.valueChanged[int].emit(value)
         self.wavelength_range.setValue(value)

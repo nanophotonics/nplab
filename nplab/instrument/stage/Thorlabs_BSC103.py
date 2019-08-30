@@ -23,7 +23,7 @@ if __name__ == "__main__":
 	t = Thorlabs_BSC103("/dev/ttyUSB0")
 	
 	formated_message = bytearray(struct.pack('BBBBBB', 0x23,0x02, 0x01, 0x00,0x11, 0x01))
-	print formated_message
+	print(formated_message)
 	# print t.query(message_id = msg_id,destination_id="motherboard")
 	t.ser.write(formated_message)
 	# print t.get_hardware_info(destination_id="motherboard")	

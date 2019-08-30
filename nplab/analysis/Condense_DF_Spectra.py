@@ -9,7 +9,7 @@ Output (summary) is directly compatible with Igor (Bart de Nijs) and Python (Cha
 """
 
 if __name__ == '__main__':
-    print 'Importing modules'
+    print('Importing modules')
 
 import os
 import re
@@ -20,8 +20,8 @@ import time
 from scipy.signal import butter, filtfilt
 
 if __name__ == '__main__':
-    print 'Modules imported\n'
-    print 'Initialising...'
+    print('Modules imported\n')
+    print('Initialising...')
 
 def findH5File(rootDir, mostRecent = True, nameFormat = 'date'):
     '''
@@ -46,7 +46,7 @@ def findH5File(rootDir, mostRecent = True, nameFormat = 'date'):
                          and (i.endswith('.h5') or i.endswith('.hdf5'))],
                         key = lambda i: os.path.getmtime(i))[n]
 
-    print '\nH5 file %s found' % h5File
+    print('\nH5 file %s found' % h5File)
 
     return h5File
 
@@ -54,34 +54,34 @@ def createOutputFile(filename):
 
     '''Auto-increments new filename if file exists. Outputs name of file to be created as a string'''
 
-    print '\nCreating output file...'
+    print('\nCreating output file...')
 
     outputFile = '%s.h5' % filename
 
     if outputFile in os.listdir('.'):
-        print '\n%s already exists' % outputFile
+        print('\n%s already exists' % outputFile)
         n = 0
         outputFile = '%s_%s.h5' % (filename, n)
 
         while outputFile in os.listdir('.'):
-            print '%s already exists' % outputFile
+            print('%s already exists' % outputFile)
             n += 1
             outputFile = '%s_%s.h5' % (filename, n)
 
-    print '\tOutput file %s created' % outputFile
+    print('\tOutput file %s created' % outputFile)
 
     return outputFile
 
 def printEnd():
-    print '%s%s%sv gud' % ('\t' * randint(0, 12), '\n' * randint(0, 5), ' ' * randint(0, 4))
-    print '%s%swow' % ('\n' * randint(2, 5), ' ' * randint(5, 55))
-    print '%s%ssuch python' % ('\n' * randint(0, 5), ' ' * randint(0, 55))
-    print '%s%swow' % ('\n' * randint(2, 5), ' ' * randint(5, 55))
-    print '%s%smany spectra' % ('\n' * randint(0, 5), ' ' * randint(10, 55))
-    print '%s%swow' % ('\n' * randint(2, 5), ' ' * randint(5, 55))
-    print '%s%smuch calculation' % ('\n' * randint(0, 5), ' ' * randint(8, 55))
-    print '%s%swow' % ('\n' * randint(2, 5), ' ' * randint(5, 55))
-    print '\n' * randint(0, 7)
+    print('%s%s%sv gud' % ('\t' * randint(0, 12), '\n' * randint(0, 5), ' ' * randint(0, 4)))
+    print('%s%swow' % ('\n' * randint(2, 5), ' ' * randint(5, 55)))
+    print('%s%ssuch python' % ('\n' * randint(0, 5), ' ' * randint(0, 55)))
+    print('%s%swow' % ('\n' * randint(2, 5), ' ' * randint(5, 55)))
+    print('%s%smany spectra' % ('\n' * randint(0, 5), ' ' * randint(10, 55)))
+    print('%s%swow' % ('\n' * randint(2, 5), ' ' * randint(5, 55)))
+    print('%s%smuch calculation' % ('\n' * randint(0, 5), ' ' * randint(8, 55)))
+    print('%s%swow' % ('\n' * randint(2, 5), ' ' * randint(5, 55)))
+    print('\n' * randint(0, 7))
 
 def detectMinima(array):
     '''
@@ -93,7 +93,7 @@ def detectMinima(array):
     if (len(array) < 3):
         return mIndices
 
-    neutral, rising, falling = range(3)
+    neutral, rising, falling = list(range(3))
 
     def getState(a, b):
         if a < b: return rising
@@ -140,7 +140,7 @@ def checkCentering(zScan):
         scanMaxsSmooth = butterLowpassFiltFilt(scanMaxs, cutoff = 1500, fs = fs)
         maxWlIndices = detectMinima(-scanMaxsSmooth) + 68
 
-    maxWlIndices = np.array([range(i - 2, i + 3) for i in maxWlIndices]).flatten()
+    maxWlIndices = np.array([list(range(i - 2, i + 3)) for i in maxWlIndices]).flatten()
     #adds a few either side of each peak for luck
 
     brightScansRaw = np.array([scan[1:] for scan in zScanTransposed[maxWlIndices]])
@@ -212,9 +212,9 @@ def extractAllSpectra(rootDir, returnIndividual = False, dodgyThreshold = 0.4, s
     try:
         inputFile = findH5File(rootDir, nameFormat = 'date')
     except:
-        print 'File not found'
+        print('File not found')
 
-    print 'About to extract data from %s' % inputFile
+    print('About to extract data from %s' % inputFile)
     outputFile = createOutputFile('summary')
 
     with h5py.File(inputFile, 'a') as ipf:
@@ -230,8 +230,8 @@ def extractAllSpectra(rootDir, returnIndividual = False, dodgyThreshold = 0.4, s
                 fileType = 'pre-2018'
 
             except Exception as e:
-                print e
-                print 'File format not recognised'
+                print(e)
+                print('File format not recognised')
                 return
 
         with h5py.File(outputFile, 'a') as opf:
@@ -251,8 +251,8 @@ def extractAllSpectra(rootDir, returnIndividual = False, dodgyThreshold = 0.4, s
                 gScanFormat = 'ParticleScannerScan_'
                 gParticleFormat = 'Particle_'
 
-            allScans = sorted([groupName for groupName in ipf.keys() if groupName.startswith(gScanFormat)],
-                              key = lambda groupName: len(ipf[groupName].keys()))[::-1]
+            allScans = sorted([groupName for groupName in list(ipf.keys()) if groupName.startswith(gScanFormat)],
+                              key = lambda groupName: len(list(ipf[groupName].keys())))[::-1]
 
             for n, scanName in enumerate(allScans):
 
@@ -262,7 +262,7 @@ def extractAllSpectra(rootDir, returnIndividual = False, dodgyThreshold = 0.4, s
                 if fileType == '2018':
                     dParticleFormat = 'alinger.z_scan_%s' % n
 
-                nummers = range(10, 101, 10)
+                nummers = list(range(10, 101, 10))
                 scanStart = time.time()
 
                 dodgyParticles = []
@@ -276,11 +276,11 @@ def extractAllSpectra(rootDir, returnIndividual = False, dodgyThreshold = 0.4, s
                 spectra = []
                 attrs = {}
                 scan = ipf[scanName]
-                particleGroups = sorted([groupName for groupName in scan.keys() if groupName.startswith(gParticleFormat)],
+                particleGroups = sorted([groupName for groupName in list(scan.keys()) if groupName.startswith(gParticleFormat)],
                                 key = lambda groupName: int(groupName.split('_')[-1]))
 
-                print '%s particles found in %s' % (len(particleGroups), scanName)
-                print '\n0% complete'
+                print('%s particles found in %s' % (len(particleGroups), scanName))
+                print('\n0% complete')
 
                 if finish == 0:
                     particleGroups = particleGroups[start:]
@@ -296,7 +296,7 @@ def extractAllSpectra(rootDir, returnIndividual = False, dodgyThreshold = 0.4, s
                         currentTime = time.time() - scanStart
                         mins = int(currentTime / 60)
                         secs = (np.round((currentTime % 60)*100))/100
-                        print '%s%% (%s particles) complete in %s min %s sec' % (nummers[0], nn, mins, secs)
+                        print('%s%% (%s particles) complete in %s min %s sec' % (nummers[0], nn, mins, secs))
                         nummers = nummers[1:]
 
                     particleGroup = scan[groupName]
@@ -305,12 +305,12 @@ def extractAllSpectra(rootDir, returnIndividual = False, dodgyThreshold = 0.4, s
                         zScan = particleGroup[dParticleFormat]
 
                     except:
-                        print 'Z-Stack not found in %s' % (groupName)
+                        print('Z-Stack not found in %s' % (groupName))
                         continue
 
                     if referenced == False:
 
-                        for key in zScan.attrs.keys():
+                        for key in list(zScan.attrs.keys()):
                             attrs[key] = zScan.attrs[key]
 
                         x = zScan.attrs['wavelengths']
@@ -332,10 +332,10 @@ def extractAllSpectra(rootDir, returnIndividual = False, dodgyThreshold = 0.4, s
                         dodgyCount += 1
 
                         if 0 < dodgyCount < 50:
-                            print 'Particle %s not centred properly or too close to another' % nn
+                            print('Particle %s not centred properly or too close to another' % nn)
 
                         elif dodgyCount == 50:
-                            print '\nMore than 50 dodgy Z scans found. I\'ll stop clogging up your screen. Assume there are more.\n'
+                            print('\nMore than 50 dodgy Z scans found. I\'ll stop clogging up your screen. Assume there are more.\n')
 
                     if returnIndividual == True:
                         gSpectrum = gIndScan.create_dataset('Spectrum %s' % nn, data = y)
@@ -347,12 +347,12 @@ def extractAllSpectra(rootDir, returnIndividual = False, dodgyThreshold = 0.4, s
                 currentTime = time.time() - scanStart
                 mins = int(currentTime / 60)
                 secs = (np.round((currentTime % 60)*100))/100
-                print '100%% (%s particles) complete in %s min %s sec' % (len(particleGroups), mins, secs)
+                print('100%% (%s particles) complete in %s min %s sec' % (len(particleGroups), mins, secs))
                 percentDefocused = 100 * len(dodgyParticles) / len(spectra)
 
                 if percentDefocused / 100 > dodgyThreshold:
                     alignment = 'Poor'
-                    print '\n\n***Warning: lots of messy spectra (~%s%%). Data may not be reliable. Check nanoparticle alignment***\n' % percentDefocused
+                    print('\n\n***Warning: lots of messy spectra (~%s%%). Data may not be reliable. Check nanoparticle alignment***\n' % percentDefocused)
 
                 else:
                     alignment = 'Good'
@@ -363,7 +363,7 @@ def extractAllSpectra(rootDir, returnIndividual = False, dodgyThreshold = 0.4, s
                 dScan.attrs['Misaligned particle numbers'] = dodgyParticles
                 dScan.attrs['%% particles misaligned'] = percentDefocused
 
-                for key in attrs.keys():
+                for key in list(attrs.keys()):
                     dScan.attrs[key] = attrs[key]
 
     return outputFile #String of output file name for easy identification later
@@ -375,5 +375,5 @@ if __name__ == '__main__':
 
     extractAllSpectra(os.getcwd(), returnIndividual = True, start = start, finish = finish)
 
-    print '\nAll done'
+    print('\nAll done')
     printEnd()

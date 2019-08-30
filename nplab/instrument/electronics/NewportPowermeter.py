@@ -184,8 +184,8 @@ if __name__ == '__main__':
     nd = NewportPowermeter(0xCEC7)
     nd._logger.setLevel("DEBUG")
 
-    print nd.get_instrument_list()
-    print nd.wavelength
-    print nd.power
-    print nd.wavelength
-    print nd.power
+    print(nd.get_instrument_list())
+    print(nd.wavelength)
+    print(nd.power)
+    print(nd.wavelength)
+    print(nd.power)

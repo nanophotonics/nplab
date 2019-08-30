@@ -70,7 +70,7 @@ if __name__ == "__main__":
 
 	fig, ax = plt.subplots(1)
 	plt.plot(xs, ys, label="True signal")
-	plt.plot(xs, ys_corrupted, label="Noisy signal");print ys_corrupted.shape,type(ys_corrupted)
+	plt.plot(xs, ys_corrupted, label="Noisy signal");print(ys_corrupted.shape,type(ys_corrupted))
 	for weight in [1,10,100]:
 		ys_denoised,_,_ = convex_smooth(signal = ys_corrupted, weight = weight, objective_type="quadratic",normalise = True)
 		plt.plot(xs, ys_denoised, label="Recovered signal [Weight:{}]".format(weight))

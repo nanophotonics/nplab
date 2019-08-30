@@ -19,7 +19,7 @@ class AttributeDict(dict):
 
     def copy_arrays(self):
         """Replace any numpy.ndarray in the dict with a copy, to break any unintentional links."""
-        for k in self.keys():
+        for k in list(self.keys()):
             if isinstance(self[k], np.ndarray):
                 self[k] = np.copy(self[k])
         

@@ -5,7 +5,7 @@ Created on Fri Nov 02 14:01:17 2018
 @author: car72
 """
 if __name__ == '__main__':
-    print 'Importing modules...'
+    print('Importing modules...')
 
 import h5py
 import numpy as np
@@ -19,8 +19,8 @@ import re
 
 if __name__ == '__main__':
     absoluteStartTime = time.time()
-    print '\tModules imported\n'
-    print 'Initialising functions...'
+    print('\tModules imported\n')
+    print('Initialising functions...')
 
 def findH5File(rootDir, mostRecent = True, nameFormat = 'date'):
     '''
@@ -38,10 +38,10 @@ def findH5File(rootDir, mostRecent = True, nameFormat = 'date'):
     if nameFormat == 'date':
 
         if mostRecent == True:
-            print 'Searching for most recent instance of yyyy-mm-dd.h5 or similar...'
+            print('Searching for most recent instance of yyyy-mm-dd.h5 or similar...')
 
         else:
-            print 'Searching for oldest instance of yyyy-mm-dd.h5 or similar...'
+            print('Searching for oldest instance of yyyy-mm-dd.h5 or similar...')
 
         h5File = sorted([i for i in os.listdir('.') if re.match('\d\d\d\d-[01]\d-[0123]\d', i[:10])
                          and (i.endswith('.h5') or i.endswith('.hdf5'))],
@@ -50,16 +50,16 @@ def findH5File(rootDir, mostRecent = True, nameFormat = 'date'):
     else:
 
         if mostRecent == True:
-            print 'Searching for most recent instance of %s.h5 or similar...' % nameFormat
+            print('Searching for most recent instance of %s.h5 or similar...' % nameFormat)
 
         else:
-            print 'Searching for oldest instance of %s.h5 or similar...' % nameFormat
+            print('Searching for oldest instance of %s.h5 or similar...' % nameFormat)
 
         h5File = sorted([i for i in os.listdir('.') if i.startswith(nameFormat)
                          and (i.endswith('.h5') or i.endswith('.hdf5'))],
                         key = lambda i: os.path.getmtime(i))[n]
 
-    print '\tH5 file %s found\n' % h5File
+    print('\tH5 file %s found\n' % h5File)
 
     return h5File
 
@@ -157,22 +157,22 @@ def retrieveData(directory, summaryNameFormat = 'summary', first = 0, last = 0, 
     summaryFile = findH5File(directory, nameFormat = summaryNameFormat)
 
     if attrsOnly == False:
-        print 'Retrieving data...'
+        print('Retrieving data...')
 
     else:
-        print 'Retrieving sample attributes...'
+        print('Retrieving sample attributes...')
 
     with h5py.File(summaryFile) as f:
 
-        mainDatasetName = sorted([scan for scan in f['particleScanSummaries/'].keys()],
+        mainDatasetName = sorted([scan for scan in list(f['particleScanSummaries/'].keys())],
                            key = lambda scan: len(f['particleScanSummaries/'][scan]['spectra']))[-1]
 
         mainDataset = f['particleScanSummaries/'][mainDatasetName]['spectra']
-        summaryAttrs = {key : mainDataset.attrs[key] for key in mainDataset.attrs.keys()}
+        summaryAttrs = {key : mainDataset.attrs[key] for key in list(mainDataset.attrs.keys())}
 
         if attrsOnly == True:
-            print '\tInfo retrieved from %s' % mainDatasetName
-            print '\t\t%s spectra in total\n' % len(mainDataset)
+            print('\tInfo retrieved from %s' % mainDatasetName)
+            print('\t\t%s spectra in total\n' % len(mainDataset))
             return summaryAttrs
 
         if last == 0:
@@ -182,9 +182,9 @@ def retrieveData(directory, summaryNameFormat = 'summary', first = 0, last = 0, 
         wavelengths = summaryAttrs['wavelengths'][()]
         nSpec = len(spectra)
 
-        print '\t%s spectra retrieved from %s\n' % (nSpec, mainDatasetName)
+        print('\t%s spectra retrieved from %s\n' % (nSpec, mainDatasetName))
 
-        print 'Removing cosmic ray events...'
+        print('Removing cosmic ray events...')
 
         prepStart = time.time()
 
@@ -202,9 +202,9 @@ def retrieveData(directory, summaryNameFormat = 'summary', first = 0, last = 0, 
         prepEnd = time.time()
         prepTime = prepEnd - prepStart
 
-        print '\tAll cosmic rays removed in %.2f seconds\n' % (prepTime)
+        print('\tAll cosmic rays removed in %.2f seconds\n' % (prepTime))
 
-        print 'Cleaning up NaN values...'
+        print('Cleaning up NaN values...')
 
         prepStart = time.time()
 
@@ -213,7 +213,7 @@ def retrieveData(directory, summaryNameFormat = 'summary', first = 0, last = 0, 
         prepEnd = time.time()
         prepTime = prepEnd - prepStart
 
-        print '\tAll spectra cleared of NaNs in %.2f seconds\n' % (prepTime)
+        print('\tAll spectra cleared of NaNs in %.2f seconds\n' % (prepTime))
 
         return wavelengths, spectra, summaryAttrs
 
@@ -259,7 +259,7 @@ def plotStackedMap(x, yData, imgName = 'Stack', plotTitle = 'Stack', closeFigure
     If init == False, image will be saved in current directory
     '''
     if init == True:
-        print 'Plotting initial stacked map...'
+        print('Plotting initial stacked map...')
         stackStartTime = time.time()
 
     elif init == False:
@@ -269,7 +269,7 @@ def plotStackedMap(x, yData, imgName = 'Stack', plotTitle = 'Stack', closeFigure
 
     try:
         xStack = x # Wavelength range
-        yStack = range(len(yData)) # Number of spectra
+        yStack = list(range(len(yData))) # Number of spectra
         zStack = np.vstack(yData) # Spectral data
 
         fig = plt.figure(figsize = (9, 7))
@@ -304,10 +304,10 @@ def plotStackedMap(x, yData, imgName = 'Stack', plotTitle = 'Stack', closeFigure
             stackEndTime = time.time()
             timeElapsed = stackEndTime - stackStartTime
 
-            print '\tInitial stack plotted in %s seconds\n' % timeElapsed
+            print('\tInitial stack plotted in %s seconds\n' % timeElapsed)
 
     except Exception as e:
-        print '\tPlotting of %s failed because %s' % (imgName, str(e))
+        print('\tPlotting of %s failed because %s' % (imgName, str(e)))
 
 def plotInitStack(x, yData, imgName = 'Initial Stack', closeFigures = True):
 
@@ -323,21 +323,21 @@ def createOutputFile(filename):
 
     '''Auto-increments new filename if file exists'''
 
-    print 'Creating output file...'
+    print('Creating output file...')
 
     outputFile = '%s.h5' % filename
 
     if outputFile in os.listdir('.'):
-        print '\t%s already exists' % outputFile
+        print('\t%s already exists' % outputFile)
         n = 0
         outputFile = '%s_%s.h5' % (filename, n)
 
         while outputFile in os.listdir('.'):
-            print '\t%s already exists' % outputFile
+            print('\t%s already exists' % outputFile)
             n += 1
             outputFile = '%s_%s.h5' % (filename, n)
 
-    print '\tOutput file %s created\n' % outputFile
+    print('\tOutput file %s created\n' % outputFile)
     return outputFile
 
 def butterLowpassFiltFilt(data, cutoff = 1500, fs = 60000, order=5):
@@ -349,12 +349,12 @@ def butterLowpassFiltFilt(data, cutoff = 1500, fs = 60000, order=5):
     return yFiltered
 
 def printEnd():
-    print '%s%s%sv gud' % ('\t' * randint(0, 12), '\n' * randint(0, 5), ' ' * randint(0, 4))
-    print '%s%ssuch python' % ('\n' * randint(0, 5), ' ' * randint(0, 55))
-    print '%s%smany spectra' % ('\n' * randint(0, 5), ' ' * randint(10, 55))
-    print '%s%smuch fitting' % ('\n' * randint(0, 5), ' ' * randint(8, 55))
-    print '%s%swow' % ('\n' * randint(2, 5), ' ' * randint(5, 55))
-    print '\n' * randint(0, 7)
+    print('%s%s%sv gud' % ('\t' * randint(0, 12), '\n' * randint(0, 5), ' ' * randint(0, 4)))
+    print('%s%ssuch python' % ('\n' * randint(0, 5), ' ' * randint(0, 55)))
+    print('%s%smany spectra' % ('\n' * randint(0, 5), ' ' * randint(10, 55)))
+    print('%s%smuch fitting' % ('\n' * randint(0, 5), ' ' * randint(8, 55)))
+    print('%s%swow' % ('\n' * randint(2, 5), ' ' * randint(5, 55)))
+    print('\n' * randint(0, 7))
 
 def detectMinima(array):
     '''
@@ -366,7 +366,7 @@ def detectMinima(array):
     if (len(array) < 3):
         return mIndices
 
-    neutral, rising, falling = range(3)
+    neutral, rising, falling = list(range(3))
 
     def getState(a, b):
         if a < b: return rising
@@ -407,7 +407,7 @@ def testIfNpom(x, y, lower = 0.05, upper = 2.5, NpomThreshold = 1.5):
         yTrunc -= yTrunc.min()
 
     except Exception as e:
-        print 'NPoM test failed because %s' % e
+        print('NPoM test failed because %s' % e)
         return False
 
     '''Trial the first: do you have a reasonable signal?'''
@@ -488,7 +488,7 @@ def testIfDouble(x, y, doublesThreshold = 2, lowerLimit = 600, plot = False, rai
                 pass
 
             else:
-                print e
+                print(e)
                 return False
 
         maxsSortedY = sorted(maxs, key = lambda maximum: maximum[1])
@@ -571,7 +571,7 @@ def normToTrans(x, y, transNorm = 1, troughNorm = 0.61, transInit = 533):
     if len(mIndices) > 0:
         yMins = ySmooth[mIndices]
         xMins = xTrunc[mIndices]
-        mins = np.array(zip(*[xMins, yMins]))#Corresponding (x, y) values
+        mins = np.array(list(zip(*[xMins, yMins])))#Corresponding (x, y) values
 
         d1 = centDiff(xTrunc, ySmooth)
         d2 = centDiff(xTrunc, d1)
@@ -586,12 +586,12 @@ def normToTrans(x, y, transNorm = 1, troughNorm = 0.61, transInit = 533):
             d2Maxdices = detectMinima(-d2)
             yMins = ySmooth[d2Maxdices]
             xMins = xTrunc[d2Maxdices]
-            mins = np.array(zip(*[xMins, yMins]))
+            mins = np.array(list(zip(*[xMins, yMins])))
 
             initMins = [minimum for minimum in mins if minimum[0] < transWl]
 
-        initMinWls = np.array(zip(*mins)[0])
-        initMinHeights = np.array(zip(*mins)[1])
+        initMinWls = np.array(list(zip(*mins))[0])
+        initMinHeights = np.array(list(zip(*mins))[1])
         initMindex = abs(initMinWls - transInit).argmin()
         initMinWl = initMinWls[initMindex]
 
@@ -915,18 +915,18 @@ def analyseNpomSpectrum(x, y, cutoff = 1500, fs = 60000, doublesThreshold = 2, c
 def plotAllStacks(outputFileName, fullSort = False, closeFigures = True, vmin = 0, vmax = 6):
     stackStart = time.time()
 
-    print 'Plotting stacked spectral maps...'
+    print('Plotting stacked spectral maps...')
 
     with h5py.File(outputFileName) as opf:
         date = opf['All Spectra (Raw)'].attrs['Date measured']
 
-        for groupName in opf['NPoMs'].keys():
+        for groupName in list(opf['NPoMs'].keys()):
             gSpectra = opf['NPoMs/%s/Normalised' % groupName]
-            spectraNames = sorted(gSpectra.keys(), key = lambda spectrumName: int(spectrumName[9:]))
+            spectraNames = sorted(list(gSpectra.keys()), key = lambda spectrumName: int(spectrumName[9:]))
             try:
                 x = gSpectra[spectraNames[0]].attrs['wavelengths']
             except:
-                print 'No data for %s' % groupName
+                print('No data for %s' % groupName)
                 continue
             yData = [gSpectra[spectrumName][()] for spectrumName in spectraNames]
 
@@ -945,15 +945,15 @@ def plotAllStacks(outputFileName, fullSort = False, closeFigures = True, vmin = 
 
     stackEnd = time.time()
     timeElapsed = stackEnd - stackStart
-    print '\tStacks plotted in %s seconds\n' % timeElapsed
+    print('\tStacks plotted in %s seconds\n' % timeElapsed)
 
 def histyFit(frequencies, bins):
 
     gaussMod = GaussianModel()
     pars = gaussMod.guess(frequencies, x = bins)
     out = gaussMod.fit(frequencies, pars, x = bins)#Performs the fit, based on initial guesses
-    print '\t\tAverage peakpos: %s +/- %s nm' % (out.params['center'].value, out.params['center'].stderr)
-    print '\t\tFWHM: %s nm\n' % out.params['fwhm'].value
+    print('\t\tAverage peakpos: %s +/- %s nm' % (out.params['center'].value, out.params['center'].stderr))
+    print('\t\tFWHM: %s nm\n' % out.params['fwhm'].value)
     #print out.fit_report()
 
     resonance = out.params['center'].value
@@ -976,22 +976,22 @@ def plotHistogram(outputFileName, npomType = 'All NPoMs', startWl = 450, endWl =
     if 'Histograms' not in os.listdir('.'):
         os.mkdir('Histograms')
 
-    print 'Preparing to plot histogram...'
-    print '\tFilter: %s' % npomType
+    print('Preparing to plot histogram...')
+    print('\tFilter: %s' % npomType)
 
     with h5py.File(outputFileName) as opf:
         date = opf['All Spectra (Raw)'].attrs['Date measured']
         gSpectra = opf['NPoMs/%s/Normalised' % npomType]
         gSpecRaw = opf['NPoMs/%s/Raw' % npomType]
         #print gSpectra.keys()
-        spectraNames = sorted([i for i in gSpectra.keys()], key = lambda spectrumName: int(spectrumName[9:]))
+        spectraNames = sorted([i for i in list(gSpectra.keys())], key = lambda spectrumName: int(spectrumName[9:]))
         #print spectraNames
         #print gSpectra[spectraNames[0]].attrs['wavelengths'][()]
 
         x = gSpectra[spectraNames[0]].attrs['wavelengths']
         #print 'X found'
 
-        print '\t(%s spectra)' % len(spectraNames)
+        print('\t(%s spectra)' % len(spectraNames))
 
         binSize = (endWl - startWl) / binNumber
         bins = np.linspace(startWl, endWl, num = binNumber)
@@ -1001,11 +1001,11 @@ def plotHistogram(outputFileName, npomType = 'All NPoMs', startWl = 450, endWl =
         yDataRawBinned = [np.zeros(len(x)) for f in frequencies]
         binnedSpectraList = {binStart : [] for binStart in bins}
 
-        print '\tGathering histogram data...'
+        print('\tGathering histogram data...')
 
-        nummers = range(5, 101, 5)
+        nummers = list(range(5, 101, 5))
         totalFitStart = time.time()
-        print '\t\t0% complete'
+        print('\t\t0% complete')
 
         for n, spectrumName in enumerate(spectraNames):
             dSpectrum = gSpectra[spectrumName]
@@ -1014,7 +1014,7 @@ def plotHistogram(outputFileName, npomType = 'All NPoMs', startWl = 450, endWl =
                 currentTime = time.time() - totalFitStart
                 mins = int(currentTime / 60)
                 secs = (np.round((currentTime % 60)*100))/100
-                print '\t\t%s%% (%s min %s sec)' % (nummers[0], mins, secs)
+                print('\t\t%s%% (%s min %s sec)' % (nummers[0], mins, secs))
                 nummers = nummers[1:]
 
             for nn, binStart in enumerate(bins):
@@ -1047,13 +1047,13 @@ def plotHistogram(outputFileName, npomType = 'All NPoMs', startWl = 450, endWl =
         else:
             minBin = max(frequencies)/minBinFactor
 
-        print '\tPerforming Gaussian fit'
+        print('\tPerforming Gaussian fit')
 
         try:
             resonance, stderr, fwhm, sigma = histyFit(frequencies, bins)
 
         except Exception as e:
-            print e
+            print(e)
             resonance = 'N/A'
             stderr = 'N/A'
             fwhm = 'N/A'
@@ -1208,7 +1208,7 @@ def plotAllHists(outputFileName, closeFigures = True, irThreshold = 8, minBinFac
 
     histPlotEnd = time.time()
     histTimeElapsed = histPlotEnd - histPlotStart
-    print '\tAll histograa plotted in %.02f seconds\n' % histTimeElapsed
+    print('\tAll histograa plotted in %.02f seconds\n' % histTimeElapsed)
 
 def plotIntensityRatios(outputFileName, plotName = 'All NPoMs', dataType = 'Raw', closeFigures = False, plot = True):
 
@@ -1216,16 +1216,16 @@ def plotIntensityRatios(outputFileName, plotName = 'All NPoMs', dataType = 'Raw'
         os.mkdir('Intensity ratios')
 
     if plot == True:
-        print 'Plotting intensity ratios for %s, %s...' % (plotName, dataType)
+        print('Plotting intensity ratios for %s, %s...' % (plotName, dataType))
 
     else:
-        print 'Gathering intensity ratiosfor %s, %s...' % (plotName, dataType)
+        print('Gathering intensity ratiosfor %s, %s...' % (plotName, dataType))
 
     with h5py.File(outputFileName) as opf:
         date = opf['All Spectra (Raw)'].attrs['Date measured']
         gSpectra = opf['NPoMs/%s/%s' % (plotName, dataType)]
         dataType = dataType.lower()
-        spectraNames = sorted(gSpectra.keys(), key = lambda spectrumName: int(spectrumName[9:]))
+        spectraNames = sorted(list(gSpectra.keys()), key = lambda spectrumName: int(spectrumName[9:]))
 
         x = np.array([gSpectra[spectrumName].attrs['Coupled mode wavelength'] for spectrumName in spectraNames])
         y = np.array([gSpectra[spectrumName].attrs['Intensity ratio (%s)' % dataType] for spectrumName in spectraNames])
@@ -1236,8 +1236,8 @@ def plotIntensityRatios(outputFileName, plotName = 'All NPoMs', dataType = 'Raw'
             sns.set_style('white')
 
             xy = np.array([[x[n], i] for n, i in enumerate(y) if 0 < i < 10 and x[n] < 848])
-            x = np.array(zip(*xy)[0])
-            y = np.array(zip(*xy)[1])
+            x = np.array(list(zip(*xy))[0])
+            y = np.array(list(zip(*xy))[1])
 
             fig, ax1 = plt.subplots(figsize = (9, 9))
             cmap = plt.get_cmap('Greys')
@@ -1270,12 +1270,12 @@ def plotIntensityRatios(outputFileName, plotName = 'All NPoMs', dataType = 'Raw'
                 plt.plot([0], [0], color = 'k', label = '1 Layer')
 
             except Exception as e:
-                print 'Intensity ratio plot failed because %s' % str(e)
+                print('Intensity ratio plot failed because %s' % str(e))
 
                 if len(x) < 100:
-                    print '\t(probably because dataset was too small)'
+                    print('\t(probably because dataset was too small)')
 
-                print '\nAttempting simple scatter plot instead...'
+                print('\nAttempting simple scatter plot instead...')
 
             ax1.set_ylim(1, 7)
             ax1.set_ylabel('Intensity Ratio', fontsize = 18)
@@ -1291,20 +1291,20 @@ def plotIntensityRatios(outputFileName, plotName = 'All NPoMs', dataType = 'Raw'
             if closeFigures == True:
                 plt.close('all')
 
-            print '\tIntensity ratios plotted\n'
+            print('\tIntensity ratios plotted\n')
 
         else:
-            print '\tIntensity ratios gathered\n'
+            print('\tIntensity ratios gathered\n')
 
     return x, y
 
 def plotAllIntensityRatios(outputFileName, closeFigures = True, plot = True):
 
-    print 'Plotting all intensity ratios...\n'
+    print('Plotting all intensity ratios...\n')
     irStart = time.time()
 
     with h5py.File(outputFileName) as opf:
-        plotNames = opf['NPoMs'].keys()
+        plotNames = list(opf['NPoMs'].keys())
 
     for plotName in plotNames:
         for dataType in ['Raw', 'Normalised']:
@@ -1313,7 +1313,7 @@ def plotAllIntensityRatios(outputFileName, closeFigures = True, plot = True):
     irEnd = time.time()
     timeElapsed = irEnd - irStart
 
-    print '\tAll intensity ratios plotted in %s seconds\n' % timeElapsed
+    print('\tAll intensity ratios plotted in %s seconds\n' % timeElapsed)
 
 def visualiseIntensityRatios(outputFileName):
 
@@ -1322,12 +1322,12 @@ def visualiseIntensityRatios(outputFileName):
 
     irVisStart = time.time()
 
-    print 'Visualising intensity ratios for individual spectra...'
+    print('Visualising intensity ratios for individual spectra...')
 
     with h5py.File(outputFileName) as opf:
         gNPoMs = opf['NPoMs/All NPoMs/Raw']
 
-        if 'Intensity ratio measurements' in opf['NPoMs/All NPoMs'].keys():
+        if 'Intensity ratio measurements' in list(opf['NPoMs/All NPoMs'].keys()):
             overWrite = True
             gIrVis = opf['NPoMs/All NPoMs/Intensity ratio measurements']
 
@@ -1335,7 +1335,7 @@ def visualiseIntensityRatios(outputFileName):
             overWrite = False
             gIrVis = opf['NPoMs/All NPoMs'].create_group('Intensity ratio measurements')
 
-        spectraNames = sorted(gNPoMs.keys(), key = lambda spectrumName: int(spectrumName[9:]))
+        spectraNames = sorted(list(gNPoMs.keys()), key = lambda spectrumName: int(spectrumName[9:]))
 
         for n, spectrumName in enumerate(spectraNames):
             spectrum = gNPoMs[spectrumName]
@@ -1387,30 +1387,30 @@ def visualiseIntensityRatios(outputFileName):
 
     irVisEnd = time.time()
     timeElapsed = irVisEnd - irVisStart
-    print '\tIntensity ratios visualised in %s seconds\n' % timeElapsed
+    print('\tIntensity ratios visualised in %s seconds\n' % timeElapsed)
 
 def calcGroupAttrAvgs(group):
     '''group must be instance of (open) hdf5 group object'''
 
-    spectraNames = sorted([spectrumName for spectrumName in group.keys() if spectrumName != 'Sum'],
+    spectraNames = sorted([spectrumName for spectrumName in list(group.keys()) if spectrumName != 'Sum'],
                                            key = lambda spectrumName: int(spectrumName[9:]))
     attrAvgs = {}
 
     for spectrumName in spectraNames:
         spectrum = group[spectrumName]
 
-        for attrName in spectrum.attrs.keys():
+        for attrName in list(spectrum.attrs.keys()):
             attrVal = spectrum.attrs[attrName]
 
             if type(attrVal) in [int, float]:
 
-                if attrName in attrAvgs.keys():
+                if attrName in list(attrAvgs.keys()):
                     attrAvgs[attrName].append(attrVal)
 
                 else:
                     attrAvgs[attrName] = [attrVal]
 
-    for attrName in attrAvgs.keys():
+    for attrName in list(attrAvgs.keys()):
         attrAvgs[attrName] = np.average(np.array(attrAvgs[attrName]))
 
     group.attrs.update(attrAvgs)
@@ -1421,12 +1421,12 @@ def calcAllPeakAverages(outputFileName, groupAvgs = True, histAvgs = True, singl
 
     peakAvgStart = time.time()
 
-    print 'Collecting peak averages...'
+    print('Collecting peak averages...')
 
     with h5py.File(outputFileName) as opf:
 
         gNPoMs = opf['NPoMs']
-        npTypes = gNPoMs.keys()
+        npTypes = list(gNPoMs.keys())
 
         for npType in npTypes:
 
@@ -1435,7 +1435,7 @@ def calcAllPeakAverages(outputFileName, groupAvgs = True, histAvgs = True, singl
                 if histAvgs == True:
 
                     histBins = gNPoMs['%s/Histogram data/Binned y data' % npType]
-                    binNames = sorted(histBins.keys(), key = lambda binName: int(binName[4:]))
+                    binNames = sorted(list(histBins.keys()), key = lambda binName: int(binName[4:]))
 
                     if singleBin == False:
 
@@ -1457,21 +1457,21 @@ def calcAllPeakAverages(outputFileName, groupAvgs = True, histAvgs = True, singl
                     calcGroupAttrAvgs(gSpectra)
 
             except Exception as e:
-                print 'PEak data collection failed for %s because %s' % (npType, e)
+                print('PEak data collection failed for %s because %s' % (npType, e))
 
 
     peakAvgEnd = time.time()
     timeElapsed = peakAvgEnd - peakAvgStart
 
-    print '\tPeak averages collected in %s seconds\n' % timeElapsed
+    print('\tPeak averages collected in %s seconds\n' % timeElapsed)
 
 def analyseRepresentative(outputFileName):
-    print 'Collecting representative spectrum info...'
+    print('Collecting representative spectrum info...')
 
     with h5py.File(outputFileName) as opf:
 
         gNPoMs = opf['NPoMs']
-        npTypes = gNPoMs.keys()
+        npTypes = list(gNPoMs.keys())
 
         for npType in npTypes:
 
@@ -1479,18 +1479,18 @@ def analyseRepresentative(outputFileName):
                 gHist = gNPoMs['%s/Histogram data' % npType]
 
             except:
-                print 'Data not found for %s' % npType
+                print('Data not found for %s' % npType)
                 continue
 
             cmPeakPos = gHist.attrs['Average resonance']
             histBins = gHist['Binned y data']
-            binNames = histBins.keys()
+            binNames = list(histBins.keys())
             biggestBinName = binNames[np.array([len(histBins[binName]) for binName in binNames]).argmax()]
             avgBinNames = [binName for binName in binNames if
                            histBins[binName].attrs['Bin start (nm)'] < cmPeakPos < histBins[binName].attrs['Bin end (nm)']]
 
-            print '\t%s' % npType
-            print '\t\tBin with largest population:', biggestBinName
+            print('\t%s' % npType)
+            print('\t\tBin with largest population:', biggestBinName)
 
             for binName in binNames:
 
@@ -1505,12 +1505,12 @@ def analyseRepresentative(outputFileName):
                 except Exception as e:
 
                     if str(e) == 'arrays used as indices must be of integer (or boolean) type':
-                          print '\t\t%s empty; analysis failed' % binName
+                          print('\t\t%s empty; analysis failed' % binName)
 
                     else:
-                        print '\t\t%s analysis failed because %s' % (binName, e)
+                        print('\t\t%s analysis failed because %s' % (binName, e))
 
-            if 'Modal representative spectrum' in gHist.keys():
+            if 'Modal representative spectrum' in list(gHist.keys()):
                 del gHist['Modal representative spectrum']
 
             gHist['Modal representative spectrum'] = histBins[biggestBinName]['Sum']
@@ -1524,13 +1524,13 @@ def analyseRepresentative(outputFileName):
                 else:
                     n = ' %s' % n
 
-                if 'Average representative spectrum%s' % n in gHist.keys():
+                if 'Average representative spectrum%s' % n in list(gHist.keys()):
                     del gHist['Average representative spectrum%s' % n]
 
                 gHist['Average representative spectrum%s' % n] = histBins[binName]['Sum']
                 gHist['Average representative spectrum%s' % n].attrs.update(histBins[binName]['Sum'].attrs)
 
-    print '\n\tRepresentative spectrum info collected\n'
+    print('\n\tRepresentative spectrum info collected\n')
 
 def doStats(outputFileName, closeFigures = True, stacks = True, hist = True, allHists = True, irThreshold = 8, minBinFactor = 5, intensityRatios = False,
             peakAvgs = True, analRep = True):
@@ -1558,7 +1558,7 @@ def fitAllSpectra(x, yData, outputFileName, summaryAttrs = False, first = 0, las
     if last == 0:
         last = len(yData)
 
-    print 'Beginning fit procedure...'
+    print('Beginning fit procedure...')
 
     with h5py.File(outputFileName, 'a') as opf:
         gAllRaw = opf.create_group('All Spectra (Raw)')
@@ -1606,11 +1606,11 @@ def fitAllSpectra(x, yData, outputFileName, summaryAttrs = False, first = 0, las
                 gAlignedNorm = gAligned.create_group('Normalised')
 
         if len(yData) > 2500:
-            print '\tAbout to fit %s spectra. This may take a while...' % len(yData)
+            print('\tAbout to fit %s spectra. This may take a while...' % len(yData))
 
-        nummers = range(5, 101, 5)
+        nummers = list(range(5, 101, 5))
         totalFitStart = time.time()
-        print '\n0% complete'
+        print('\n0% complete')
 
         for n, spectrum in enumerate(yData[first:last]):
             nn = n # Keeps track of our progress through our list of spectra
@@ -1620,7 +1620,7 @@ def fitAllSpectra(x, yData, outputFileName, summaryAttrs = False, first = 0, las
                 currentTime = time.time() - totalFitStart
                 mins = int(currentTime / 60)
                 secs = (np.round((currentTime % 60)*100))/100
-                print '%s%% (%s spectra) analysed in %s min %s sec' % (nummers[0], nn, mins, secs)
+                print('%s%% (%s spectra) analysed in %s min %s sec' % (nummers[0], nn, mins, secs))
                 nummers = nummers[1:]
 
             spectrumName = 'Spectrum %s' % n
@@ -1642,7 +1642,7 @@ def fitAllSpectra(x, yData, outputFileName, summaryAttrs = False, first = 0, las
 
                 except Exception as e:
 
-                    print '%s failed because %s' % (spectrumName, e)
+                    print('%s failed because %s' % (spectrumName, e))
                     gAllRaw[spectrumName].attrs['Failure reason'] = str(e)
                     gAllRaw[spectrumName].attrs['wavelengths'] = x
 
@@ -1662,7 +1662,7 @@ def fitAllSpectra(x, yData, outputFileName, summaryAttrs = False, first = 0, las
                     gMisaligned[spectrumName].attrs.update(gAllRaw[spectrumName].attrs)
 
                 else:
-                    if 'Aligned NPoMs' in gNPoMs.keys() and 'Spectrum %s' % n in gAllNPoMsNorm.keys():
+                    if 'Aligned NPoMs' in list(gNPoMs.keys()) and 'Spectrum %s' % n in list(gAllNPoMsNorm.keys()):
                         gAlignedRaw[spectrumName] = gAllRaw[spectrumName]
                         gAlignedRaw[spectrumName].attrs.update(gAllRaw[spectrumName].attrs)
 
@@ -1721,7 +1721,7 @@ def fitAllSpectra(x, yData, outputFileName, summaryAttrs = False, first = 0, las
     currentTime = time.time() - totalFitStart
     mins = int(currentTime / 60)
     secs = (np.round((currentTime % 60)*100))/100
-    print '100%% (%s spectra) analysed in %s min %s sec\n' % (last, mins, secs)
+    print('100%% (%s spectra) analysed in %s min %s sec\n' % (last, mins, secs))
 
     if stats == True:
         doStats(outputFileName, closeFigures = closeFigures)
@@ -1738,24 +1738,24 @@ def fitAllSpectra(x, yData, outputFileName, summaryAttrs = False, first = 0, las
         gFailed = opf['Failed Spectra']
 
         if len(gFailed) == 0:
-            print '\nFinished in %s min %s sec. Smooth sailing.' % (mins, secs)
+            print('\nFinished in %s min %s sec. Smooth sailing.' % (mins, secs))
 
         elif len(gFailed) == 1:
-            print '\nPhew... finished in %s min %s sec with only %s failure' % (mins, secs, len(gFailed))
+            print('\nPhew... finished in %s min %s sec with only %s failure' % (mins, secs, len(gFailed)))
 
         elif len(gFailed) > len(gAllRaw) * 2:
-            print '\nHmmm... finished in %s min %s sec but with %s failures and only %s successful fits' % (mins, secs, len(gFailed),
-                                                                                                            len(gAllRaw) - len(gFailed))
+            print('\nHmmm... finished in %s min %s sec but with %s failures and only %s successful fits' % (mins, secs, len(gFailed),
+                                                                                                            len(gAllRaw) - len(gFailed)))
         elif mins > 30:
-            print '\nM8 that took ages. %s min %s sec' % (mins, secs)
+            print('\nM8 that took ages. %s min %s sec' % (mins, secs))
 
         else:
-            print '\nPhew... finished in %s min %s sec with only %s failures' % (mins, secs, len(gFailed))
+            print('\nPhew... finished in %s min %s sec with only %s failures' % (mins, secs, len(gFailed)))
 
-        print ''
+        print('')
 
 if __name__ == '__main__':
-    print '\tFunctions initialised'
+    print('\tFunctions initialised')
     x, yData, summaryAttrs = retrieveData(os.getcwd())
     initImg = plotInitStack(x, yData, imgName = 'Initial Stack', closeFigures = True)
     outputFileName = createOutputFile('MultiPeakFitOutput')

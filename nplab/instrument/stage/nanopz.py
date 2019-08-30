@@ -106,13 +106,13 @@ class NanoPZ(si.SerialInstrument,Stage):
         if value <0:
             self._send_command("SL{0}".format(value))
         else:
-            print "The lower Limit must be less than 0, current lower limit = ",self.query("{0}SL?".format(self.controllerNOM))
+            print("The lower Limit must be less than 0, current lower limit = ",self.query("{0}SL?".format(self.controllerNOM)))
             
     def upper_limit(self,value):
         if value >0:
             self._send_command("SR{0}".format(value))
         else:
-            print "The upper Limit must be greater than 0, current upper limit = ",self.query("{0}SR?".format(self.controllerNOM))
+            print("The upper Limit must be greater than 0, current upper limit = ",self.query("{0}SR?".format(self.controllerNOM)))
 
 
         

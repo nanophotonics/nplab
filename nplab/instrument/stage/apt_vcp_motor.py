@@ -116,14 +116,14 @@ class APT_VCP_motor(APT_VCP, Stage):
     def _waitFinishMove(self,axis = None,debug=False):
         """A simple function to force movement to block the console """
         if axis == None:
-            destination_ids = self.destination.keys()
+            destination_ids = list(self.destination.keys())
         else:
             destination_ids = [axis]
         for dest in destination_ids:
             status = self.get_status_update(axis = dest)
             if debug > 0 or DEBUG == True:
-                print status
-            while any(map(lambda x: 'in motion' in x[1], status)):
+                print(status)
+            while any(['in motion' in x[1] for x in status]):
                 time.sleep(0.1)
                 status = self.get_status_update(axis = dest)
           #      print status
@@ -202,7 +202,7 @@ class APT_VCP_motor(APT_VCP, Stage):
         '''
         if debug > 0 or DEBUG == True:
             N = len(returned_message)
-            print "returned_message length:",N
+            print("returned_message length:",N)
         if self.model[1] in DC_status_motors:
             channel, position, velocity, Reserved, status_bits = struct.unpack('<HLHHI', returned_message)
             #HLHHI
@@ -217,7 +217,7 @@ class APT_VCP_motor(APT_VCP, Stage):
         bitmask = self._bit_mask_array(status_bits, [int(i) for i in self.status_bit_mask[:, 0]])
         self.status = self.status_bit_mask[np.where(bitmask)]
         if debug > 0 or DEBUG == True:
-            print self.status
+            print(self.status)
         return self.status
 
 
@@ -262,7 +262,7 @@ class APT_VCP_motor(APT_VCP, Stage):
 
 
     def convert(self, value, from_, to_):
-        print 'Not doing anything from ', from_, ' to ', to_
+        print('Not doing anything from ', from_, ' to ', to_)
         return value
 
     def make_parameter(self, param_dict, destination_id = None):
@@ -331,7 +331,7 @@ class APT_VCP_motor(APT_VCP, Stage):
         try:
             setattr(self, param_dict['name'], property('get_' + param_dict['name'], 'set_' + param_dict['name']))
         except AttributeError:
-            print param_dict['name'], ' already exists'
+            print(param_dict['name'], ' already exists')
 
     def make_all_parameters(self):
         # TODO: add all the documentation for each of these parameters
@@ -541,7 +541,7 @@ class Stepper_APT_trinamics(APT_VCP_motor):
              'acceleration' : acc_to_counts}
     
 if __name__ == '__main__':
-    print "pass"
+    print("pass")
     # microscope_stage = APT_VCP_motor(port='COM12', source=0x01, destination=0x21)
 
     tdc_cube = Stepper_APT_trinamics(port='/dev/ttyUSB1', source=0x01, destination=0x50)

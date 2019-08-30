@@ -99,10 +99,10 @@ class SolsTiS(Instrument):
 
         self.read_message()
 
-        if 'status' in self.message_in_history[-1]['message']['parameters'].keys():
+        if 'status' in list(self.message_in_history[-1]['message']['parameters'].keys()):
             status = self.message_in_history[-1]['message']['parameters']['status']
 
-            if isinstance(status, basestring):
+            if isinstance(status, str):
                 self._logger.debug(operation + ': ' + status)
             else:
                 self._logger.debug(operation + ': ' + id_dictionary.get(operation, {})['status'][status[0]])
@@ -321,10 +321,10 @@ class SolsTiSUI(QtWidgets.QWidget):
                                'R. volt.': 'resonator_voltage', 'E. volt.': 'etalon_voltage',
                                'wvl': 'wavelength', 'Out': 'output_monitor'}
         display_dicc = {new_key: self.SolsTiS.laser_status[relevant_properties[new_key]] for new_key in
-                        relevant_properties.keys()}
+                        list(relevant_properties.keys())}
         self.tableWidget.setRowCount(len(relevant_properties))
         row = 0
-        for key in display_dicc.keys():
+        for key in list(display_dicc.keys()):
             item_key = QtWidgets.QTableWidgetItem(key)
             item_value = QtWidgets.QTableWidgetItem(str(display_dicc[key]))
             self.tableWidget.setItem(row, 0, item_key)
@@ -381,13 +381,13 @@ def download_logs():
             # yield curr
             return_list.append(curr)
             curr += delta
-        return map(lambda x: (int(x.strftime('%d')), int(x.strftime('%m')), int(x.strftime('%y'))), return_list)
+        return [(int(x.strftime('%d')), int(x.strftime('%m')), int(x.strftime('%y'))) for x in return_list]
 
     '''NOT GENERAL
 
     Script that can be used to download the logs created by automatic logging in the laser
     '''
-    import urllib2
+    import urllib.request, urllib.error, urllib.parse
     # import numpy as np
     from datetime import date, timedelta
 
@@ -405,19 +405,19 @@ def download_logs():
     list_dates = perdelta(date(2016, 7, 12), date(2016, 11, 4), timedelta(days=1))
     for datum in list_dates:
         try:
-            data = urllib2.urlopen(url_name % ((153,) + datum))
+            data = urllib.request.urlopen(url_name % ((153,) + datum))
             all_logs.append(data.read())
-            print 'Downloaded ', url_name % ((153,) + datum)
+            print('Downloaded ', url_name % ((153,) + datum))
         except Exception as e:
-            print 'Failed ', url_name % ((153,) + datum), ' because ', e
+            print('Failed ', url_name % ((153,) + datum), ' because ', e)
     list_dates = perdelta(date(2015, 7, 8), date(2016, 7, 11), timedelta(days=1))
     for datum in list_dates:
         try:
-            data = urllib2.urlopen(url_name % ((222,) + datum))
+            data = urllib.request.urlopen(url_name % ((222,) + datum))
             all_logs.append(data.read())
-            print 'Downloaded ', url_name % ((222,) + datum)
+            print('Downloaded ', url_name % ((222,) + datum))
         except Exception as e:
-            print 'Failed ', url_name % ((222,) + datum), ' because ', e
+            print('Failed ', url_name % ((222,) + datum), ' because ', e)
 
     # for num in nums:
     #     try:

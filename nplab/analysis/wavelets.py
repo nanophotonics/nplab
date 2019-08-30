@@ -278,7 +278,7 @@ def plot_denoised_functions():
 		ys = ys + noise
 		denoised = SUREShrink(ys)
 		axarr[i].plot(xs,denoised)
-		axarr[i].set_title("Denoised {}".format(f.func_name))
+		axarr[i].set_title("Denoised {}".format(f.__name__))
 	plt.show()
 
 

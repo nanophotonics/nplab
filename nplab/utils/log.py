@@ -72,12 +72,12 @@ def log(message, from_class=None, from_object=None,
 #            print "Couldn't log to file: " + message
 #            print 'due to error', e
             if assert_datafile:
-                print "Error saving log message - raising exception."
+                print("Error saving log message - raising exception.")
                 raise e
 
 
 '''COLORED LOGGING'''
-BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
+BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = list(range(8))
 
 # These are the sequences need to get colored ouput
 RESET_SEQ = "\033[0m"

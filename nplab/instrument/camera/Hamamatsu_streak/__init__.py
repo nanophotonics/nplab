@@ -32,7 +32,7 @@ def string_to_number(s):
 
 
 def dict_of_Nones(lst):
-    return dict(zip(lst, [None] * len(lst)))
+    return dict(list(zip(lst, [None] * len(lst))))
 
 
 class StreakError(Exception):
@@ -137,7 +137,7 @@ class StreakBase(Instrument):
         """
 
         self._logger.debug("send_command: %s, %s, %s" % (operation, parameters, kwargs))
-        params = map(str, parameters)
+        params = list(map(str, parameters))
         self.current_message = operation + '(' + ','.join(params) + ')'
         self.current_message += '\r'
         self.message_history.append({'sent': self.current_message.rstrip(), 'received': []})
@@ -232,11 +232,11 @@ class StreakBase(Instrument):
                      'SensitivityMode', 'Sensitivity', 'Sensitivity2Mode', 'Sensitivity2', 'ContrastControl',
                      'ContrastGain', 'ContrastOffset', 'PhotonImagingMode', 'HighDynamicRangeMode', 'RecurNumber2',
                      'RecurFilter2', 'FrameAvgNumber', 'FrameAvg']
-        cam_params = dict(Setup=dict(zip(setup_param, [None] * len(setup_param))),
-                          Live=dict(zip(tab_param, [None] * len(tab_param))),
-                          Acquire=dict(zip(tab_param, [None] * len(tab_param))),
-                          AI=dict(zip(tab_param, [None] * len(tab_param))),
-                          PC=dict(zip(tab_param, [None] * len(tab_param))))
+        cam_params = dict(Setup=dict(list(zip(setup_param, [None] * len(setup_param)))),
+                          Live=dict(list(zip(tab_param, [None] * len(tab_param)))),
+                          Acquire=dict(list(zip(tab_param, [None] * len(tab_param)))),
+                          AI=dict(list(zip(tab_param, [None] * len(tab_param)))),
+                          PC=dict(list(zip(tab_param, [None] * len(tab_param)))))
 
         dev_params = ['TD', 'Streak', 'Streakcamera', 'Spec', 'Spectrograph', 'Del', 'Delay', 'Delaybox', 'Del1',
                       'Del2',
@@ -247,10 +247,10 @@ class StreakBase(Instrument):
         curv_param = ['CorrectionFile', 'AutoCurvature']
         defect_pixel_param = ['DefectCorrection', 'DefectPixelFile']
         shading_param = ['ShadingFile', 'ShadingConstant', 'AutoShading', 'SensitivityCorrection', 'LampFile']
-        correction_params = dict(Background=dict(zip(bkg_param, [None] * len(bkg_param))),
-                                 Shading=dict(zip(curv_param, [None] * len(curv_param))),
-                                 Curvature=dict(zip(defect_pixel_param, [None] * len(defect_pixel_param))),
-                                 DefectPixel=dict(zip(shading_param, [None] * len(shading_param))))
+        correction_params = dict(Background=dict(list(zip(bkg_param, [None] * len(bkg_param)))),
+                                 Shading=dict(list(zip(curv_param, [None] * len(curv_param)))),
+                                 Curvature=dict(list(zip(defect_pixel_param, [None] * len(defect_pixel_param)))),
+                                 DefectPixel=dict(list(zip(shading_param, [None] * len(shading_param)))))
 
         img_params = ['AcquireToSameWindow', 'DefaultZoomFactor', 'WarnWhenUnsaved', 'Calibrated', 'LowerLUTIsZero',
                       'AutoLUT', 'AutoLUTInLive', 'AutoLUTInROI', 'HorizontalRuler', 'VerticalRuler', 'FixedITEXHeader']
@@ -335,7 +335,7 @@ class StreakBase(Instrument):
             if not hasattr(names, '__iter__'):
                 names = (names,)
         else:
-            names = self.parameters.keys()
+            names = list(self.parameters.keys())
         if len(give_params) > 3:
             raise ValueError('Too many input parameters')
 
@@ -344,13 +344,13 @@ class StreakBase(Instrument):
             command_name = str(self.parameters[name]['get'])
             param_dictionary = self.parameters[name]['value']
             return_dict[name] = {}
-            if type(param_dictionary[param_dictionary.keys()[0]]) == dict:
+            if type(param_dictionary[list(param_dictionary.keys())[0]]) == dict:
                 if len(give_params) >= 2:
                     locations = give_params[1]
                     if not hasattr(locations, '__iter__'):
                         locations = (locations,)
                 else:
-                    locations = param_dictionary.keys()
+                    locations = list(param_dictionary.keys())
 
                 for location in locations:
                     if param_dictionary[location] == 'NotAvailable':
@@ -360,7 +360,7 @@ class StreakBase(Instrument):
                         if not hasattr(params, '__iter__'):
                             params = (params,)
                     else:
-                        params = param_dictionary[location].keys()
+                        params = list(param_dictionary[location].keys())
                     # print 'Location: ', location
                     # if params == 'All':
                     #     params = param_dictionary[location].keys()
@@ -368,7 +368,7 @@ class StreakBase(Instrument):
                     #     params = (params,)
                     return_dict[name][location] = {}
                     for param in params:
-                        if param not in param_dictionary[location].keys():
+                        if param not in list(param_dictionary[location].keys()):
                             raise ValueError('Parameter %s not recognised' % param)
                         try:
                             self.send_command(command_name, location, param)
@@ -388,7 +388,7 @@ class StreakBase(Instrument):
                     if not hasattr(params, '__iter__'):
                         params = (params,)
                 else:
-                    params = param_dictionary.keys()
+                    params = list(param_dictionary.keys())
                     # if params is 'All':  # init_params
                     #     params = param_dictionary.keys()
                     # print param_dictionary.keys()
@@ -397,7 +397,7 @@ class StreakBase(Instrument):
                     # raise ValueError('Parameter needs to be given as an iterable')
                 for param in params:
                     # print 'Parameter: ', param
-                    if param not in param_dictionary.keys():
+                    if param not in list(param_dictionary.keys()):
                         raise ValueError('%s parameter %s not recognised' % (name, param))
                     try:
                         self.send_command(command_name, param)
@@ -426,13 +426,13 @@ class StreakBase(Instrument):
 
         for give_params in args:
             name = give_params[0]
-            if name not in self.parameters.keys():
+            if name not in list(self.parameters.keys()):
                 raise ValueError('Name %s not recognised' % name)
             if self.parameters[name]['set'] is not None:
                 if len(give_params) == 3:
                     param = give_params[1]
                     value = give_params[2]
-                    if param not in self.parameters[name]['value'].keys():
+                    if param not in list(self.parameters[name]['value'].keys()):
                         raise ValueError('Parameter %s not recognised' % param)
                     self.send_command(self.parameters[name]['set'], param, value)
                     self.parameters[name]['value'][param] = value
@@ -440,9 +440,9 @@ class StreakBase(Instrument):
                     location = give_params[1]
                     param = give_params[2]
                     value = give_params[3]
-                    if location not in self.parameters[name]['value'].keys():
+                    if location not in list(self.parameters[name]['value'].keys()):
                         raise ValueError('Location %s not recognised' % location)
-                    if param not in self.parameters[name]['value'][location].keys():
+                    if param not in list(self.parameters[name]['value'][location].keys()):
                         raise ValueError('Parameter %s not recognised' % param)
                     self.send_command(self.parameters[name]['set'], location, param, value)
                     self.parameters[name]['value'][location][param] = value
@@ -454,20 +454,20 @@ class StreakBase(Instrument):
 
     def parameter_info(self, *give_params):
         name = give_params[0]
-        if name not in self.parameters.keys():
+        if name not in list(self.parameters.keys()):
             raise ValueError('Name %s not recognised' % name)
         if self.parameters[name]['info'] is not None:
             if len(give_params) == 2:
                 param = give_params[1]
-                if param not in self.parameters[name]['value'].keys():
+                if param not in list(self.parameters[name]['value'].keys()):
                     raise ValueError('Parameter %s not recognised' % param)
                 self.send_command(self.parameters[name]['info'], param)
             elif len(give_params) == 3:
                 location = give_params[1]
                 param = give_params[2]
-                if location not in self.parameters[name]['value'].keys():
+                if location not in list(self.parameters[name]['value'].keys()):
                     raise ValueError('Location %s not recognised' % location)
-                if param not in self.parameters[name]['value'][location].keys():
+                if param not in list(self.parameters[name]['value'][location].keys()):
                     raise ValueError('Parameter %s not recognised' % param)
                 self.send_command(self.parameters[name]['info'], location, param)
             else:
@@ -477,7 +477,7 @@ class StreakBase(Instrument):
             reply_dict = dict(ErrorCode=split_response[0], CommandName=split_response[1], Label=split_response[2])
 
             if split_response[4].isdigit():
-                if int(split_response[4]) in PARAMETER_TYPES.keys():
+                if int(split_response[4]) in list(PARAMETER_TYPES.keys()):
                     reply_dict['CurrentValue'] = split_response[3]
                     reply_dict['ParameterType'] = PARAMETER_TYPES[int(split_response[4])]
                 if split_response[4] == '1':
@@ -610,9 +610,9 @@ class StreakBase(Instrument):
         :return:
         """
         if devices is None:
-            devices = self.parameters['Devices']['value'].keys()
+            devices = list(self.parameters['Devices']['value'].keys())
         for device in devices:
-            if device not in self.parameters['Devices']['value'].keys():
+            if device not in list(self.parameters['Devices']['value'].keys()):
                 raise ValueError('Device %s not recognised' % device)
             try:
                 self.send_command('DevParamsList', device)
@@ -753,7 +753,7 @@ class StreakBase(Instrument):
         :return:
         """
         self.send_command('ImgDataInfo', image_index, 'Size')
-        shape = map(int, tuple(self.current_reply.split(',')[2:6]))
+        shape = list(map(int, tuple(self.current_reply.split(',')[2:6])))
         bytes_per_pixel = int(self.current_reply.split(',')[-1])
         return shape, bytes_per_pixel
 

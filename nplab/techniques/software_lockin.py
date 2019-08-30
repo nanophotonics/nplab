@@ -65,6 +65,6 @@ if __name__ == '__main__':
 
     x, y = software_lockin(t, signal, ref, harmonic=1)
     r, theta = cart2pol(x, y)
-    print r, theta/np.pi
+    print(r, theta/np.pi)
 
     plt.show()

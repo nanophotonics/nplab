@@ -85,8 +85,8 @@ class ProScan(serial.SerialInstrument, stage.Stage):
                 while(self.is_moving()):
                     time.sleep(0.02)
                     if (time.time()-time_0>10):
-                        print x,
-                        print self.position
+                        print(x, end=' ')
+                        print(self.position)
                         self.emergency_stop()
                         self.move(x, relative, axis, block)
         except KeyboardInterrupt:

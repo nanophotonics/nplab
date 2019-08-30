@@ -22,7 +22,7 @@ def list_datafile_content(filepath, folderpath):
     
     """
     f = df.DataFile(os.path.normpath(filepath), 'r')
-    return f[folderpath].keys()
+    return list(f[folderpath].keys())
 
 def extractor(filepath, folderpath):
     """
@@ -107,4 +107,4 @@ if __name__ == "__main__":
 	mapper_1200 = make_mapper()
 	FILEPATH = 'C:\\Users\\Hera\\OneDrive - University Of Cambridge\\20190522\\Spectra\\840_1s_38mW.hdf5'
 	FOLDERPATH = 'spectrum'
-	print(mapped_extractor(filepath=FILEPATH, folderpath=FOLDERPATH, mapper = mapper_1200))
+	print((mapped_extractor(filepath=FILEPATH, folderpath=FOLDERPATH, mapper = mapper_1200)))

@@ -16,15 +16,15 @@ def test_logging(tmpdir):
     nplab.datafile.set_current(str(tmpdir.join("temp.h5")))
     df = nplab.current_datafile()
     assert df, "Error creating datafile!"
-    print df
+    print(df)
 
     nplab.log("test log message", assert_datafile=True) #make a log message
     df.flush() #make sure the message makes it to the file...
 
-    print df['nplab_log'].keys()
+    print(list(df['nplab_log'].keys()))
     entry = df['nplab_log'].numbered_items("entry")[-1]
     assert entry.value == "test log message"
-    print entry.attrs.keys()
+    print(list(entry.attrs.keys()))
     assert entry.attrs.get('creation_timestamp') is not None
 
 
@@ -60,7 +60,7 @@ def test_long_log(tmpdir):
     N = 1000
     for i in range(N):
         instr.do_something()
-        print i
+        print(i)
     #assert len(df['nplab_log'].keys()) == N #SLOW!
     assert df['nplab_log/entry_%d' % (N-1)], "Last log entry was missing!"
     with pytest.raises(KeyError):

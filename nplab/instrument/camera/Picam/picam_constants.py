@@ -1,9 +1,9 @@
 def transpose_dictionary(dictionary):
-	keys = dictionary.keys()
-	values = dictionary.values()
+	keys = list(dictionary.keys())
+	values = list(dictionary.values())
 	assert(len(set(values))==len(values)) #assert values are unique
 	output = {}
-	for k,v in dictionary.items():
+	for k,v in list(dictionary.items()):
 		output.update({v:k})
 	return output 
 
@@ -926,7 +926,7 @@ if __name__ == "__main__":
 	#Perform basic tests
 	expected_value = 16908303 #ExposureTime
 	(value_type, constraint_type, n) = PicamParameter["PicamParameter_SensorTemperatureReading"]
-	print value_type, constraint_type,n 
+	print(value_type, constraint_type,n) 
 	computed_value = PI_V(value_type,constraint_type,n)
 	assert(expected_value==computed_value)
 	#Parameter dictionary

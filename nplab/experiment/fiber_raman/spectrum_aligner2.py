@@ -47,7 +47,7 @@ def annotate_points(xs,ys,ax):
 	texts = []
 	for i in range(len(xs)):
 		label = "ind:{}".format(i)
-		print xs[i], ys[i],label
+		print(xs[i], ys[i],label)
 		t = ax.text(xs[i],ys[i],label,fontsize=10)
 		texts.append(t)
 	return texts
@@ -66,7 +66,7 @@ def merge_spectra(ys0,ys1,shift):
 		ys0 = np.concatenate((ys0,ys0_pad),axis=1)
 	else:
 		if debug> 0:
-			print "Warning! - No padding of ys0 matrix!"
+			print("Warning! - No padding of ys0 matrix!")
 	ys1_pad = np.zeros((1,relative_shift))
 	
 	ys1 =np.concatenate((ys1_pad,ys1),axis=1)
@@ -109,7 +109,7 @@ def compute_shifts(spectra,threshold=-105,debug=0):
 	inds = inds[0]
 
 
-	xs_interp = range(0,np.max(inds)+1)
+	xs_interp = list(range(0,np.max(inds)+1))
 	f0 = interp1d(inds, shifts[inds])
 	ys_interp = [f0(x) for x in xs_interp]
 	pad_length = 5
@@ -128,11 +128,11 @@ def compute_shifts(spectra,threshold=-105,debug=0):
 		ax.set_title("fname:compute_shifts, debug plot")
 		ax.plot(inds, shifts[inds],"o",label="Threshold shifts [threshold value: {}".format(threshold))
 		# ax.plot(inds[0], smoothed,"-",label="Threshold shifts [threshold value: {}".format(threshold))
-		ax.plot(range(len(shifts)), shifts,"x-",label="Raw shift values".format(threshold))
+		ax.plot(list(range(len(shifts))), shifts,"x-",label="Raw shift values".format(threshold))
 
 		ax.plot(xs_interp, ys_interp ,"x-",label="Linearly interpolated shift values".format(threshold))
 		ax.plot(xs_interp, smoothed_shifts ,"x-",label="Smoothed shift values".format(threshold))
-		print len(shifts), len(padded_smoothed_shifts)
+		print(len(shifts), len(padded_smoothed_shifts))
 
 		ax.plot(padded_smoothed_shifts,"x-",label="Smoothed shift values with end-padding")
 		ax.plot(outp,label="Final output")
@@ -155,7 +155,7 @@ def peak_threshold(peaks,sf=1.0):
 def load_measured_data(measurement_file):
 	#measurement file - HDF5 file contanining individual measurements from the Acton/Pixis
 	data = []
-	for k in measurement_file["spectra"].keys():
+	for k in list(measurement_file["spectra"].keys()):
 		v = measurement_file["spectra"][k]
 		wl =  v.attrs["center_wavelength"]
 		xs = np.array(v)[0,:]
@@ -191,7 +191,7 @@ def plot_layers(center_wavelengths, data,mapper,show_plot=True):
 	ax.set_title("fname: plot_layers, debug plot")
 	for i in range(len(data)):
 		center_wl, ys = data[i][0], data[i][2]
-		xs = range(len(ys)) 
+		xs = list(range(len(ys))) 
 		
 		ys = ys - np.nanmin(ys)
 		ys = i + (ys/(1.1*np.nanmax(ys))) 
@@ -259,7 +259,7 @@ def median_spectrum(data,debug=0):
 	pixel_to_index = pixel_to_index_map_generator()
 	
 	if debug > 0:
-		wavelengths = range(450,700,1)
+		wavelengths = list(range(450,700,1))
 		lower_bound = 0
 		upper_bound = 1014 
 		fig, ax = plt.subplots(1)
@@ -294,13 +294,13 @@ def rescale_reference(xs,ys,max_size,N,debug=0):
 	#Resample the wavelength scale as well:
 	xs = resample(xs,N)
 
-	[gradient, offset] = least_squares(range(0,len(xs)),xs)
+	[gradient, offset] = least_squares(list(range(0,len(xs))),xs)
 	if debug > 0:
 	
 		fig, ax = plt.subplots(1)
 		ax.set_title("fname: rescale_reference, debug plot 0")
 		ax.plot(xs)
-		plt.plot(range(0,len(xs)),[offset+gradient*x for x in  range(0,len(xs))],label="least_squares fit")
+		plt.plot(list(range(0,len(xs))),[offset+gradient*x for x in  range(0,len(xs))],label="least_squares fit")
 		plt.legend();
 	return xs, ys, gradient, offset
 
@@ -313,11 +313,11 @@ def prune_peaks(peaks):
 		to_drop = []
 		for i in range(peaks.shape[1]):
 			v = peaks[:,i]
-			print peaks
+			print(peaks)
 			diff = [np.linalg.norm(peaks[:,j].T-v) for j in range(peaks.shape[1]) ]
 			diff[i] = np.inf
 			min_diff = np.argmin(diff)
-			print diff
+			print(diff)
 			if diff[min_diff] < 50:
 				to_drop.append(min_diff)
 		peaks = peaks.T
@@ -442,7 +442,7 @@ def main(debug=0):
 	if debug > 0:
 		fig, ax = plt.subplots(1)
 		ax.set_title("fname: main, debug plot 1")
-		xs = range(np.min(interpolator_bounds),np.max(interpolator_bounds))
+		xs = list(range(np.min(interpolator_bounds),np.max(interpolator_bounds)))
 		ys = [index_to_wavelength(x) for x in xs]
 		plt.plot(xs,ys)
 
@@ -450,7 +450,7 @@ def main(debug=0):
 		ax.set_title("fname: main, debug plot 2")
 		wavelengths_reference = [index_to_wavelength(x,with_correction=False) for x in range(len(ref_ys))]
 		ax.plot(wavelengths_reference,ref_ys,label="Reference spectrum (rescaled)")
-		xs = range(interpolator_bounds[0],interpolator_bounds[1])
+		xs = list(range(interpolator_bounds[0],interpolator_bounds[1]))
 
 		ax.plot([index_to_wavelength(x,with_correction=True) for x in xs],[signal_spectrum[x] for x in xs],label="Stitched signal (corrected)")
 		ax.plot([index_to_wavelength(x,with_correction=False) for x in xs],[signal_spectrum[x] for x in xs],alpha=0.4,label="Stitched signal (uncorrected)")

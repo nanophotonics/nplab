@@ -287,7 +287,7 @@ def Run(x_axis,Signal,Maximum_FWHM=40,Regions=50,Minimum_Width_Factor=0.1,Peak_T
 		Loss_Results.append(Loss(Output))
 
 		if Print is True:
-			print 'Iteration ',len(Loss_Results),', Peaks Found: ',len(Results[-1])/3
+			print('Iteration ',len(Loss_Results),', Peaks Found: ',len(Results[-1])/3)
 
 
 		#---Check to increase region by x5
@@ -366,7 +366,7 @@ def Run(x_axis,Signal,Maximum_FWHM=40,Regions=50,Minimum_Width_Factor=0.1,Peak_T
 
 def Worker_Function(x_axis,Signal,Maximum_FWHM,Regions,Minimum_Width_Factor,Peak_Type,Initial_Fit,Number):
 		Fit=Run(x_axis,Signal,Maximum_FWHM,Regions,Minimum_Width_Factor,Peak_Type,Initial_Fit=Initial_Fit,Print=False)
-		print 'Fit Spectrum:',Number
+		print('Fit Spectrum:',Number)
 		return [Fit,Number]
 
 def Fit_Set_of_Spectra(x_axis,Signals,Maximum_FWHM=40,Regions=50,Minimum_Width_Factor=0.1,Peak_Type='L',Cores=2,Utilise_Persistent=False):

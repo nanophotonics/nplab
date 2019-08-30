@@ -141,13 +141,13 @@ class CameraStageMapper(Instrument):
                 shift=self.centre_on_feature_iterate(feature_image, 
                                                      search_size=search_size, 
                                                      **kwargs)
-                print "Centring on feature: moving by %.2f, %.2f" % tuple(shift)
+                print("Centring on feature: moving by %.2f, %.2f" % tuple(shift))
             except:
-                print "Something went wrong with auto-centering - trying again." #don't worry, we incremented N so this won't go on forever!
+                print("Something went wrong with auto-centering - trying again.") #don't worry, we incremented N so this won't go on forever!
         if np.sqrt(np.sum(np.array(shift)**2))>tolerance:
-            print "Performed %d iterations but did not converge on the feature to within %.3fum" % (n, tolerance)
+            print("Performed %d iterations but did not converge on the feature to within %.3fum" % (n, tolerance))
         else:
-            print "Centered on feature in %d iterations." % n
+            print("Centered on feature in %d iterations." % n)
         if self.disable_live_view:
             self.camera.live_view = camera_live_view #reenable live view if necessary
     def centre_on_feature_iterate(self, feature_image, search_size=(50,50), image_filter=lambda x: x):
@@ -176,14 +176,14 @@ class CameraStageMapper(Instrument):
             self.move_to_camera_pixel(np.array(peak) - np.array(corr.shape[0:2])/2.+np.array(current_image.shape[0:2])/2.)
             return self.camera_pixel_displacement_to_sample(np.array(peak) - np.array(corr.shape[0:2])/2.)
         except Exception as e:
-            print "Exception: ", e
-            print "Corr: ", corr
-            print "Feature: ", feature_image
-            print "Feature Size: ", feature_image.shape
-            print "Corr size: ", corr.shape
-            print "Peak: ", peak
-            print "sum(corr): ", np.sum(corr)
-            print "max(corr): ", np.max(corr)
+            print("Exception: ", e)
+            print("Corr: ", corr)
+            print("Feature: ", feature_image)
+            print("Feature Size: ", feature_image.shape)
+            print("Corr size: ", corr.shape)
+            print("Peak: ", peak)
+            print("sum(corr): ", np.sum(corr))
+            print("max(corr): ", np.max(corr))
             raise e
 
 ########## Calibration ###############
@@ -199,7 +199,7 @@ class CameraStageMapper(Instrument):
                     pos = [np.array([i,j]) for i in [-dx,dx] for j in [-dx,dx]]
                 elif len(self.stage.axis_names)==3:
                     pos = [np.array([i,j,0]) for i in [-dx,dx] for j in [-dx,dx]]
-                print pos, dx
+                print(pos, dx)
                 camera_pos = []
                 self.camera.update_latest_frame() # make sure we've got a fresh image
                 if self.filter_images==True and self.camera.filter_function != None:
@@ -236,12 +236,12 @@ class CameraStageMapper(Instrument):
                 #camera_pos now contains the displacements in pixels for each move
                 sample_displacement = np.array([-p[0:2] for p in pos]) #nb need to convert to 2D, and the stage positioning is flipped from sample coords
                 camera_displacement = np.array([self.camera_pixel_to_point(p) for p in camera_pos])
-                print "sample was moved (in um):\n",sample_displacement
-                print "the image shifted (in fractions-of-a-camera):\n",camera_displacement
+                print("sample was moved (in um):\n",sample_displacement)
+                print("the image shifted (in fractions-of-a-camera):\n",camera_displacement)
                 A, res, rank, s = np.linalg.lstsq(camera_displacement, sample_displacement)
                 self.camera_to_sample = A
         except Exception as e:
-            print 'Calibration failed because', e
+            print('Calibration failed because', e)
     def flush_camera_and_wait(self):
         """take and discard a number of images from the camera to make sure the image is fresh
         
@@ -381,9 +381,9 @@ class CameraStageMapper(Instrument):
         n=0
         for r in ranges:
             pos = self.autofocus_iterate(r)[0]
-            print "moving Z by %.3f" % pos[2]
+            print("moving Z by %.3f" % pos[2])
             n+=1
-        print "Autofocus: performed %d iterations" % n
+        print("Autofocus: performed %d iterations" % n)
     
     def get_qt_ui(self):
         return CameraStageMapperControlWidget(self)

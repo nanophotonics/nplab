@@ -100,7 +100,7 @@ class Acton(SerialInstrument):
                          
     def __init__(self, port, debug=0, echo=True, dummy=False):
         if debug > 0:
-            print "Started: Acton.__init__"
+            print("Started: Acton.__init__")
         SerialInstrument.__init__(self, port)
         self.echo=echo
         
@@ -166,7 +166,7 @@ class Acton(SerialInstrument):
             gratings = grating_string.splitlines()[0:-1] # for no echo
 #        if self.debug: print(gratings)
         
-        print gratings
+        print(gratings)
         self.gratings = []
         
         for grating in gratings:
@@ -192,7 +192,7 @@ class Acton(SerialInstrument):
 
         elif blocking == False:
             query = "{0:.3f} >NM".format(wavelength)
-        print "set_wavelength:", query
+        print("set_wavelength:", query)
         resp = self.write_command(query,debug=debug)
         return resp 
 
@@ -235,7 +235,7 @@ class Acton(SerialInstrument):
     def read_entrance_slit(self):
         resp = self.write_command("SIDE-ENT-SLIT ?MICRONS")
         #"480 um" or "no motor"
-        print(repr(resp))
+        print((repr(resp)))
         if resp == 'no motor':
             self.entrance_slit = -1
         else:
@@ -288,8 +288,8 @@ class Acton(SerialInstrument):
         out = out.decode('ascii')
 
         if debug > 0:
-            print "response full:", out   
-            print "response tail:",out[-5:]
+            print("response full:", out)   
+            print("response tail:",out[-5:])
         # assert out[-5:] == " ok\r\n"
         # out = out[:-5].strip()
     
@@ -297,7 +297,7 @@ class Acton(SerialInstrument):
         if self.echo:
             echo = out[0:len(cmd_bytes)]        
             rest = out[len(cmd_bytes):]
-            print("echo, rest, cmd:", echo, rest, cmd_bytes)
+            print(("echo, rest, cmd:", echo, rest, cmd_bytes))
             # assert echo == cmd
             return rest
         else:

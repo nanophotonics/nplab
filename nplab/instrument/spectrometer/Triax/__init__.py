@@ -174,7 +174,7 @@ class Triax(VisaInstrument):
             time.sleep(1)
             if (time.time() - Start_Time) > Timeout:
                 self._logger.warn('Timed out')
-                print 'Timed out'
+                print('Timed out')
                 break
 
     #-------------------------------------------------------------------------------------------------

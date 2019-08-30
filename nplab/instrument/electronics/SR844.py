@@ -34,9 +34,9 @@ class Lockin_SR844(vi.VisaInstrument):
         self.instr.read_termination = '\n'
         self.instr.write_termination = '\n'
         self.instr.timeout = None
-        print self.instr.read_termination
+        print(self.instr.read_termination)
  
-        print self.write("OUTX")
+        print(self.write("OUTX"))
         
         self.ch_list = {'X': 1, 'Y': 2,'R[V]' : 3,'R [dBm]' : 4,"theta" : 5, "AUX1" : 6, "AUX2" : 7, "Ref Freq" : 8,
                         "CH1" : 9, "CH2" :10}
@@ -200,11 +200,11 @@ class Lockin_SR844(vi.VisaInstrument):
             integrationtime(float):     The real value for the time constant in seconds
                                         for allowed values see self.time_list
         '''
-        for i in range(len(self.time_list.values()[:])):
-            if self.time_list.values()[i] == integrationtime:
-                self.time_constant = self.time_list.keys()[i]
+        for i in range(len(list(self.time_list.values())[:])):
+            if list(self.time_list.values())[i] == integrationtime:
+                self.time_constant = list(self.time_list.keys())[i]
                 return True
-        print 'Setting integration time failed. '+str(integrationtime)+' is not in self.time_list'
+        print('Setting integration time failed. '+str(integrationtime)+' is not in self.time_list')
         return False
 
     def get_filter(self):
@@ -295,7 +295,7 @@ class Lockin_SR844(vi.VisaInstrument):
                 Lowersense = 0.0
             if testmax>self.sensitivity[1]:
                 if self.sensitivity[0]==14:
-                    print "OVERLOADED RUNNNNNN"
+                    print("OVERLOADED RUNNNNNN")
                 self.sensitivity = self.sensitivity[0]+1
             elif testmax<Lowersense:
                 self.sensitivity = self.sensitivity[0]-1

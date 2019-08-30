@@ -215,7 +215,7 @@ if __name__ == '__main__':
     from time import sleep
 
     def multi_read(d):
-        print 5./6000
+        print(5./6000)
         d.setup_multi_ai([0,1,2,3,4], 1e6, 0.001)
         j = 0
         while j<2:
@@ -230,7 +230,7 @@ if __name__ == '__main__':
         d.clear_multi_ai()
 
     def cont_multi_read(d):
-        print 'should take %s ms' % (1000*5./6000.)
+        print('should take %s ms' % (1000*5./6000.))
         d.setup_multi_ai_cont([0,1,2,3,4], 1e6, 5./6000.)
         i=0
         while i<10:

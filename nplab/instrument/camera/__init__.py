@@ -154,7 +154,7 @@ class Camera(Instrument):
         return True, np.zeros((640,480,3),dtype=np.uint8)
         
     def get_image(self):
-        print "Warning: get_image is deprecated, use raw_image() instead."
+        print("Warning: get_image is deprecated, use raw_image() instead.")
         return self.raw_image()
         
     def raw_image(self, bundle_metadata=False, update_latest_frame=False):
@@ -245,8 +245,8 @@ class Camera(Instrument):
                 try:
                     w.update_image(self.latest_frame)
                 except Exception as e:
-                    print "something went wrong updating the preview widget"
-                    print e
+                    print("something went wrong updating the preview widget")
+                    print(e)
 
     @property
     def latest_frame(self):
@@ -276,7 +276,7 @@ class Camera(Instrument):
             
             return self.latest_frame
         else:
-            print "Failed to get an image from the camera"    
+            print("Failed to get an image from the camera")    
     
     def camera_parameter_names(self):
         """Return a list of names of parameters that may be set/read.
@@ -332,7 +332,7 @@ class Camera(Instrument):
         if live_view==True:
             if self._live_view:
                 return # do nothing if it's going already.
-            print "starting live view thread"
+            print("starting live view thread")
             try:
                 self._frame_counter = 0
                 self._live_view_stop_event = threading.Event()
@@ -340,11 +340,11 @@ class Camera(Instrument):
                 self._live_view_thread.start()
                 self._live_view = True
             except AttributeError as e: #if any of the attributes aren't there
-                print "Error:", e
+                print("Error:", e)
         else:
             if not self._live_view:
                 return # do nothing if it's not running.
-            print "stopping live view thread"
+            print("stopping live view thread")
             try:
                 self._live_view_stop_event.set()
                 self._live_view_thread.join()
@@ -585,7 +585,7 @@ class PreviewImageItem(pg.ImageItem):
      #           point = pos/size
       #          self.legacy_click_callback(point[1], point[0])
                 self.legacy_click_callback(int(pos[1]), int(pos[0]))
-                print pos[1],pos[0]
+                print(pos[1],pos[0])
                 ev.accept()
             else:
                 pass
@@ -607,7 +607,7 @@ class CameraPreviewWidget(pg.GraphicsView):
         self.setCentralWidget(self.view_box)
         self.crosshair = {'h_line': pg.InfiniteLine(pos=0,angle=0),
                           'v_line': pg.InfiniteLine(pos=0,angle=90),}
-        for item in self.crosshair.values():
+        for item in list(self.crosshair.values()):
             self.view_box.addItem(item)
         self._image_shape = ()
 
@@ -664,11 +664,11 @@ class DummyCamera(Camera):
     def set_camera_parameter(self, name, value):
         self._camera_parameters[name] = value
     def print_numbers(self,a = 5.0,b = 10):
-        print a, b
+        print(a, b)
     def print_strs(self,a= 'hello'):
-        print a
+        print(a)
     def print_array(self,a = np.array([1, 2, 3, 4])):
-        print a
+        print(a)
         
 if __name__ == '__main__':
     cam = DummyCamera()

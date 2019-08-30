@@ -130,13 +130,13 @@ class CameraStageMapper(Instrument, HasTraits):
                 shift=self.centre_on_feature_iterate(feature_image, 
                                                      search_size=search_size, 
                                                      **kwargs)
-                print "Centring on feature: moving by %.2f, %.2f" % tuple(shift)
+                print("Centring on feature: moving by %.2f, %.2f" % tuple(shift))
             except:
-                print "Something went wrong with auto-centering - trying again." #don't worry, we incremented N so this won't go on forever!
+                print("Something went wrong with auto-centering - trying again.") #don't worry, we incremented N so this won't go on forever!
         if np.sqrt(np.sum(np.array(shift)**2))>tolerance:
-            print "Performed %d iterations but did not converge on the feature to within %.3fum" % (n, tolerance)
+            print("Performed %d iterations but did not converge on the feature to within %.3fum" % (n, tolerance))
         else:
-            print "Centered on feature in %d iterations." % n
+            print("Centered on feature in %d iterations." % n)
         if self.disable_live_view:
             self.camera.live_view = camera_live_view #reenable live view if necessary
     def centre_on_feature_iterate(self, feature_image, search_size=(50,50), image_filter=lambda x: x):
@@ -165,14 +165,14 @@ class CameraStageMapper(Instrument, HasTraits):
             self.move_to_camera_pixel(np.array(peak) - np.array(corr.shape[0:2])/2.+np.array(current_image.shape[0:2])/2.)
             return self.camera_pixel_displacement_to_sample(np.array(peak) - np.array(corr.shape[0:2])/2.)
         except Exception as e:
-            print "Exception: ", e
-            print "Corr: ", corr
-            print "Feature: ", feature_image
-            print "Feature Size: ", feature_image.shape
-            print "Corr size: ", corr.shape
-            print "Peak: ", peak
-            print "sum(corr): ", np.sum(corr)
-            print "max(corr): ", np.max(corr)
+            print("Exception: ", e)
+            print("Corr: ", corr)
+            print("Feature: ", feature_image)
+            print("Feature Size: ", feature_image.shape)
+            print("Corr size: ", corr.shape)
+            print("Peak: ", peak)
+            print("sum(corr): ", np.sum(corr))
+            print("max(corr): ", np.max(corr))
             raise e
 
 ########## Calibration ###############
@@ -215,8 +215,8 @@ class CameraStageMapper(Instrument, HasTraits):
             #camera_pos now contains the displacements in pixels for each move
             sample_displacement = np.array([-p[0:2] for p in pos]) #nb need to convert to 2D, and the stage positioning is flipped from sample coords
             camera_displacement = np.array([self.camera_pixel_to_point(p) for p in camera_pos])
-            print "sample was moved (in um):\n",sample_displacement
-            print "the image shifted (in fractions-of-a-camera):\n",camera_displacement
+            print("sample was moved (in um):\n",sample_displacement)
+            print("the image shifted (in fractions-of-a-camera):\n",camera_displacement)
             A, res, rank, s = np.linalg.lstsq(camera_displacement, sample_displacement)
             self.camera_to_sample = A
 
@@ -354,9 +354,9 @@ class CameraStageMapper(Instrument, HasTraits):
         n=0
         for r in ranges:
             pos = self.autofocus_iterate(r)[0]
-            print "moving Z by %.3f" % pos[2]
+            print("moving Z by %.3f" % pos[2])
             n+=1
-        print "Autofocus: performed %d iterations" % n
+        print("Autofocus: performed %d iterations" % n)
 
 #if __name__ == '__main__':
     #WARNING this is old, probably broken, code.

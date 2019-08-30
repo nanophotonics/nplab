@@ -16,13 +16,13 @@ if __name__ == '__main__':
     group = df.create_group("test_items")
     
     d = group.create_dataset("1d_generic",data=random((100)))
-    print suitable_renderers(d)
+    print(suitable_renderers(d))
     d = group.create_dataset("2d_generic",data=random((100,100)))
-    print suitable_renderers(d)
+    print(suitable_renderers(d))
     d = group.create_dataset("3d_rgb",data=random((100,100,3)))
-    print suitable_renderers(d)
+    print(suitable_renderers(d))
     d = group.create_dataset("3d_generic",data=random((100,100,100)))
-    print suitable_renderers(d)
+    print(suitable_renderers(d))
     
     df.show_gui(block=True)
     df.close()

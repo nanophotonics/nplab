@@ -52,7 +52,7 @@ def locked_action_decorator(wait_for_lock=True):
                     self._nplab_action_lock.acquire() #this will wait until we can lock the device
                 else:    #if "wait for lock" is false, just return false if it's busy
                     if not self._nplab_action_lock.acquire(block=False):
-                        print "Could not acquire action lock, giving up."
+                        print("Could not acquire action lock, giving up.")
                         return False
                 return function(self, *args, **kwargs)
             except Exception as e:
@@ -122,14 +122,14 @@ if __file__ == "__main__":
             time.sleep(1)
             for c in "Hello World!\n":
                 time.sleep(0.1)
-                print(c),
+                print((c), end=' ')
             return "Return Value"
         @background_action
         def say(self, message):
             time.sleep(1)
             for c in message+"\n":
                 time.sleep(0.1)
-                print(c),
+                print((c), end=' ')
             return len(message)
 
     class Bar(object):
@@ -137,11 +137,11 @@ if __file__ == "__main__":
             time.sleep(1)
             for c in "Hello World!\n":
                 time.sleep(0.1)
-                print(c),
+                print((c), end=' ')
         def say(self, message):
             time.sleep(1)
             for c in message+"\n":
                 time.sleep(0.1)
-                print(c),
+                print((c), end=' ')
 
 

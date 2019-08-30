@@ -19,7 +19,7 @@ asVoidPtr.restype = ctypes.c_void_p #we need to set the result and argument type
 asVoidPtr.argtypes = [ctypes.py_object]
 
 try:
-    import lucam
+    from . import lucam
 except WindowsError:
     explanation="""
 WARNING: could not open the lucam driver.
@@ -31,8 +31,8 @@ Capture), and that its version matches your Python architecture (64 or 32 bit).
         import traitsui.message
         traitsui.message.error(explanation,"Infinity Driver Missing", buttons=["OK"])
     except Exception as e:
-        print "uh oh, problem with the message..."
-        print e
+        print("uh oh, problem with the message...")
+        print(e)
         pass
     finally:
         raise ImportError(explanation) 
@@ -102,7 +102,7 @@ class LumeneraCamera(Camera):
             del self.cam
             self.log("Camera deleted")
         except Exception as e:
-            print "Warning, an exception was raised deleting the old camera:\n{0}".format(e)
+            print("Warning, an exception was raised deleting the old camera:\n{0}".format(e))
         time.sleep(2)
         self.log("Creating new camera object")
         self.cam = lucam.Lucam(self._camera_number)
@@ -157,10 +157,10 @@ class LumeneraCamera(Camera):
                         image = image[x_mid-x_size:x_mid+x_size,y_mid-y_size:y_mid+y_size]
                     return True, image
                 except Exception as e:
-                    print "Attempt number {0} failed to capture a frame from the camera: {1}".format(i,e)
-        print "Camera.raw_snapshot() has failed to capture a frame."
+                    print("Attempt number {0} failed to capture a frame from the camera: {1}".format(i,e))
+        print("Camera.raw_snapshot() has failed to capture a frame.")
         if reset_on_error:
-            print "Camera dropped lots of frames.  Turning it off and on again.  Fingers crossed!"
+            print("Camera dropped lots of frames.  Turning it off and on again.  Fingers crossed!")
             self.restart() #try restarting the camera!
             return self.raw_snapshot(suppress_errors=suppress_errors, 
                                      reset_on_error=False, #this matters: avoid infinite loop!
@@ -182,7 +182,7 @@ class LumeneraCamera(Camera):
         try:
             self.latest_raw_frame = self.convert_frame(frame_pointer, frame_size)
         except:
-            print "invalid frame size"
+            print("invalid frame size")
             
     def convert_frame(self, frame_pointer, frame_size):
         """Convert a frame from the camera to an RGB numpy array."""
@@ -293,7 +293,7 @@ class LumeneraCameraControlWidget(CameraControlWidget):
 # this is slightly dangerous, but here we populate the camera with properties
 # to set all the things in its list of properties.  We may want to prune this
 # a little.
-for pname in lucam.Lucam.PROPERTY.keys():
+for pname in list(lucam.Lucam.PROPERTY.keys()):
     setattr(LumeneraCamera, pname, CameraParameter(pname))
 
 

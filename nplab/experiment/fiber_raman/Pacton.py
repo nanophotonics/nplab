@@ -61,11 +61,11 @@ class Pacton(Instrument):
 		self.acton.set_wavelength(center_wavelength,blocking=True,debug=debug)
 		if roi is not None:
 
-			if debug>0: print "starting try-catch"
+			if debug>0: print("starting try-catch")
 			try:
 				[x_min,x_max,y_min,y_max] = roi
 				if debug > 0:
-					print "Pacton.get_image: region of interest:", roi
+					print("Pacton.get_image: region of interest:", roi)
 				return self.pixis.get_roi(x_min=x_min, x_max = x_max, y_min=y_min,y_max = y_max,debug=debug)
 
 			except: 
@@ -135,7 +135,7 @@ class Pacton(Instrument):
 		Smooth the average using cvx and use this in furthre processing for background subtraction on the LHS
 		to make it easier to stitch together spectra
 		'''
-		wavelengths = range(50,80,10)
+		wavelengths = list(range(50,80,10))
 		spectra = []
 		for wl in wavelengths:
 			self.acton.set_wavelength(wl,blocking=True,fast=True,debug=debug)
@@ -210,7 +210,7 @@ class Pacton(Instrument):
 				sp2 = spectra[j]
 				peak,xcs = spectrum_pixel_offset(sp1,sp2)
 				if debug > 0:
-					print "Correlation peak (=pixel offset): {0}".format(peak)
+					print("Correlation peak (=pixel offset): {0}".format(peak))
 				d_wl = wavelengths[j] - wavelengths[i]
 				d_pixel = peak
 				sf = pixel_wavelength_conversion(d_pixel,d_wl)
@@ -221,13 +221,13 @@ class Pacton(Instrument):
 					axarr[1].plot(peak,xcs[peak],"o",color=p[0].get_color())
 
 				if debug > 0:
-					print "Scale factor [{0} nm] vs [{1} nm]:".format(wavelengths[i],wavelengths[j]), sf
+					print("Scale factor [{0} nm] vs [{1} nm]:".format(wavelengths[i],wavelengths[j]), sf)
 
 		#compute mean of scaling factor
 		sf_mean = np.mean(scale_factors)
 		sf_std = np.std(scale_factors)
 		if debug > 0:
-			print "Final pixel to wavelength conversion  factor: {0:4g} +/- {1:4g} [nm/pixel]".format(sf_mean,sf_std)
+			print("Final pixel to wavelength conversion  factor: {0:4g} +/- {1:4g} [nm/pixel]".format(sf_mean,sf_std))
 		
 		if plot == True:
 			axarr[0].legend()
@@ -260,4 +260,4 @@ class Pacton(Instrument):
 		# return stitched spectrum
 
 if __name__ == "__main__":
-	print "pass"
+	print("pass")

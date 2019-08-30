@@ -1,4 +1,4 @@
-from __future__ import division
+
 import numpy as np
 import requests
 import matplotlib.pyplot as plt
@@ -10,7 +10,7 @@ from matplotlib import cm
 #Initialized after first request
 WAVELENGTHS = None
 REFRACTIVE_INDEX = None
-print "starting"
+print("starting")
 '''
 Adapted from: https://github.com/scottprahl/miepython
 
@@ -209,9 +209,9 @@ def get_refractive_index(target_wavelength, url):
         reader = csv.reader(response._content)
         # for row in reader:
         #     print row
-        print response._content
+        print(response._content)
         # content = ((response._content).replace('\r','\n')).replace('\n\n\n',"\n").replace('\t',",").replace("\n\n","\n")
-        print content
+        print(content)
         R = [v.split(",") for v in (content.split("\n"))]
         R=R[1:]
 
@@ -227,9 +227,9 @@ def get_refractive_index(target_wavelength, url):
                 pass
             WAVELENGTHS = wavelengths
             REFRACTIVE_INDEX = ns
-    print target_wavelength
-    print WAVELENGTHS
-    print REFRACTIVE_INDEX
+    print(target_wavelength)
+    print(WAVELENGTHS)
+    print(REFRACTIVE_INDEX)
     return np.interp(target_wavelength,WAVELENGTHS,REFRACTIVE_INDEX)
 
 def get_refractive_index_Au(target_wavelength):
@@ -287,15 +287,15 @@ def main3():
     rs = [20e-9,40e-9,]
     wavelengths = np.linspace(400e-9,1000e-9,600)
     for r in rs:
-        print "r",r
+        print("r",r)
         Xs_sca = []
         Xs_ext = []
         for wavelength in wavelengths:
             n_particle = get_refractive_index_Au(wavelength/1e-9)
-            print "N:",n_particle
+            print("N:",n_particle)
             x,m = make_rescaled_parameters(n_med=n_medium,n_particle=n_particle,r=r,wavelength=wavelength)
             
-            print "X:{0},M:{1}".format(x,m)
+            print("X:{0},M:{1}".format(x,m))
             n_max = 20
             scatteringXc = calculate_scattering_cross_section(m,x,r,n_max)
             extinctionXc = calculate_extinction_cross_section(m,x,r,n_max)
@@ -388,9 +388,9 @@ def main():
         x,m = make_rescaled_parameters(n_med=n_medium,n_particle=n_particle,r=r,wavelength=wavelength)
         n_max = int(x + 4.05 * x**0.33333 + 2.0)+1
 
-        print "x:",x
-        print "m:",m
-        print "n_max", n_max
+        print("x:",x)
+        print("m:",m)
+        print("n_max", n_max)
         theta = np.linspace(-np.pi,np.pi, 360)
         mu = np.cos(theta)
         [S1,S2] = mie_S1_S2(m,x,mu,n_max)
@@ -420,7 +420,7 @@ def main():
         ax2.legend()
         plt.title("Particle radius [nm]:{0},x:{1},\nm:{2}, n_max:{3}".format(r/1e-9,x,m,n_max))
         # plt.show()
-        plt.savefig("C:\Users\im354\Pictures\Mie\particle_{}.png".format(r/1e-9))
+        plt.savefig("C:\\Users\im354\Pictures\Mie\particle_{}.png".format(r/1e-9))
 
 def scattering_cross_section(radius,wavelength):
 
@@ -446,8 +446,8 @@ def main4():
 
     ratio_low = scattering_cross_section(radius = 120e-9,wavelength=450e-9)/scattering_cross_section(radius = 100e-9,wavelength=450e-9)
     ratio_high = scattering_cross_section(radius = 120e-9,wavelength=580e-9)/scattering_cross_section(radius = 100e-9,wavelength=580e-9)
-    print "RATIO LOW: ", ratio_low
-    print "RATIO High: ", ratio_high
+    print("RATIO LOW: ", ratio_low)
+    print("RATIO High: ", ratio_high)
     plt.show()
 if __name__ == "__main__":
     main4()

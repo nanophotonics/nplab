@@ -83,13 +83,13 @@ class Frequency_counter_F390(SerialInstrument):
         try:
             return float(self.query('N?')[:-2])
         except:
-            print self.query('N?')[:-2]
+            print(self.query('N?')[:-2])
     def measure_next_fast(self):
         '''Return the invalid measurement (i.e. refereshs at LCD refresh rate, not the measreument rate)'''
         try:
             return float(self.query('?')[:-2])
         except:
-            print self.query('?')[:-2]
+            print(self.query('?')[:-2])
 #    def start_countinous_fast(self):
 #        '''Starts fast streaming of values at the LCD refresh rate '''
 #        self.write('C?')
@@ -158,11 +158,11 @@ class Frequency_counter_F390(SerialInstrument):
                 self._live_view_thread = threading.Thread(target=self._live_view_function)
                 self._live_view_thread.start()
             except AttributeError as e: #if any of the attributes aren't there
-                print "Error:", e
+                print("Error:", e)
         else:
             if not self._live_view:
                 return # do nothing if it's not running.
-            print "stopping live view thread"
+            print("stopping live view thread")
             try:
                 self._live_view = False
                 self._live_view_stop_event.set()

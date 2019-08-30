@@ -5,21 +5,21 @@ import numpy as np
 import time
 
 from nplab.instrument.camera.Picam.pixis import Pixis
-from Pacton import Pacton
+from .Pacton import Pacton
 
 
 def initialize_measurement(acton_port, exposure_time = 50):
-	print "Starting.."
+	print("Starting..")
 
-	print "Pixis..."
+	print("Pixis...")
 	p = Pixis(debug=1)
 
 	p.StartUp()
-	print "Acton..."
+	print("Acton...")
 	act = Acton(port=acton_port, debug=1)
-	print "Done..."
+	print("Done...")
 	pacton = Pacton(pixis=p,acton=act)
-	print "Measuring..."
+	print("Measuring...")
 	p.SetExposureTime(exposure_time)
 	return pacton
 

@@ -51,9 +51,9 @@ def SendMessage(address,msg,subject):
             server.login(credentials.user, credentials.pw)
             server.sendmail(FROM, TO, message)
             server.close()
-            print 'successfully sent the mail'
+            print('successfully sent the mail')
         except:
-            print "failed to send mail"
+            print("failed to send mail")
             
 NPLAB_FROM_ADDRESS = "physics-np-bounces@lists.cam.ac.uk"#np-lab-notifications@phy.cam.ac.uk"
 NPLAB_SMTP_SERVER = "ppsw.cam.ac.uk"
@@ -73,7 +73,7 @@ def send_email(to_address, message, subject="[nplab] Notification", raise_except
         if raise_exceptions:
             raise e
         else:
-            print "Warning: errror while sending email to {0}: {1}".format(to_address, e)
+            print("Warning: errror while sending email to {0}: {1}".format(to_address, e))
 
 if __name__ == "__main__":
     import datetime

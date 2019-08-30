@@ -42,4 +42,4 @@ if __name__ == '__main__':
             """Docstring for C"""
             return x+3
 
-    print C.foo.__doc__
+    print(C.foo.__doc__)

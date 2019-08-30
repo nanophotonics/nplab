@@ -71,10 +71,10 @@ if __name__ == '__main__':
     image = np.random.random((100,100,3))
     f = plt.figure()
     ax = f.add_subplot(111)
-    print "Plotting..."
+    print("Plotting...")
     plot_skewed_image(image,[(0,0),(-0.5,1),(1,0.5),(0.5,1.5)],ax)
-    print "Drawing..."
+    print("Drawing...")
     f.canvas.draw()
-    print "Done"
+    print("Done")
     plt.show()
     

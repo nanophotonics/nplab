@@ -6,7 +6,7 @@ from nplab.analysis.smoothing import convex_smooth
 
 from nplab.instrument.spectrometer.acton_2300i import Acton
 from nplab.instrument.camera.Picam.pixis import Pixis
-from Pacton import Pacton
+from .Pacton import Pacton
 
 
 def make_measurement(data_group,laser_wavelength,center_wavelength):
@@ -19,17 +19,17 @@ def make_measurement(data_group,laser_wavelength,center_wavelength):
 def initialize_measurement():
 	f = df.DataFile("ir_calibration.hdf5","a")
 	g = f.require_group("calibration")
-	print "Starting.."
+	print("Starting..")
 
-	print "Pixis..."
+	print("Pixis...")
 	p = Pixis(debug=1)
 
 	p.StartUp()
-	print "Acton..."
+	print("Acton...")
 	act = Acton("COM7",debug=1)
-	print "Done..."
+	print("Done...")
 	pacton = Pacton(pixis=p,acton=act)
-	print "Measuring..."
+	print("Measuring...")
 	fig,ax = plt.subplots(1)
 	p.SetExposureTime(500)
 	pacton.get_pixel_response_calibration_spectrum()
@@ -45,17 +45,17 @@ if __name__ == "__main__":
 
 	f = df.DataFile("ir_calibration.hdf5","a")
 	g = f.require_group("calibration")
-	print "Starting.."
+	print("Starting..")
 
-	print "Pixis..."
+	print("Pixis...")
 	p = Pixis(debug=1)
 
 	p.StartUp()
-	print "Acton..."
+	print("Acton...")
 	act = Acton("COM7",debug=1)
-	print "Done..."
+	print("Done...")
 	pacton = Pacton(pixis=p,acton=act)
-	print "Measuring..."
+	print("Measuring...")
 	fig,ax = plt.subplots(1)
 	p.SetExposureTime(500)
 	pacton.get_pixel_response_calibration_spectrum()

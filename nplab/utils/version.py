@@ -36,7 +36,7 @@ def latest_commit():
 def all_module_versions_string():
     """A string containing the version of all loaded modules with accessible version info."""
     modulestring = ""
-    for m in sys.modules.values():
+    for m in list(sys.modules.values()):
         try:
             modulestring += m.__name__ + ": " + m.__version__ + "\n"
         except:
@@ -70,4 +70,4 @@ def version_info_string():
     return version_string
 
 if __name__ == '__main__':
-    print version_info_string()
+    print(version_info_string())

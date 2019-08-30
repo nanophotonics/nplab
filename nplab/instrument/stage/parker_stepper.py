@@ -42,7 +42,7 @@ class ParkerStepper(si.SerialInstrument):
             newlocation(int):   The new postion you want the stepper to move to                
         '''
         if newlocation>=self.max_steps or newlocation<0:
-            print 'Move failed as new postion was out of range'
+            print('Move failed as new postion was out of range')
             return None
         self.write("MN")
         self.write("MPA")

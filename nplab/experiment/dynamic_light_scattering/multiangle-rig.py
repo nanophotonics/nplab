@@ -11,18 +11,18 @@ shutter.close_shutter()
 s.home()
 s._waitFinishMove(axis="x")
 import time
-angles = range(10,50,10)
-print angles
+angles = list(range(10,50,10))
+print(angles)
 for angle in angles:
 	shutter.close_shutter()
 	s.move(angle,axis="x",block=True)
-	print "angle@",angle
-	print "starting capture {} ...".format(datetime.now()),
+	print("angle@",angle)
+	print("starting capture {} ...".format(datetime.now()), end=' ')
 	output_file =PATH_TEMPLATE.format("datafile_{}.timetag".format(angle))
 	shutter.open_shutter()
 	time.sleep(1)
 	# t.capture(integration_time=1,output_file=output_file)
-	print "...done {}".format(datetime.now())
+	print("...done {}".format(datetime.now()))
 	shutter.close_shutter()
 
 shutter.close_shutter()

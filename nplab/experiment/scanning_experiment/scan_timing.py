@@ -54,4 +54,4 @@ class TimedScan(object):
 
     def print_scan_time(self, t):
         """Prints the duration of the scan."""
-        print 'Scan took', self.format_time(t)
+        print('Scan took', self.format_time(t))

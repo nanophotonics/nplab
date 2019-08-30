@@ -25,7 +25,7 @@ class CubeLaser(SerialInstrument, LightSource):
     def get_power(self):
         """read the current power output in mW"""
         power = self.float_query("?P") 
-        print "%.1f mW" % power
+        print("%.1f mW" % power)
         return power  
         
     def set_power(self, power):
@@ -33,7 +33,7 @@ class CubeLaser(SerialInstrument, LightSource):
         if 0<=power<=40:
             self.query("P=%.1f" % power)
         else:
-            print 'Input power must be between 0 an 40 mW'
+            print('Input power must be between 0 an 40 mW')
 
     def mode_switch(self,pulsed=0): #if pulsed=0, then CW; if 1 then pulsed
         self.query("CW=%.f" % (1-pulsed))
@@ -43,7 +43,7 @@ class CubeLaser(SerialInstrument, LightSource):
             mode = 'Pulsed mode'
         else:
             mode = 'pulsed must be 0 (CW) or 1 (Pulsed)'           
-        print mode
+        print(mode)
 
 class CubeLaserUI(QtGui.QWidget):
     def __init__(self):

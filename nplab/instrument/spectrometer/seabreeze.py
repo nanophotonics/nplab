@@ -55,10 +55,10 @@ website (http://downloads.oceanoptics.com/OEM/), and that its version matches
 your Python architecture (64 or 32 bit).  See the module help for more
 information"""
     try:
-        print explanation, "SeaBreeze Driver Missing"
+        print(explanation, "SeaBreeze Driver Missing")
     except Exception as e:
-        print "uh oh, problem with the message..."
-        print e
+        print("uh oh, problem with the message...")
+        print(e)
         pass
     finally:
         raise Exception(explanation)
@@ -154,7 +154,7 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
         wrapper and include them in it.  If not, attempt to open and wrap all
         spectrometers connected to the computer."""
         instances = cls.get_instances()
-        print instances
+        print(instances)
         if instances == []:
             return cls.get_spectrometers()
         else:
@@ -279,8 +279,8 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
         try:
             return self._tec_enabled
         except OceanOpticsError as error:
-            print error
-            print 'Most likely raised due to the lack of a tec on this device'
+            print(error)
+            print('Most likely raised due to the lack of a tec on this device')
             
             
 
@@ -292,8 +292,8 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
             check_error(e)
             self._tec_enabled = state
         except OceanOpticsError as error:
-            print error
-            print 'Most likely raised due to the lack of a tec on this device'
+            print(error)
+            print('Most likely raised due to the lack of a tec on this device')
 
     enable_tec = property(get_tec_enable, set_tec_enable)
 
@@ -316,8 +316,8 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
            
             return temperature
         except OceanOpticsError as error:
-            print error
-            print 'Most likely raised due to the lack of a tec on this device'
+            print(error)
+            print('Most likely raised due to the lack of a tec on this device')
 
     def set_tec_temperature(self, temperature):
         """Enable the cooling system and set the temperature"""
@@ -329,8 +329,8 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
             seabreeze.seabreeze_set_tec_enable(self.index, byref(e), 1)
             check_error(e)
         except OceanOpticsError as error:
-            print error
-            print 'Most likely raised due to the lack of a tec on this device'        
+            print(error)
+            print('Most likely raised due to the lack of a tec on this device')        
 
     tec_temperature = property(get_tec_temperature, set_tec_temperature)
 
@@ -441,13 +441,13 @@ def main():
 
     try:
         N = len(list_spectrometers())
-        print "Spectrometers connected:", list_spectrometers()
-        print "%d spectrometers found" % N
+        print("Spectrometers connected:", list_spectrometers())
+        print("%d spectrometers found" % N)
         assert N != 0, 'There are no Ocean Optics spectrometers attached (are you using the seabreeze drivers?)'
 
         spectrometers = OceanOpticsSpectrometer.get_spectrometers()
         for s in spectrometers.spectrometers:
-            print "spectrometer %s is a %s" % (s.serial_number, s.model_name)
+            print("spectrometer %s is a %s" % (s.serial_number, s.model_name))
             if s.model_name in ["QE65000", "QE-PRO"]:
                 s.set_tec_temperature = -20
             s.read()
@@ -457,14 +457,14 @@ def main():
  #       sys.exit(app.exec_()) #this is the "long way" of running a GUI
         spectrometers.show_gui()  # the "short way" of running a GUI
     except OceanOpticsError as error:
-        print "An error occurred with the spectrometer: %s" % error
+        print("An error occurred with the spectrometer: %s" % error)
     finally:
         try:
             pass
             #           del s     #we close the spectrometer afterwards, regardless of what happened.
         except:  # of course, if there's no spectrometer this will fail, hence the error handling
             shutdown_seabreeze()  # reset things if we've had errors
-            print "The spectrometer did not close cleanly. SeaBreeze has been reset."
+            print("The spectrometer did not close cleanly. SeaBreeze has been reset.")
 # to alter max/min: s.spectrum_plot.value_mapper.range.high=0.01
 
 # example code:

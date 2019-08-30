@@ -6,7 +6,7 @@ from nplab.analysis.smoothing import convex_smooth
 
 from nplab.instrument.spectrometer.acton_2300i import Acton
 from nplab.instrument.camera.Picam.pixis import Pixis
-from Pacton import Pacton
+from .Pacton import Pacton
 
 from nplab.instrument.light_sources.SolsTiS import SolsTiS
 import time
@@ -48,17 +48,17 @@ def make_measurement(data_group,laser_wavelength,center_wavelength,reruns=0):
 def initialize_measurement():
 	f = df.DataFile("ir_calibration.hdf5","a")
 	g = f.require_group("calibration")
-	print "Starting.."
+	print("Starting..")
 
-	print "Pixis..."
+	print("Pixis...")
 	p = Pixis(debug=1)
 
 	p.StartUp()
-	print "Acton..."
+	print("Acton...")
 	act = Acton("COM7",debug=1)
-	print "Done..."
+	print("Done...")
 	pacton = Pacton(pixis=p,acton=act)
-	print "Measuring..."
+	print("Measuring...")
 	fig,ax = plt.subplots(1)
 	p.SetExposureTime(500)
 	pacton.get_pixel_response_calibration_spectrum()
@@ -74,18 +74,18 @@ if __name__ == "__main__":
 
 	f = df.DataFile("ir_calibration_1200gmm.hdf5","a")
 	g = f.require_group("calibration")
-	print "Starting.."
+	print("Starting..")
 
-	print "Pixis..."
+	print("Pixis...")
 	p = Pixis(debug=0)
 
 	p.StartUp()
-	print "Acton..."
+	print("Acton...")
 	act = Acton("COM5",debug=0)
-	print "Done..."
+	print("Done...")
 	pacton = Pacton(pixis=p,acton=act)
 	
-	print "Setting grating..."
+	print("Setting grating...")
 	pacton.acton.set_grating(1) # 1 : 1200g/mm, 2: 300g/mm
 	# print pacton.acton.read_grating()
 	p.SetExposureTime(200)
@@ -95,7 +95,7 @@ if __name__ == "__main__":
 	# measured = get_wavelength(laser)
 	# print wl, measured
 
-	center_wavelengths = range(870,890,10)
+	center_wavelengths = list(range(870,890,10))
 	p.SetExposureTime(200)
 	
 	
@@ -103,7 +103,7 @@ if __name__ == "__main__":
 	for c_wl in center_wavelengths:
 		laser_wavelengths = np.linspace(c_wl-bandwidth,c_wl+bandwidth,5)
 		for l_wl in laser_wavelengths:
-			print "acton wl: {0}, laser wl: {1}".format(c_wl,l_wl)
+			print("acton wl: {0}, laser wl: {1}".format(c_wl,l_wl))
 			tune(l_wl,LASER)
 			measured_wl = get_wavelength(LASER)	
 			#plot_measurement(pacton,c_wl)

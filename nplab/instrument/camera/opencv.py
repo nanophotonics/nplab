@@ -22,8 +22,8 @@ We are using Python %d.%d, so get the corresponding package.
         import traitsui.message
         traitsui.message.error(explanation,"OpenCV Missing", buttons=["OK"])
     except Exception as e:
-        print "uh oh, problem with the message..."
-        print e
+        print("uh oh, problem with the message...")
+        print(e)
         pass
     finally:
         raise ImportError(explanation) 
@@ -54,9 +54,9 @@ class OpenCVCamera(Camera):
                         frame = cv2.cvtColor(frame, cv2.cv.CV_BGR2RGB)
                     return ret, frame
                 except Exception as e:
-                    print "Attempt number {0} failed to capture a frame from the camera!".format(i)
-                    print e
-        print "Camera.raw_snapshot() has failed to capture a frame."
+                    print("Attempt number {0} failed to capture a frame from the camera!".format(i))
+                    print(e)
+        print("Camera.raw_snapshot() has failed to capture a frame.")
         if not suppress_errors:
             raise IOError("Dropped too many frames from camera :(")
         else:

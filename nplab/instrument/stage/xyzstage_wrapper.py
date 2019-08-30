@@ -11,7 +11,7 @@ import numpy as np
 
 class fake_stage(Stage):
     def move(self,a,axis = 1,relative = False):
-        print a
+        print(a)
     def get_position(self):
         return 0
 
@@ -33,20 +33,20 @@ class piezoconcept_thorlabsMSL02_wrapper(Stage):
         """ move wrapper
 
         """
-        print 'move command' ,x,axis,relative
+        print('move command' ,x,axis,relative)
         if axis == None:
             if len(x)==3:
                 self.z.move(x[2],relative = relative)
                 try:
                     self.xy.move(x[:2],relative = relative,block = block)
                 except Exception as e:
-                    print e
+                    print(e)
                     self.xy.move(x[:2],relative = relative,block = block)
             elif len(x)==2:
                 try:
                     self.xy.move(x,relative = relative,block = block)
                 except Exception as e:
-                    print e
+                    print(e)
                     self.xy.move(x[:2],relative = relative,block = block)
         if axis in self.axis_names:
             if axis=='x' or axis=='y':

@@ -23,7 +23,7 @@ class CameraConsumer(threading.Thread):
             assert len(image.shape)==3
 
 if __name__ == '__main__':
-    device = int(input("Enter the number of the camera to use: "))
+    device = int(eval(input("Enter the number of the camera to use: ")))
     cam = nplab.instrument.camera.opencv.OpenCVCamera(device)
     cam.live_view = True
     consumer_threads = [CameraConsumer(cam) for i in range(3)]

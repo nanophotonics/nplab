@@ -163,7 +163,7 @@ class NotifiedProperty(Property):
         
         NB if the function raises an exception, it will not be called again.
         """
-        if obj not in self.callbacks_by_object.keys():
+        if obj not in list(self.callbacks_by_object.keys()):
             self.callbacks_by_object[obj] = WeakSet()
         self.callbacks_by_object[obj].add(callback)
         

@@ -46,9 +46,9 @@ class ThreadBox3000(QuickControlBox):
                 elif hasattr(default,'__call__'):
                     self.add_lineedit(arg)
                     try:
-                        self.controls[arg].setText(default.func_name)
+                        self.controls[arg].setText(default.__name__)
                     except Exception as e:
-                        print e
+                        print(e)
                         self.controls[arg].setText(default.__name__)
                     self.controls[arg].setReadOnly(True)
                         
@@ -74,7 +74,7 @@ class ThreadBox3000(QuickControlBox):
         def payload(save_group=df._current_group):
             import numpy as np
             input_variables= {}
-            for variable in self.controls.keys():
+            for variable in list(self.controls.keys()):
                 if variable == 'save_returned' or variable == 'start' or variable == 'function name':
                     continue
                 
@@ -90,27 +90,27 @@ class ThreadBox3000(QuickControlBox):
                     defaults = np.array(fullargs.defaults)
                     default_value = defaults[args==variable]
                     input_variables[variable]=default_value[0]
-                    print variable, default_value
+                    print(variable, default_value)
                 elif (type(variable_control) == QtWidgets.QSpinBox or 
                     type(variable_control) == QtWidgets.QDoubleSpinBox):
                     input_variables[variable]=variable_control.value()
                 elif type(variable_control) == QtWidgets.QLineEdit:
                     try:
-                        exec 'temp_var = '+variable_control.text() in locals()   
+                        exec('temp_var = '+variable_control.text(), locals())   
                         input_variables[variable]=temp_var
 
                     except Exception as e:
-                        print e
-                        print 'Qlineedit input error for ',variable
+                        print(e)
+                        print('Qlineedit input error for ',variable)
                 elif type(variable_control) == QtWidgets.QCheckBox:
                     input_variables[variable]=variable_control.isChecked()
             try:
                 function_returns = self.function(**input_variables)
             except TypeError:
-                print input_variables
-                print 'function: ',task
-                print 'Did not recieve the correct inputs!'
-                print 'did you make an error in your lineedit inputs?'
+                print(input_variables)
+                print('function: ',task)
+                print('Did not recieve the correct inputs!')
+                print('did you make an error in your lineedit inputs?')
             if self.controls['save_returned'].isChecked()==True:
                 save_group.create_dataset(task,
                                           data = function_returns,
@@ -143,7 +143,7 @@ class ThreadBox3000(QuickControlBox):
     
 if __name__ == '__main__':
     def print_hello(spade = '1'):
-        print spade
+        print(spade)
     from nplab.utils.gui import get_qt_app
     app = get_qt_app()    
     thread_box = ThreadBox3000(print_hello)

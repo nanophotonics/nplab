@@ -271,8 +271,8 @@ if __name__ == '__main__':
     smu = Keithley2635A()
     smu.output = 1
     smu.src_voltage = 10e-3
-    print smu.read_iv()
-    print smu.read_resistance()
+    print(smu.read_iv())
+    print(smu.read_resistance())
     smu.output = 0
 
     smu.show_gui()
