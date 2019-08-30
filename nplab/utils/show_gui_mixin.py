@@ -9,7 +9,7 @@ to avoid dependencies on Qt, etc. as it's intended to be toolkit-neutral
 author: Richard Bowman
 """
 
-class ShowGUIMixin:
+class ShowGUIMixin(object):
     """A mixin class to provide standard GUI functionality.
 
     This class provides one method, which pops up a GUI window using 

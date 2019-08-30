@@ -17,6 +17,7 @@ Decorating a function with @background_action means that it will happen in a thr
 
 A function running in the background returns a thread object; to find the return value, you can call t.join_and_return_result() (you may want to check if the thread has finished first with t.is_alive()).
 """
+from __future__ import print_function
 
 import time
 import threading
