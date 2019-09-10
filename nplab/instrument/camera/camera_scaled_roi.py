@@ -22,10 +22,13 @@ class CameraRoiScale(Camera):
 
     This class also handles binning, and keeps the scaled axes and ROI selection unaffected by the binning
     """
-    def __init__(self):
+    def __init__(self, crosshair_origin='top_left'):
         super(CameraRoiScale, self).__init__()
         self.axis_values = dict(bottom=None, left=None, top=None, right=None)
         self.axis_units = dict(bottom=None, left=None, top=None, right=None)
+        self._roi = (0, 1000, 0, 1000)
+        self.detector_shape = (1000, 1000)
+        self.crosshair_origin = crosshair_origin
 
     @property
     def x_axis(self):
@@ -46,10 +49,23 @@ class CameraRoiScale(Camera):
     @property
     def roi(self):
         """
+        If the camera supports setting a ROI in hardware, the user should overwrite this property
 
         :return: 4-tuple of integers. Pixel positions xmin, xmax, ymin, ymax
         """
-        return 0, 1, 0, 1
+        return self._roi
+
+    @roi.setter
+    def roi(self, value):
+        """
+        By default, setting a ROI will make a filter function that indexes the frame to the given ROI.
+
+        :return: 4-tuple of integers. Pixel positions xmin, xmax, ymin, ymax
+        """
+        self._roi = value
+        def fltr(img):
+            return img[self._roi[2]:self._roi[3], self._roi[0]:self._roi[1]]
+        setattr(self, 'filter_function', fltr)
 
     @property
     def gui_roi(self):
@@ -89,15 +105,30 @@ class CameraRoiScale(Camera):
                     widgt._pxl_scale = self.binning
                     # Set the axes values and units
                     widgt.axis_values = self.axis_values
+                    widgt.axis_units = self.axis_units
                     widgt.x_axis = self.x_axis
                     widgt.y_axis = self.y_axis
-                    widgt.axis_units = self.axis_units
+                    if not self.live_view:  # not sure why it doesn't work in live view
+                        widgt.update_axes()
+                    widgt.mouseMoved()
 
-                    # Resize the crosshairs, so that they are always 1/40th of the total size of the image
-                    size = min(((roi[1] - roi[0])/40., (roi[3]-roi[2])/40.))
+                    # Resize the crosshairs, so that they are always 1/40th of the total size of the image, but never
+                    # less than 5 pixels
+                    size = max(((roi[1] - roi[0])/40., (roi[3]-roi[2])/40., 5))
                     for idx in [1, 2]:
                         xhair = getattr(widgt, 'CrossHair%d' % idx)
                         xhair._size = size
+                        if self.crosshair_origin == 'top_left':
+                            xhair._origin = [0, 0]
+                        elif self.crosshair_origin == 'top_right':
+                            xhair._origin = [self.detector_shape[0], 0]
+                        elif self.crosshair_origin == 'bottom_left':
+                            xhair._origin = [0, self.detector_shape[1]]
+                        elif self.crosshair_origin == 'top_right':
+                            xhair._origin = [self.detector_shape[0], self.detector_shape[1]]
+                        else:
+                            self._logger.info('Not recognised: crosshair_origin = %s. Needs to be top_left, top_right, '
+                                              'bottom_left or bottom_right' % self.crosshair_origin)
                         xhair.update()
 
         super(CameraRoiScale, self).update_widgets()
@@ -153,6 +184,7 @@ class Crosshair(pyqtgraph.GraphicsObject):
         super(Crosshair, self).__init__(*args)
         self.color = color
         self._size = size
+        self._origin = [0, 0]
 
     def paint(self, p, *args):
         p.setPen(pyqtgraph.mkPen(self.color))
@@ -174,6 +206,10 @@ class Crosshair(pyqtgraph.GraphicsObject):
         else:
             self.setPos(self.startPos + ev.pos() - ev.buttonDownPos())
         self.Released.emit()
+
+    def referenced_pos(self):
+        pos = self.pos()
+        return [np.abs(pos[x] - self._origin[x]) for x in [0, 1]]
 
 
 class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
@@ -225,6 +261,7 @@ class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
         self.checkbox_aspectratio.stateChanged.connect(self.fix_aspect_ratio)
         self.checkbox_tools.stateChanged.connect(self.show_tools)
         self.checkbox_axes.stateChanged.connect(self.hide_axes)
+        self.checkbox_autolevel.stateChanged.connect(self.autoLevel)
         self.splitter.setSizes([1, 0])
         self.hide_axes()
 
@@ -268,9 +305,20 @@ class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
     def autoRange(self):
         return self.checkbox_autorange.isChecked()
 
-    @property
     def autoLevel(self):
-        return self.checkbox_autolevel.isChecked()
+        if self.checkbox_autolevel.isChecked():
+            self.lineEdit_minLevel.setText('0')
+            self.lineEdit_maxLevel.setText('100')
+            self.lineEdit_minLevel.setReadOnly(True)
+            self.lineEdit_maxLevel.setReadOnly(True)
+        else:
+            self.lineEdit_minLevel.setReadOnly(False)
+            self.lineEdit_maxLevel.setReadOnly(False)
+
+    def levels(self):
+        min_level = float(self.lineEdit_minLevel.text())
+        max_level = float(self.lineEdit_maxLevel.text())
+        return min_level, max_level
 
     def pos_to_unit(self, positions):
         """
@@ -303,7 +351,7 @@ class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
             positions = ()
             for idx in [1, 2]:
                 xhair = getattr(self, "CrossHair%d" % idx)
-                pos = tuple(xhair.pos())
+                pos = tuple(xhair.referenced_pos())
                 positions += pos
             diff = np.linalg.norm(np.array(positions[:2]) - np.array(positions[2:]))
             positions += (diff, )
@@ -317,7 +365,7 @@ class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
                 scaled_positions = ()
                 for idx in [1, 2]:
                     xhair = getattr(self, "CrossHair%d" % idx)
-                    pos = tuple(xhair.pos())
+                    pos = tuple(xhair.referenced_pos())
                     scaled_positions += self.pos_to_unit(pos)
                 units = ()
                 for ax in ['bottom', 'left']:
@@ -349,10 +397,11 @@ class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
         elif len(newimage.shape) == 2:
             if newimage.shape[0] > self._max_num_line_plots:
                 self.splitter.setSizes([1, 0])
+                levels = map(lambda x: np.percentile(newimage, x), self.levels())
                 self.ImageDisplay.setImage(newimage,
                                            pos=offset,
                                            autoRange=self.autoRange,
-                                           autoLevels=self.autoLevel,
+                                           levels=levels,
                                            scale=scale)
             else:
                 self.splitter.setSizes([0, 1])
@@ -363,15 +412,14 @@ class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
             zvals = 0.99 * np.linspace(0, newimage.shape[0] - 1, newimage.shape[0])
             if newimage.shape[0] == 1:
                 newimage = newimage[0]
+            levels = map(lambda x: np.percentile(newimage, x), self.levels())
             self.ImageDisplay.setImage(newimage, xvals=zvals,
                                        pos=offset,
                                        autoRange=self.autoRange,
-                                       autoLevels=self.autoLevel,
+                                       levels=levels,
                                        scale=scale)
         else:
             raise ValueError('Cannot display. Array shape unrecognised')
-        self.mouseMoved()
-        self.update_axes()
 
     def fix_aspect_ratio(self):
         boolean = self.checkbox_aspectratio.isChecked()
@@ -405,8 +453,8 @@ class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
         assert hasattr(self, 'CrossHair1')
         assert hasattr(self, 'CrossHair2')
 
-        pos1 = self.CrossHair1.pos()
-        pos2 = self.CrossHair2.pos()
+        pos1 = self.CrossHair1.referenced_pos()
+        pos2 = self.CrossHair2.referenced_pos()
         if pos1 == pos2:
             return None
 

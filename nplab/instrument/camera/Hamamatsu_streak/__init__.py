@@ -11,8 +11,7 @@ import numpy as np
 
 from nplab.utils.gui import QtWidgets, QtCore, uic
 from nplab.instrument import Instrument
-from nplab.instrument.message_bus_instrument import MessageBusInstrument
-from nplab.instrument.camera import DisplayWidget
+from nplab.instrument.camera.camera_scaled_roi import DisplayWidgetRoiScale
 
 PrettyPrinter = pprint.PrettyPrinter(indent=4)
 
@@ -653,7 +652,8 @@ class StreakBase(Instrument):
 
     '''Image commands'''
 
-    def save_image(self, image_index='Current', image_type='TIF', filename='DefaultImage.tif', overwrite=False):
+    def save_image(self, image_index='Current', image_type='TIF', filename='DefaultImage.tif', overwrite=False,
+                   directory=None):
         """
 
         :param image_index: image to be saved, either 'Current' or a number between 0 and 19
@@ -661,13 +661,16 @@ class StreakBase(Instrument):
                                 'data2tiff', 'data2tif', 'display2tiff', 'display2tif'
         :param filename: file path
         :param overwrite: whether to overwrite existing files
+        :param directory:
         :return:
         """
-        if not filename.startswith('C:'):
-            filename = 'C:/Users/Hera/Desktop/StreakData/' + filename
+        if directory is None:
+            directory = os.getcwd()
+        if not os.path.isabs(filename):
+            filename = os.path.join(directory, filename)
         self.send_command('ImgSave', image_index, image_type, filename, int(overwrite))
 
-    def load_image(self, filename=r'C:/Users/Hera/Desktop/DefaultImage.txt', image_type='ASCII'):
+    def load_image(self, filename='DefaultImage.txt', image_type='ASCII'):
         """
         Not that not all file types which can be saved can also be loaded. Some file types are intended for export only.
         Note: This load functions loads the image always into a new window independently of the setting of
@@ -678,6 +681,8 @@ class StreakBase(Instrument):
                                 'data2tiff', 'data2tif', 'display2tiff', 'display2tif'
         :return:
         """
+        if not os.path.isabs(filename):
+            filename = os.path.join(os.getcwd(), filename)
         self.send_command('ImgLoad', image_type, filename)
 
     def delete_image(self, image_index='Current'):
@@ -840,10 +845,14 @@ class StreakBase(Instrument):
         """
         self.send_command('SeqDelete')
 
-    def save_sequence(self, image_type='ASCII', filename=r'C:\Users\Hera\Desktop/DefaultSequence.txt', overwrite=0):
+    def save_sequence(self, image_type='ASCII', filename='DefaultSequence.txt', overwrite=0):
+        if not os.path.isabs(filename):
+            filename = os.path.join(os.getcwd(), filename)
         self.send_command('SeqSave', image_type, filename, overwrite)
 
-    def load_sequence(self, image_type='ASCII', filename=r'C:\Users\Hera\Desktop/DefaultSequence.txt'):
+    def load_sequence(self, image_type='ASCII', filename='DefaultSequence.txt'):
+        if not os.path.isabs(filename):
+            filename = os.path.join(os.getcwd(), filename)
         self.send_command('SeqLoad', image_type, filename)
 
     '''My commands'''
@@ -1094,7 +1103,7 @@ class StreakUI(QtWidgets.QWidget):
 
     def updateImage(self):
         if self.DisplayWidget is None:
-            self.DisplayWidget = DisplayWidget()
+            self.DisplayWidget = DisplayWidgetRoiScale()
         if self.DisplayWidget.isHidden():
             self.DisplayWidget.show()
         if len(self.Streak.image.shape) == 0:

@@ -22,7 +22,7 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
     """
 
     def __init__(self, instrument_dict, parent=None, dock_settings_path=None,
-                 scripts_path=None, working_directory=None):  #
+                 scripts_path=None, working_directory=None, file_path=None):  #
         """Args:
             instrument_dict(dict) :     This is a dictionary containing the
                                         instruments objects where the key is the 
@@ -30,12 +30,15 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
                                         console
             dock_settings_path(str):    A path for loading a previous dock widget
                                         configuration
-            script_path(str):           The path of any scripts the user may want to
+            scripts_path(str):          The path of any scripts the user may want to
                                         run using the drop down menu at the top
                                         of the gui
             working_directory(str):     A path to the requested working directory - 
                                         handy if you always wish to save data to 
                                         the same directories
+            file_path(str):             A path to the file for saving data. If None,
+                                        a dialog will ask for one. Can be a relative
+                                        path (from working_directory) or an absolute path
                                 """
         super(GuiGenerator, self).__init__(parent)
         self._logger = LOGGER
@@ -44,7 +47,15 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
             self.working_directory = os.path.join(os.getcwd())
         else:
             self.working_directory = working_directory
-        self.data_file = df.current(working_directory=working_directory)
+        if file_path is None:
+            self.data_file = df.current(working_directory=working_directory)
+        elif os.path.isabs(file_path):
+            df.set_current(file_path)
+            self.data_file = df.current()
+        else:
+            df.set_current(self.working_directory + '/' + file_path)
+            self.data_file = df.current()
+
         self.instr_dict["HDF5"] = self.data_file
         self.setDockNestingEnabled(1)
 
@@ -67,15 +78,14 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
         for instr in self.instr_dict:
             self._open_one_gui(instr)
 
-        self.terminalWindow = None
-        self.menuTerminal()
-        self._addActionViewMenu('Terminal')
-
         self.script_menu = None
         if scripts_path is not None:
             self.scripts_path = scripts_path
         else:
             self.scripts_path = 'scripts'
+        self.terminalWindow = None
+        self.menuTerminal()
+        self._addActionViewMenu('Terminal')
         self.makeScriptMenu()
 
         self.NightMode = 1
@@ -236,6 +246,7 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
         self._open_one_gui('HDF5')
         self.dockWidgetArea.restoreState(dock_state)
 
+
     def menuSaveExperiment(self):
         """push to data to hard drive """
         self.data_file.flush()
@@ -256,14 +267,14 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
         from nplab.utils import terminal
         if self.terminalWindow is None:
             if os.environ["QT_API"] == "pyqt5":
-                self.terminalWindow = terminal.QIPythonWidget()
+                self.terminalWindow = terminal.QIPythonWidget(scripts_path=self.scripts_path)
                 self.terminalWindow.push_vars({'gui': self, 'exper': self.instr_dict})
                 self.terminalWindow.push_vars(self.instr_dict)
                 self.terminalWindow.execute_command('import nplab.datafile as df')
                 self.terminalWindow.execute_command('')
                 handle = logging.StreamHandler(self.terminalWindow.kernel_manager.kernel.stdout)
             else:
-                self.terminalWindow = terminal.ipython()
+                self.terminalWindow = terminal.Ipython()
                 self.terminalWindow.push({'gui': self, 'exper': self.instr_dict})
                 self.terminalWindow.push(self.instr_dict)
                 self.terminalWindow.execute('import nplab.datafile as df')
@@ -308,7 +319,7 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
             for fn in filenames:
                 if fn != '__init__.py':
                     menuitem = current.addAction(fn)
-                    menuitem.triggered.connect(partial(self.menuScriptClicked, fn))
+                    menuitem.triggered.connect(partial(self.menuScriptClicked, '\\'.join((dirpath,fn))))
 
         script_menu.addSeparator()
         refreshScripts = script_menu.addAction('Refresh')
@@ -324,7 +335,6 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
         """Runs the selected script """
         if self.terminalWindow is None:
             self.menuTerminal()
-
         self.terminalWindow.run_script(scriptname)
 
     def VerboseChanged(self, action):

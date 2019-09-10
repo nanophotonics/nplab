@@ -22,9 +22,6 @@ class TemperatureControlMixin(object):
 
         self._control_thread = None
         self._controlling = False
-        self._monitor_thread = None
-        self._monitoring = False
-        self.temperature_history = None
 
     def get_temperature(self):
         raise NotImplementedError
@@ -37,9 +34,15 @@ class TemperatureControlMixin(object):
         return
     target_temperature = property(fset=set_target_temperature, fget=get_target_temperature)
 
-    def monitor_temperature(self, minutes=5):
-        "Monitor the temperature every 10s"
-        monitor_property(self, 'temperature', minutes * 60, 10)
+    def monitor_temperature(self, how_long=5, how_often=10, warn_limits=None):
+        """Sets a thread to monitor the temperature
+
+        :param int how_long: how long a history to keep, in minutes
+        :param int how_often: how often to add a value to the history, in seconds
+        :param 2-tuple warn_limits: min/max temperature below/above which a warning is raised
+        :return:
+        """
+        monitor_property(self, 'temperature', how_long * 60, how_often, warn_limits)
 
     def control_temperature(self, upper_target=None, lower_target=None):
         """
@@ -69,5 +72,3 @@ class TemperatureControlMixin(object):
             if not self._controlling:
                 break
         self._logger.warn('Temperature out of range')
-
-

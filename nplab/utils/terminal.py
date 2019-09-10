@@ -1,20 +1,24 @@
+# -*- coding: utf-8 -*-
+
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.inprocess import QtInProcessKernelManager
 # from IPython.qt.console.rich_ipython_widget import RichIPythonWidget
 # from IPython.qt.inprocess import QtInProcessKernelManager
 from nplab.utils.gui import QtCore
 import sys
+import os
 from IPython.lib import guisupport
 
-class ipython:
-    def __init__(self):
+
+class Ipython:
+    def __init__(self, scripts_path=''):
         self.kernel_manager = QtInProcessKernelManager()
         self.kernel_manager.start_kernel()
         self.kernel = self.kernel_manager.kernel
         sys.stdout = self.kernel.stdout
         sys.stderr = self.kernel.stderr
-          
-       
+
+        self.scripts_path = scripts_path
         self.kernel.gui = 'qt4'
 
         self.kernel_client = self.kernel_manager.client()
@@ -30,7 +34,6 @@ class ipython:
         self.execute('import numpy as np')
         self.execute('from matplotlib import pyplot as plt')
         self.execute('%matplotlib')
-        #self.execute('clear')
         self.execute('')
 
     def __del__(self):
@@ -41,7 +44,7 @@ class ipython:
         self.control.show()
 
         self.control.setWindowState(
-        self.control.windowState() & ~QtCore.Qt.WindowMinimized | QtCore.Qt.WindowActive)
+            self.control.windowState() & ~QtCore.Qt.WindowMinimized | QtCore.Qt.WindowActive)
         self.control.activateWindow()
 
     def stop(self):
@@ -58,7 +61,8 @@ class ipython:
         self.control.execute(cmd)
 
     def run_script(self, scriptname):
-        return self.control.execute('run -i scripts/%s' %scriptname)
+        scriptpath = os.path.join(self.scripts_path, scriptname)
+        return self.control.execute('run -i %s' % scriptpath)
 
 
 class QIPythonWidget(RichJupyterWidget):
@@ -67,8 +71,10 @@ class QIPythonWidget(RichJupyterWidget):
     argument. Modified from https://stackoverflow.com/questions/11513132/embedding-ipython-qt-console-in-a-pyqt-application
     """
 
-    def __init__(self, customBanner=None, *args, **kwargs):
-        if not customBanner is None: self.banner = customBanner
+    def __init__(self, custom_banner=None, scripts_path='', *args, **kwargs):
+        if custom_banner is not None:
+            self.banner = custom_banner
+        self.scripts_path = scripts_path
         super(QIPythonWidget, self).__init__(*args, **kwargs)
         self.kernel_manager = kernel_manager = QtInProcessKernelManager()
         kernel_manager.start_kernel()
@@ -87,9 +93,9 @@ class QIPythonWidget(RichJupyterWidget):
         self.execute_command("from matplotlib import pyplot as plt")
         self.execute_command("%matplotlib")
 
-    def push_vars(self, variableDict):
+    def push_vars(self, variable_dict):
         """ Given a dictionary containing name / value pairs, push those variables to the IPython console widget """
-        self.kernel_manager.kernel.shell.push(variableDict)
+        self.kernel_manager.kernel.shell.push(variable_dict)
 
     def clear(self):
         """ Clears the terminal """
@@ -105,6 +111,8 @@ class QIPythonWidget(RichJupyterWidget):
 
     def run_script(self, scriptname):
         try:
-            self._execute('run -i scripts/%s' % scriptname, False)
+            scriptpath = os.path.join(self.scripts_path, scriptname)
+            self._execute('run -i %s' % scriptpath, False)
         except Exception as e:
             print 'Failed because ', e
+
