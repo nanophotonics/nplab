@@ -1,12 +1,14 @@
 __author__ = 'alansanders'
 import ctypes as ct
+import os
 
-PVCAM = ct.WinDLL("DLL/Pvcam32.dll")
+pvcam=PVCAM = ct.WinDLL(os.path.dirname(__file__) +"/DLL/Pvcam32.dll")
 
 import nplab.instrument.ccd.pvcam_h as pv
 import numpy as np
 import time
 from nplab.instrument.ccd import CCD
+from nplab.instrument.camera import Camera
 from nplab.utils.gui import *
 from nplab.ui.ui_tools import UiTools
 from nplab import inherit_docstring
@@ -22,7 +24,7 @@ class PixisError(Exception):
         pvcam.pl_self.pvcam_uninit()
 
 
-class Pixis256E(CCD):
+class Pixis256E(CCD,Camera):
     def __init__(self):
         super(Pixis256E, self).__init__()
         try:
@@ -258,6 +260,13 @@ class Pixis256E(CCD):
         self.reference = self.read_image(self.exposure, self.timing, self.mode,
                                          new=True, end=True)
         self.update_config('reference', self.reference)
+    
+    def raw_snapshot(self):
+        try:
+            image = self.read_image(self.exposure, timing='timed', mode='kinetics', new=False, end= True, k_size=1)
+            return 1, image
+        except Exception as e:
+            self._logger.warn("Couldn't Capture because %s" % e)
 
 
 @inherit_docstring(Pixis256E)
@@ -371,17 +380,17 @@ if __name__ == '__main__':
         plt.show()
 
     print "one"
-    app = get_qt_app()
-    ui = Pixis256EUI(pixis=p)
-    print "two"
+#    app = get_qt_app()
+#    ui = Pixis256EUI(pixis=p)
+#    print "two"
 
-    ui.show()
-    sys.exit(app.exec_())
+#    ui.show()
+ #   sys.exit(app.exec_())
 
     # p.read_image(p.exposure, timing='timed', mode='kinetics', new=True, end= False, k_size=1)
     # img = p.read_image(p.exposure, timing='timed', mode='kinetics', new=False, end= True, k_size=1)
     # plt.imshow(img)
     # plt.show()
-    
+
 
 

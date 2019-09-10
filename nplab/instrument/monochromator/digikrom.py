@@ -76,7 +76,7 @@ class Digikrom(SerialInstrument):
             byte = chr(decimal)
             byte_str+=byte
         return byte_str
-#
+
     def set_status_byte(self,status_byte):
         """Extract the status from the status byte """
         binary_byte = bin(status_byte)[2:]
@@ -226,6 +226,7 @@ class Digikrom(SerialInstrument):
 
     def set_slit_2_width(self,slit_width):
         """Adjusts exit slit to a given width."""
+        """Slit 2 (exit) not installed 05042019"""
         high_byte = int(slit_width/256)
         slit_width = slit_width-high_byte*256
         low_byte = int(slit_width)
@@ -252,5 +253,15 @@ class Digikrom(SerialInstrument):
         else:
             return False
 
+def init():
+    spec = Digikrom(port="COM9",serial_number = [50, 52, 51, 49, 55])
+    return spec 
+
 if __name__ == '__main__':
     spec = Digikrom(serial_number = [50, 52, 51, 49, 55])
+    print spec
+    # spec.set_wavelength(0)
+    wavel =spec.get_wavelength()
+    print wavel
+    slit=spec.get_slit_widths()
+    print slit

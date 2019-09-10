@@ -30,7 +30,7 @@ def make_app(pixis, refresh_time):
 
 		img = pixis.read_image(pixis.exposure, timing='timed', mode='kinetics', new=False, end= True, k_size=1)
 		# img = np.random.uniform(0,1,(500,500))
-		plot.setImage(img)
+		plot.setImage(img.T)
 
 	timer.timeout.connect(update)
 	timer.start(refresh_time)
