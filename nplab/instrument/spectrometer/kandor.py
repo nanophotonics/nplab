@@ -15,7 +15,7 @@ class Kandor(Andor):
         super(Kandor, self).__init__()
         self.kymera.pixel_number = pixel_number
         self.kymera.pixel_width = 16
-
+        self.ImageFlip = 0
     def get_xaxis(self):
         return self.kymera.GetCalibration()
     x_axis = property(get_xaxis)
