@@ -227,7 +227,7 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
                 directory=self.working_directory,
             )[0]
         try:
-            loaded_state = np.load(self.dock_settings_path)
+            loaded_state = np.load(self.dock_settings_path, allow_pickle = True)
             loaded_state = loaded_state[()]
             self.dockWidgetArea.restoreState(loaded_state)
         except:
