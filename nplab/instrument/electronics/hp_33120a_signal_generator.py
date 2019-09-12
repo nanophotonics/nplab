@@ -5,7 +5,7 @@ from functools import partial
 
 
 class SignalGenerator(VisaInstrument):
-    def __init__(self, address='GPIB0::3::INSTR'):
+    def __init__(self, address='GPIB0::7::INSTR'):
         super(SignalGenerator, self).__init__(address)
         self.instr.read_termination = '\n'
         self.instr.write_termination = '\n'
@@ -24,7 +24,7 @@ class SignalGenerator(VisaInstrument):
         self.write('*rst')
 
 if __name__ == '__main__':
-    s = SignalGenerator()
+    s = SignalGenerator('GPIB0::7::INSTR')
     print s.frequency
     s.frequency = 1e3
     print s.frequency
