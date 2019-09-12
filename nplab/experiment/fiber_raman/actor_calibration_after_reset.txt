@@ -1,0 +1,5 @@
+>>> a.write_command("?GRATINGS")
+('echo, rest, cmd:', u'?GRATINGS', u' \r\n\x1a1 1200 g/mm BLZ=  500NM \r\n 2  300 g/mm BLZ=  500NM \r\n 3  Not Installed     \r\n 4  Not Installed     \r\n 5  Not Installed     \r\n 6  Not Installed     \r\n 7  Not Installed     \r\n 8  Not Installed     \r\n 9  Not Installed', '?GRATINGS')
+u' \r\n\x1a1 1200 g/mm BLZ=  500NM \r\n 2  300 g/mm BLZ=  500NM \r\n 3  Not Installed     \r\n 4  Not Installed     \r\n 5  Not Installed     \r\n 6  Not Installed     \r\n 7  Not Installed     \r\n 8  Not Installed     \r\n 9  Not Installed'
+>>> a.write_command("MONO-ESTATUS")
+0

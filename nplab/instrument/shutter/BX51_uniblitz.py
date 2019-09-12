@@ -4,7 +4,7 @@ __author__ = 'jm806'
 from nplab.instrument.shutter import ShutterWithEmulatedRead
 from nplab.instrument.serial_instrument import SerialInstrument
 import serial
-
+import time
 
 class Uniblitz(ShutterWithEmulatedRead, SerialInstrument):
     """
@@ -27,6 +27,7 @@ class Uniblitz(ShutterWithEmulatedRead, SerialInstrument):
             self.ser.write('@')
         elif state == 'Closed': 
             self.ser.write('A')
+        time.sleep(2)
 
 #
 #    def toggle(self):
@@ -48,6 +49,6 @@ class Uniblitz(ShutterWithEmulatedRead, SerialInstrument):
 
 if __name__ == '__main__':
 
-    shutter = Uniblitz('COM1')
+    shutter = Uniblitz('COM7')
     shutter.show_gui()
     shutter.close()

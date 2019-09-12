@@ -73,7 +73,7 @@ def Select_Time_Range(Min,Max):
 
 	return Lower,Upper
 
-def Select_Peaks(Array,Threshold,Color='r',Extra_Lines=None):
+def Select_Peaks(Array,Threshold,Color='r',Extra_Lines=None,colormap='inferno'):
 	"""
 	Allows the select vertical lines on the array, and returns their x-axis positions.
 	Array is an array. Threshold thresholds the colormap. Color is color of lines to draw. Extra lines goes 
@@ -122,7 +122,7 @@ def Select_Peaks(Array,Threshold,Color='r',Extra_Lines=None):
 		if Draw[0] is True:
 			Draw[0]=False
 			pl.clf()
-			pl.imshow(Array,interpolation='None',origin='lower',cmap='inferno',aspect=float(len(Array[0]))/len(Array),vmax=Threshold[0])
+			pl.imshow(Array,interpolation='None',origin='lower',cmap=colormap,aspect=float(len(Array[0]))/len(Array),vmax=Threshold[0])
 			pl.xlabel('Array Element')
 			pl.ylabel('Spectrum')
 			for i in Peaks:
@@ -304,7 +304,7 @@ def Convert_to_x_value(Element,x_axis):
 	Weight=Element%1
 	return (Weight*(x1-x0))+x0
 
-def Run(Array,x_axis,Threshold=None):
+def Run(Array,x_axis,Threshold=None,colormap='inferno'):
 	"""
 	Runs the fitting, including the UI. Array is the array to fit. x_axis is the corresponding x axis values. Threshold 
 	is a value to threshold the images of the array.
@@ -323,7 +323,7 @@ def Run(Array,x_axis,Threshold=None):
 	print "Please use your left mouse button to select peaks to track. Use your right mouse button to erase the last selection. Press Enter when done."
 	print '=========='
 
-	Peaks=Select_Peaks(To_Fit,Threshold)
+	Peaks=Select_Peaks(To_Fit,Threshold,colormap=colormap)
 	Peaks=sorted(Peaks)
 
 	#-------------Select Interpeak Bounds
@@ -333,7 +333,7 @@ def Run(Array,x_axis,Threshold=None):
 	print "Please use your left mouse button to select section boundaries. Use your right mouse button to erase the last selection. Press Enter when done."
 	print '=========='
 
-	Bounds=Select_Peaks(To_Fit,Threshold,'w',[Peaks,'r'])
+	Bounds=Select_Peaks(To_Fit,Threshold,'w',[Peaks,'r'],colormap=colormap)
 	Bounds=sorted(Bounds)
 	Bounds=[0]+Bounds+[len(To_Fit[0])]
 

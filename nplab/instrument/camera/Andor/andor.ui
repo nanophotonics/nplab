@@ -6,13 +6,13 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>369</width>
+    <width>387</width>
     <height>406</height>
    </rect>
   </property>
   <property name="maximumSize">
    <size>
-    <width>500</width>
+    <width>700</width>
     <height>16777215</height>
    </size>
   </property>
@@ -55,9 +55,15 @@
       </property>
       <item>
        <widget class="QLabel" name="labelExpT">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
         <property name="maximumSize">
          <size>
-          <width>70</width>
+          <width>16777215</width>
           <height>16777215</height>
          </size>
         </property>
@@ -70,7 +76,7 @@
        <widget class="QLineEdit" name="lineEditExpT">
         <property name="maximumSize">
          <size>
-          <width>40</width>
+          <width>16777215</width>
           <height>16777215</height>
          </size>
         </property>
@@ -81,9 +87,15 @@
       </item>
       <item>
        <widget class="QPushButton" name="pushButtonDiv5">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
         <property name="maximumSize">
          <size>
-          <width>30</width>
+          <width>16777215</width>
           <height>16777215</height>
          </size>
         </property>
@@ -94,9 +106,15 @@
       </item>
       <item>
        <widget class="QPushButton" name="pushButtonTimes5">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
         <property name="maximumSize">
          <size>
-          <width>30</width>
+          <width>16777215</width>
           <height>16777215</height>
          </size>
         </property>
@@ -146,9 +164,15 @@
         <layout class="QVBoxLayout" name="verticalLayout">
          <item>
           <widget class="QCheckBox" name="checkBoxROI">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
            <property name="maximumSize">
             <size>
-             <width>45</width>
+             <width>16777215</width>
              <height>16777215</height>
             </size>
            </property>
@@ -161,7 +185,7 @@
           <widget class="QCheckBox" name="checkBoxCrop">
            <property name="maximumSize">
             <size>
-             <width>45</width>
+             <width>16777215</width>
              <height>16777215</height>
             </size>
            </property>
@@ -172,6 +196,12 @@
          </item>
          <item>
           <widget class="QCheckBox" name="checkBoxCooler">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
            <property name="text">
             <string>Cooler</string>
            </property>
@@ -194,9 +224,15 @@
         <layout class="QGridLayout" name="gridLayout_3">
          <item row="4" column="0">
           <widget class="QLabel" name="labelNumFrames">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
            <property name="maximumSize">
             <size>
-             <width>40</width>
+             <width>16777215</width>
              <height>16777215</height>
             </size>
            </property>
@@ -207,9 +243,15 @@
          </item>
          <item row="6" column="0">
           <widget class="QLabel" name="labelNumRows">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
            <property name="maximumSize">
             <size>
-             <width>40</width>
+             <width>16777215</width>
              <height>16777215</height>
             </size>
            </property>
@@ -222,7 +264,7 @@
           <widget class="QSpinBox" name="spinBoxNumRows">
            <property name="maximumSize">
             <size>
-             <width>50</width>
+             <width>16777215</width>
              <height>16777215</height>
             </size>
            </property>
@@ -236,9 +278,15 @@
          </item>
          <item row="5" column="0">
           <widget class="QLabel" name="labelNumAccum">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
            <property name="maximumSize">
             <size>
-             <width>40</width>
+             <width>16777215</width>
              <height>16777215</height>
             </size>
            </property>
@@ -264,7 +312,7 @@
           <widget class="QSpinBox" name="spinBoxNumAccum">
            <property name="maximumSize">
             <size>
-             <width>50</width>
+             <width>16777215</width>
              <height>16777215</height>
             </size>
            </property>
@@ -277,7 +325,7 @@
           <widget class="QSpinBox" name="spinBoxNumFrames">
            <property name="maximumSize">
             <size>
-             <width>50</width>
+             <width>16777215</width>
              <height>16777215</height>
             </size>
            </property>
@@ -291,6 +339,12 @@
          </item>
          <item row="7" column="0">
           <widget class="QLabel" name="labelCenterRow">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
            <property name="text">
             <string>Center</string>
            </property>
@@ -367,8 +421,8 @@
     <widget class="QComboBox" name="comboBoxReadMode">
      <property name="maximumSize">
       <size>
-       <width>70</width>
-       <height>20</height>
+       <width>16777215</width>
+       <height>16777215</height>
       </size>
      </property>
      <item>
@@ -407,9 +461,15 @@
    </item>
    <item row="2" column="3">
     <widget class="QPushButton" name="pushButtonAbort">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
      <property name="maximumSize">
       <size>
-       <width>70</width>
+       <width>16777215</width>
        <height>16777215</height>
       </size>
      </property>
@@ -425,8 +485,8 @@
     <widget class="QComboBox" name="comboBoxBinning">
      <property name="maximumSize">
       <size>
-       <width>70</width>
-       <height>20</height>
+       <width>16777215</width>
+       <height>16777215</height>
       </size>
      </property>
      <item>
@@ -453,9 +513,15 @@
    </item>
    <item row="0" column="3">
     <widget class="QPushButton" name="pushButtonCapture">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
      <property name="maximumSize">
       <size>
-       <width>70</width>
+       <width>16777215</width>
        <height>16777215</height>
       </size>
      </property>
@@ -475,9 +541,15 @@
    </item>
    <item row="2" column="2">
     <widget class="QPushButton" name="pushButtonLive">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
      <property name="maximumSize">
       <size>
-       <width>70</width>
+       <width>16777215</width>
        <height>16777215</height>
       </size>
      </property>
@@ -493,8 +565,8 @@
     <widget class="QLabel" name="label_3">
      <property name="maximumSize">
       <size>
-       <width>50</width>
-       <height>25</height>
+       <width>16777215</width>
+       <height>16777215</height>
       </size>
      </property>
      <property name="text">
@@ -506,8 +578,8 @@
     <widget class="QComboBox" name="comboBoxAcqMode">
      <property name="maximumSize">
       <size>
-       <width>70</width>
-       <height>20</height>
+       <width>16777215</width>
+       <height>16777215</height>
       </size>
      </property>
      <item>
@@ -536,7 +608,7 @@
     <widget class="QLabel" name="label_2">
      <property name="maximumSize">
       <size>
-       <width>50</width>
+       <width>16777215</width>
        <height>16777215</height>
       </size>
      </property>
@@ -549,8 +621,8 @@
     <widget class="QComboBox" name="comboBoxTrigMode">
      <property name="maximumSize">
       <size>
-       <width>70</width>
-       <height>20</height>
+       <width>16777215</width>
+       <height>16777215</height>
       </size>
      </property>
      <item>
@@ -574,7 +646,7 @@
     <widget class="QLabel" name="label">
      <property name="maximumSize">
       <size>
-       <width>50</width>
+       <width>16777215</width>
        <height>16777215</height>
       </size>
      </property>
@@ -631,9 +703,15 @@
    </item>
    <item row="3" column="2">
     <widget class="QPushButton" name="pushButtonTakeBG">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
      <property name="maximumSize">
       <size>
-       <width>70</width>
+       <width>16777215</width>
        <height>16777215</height>
       </size>
      </property>

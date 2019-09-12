@@ -11,13 +11,10 @@ import h5py
 import numpy as np
 import os
 import matplotlib.pyplot as plt
-from scipy import sparse
-import scipy.sparse.linalg as splu
 from scipy.signal import butter, filtfilt
 from lmfit.models import GaussianModel
 import time
 from random import randint
-import scipy.optimize as spo
 import re
 
 if __name__ == '__main__':
@@ -239,6 +236,17 @@ def truncateSpectrum(x, y, startWl = 450, finishWl = 900):
 
     xTrunc = np.array(x[startIndex:finishIndex])
     yTrunc = np.array(y[startIndex:finishIndex])
+
+    if xTrunc.size <= 10 and x.size <= 100:
+
+        if startWl > finishWl:
+            wl1 = finishWl
+            wl2 = startWl
+            startWl = wl1
+            finishWl = wl2
+
+        xTrunc, yTrunc = np.transpose(np.array([[i, y[n]] for n, i in enumerate(x) if startWl < i < finishWl]))
+
     return np.array([xTrunc, yTrunc])
 
 def plotStackedMap(x, yData, imgName = 'Stack', plotTitle = 'Stack', closeFigures = False, init = False, vmin = 0, vmax = 6):
@@ -968,16 +976,22 @@ def plotHistogram(outputFileName, npomType = 'All NPoMs', startWl = 450, endWl =
     if 'Histograms' not in os.listdir('.'):
         os.mkdir('Histograms')
 
-    print 'Combining spectra and plotting histogram...'
+    print 'Preparing to plot histogram...'
+    print '\tFilter: %s' % npomType
 
     with h5py.File(outputFileName) as opf:
         date = opf['All Spectra (Raw)'].attrs['Date measured']
         gSpectra = opf['NPoMs/%s/Normalised' % npomType]
         gSpecRaw = opf['NPoMs/%s/Raw' % npomType]
-        spectraNames = sorted(gSpectra.keys(), key = lambda spectrumName: int(spectrumName[9:]))
-        x = gSpectra[spectraNames[0]].attrs['wavelengths'][()]
+        #print gSpectra.keys()
+        spectraNames = sorted([i for i in gSpectra.keys()], key = lambda spectrumName: int(spectrumName[9:]))
+        #print spectraNames
+        #print gSpectra[spectraNames[0]].attrs['wavelengths'][()]
 
-        print '\tFilter: %s (%s spectra)' % (npomType, len(spectraNames))
+        x = gSpectra[spectraNames[0]].attrs['wavelengths']
+        #print 'X found'
+
+        print '\t(%s spectra)' % len(spectraNames)
 
         binSize = (endWl - startWl) / binNumber
         bins = np.linspace(startWl, endWl, num = binNumber)
@@ -987,8 +1001,21 @@ def plotHistogram(outputFileName, npomType = 'All NPoMs', startWl = 450, endWl =
         yDataRawBinned = [np.zeros(len(x)) for f in frequencies]
         binnedSpectraList = {binStart : [] for binStart in bins}
 
+        print '\tGathering histogram data...'
+
+        nummers = range(5, 101, 5)
+        totalFitStart = time.time()
+        print '\t\t0% complete'
+
         for n, spectrumName in enumerate(spectraNames):
             dSpectrum = gSpectra[spectrumName]
+
+            if int(100 * n / len(spectraNames)) in nummers:
+                currentTime = time.time() - totalFitStart
+                mins = int(currentTime / 60)
+                secs = (np.round((currentTime % 60)*100))/100
+                print '\t\t%s%% (%s min %s sec)' % (nummers[0], mins, secs)
+                nummers = nummers[1:]
 
             for nn, binStart in enumerate(bins):
                 cmPeakPos = dSpectrum.attrs['Coupled mode wavelength']
@@ -1007,6 +1034,10 @@ def plotHistogram(outputFileName, npomType = 'All NPoMs', startWl = 450, endWl =
                     binnedSpectraList[binStart].append(spectrumName)
 
         for n, yDataSum in enumerate(yDataBinned):
+
+            if binPops[n] == 0:
+                continue
+
             yDataBinned[n] /= binPops[n]
             yDataRawBinned[n] /= binPops[n]
 
@@ -1015,6 +1046,8 @@ def plotHistogram(outputFileName, npomType = 'All NPoMs', startWl = 450, endWl =
 
         else:
             minBin = max(frequencies)/minBinFactor
+
+        print '\tPerforming Gaussian fit'
 
         try:
             resonance, stderr, fwhm, sigma = histyFit(frequencies, bins)
@@ -1096,9 +1129,13 @@ def plotHistogram(outputFileName, npomType = 'All NPoMs', startWl = 450, endWl =
 def plotHistAndFit(outputFileName, npomType = 'All NPoMs', startWl = 450, endWl = 987, binNumber = 80, plot = True,
                   minBinFactor = 5, closeFigures = False, irThreshold = 8):
 
+    #try:
     frequencies, bins, yDataBinned, yDataRawBinned, binnedSpectraList, histyWl, avgResonance, stderr, fwhm, sigma = plotHistogram(outputFileName,
-                                                              npomType = npomType, minBinFactor = minBinFactor,
-                                                              closeFigures = closeFigures, irThreshold = irThreshold, plot = plot)
+                                                                  npomType = npomType, minBinFactor = minBinFactor,
+                                                                  closeFigures = closeFigures, irThreshold = irThreshold, plot = plot)
+    #except:
+    #    print '\tHistogram plot failed for %s' % npomType
+    #    return
 
     with h5py.File(outputFileName) as opf:
 
@@ -1156,20 +1193,18 @@ def plotAllHists(outputFileName, closeFigures = True, irThreshold = 8, minBinFac
     histPlotStart = time.time()
 
     with h5py.File(outputFileName) as opf:
-        npomTypes = opf['NPoMs'].keys()
-
-        if plotAll == False:
-            npomTypes = ['All NPoMs', 'Non-Weird-Peakers', 'Weird Peakers', 'Ideal NPoMs']
+        npomTypes = ['All NPoMs', 'Non-Weird-Peakers', 'Weird Peakers', 'Ideal NPoMs']
 
         #if 'Aligned NPoMs' in opf['NPoMs'].keys():
         #    npomTypes.append('Aligned NPoMs')
 
     for npomType in npomTypes:
-        try:
-            plotHistAndFit(outputFileName, npomType = npomType, irThreshold = irThreshold, minBinFactor = minBinFactor,
+
+        #try:
+        plotHistAndFit(outputFileName, npomType = npomType, irThreshold = irThreshold, minBinFactor = minBinFactor,
                        closeFigures = closeFigures)
-        except:
-            print 'No data for %s' % (npomType)
+        #except:
+        #    print 'No data for %s' % (npomType)
 
     histPlotEnd = time.time()
     histTimeElapsed = histPlotEnd - histPlotStart
