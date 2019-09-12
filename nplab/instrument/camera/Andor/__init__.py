@@ -447,8 +447,6 @@ class AndorBase:
                         self._parameters['IsolatedCropMode'][2] / self._parameters['IsolatedCropMode'][
                             4],)
                 else:
-                    if self._parameters['FVBHBin'] is None:
-                            self.FVBHBin = 1
                     image_shape = (self._parameters['DetectorShape'][0] / self._parameters['FVBHBin'],)
             elif self._parameters['ReadMode'] == 3:
                 image_shape = (self._parameters['DetectorShape'][0],)

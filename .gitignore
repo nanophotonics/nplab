@@ -63,5 +63,3 @@ docs/nplab.*.rst
 *.xml
 *.iml
 .DS_Store
-nplab/instrument/camera/camera_ee306.py
-nplab/instrument/camera/camera_with_location_ee306.py
