@@ -134,7 +134,7 @@ class PIStage(VisaInstrument, Stage):
 
 
 if __name__ == '__main__':
-    stage = PIStage()
+    stage = PIStage(address='ASRL4::INSTR')
   #  stage.move((5e-6, 10e-6))
 #    print stage.position
 #    print stage.get_position()

@@ -1,8 +1,8 @@
 __author__ = 'alansanders'
 
 from nplab.instrument import Instrument
-from PyDAQmx import *
-import PyDAQmx as pdmx #pointess line of code ?
+from pydaqmx import *
+import pydaqmx as pdmx #pointess line of code ?
 import numpy as np
 
 

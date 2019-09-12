@@ -1281,7 +1281,7 @@ class SmaractMCSUI(QtWidgets.QWidget, UiTools):
 
 if __name__ == '__main__':
 
-    smaract = SmaractMCSSerial('COM10')
+    smaract = SmaractMCSSerial('COM3')
 
 
     # print SA_OK
