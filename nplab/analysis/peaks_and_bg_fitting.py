@@ -42,14 +42,12 @@ The time taken to fit increases non-linearly with spectrum size/length, so cutti
 as is fitting the stokes and anti-stokes spectra separately. 
 """
 import numpy as np
-import os
-import h5py
 from scipy.optimize import minimize
 import matplotlib.pyplot as plt
 import scipy.interpolate as scint
 import scipy.ndimage.filters as ndimf
 import pywt
-
+import misc as ms # these are some convenience functions I've written
 
 def Grad(Array):
 	"""
@@ -58,31 +56,8 @@ def Grad(Array):
 	A=np.array(Array.tolist()+[Array[-1],Array[-2]])
 	B=np.array([Array[1],Array[0]]+Array.tolist())
 	return (A-B)[1:-1]
-def truncate(counts, wavelengths, lower_cutoff, upper_cutoff):
-    l = 0
-    for index, wl in enumerate(wavelengths):
-        if wl>=lower_cutoff:
-            
-            l = index
-            break
-        
-    u = False
-    for index, wl in enumerate(wavelengths[l:]):
-        if wl>= upper_cutoff:
-            u=index+l
-            break
 
-    if u == False:
-        return counts[l:], wavelengths[l:]
-    else:
-        return counts[l:u], wavelengths[l:u]
-def find_closest(value_to_match, array):
-    '''Taking an input value and array, it searches for the value and index in the array which is closest to the input value '''
-    residual = []
-    for value in array:
-        residual.append(np.absolute(value-value_to_match))
-        
-    return array[np.argmin(residual)], np.argmin(residual), min(residual) # value, index, residual
+
 class fullfit:
     def __init__(self, spec, shifts, order = 3):
         self.spec = spec
@@ -153,7 +128,7 @@ class fullfit:
     	
     	#-----Minimise loss in each region--------- 
     
-    	for i in range(self.regions):
+    	for i in range(int(self.regions)):
     		Bounds=[(0,np.inf),(i*Sections+Start,(i+1)*Sections+Start),(0,self.maxwidth)]
     		Centre=(i+np.random.rand())*Sections+Start
     		Height=self.signal[np.argmin(np.abs(self.shifts-Centre))]-np.min(self.signal)
@@ -256,7 +231,7 @@ class fullfit:
         crudely gets the maximum of the signal within the peak widht as an estimate for the peak height
         '''
         for index, peak in enumerate(self.peaks_stack):
-            self.peaks_stack[index][0] = max(truncate(self.signal, self.shifts, peak[1]-peak[2], peak[1]+peak[2])[0])
+            self.peaks_stack[index][0] = max(ms.truncate(self.signal, self.shifts, peak[1]-peak[2], peak[1]+peak[2])[0])
         self.peaks = []
         for peak in self.peaks_stack:#flattens the stack
             for parameter in peak:
@@ -270,7 +245,7 @@ class fullfit:
         fit = self.bg + self.multi_L(self.shifts,*loss_vector[self.order+1:])
         obj = np.sum(np.square(self.spec - fit))
         return obj
-    def Run(self,initial_fit=None, minwidth_fac=0.1, maxwidth = 7, regions = 20, noise_factor = 0.6, min_peak_spacing = 3, comparison_thresh = 0.1, verbose = False):    
+    def Run(self,initial_fit=None, minwidth_fac=0.1, maxwidth = 7, regions = 20, noise_factor = 0.6, min_peak_spacing = 8, comparison_thresh = 0.1, verbose = False):    
     	self.maxwidth = maxwidth
         self.width=self.Wavelet_Estimate_Width()*0.5
         self.regions = regions
@@ -295,7 +270,7 @@ class fullfit:
             peak_candidate = self.Add_New_Peak()
             if peak_candidate[0]>self.noise_threshold and peak_candidate[2]>minwidth: #has a height, and is above minimum width - maximum width is filtered already
                 if len(self.peaks)!=0:
-                    dump, peak, residual = an.find_closest(peak_candidate[1],np.transpose(self.peaks_stack)[1])
+                    dump, peak, residual = ms.find_closest(peak_candidate[1],np.transpose(self.peaks_stack)[1])
                     if residual>min_peak_spacing*self.peaks_stack[peak][2]:
                         self.peaks = np.append(self.peaks,peak_candidate)
                         self.peaks_stack = self.peaks_to_matrix(self.peaks)
@@ -317,9 +292,10 @@ class fullfit:
             #---Check to increase region by x5
             if existing_loss_score is not None:
                 if new_loss_score >= existing_loss_score: #Has loss gone up?
-                    self.peaks = self.peaks[0:-3]
-                    self.peaks_stack = self.peaks_stack[0:-1]
-                    self.regions*=5
+                    if peak_added == True:
+                        self.peaks = self.peaks[0:-3]
+                        self.peaks_stack = self.peaks_stack[0:-1]
+                    self.regions*=3
                 elif peak_added == False: #Otherwise, same number of peaks?
                
                     Old = self.peaks_to_matrix(loss_vector[self.order+1:].tolist())
@@ -327,7 +303,7 @@ class fullfit:
                     New_trnsp = np.transpose(New)
                     residual = []
                     for old_peak in Old:
-                            new_peak = an.find_closest(old_peak[1], New_trnsp[1])[1]# returns index of the new peak which matches it
+                            new_peak = ms.find_closest(old_peak[1], New_trnsp[1])[1]# returns index of the new peak which matches it
                             old_height = old_peak[0]
                             old_height
                             old_pos = old_peak[1]/self.width
@@ -338,10 +314,10 @@ class fullfit:
                     comparison = residual>comparison_thresh
                     if type(comparison) == bool:
                         if comparison ==False:
-                            self.regions*=5
+                            self.regions*=3
                     else:
                         if any(comparison) == False: #if none of the peaks have changed by more than comparison_thresh fraction
-                            self.regions*=5
+                            self.regions*=3
 
             	
             
@@ -353,20 +329,22 @@ class fullfit:
 
 
 if __name__ =='__main__':
+    import time
+    import h5py
+    import conversions as cnv
+    import os
     os.chdir(r'R:\ee306\Experimental data\2019.09.06 Lab 5 two temperature with full calibration')
     #File = h5py.File('Wavenumbered_plots.h5', mode = 'r')
-    import time
-    import analysis as an
-    import conversions as cnv
+   
     start = time.time()
-    File = h5py.File(an.findH5File(os.getcwd()), mode = 'r')
+    File = h5py.File(ms.findH5File(os.getcwd()), mode = 'r')
     spec = File['BPT_1']['Power_Series'][-1]
     shifts = -cnv.wavelength_to_cm(File['BPT_1']['Power_Series'].attrs['wavelengths'], centre_wl = 785)
     notch = 200
-    S_portion, S_shifts = an.truncate(spec,shifts, notch, 850)
+    S_portion, S_shifts = ms.truncate(spec,shifts, notch, 850)
     #S_portion, S_shifts = an.truncate(spec,shifts, 796, 850)
-    ff = fullfit(S_portion, S_shifts, order = 9)
-    ff.Run(min_peak_spacing = 4, noise_factor = 0.2)
+    ff = fullfit(S_portion, S_shifts, order = 3)
+    ff.Run(min_peak_spacing = 4, noise_factor = 0.01, verbose = True)
     ff.plot_result()
     end = time.time()
     print 'that took '+ str(np.round(end-start,decimals = 0))+ ' seconds'
