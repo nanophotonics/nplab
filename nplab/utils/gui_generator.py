@@ -78,15 +78,14 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
         for instr in self.instr_dict:
             self._open_one_gui(instr)
 
-        self.terminalWindow = None
-        self.menuTerminal()
-        self._addActionViewMenu('Terminal')
-
         self.script_menu = None
         if scripts_path is not None:
             self.scripts_path = scripts_path
         else:
             self.scripts_path = 'scripts'
+        self.terminalWindow = None
+        self.menuTerminal()
+        self._addActionViewMenu('Terminal')
         self.makeScriptMenu()
 
         self.NightMode = 1
@@ -228,10 +227,11 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
                 directory=self.working_directory,
             )[0]
         try:
-            loaded_state = np.load(self.dock_settings_path)
+            loaded_state = np.load(self.dock_settings_path, allow_pickle=True)
             loaded_state = loaded_state[()]
             self.dockWidgetArea.restoreState(loaded_state)
-        except:
+        except Exception as e:
+            self._logger.debug(e)
             self._logger.warn(
                 'The dock_settings file does not exist! or it is for the wrong docks!')
 
@@ -268,14 +268,14 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
         from nplab.utils import terminal
         if self.terminalWindow is None:
             if os.environ["QT_API"] == "pyqt5":
-                self.terminalWindow = terminal.QIPythonWidget()
+                self.terminalWindow = terminal.QIPythonWidget(scripts_path=self.scripts_path)
                 self.terminalWindow.push_vars({'gui': self, 'exper': self.instr_dict})
                 self.terminalWindow.push_vars(self.instr_dict)
                 self.terminalWindow.execute_command('import nplab.datafile as df')
                 self.terminalWindow.execute_command('')
                 handle = logging.StreamHandler(self.terminalWindow.kernel_manager.kernel.stdout)
             else:
-                self.terminalWindow = terminal.ipython()
+                self.terminalWindow = terminal.Ipython()
                 self.terminalWindow.push({'gui': self, 'exper': self.instr_dict})
                 self.terminalWindow.push(self.instr_dict)
                 self.terminalWindow.execute('import nplab.datafile as df')
@@ -336,7 +336,6 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
         """Runs the selected script """
         if self.terminalWindow is None:
             self.menuTerminal()
-
         self.terminalWindow.run_script(scriptname)
 
     def VerboseChanged(self, action):
