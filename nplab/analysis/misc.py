@@ -62,7 +62,7 @@ def findH5File(rootDir, mostRecent = True, nameFormat = 'date'):
 
     return h5File
 
-def truncate(counts, wavelengths, lower_cutoff, upper_cutoff):
+def truncate(counts, wavelengths, lower_cutoff, upper_cutoff, return_indices_only = False):
     l = 0
     for index, wl in enumerate(wavelengths):
         if wl>=lower_cutoff:
@@ -75,11 +75,13 @@ def truncate(counts, wavelengths, lower_cutoff, upper_cutoff):
         if wl>= upper_cutoff:
             u=index+l
             break
-
-    if u == False:
-        return counts[l:], wavelengths[l:]
+    if return_indices_only == False:
+        if u == False:
+            return counts[l:], wavelengths[l:]
+        else:
+            return counts[l:u], wavelengths[l:u]
     else:
-        return counts[l:u], wavelengths[l:u]
+        return l,u
 def find_closest(value_to_match, array):
     '''Taking an input value and array, it searches for the value and index in the array which is closest to the input value '''
     residual = []

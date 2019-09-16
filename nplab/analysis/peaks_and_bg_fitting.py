@@ -16,7 +16,7 @@ The fullfit class is the main thing here - sample use:
     ff.bg gives the background as a 1d array.
 
 The fitting works as follows: 
-    Run(self,minwidth_fac=0.1,initial_fit=None, maxwidth = 7, regions = 20, noise_factor = 0.6, min_peak_overlap = 3, comparison_thresh = 0.1):   
+    Run(self,minwidth_fac=0.1,initial_fit=None, maxwidth = 7, regions = 20, noise_factor = 0.6, min_peak_separation = 8, comparison_thresh = 0.1):   
         minwidth fac is the minimum fraction of the guessed peak width a fitted peak can have.
         initial_fit should be a 1d array of the  order+1 background VALUES (see below) and the peaks
         maxwidth is the maximum width a peak can have.
@@ -26,15 +26,24 @@ The fitting works as follows:
         comparison_thresh  is the fractional difference allowed between fit optimisations for the peak to be considered fitted.
     
     If there's no intial fit then initial_bg_poly() takes a guess at what the background is. The signal is spectrum-bg
+    
     Add_New_Peak() forcibly adds a peak to the signal as in Iterative_Raman_fitting.
-    If the peak passes some filtering conditions (see Run() for more details) its added to the peaks.
+        The only difference is that there are bounds on the peak parameters, and if the peak is within min_peak_separation*peak width of 
+    any other peak, it picks the next best peak, and so on until the best 1/3 of the peaks have been tested. Else, it doesn't add a new peak at all.
+    
     The peak heights are then somewhat manually assigned by getting the maximum of the signal around the peak centre.
-    The background is optimised for these new peaks, and then the peaks are optimised.
+    The widths and centres of the peaks are then optimised for these heights.
+    optionally, you can include the commented out self.optimize_peaks() here to optimise all the peak parameters together but I leave this to the end.
+    
     If this new peak improves the fit, it adds another peak, repeats.
     Else, if it doesn't improve the fit (a sign that the right # of peaks have been added) the number of regions is multiplied by 5 to try more possible places to add a peak.
-    if the peak doesn't pass the initial filtering (again, a good sign) the rest of the function matches each peak with its nearest neighbour (hopefully itself)
+    It also now optimises the background, as doing so before will make it cut through the un-fitted peaks
+    
+    If no new peak has been added (again, a good sign) the rest of the function matches each peak with its nearest neighbour (hopefully itself)
     from before the latest round of optimisation. If none of the peaks have moved by comparison_thresh*sqrt(height and width added in quadrature)
     the fit is considered optimised, and the number of peak adding regions is increased by 5x. 
+    
+    one last optional round of optimisation is included at the very end
     
 This script uses cm-1 for shifts. Using wavelengths is fine, but make sure and adjust the maxwidth parameter accordingly   
 
@@ -48,6 +57,7 @@ import scipy.interpolate as scint
 import scipy.ndimage.filters as ndimf
 import pywt
 import misc as ms # these are some convenience functions I've written
+import ipdb
 
 def Grad(Array):
 	"""
@@ -129,7 +139,7 @@ class fullfit:
     	#-----Minimise loss in each region--------- 
     
     	for i in range(int(self.regions)):
-    		Bounds=[(0,np.inf),(i*Sections+Start,(i+1)*Sections+Start),(0,self.maxwidth)]
+    		Bounds=[(0,np.inf),(i*Sections+Start,(i+1)*Sections+Start),(self.minwidth,self.maxwidth)]
     		Centre=(i+np.random.rand())*Sections+Start
     		Height=self.signal[np.argmin(np.abs(self.shifts-Centre))]-np.min(self.signal)
     		Vector=[Height,Centre,self.width]
@@ -138,10 +148,29 @@ class fullfit:
     
     		Results.append(Opt)
     		Loss_Results.append(Loss(Opt))
-    
-    	#------Select most effective peak postion
-        #print Results[np.argmin(Loss_Results)]
-    	return Results[np.argmin(Loss_Results)] # return one peak
+        
+        sorted_indices = np.argsort(Loss_Results)
+        
+        
+        self.peak_added = False
+        i=-1
+        while self.peak_added == False and i<(int(self.regions/3)):
+            i+=1
+            peak_candidate = Results[sorted_indices[i]]
+            if len(self.peaks)!=0:
+                if peak_candidate[0]>self.noise_threshold:# and peak_candidate[2]>self.minwidth: #has a height, minimum width - maximum width is filtered already
+                    dump, peak, residual = ms.find_closest(peak_candidate[1],np.transpose(self.peaks_stack)[1])
+                    if residual>self.min_peak_spacing*self.peaks_stack[peak][2]:
+                        self.peaks = np.append(self.peaks,peak_candidate)
+                        self.peaks_stack = self.peaks_to_matrix(self.peaks)
+                        self.peak_added = True
+                        
+                        
+            else:
+                self.peaks = np.append(self.peaks,peak_candidate)
+                self.peaks_stack = self.peaks_to_matrix(self.peaks)
+                self.peak_added = True
+        
         
     def Wavelet_Estimate_Width(self,Smooth_Loss_Function=2):
     	#Uses the CWT to estimate the typical peak FWHM in the signal
@@ -218,17 +247,61 @@ class fullfit:
         n=0
         height_bound = (0,max(self.spec))
         pos_bound = (np.min(self.shifts),np.max(self.shifts))
-        width_bound = (0,self.maxwidth)
+        width_bound = (self.minwidth,self.maxwidth)
         while n<len(self.peaks):
            
             peak_bounds+=[height_bound, pos_bound, width_bound]  # height, position, width
             n+=3
+
         self.peaks = minimize(self.peak_loss, self.peaks, bounds = peak_bounds).x
         self.peaks_stack = self.peaks_to_matrix(self.peaks)
 
+
+    
+    def optimize_centre_and_width(self):
+        heights = np.transpose(self.peaks_stack)[0]
+        centres_and_widths_stack = np.transpose(self.peaks_stack)[1:]
+        centres_and_widths = []
+        for peak in np.transpose(centres_and_widths_stack):#flattens the stack
+            for parameter in peak:
+                centres_and_widths.append(parameter)
+        width_bound = (self.minwidth,self.maxwidth)
+        centre_and_width_bounds = []
+
+        for centre, width in zip(centres_and_widths_stack[0], centres_and_widths_stack[1]):
+            centre_and_width_bounds+=[(centre-width, centre+width), width_bound]  # height, position, width
+        
+        def multi_L_centres_and_widths(self,x,*centres_and_widths):
+            """
+        	Defines a sum of Lorentzians. Params goes Height1,Centre1, Width1,Height2.....
+        	"""
+            n = 0
+            params = []
+            while n<len(centres_and_widths):
+                params.extend([heights[n/2], centres_and_widths[n:n+2]])
+                n+=2
+            Output=0
+            n=0
+            while n<len(params):
+        		Output+=self.L(x,*params[n:n+3])
+        		n+=3
+            return Output
+        def loss_centres_and_widths(*centres_and_widths):
+            fit = multi_L_centres_and_widths(self.shifts,centres_and_widths)
+            obj = np.sum(np.square(self.signal - fit))
+            return obj
+        centres_and_widths = minimize(loss_centres_and_widths,centres_and_widths, bounds = centre_and_width_bounds).x
+        n = 0
+        self.peaks = []
+        while n<len(centres_and_widths):
+            self.peaks.extend([heights[n/2], centres_and_widths[n],centres_and_widths[n+1] ])
+            n+=2   
+        self.peaks_stack = self.peaks_to_matrix(self.peaks)
+        
+        
     def optimize_heights(self):
         '''
-        crudely gets the maximum of the signal within the peak widht as an estimate for the peak height
+        crudely gets the maximum of the signal within the peak width as an estimate for the peak height
         '''
         for index, peak in enumerate(self.peaks_stack):
             self.peaks_stack[index][0] = max(ms.truncate(self.signal, self.shifts, peak[1]-peak[2], peak[1]+peak[2])[0])
@@ -245,12 +318,13 @@ class fullfit:
         fit = self.bg + self.multi_L(self.shifts,*loss_vector[self.order+1:])
         obj = np.sum(np.square(self.spec - fit))
         return obj
-    def Run(self,initial_fit=None, minwidth_fac=0.1, maxwidth = 7, regions = 20, noise_factor = 0.6, min_peak_spacing = 8, comparison_thresh = 0.1, verbose = False):    
+    def Run(self,initial_fit=None, minwidth = 2, maxwidth = 10, regions = 20, noise_factor = 0.6, min_peak_spacing = 7, comparison_thresh = 0.01, verbose = False):    
     	self.maxwidth = maxwidth
-        self.width=self.Wavelet_Estimate_Width()*0.5
+        self.min_peak_spacing = min_peak_spacing
+        self.width=self.Wavelet_Estimate_Width()
         self.regions = regions
-        if self.regions>len(self.spec):	self.regions = len(self.spec)/2
-    	minwidth=self.width*minwidth_fac
+        if self.regions>len(self.spec):	self.regions = len(self.spec)/2 
+    	self.minwidth=minwidth
     	self.noise_threshold = noise_factor*np.std(Grad(spec))
         if initial_fit is not None:
             self.bg_vals = initial_fit[0:self.order+1]
@@ -258,46 +332,38 @@ class fullfit:
         else:
             self.initial_bg_poly() # gives initial bg_vals, and bg_indices
         
-        #self.optimize_bg()
         while self.regions <= len(self.spec):
             if verbose == True: print 'Region fraction: ', np.around(self.regions/float(len(self.spec)), decimals = 2)
             
             loss_vector = np.append(self.bg_vals,self.peaks)
             existing_loss_score = self.loss_function(loss_vector)
-           
-
-            peak_added = False
-            peak_candidate = self.Add_New_Peak()
-            if peak_candidate[0]>self.noise_threshold and peak_candidate[2]>minwidth: #has a height, and is above minimum width - maximum width is filtered already
-                if len(self.peaks)!=0:
-                    dump, peak, residual = ms.find_closest(peak_candidate[1],np.transpose(self.peaks_stack)[1])
-                    if residual>min_peak_spacing*self.peaks_stack[peak][2]:
-                        self.peaks = np.append(self.peaks,peak_candidate)
-                        self.peaks_stack = self.peaks_to_matrix(self.peaks)
-                        peak_added = True
-                else:
-                    self.peaks = np.append(self.peaks,peak_candidate)
-                    self.peaks_stack = self.peaks_to_matrix(self.peaks)
-                    peak_added = True
-            else:
-                if verbose == True: print 'peak rejected'
-            
+            self.Add_New_Peak()
             if verbose == True: print '# of peaks:', len(self.peaks)/3
-            self.optimize_bg()
-            self.optimize_heights()
-            self.optimize_peaks()
+            
+            try:
+                self.optimize_heights()
+            except:
+                dump = 1
+            self.optimize_centre_and_width()
+            #self.optimize_peaks()
             vector = np.append(self.bg_vals, self.peaks)
             new_loss_score = self.loss_function(vector)
     		
             #---Check to increase region by x5
             if existing_loss_score is not None:
                 if new_loss_score >= existing_loss_score: #Has loss gone up?
-                    if peak_added == True:
+                    if self.peak_added == True:
                         self.peaks = self.peaks[0:-3]
                         self.peaks_stack = self.peaks_stack[0:-1]
                     self.regions*=3
-                elif peak_added == False: #Otherwise, same number of peaks?
-               
+                elif self.peak_added == False: #Otherwise, same number of peaks?
+                    self.optimize_bg()
+                    try:
+                        self.optimize_heights()
+                    except:
+                        dump = 1
+                    self.optimize_centre_and_width()
+                    self.optimize_peaks()
                     Old = self.peaks_to_matrix(loss_vector[self.order+1:].tolist())
                     New = self.peaks_stack
                     New_trnsp = np.transpose(New)
@@ -318,7 +384,17 @@ class fullfit:
                     else:
                         if any(comparison) == False: #if none of the peaks have changed by more than comparison_thresh fraction
                             self.regions*=3
+                    
+        #---One last round of optimization for luck---#
+        self.optimize_bg()
+        try:
+            self.optimize_heights()
+        except:
+            dump = 1
+        self.optimize_centre_and_width()
+        #self.optimize_peaks()
 
+                    
             	
             
                     
@@ -343,8 +419,8 @@ if __name__ =='__main__':
     notch = 200
     S_portion, S_shifts = ms.truncate(spec,shifts, notch, 850)
     #S_portion, S_shifts = an.truncate(spec,shifts, 796, 850)
-    ff = fullfit(S_portion, S_shifts, order = 3)
-    ff.Run(min_peak_spacing = 4, noise_factor = 0.01, verbose = True)
+    ff = fullfit(S_portion, S_shifts, order = 7)
+    ff.Run(noise_factor = 0.1, verbose = False)
     ff.plot_result()
     end = time.time()
     print 'that took '+ str(np.round(end-start,decimals = 0))+ ' seconds'
