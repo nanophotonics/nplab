@@ -176,6 +176,9 @@ class exponential3: # work in omega, more complicated exponential
         self.fitted_params = result.params
         #self.errors = {'A':result.params['A'].stderr, 'T':result.params['T'].stderr, 'bg':result.params['bg'].stderr
 
+
+
+
 def get_peak_heights(counts, wavelengths, shift, Range=4., return_wavelength = False, antiStokes = True, inputcm = False): # shift is in cm-1, range is in nm
     
     if inputcm==False:    
@@ -373,7 +376,7 @@ def calibrate_BPT(counts, wavelengths, notch, analysis_range, Si_counts=None, Si
         
         init_shifts = -cnv.wavelength_to_cm(wavelengths, centre_wl = 785.)
         calibrated_shifts = np.append(calibrated_AS_shifts, calibrated_S_shifts)
-        return calibrated_shifts
+        return calibrated_shifts, S_fit, AS_fit
         
 
 
