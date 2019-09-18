@@ -29,11 +29,11 @@ def zernike_polynomial(array_size, n, m, beam_size=1):
         odd = False
     assert n >= m
 
-    x = np.linspace(-1, 1, array_size)
-    X, Y = np.meshgrid(x, x)
+    _x = np.linspace(-1, 1, array_size)
+    x, y = np.meshgrid(_x, _x)
     # By normalising the radius to the beamsize, we can make Zernike polynomials of different sizes
-    rho = np.sqrt(X**2 + Y**2) / beam_size
-    phi = np.arctan2(X, Y)
+    rho = np.sqrt(x**2 + y**2) / beam_size
+    phi = np.arctan2(x, y)
 
     summ = []
     for k in range(1 + (n - m) / 2):
@@ -52,12 +52,12 @@ def zernike_polynomial(array_size, n, m, beam_size=1):
         return r * np.cos(m * phi)
 
 
-class SLMDisplay(QtWidgets.QWidget):
+class SlmDisplay(QtWidgets.QWidget):
     """Widget for displaying the greyscale holograms on the SLM
     It is simply a plain window with a QImage + QLabel.setPixmap combination for displaying phase arrays
     """
     def __init__(self, shape=(1000, 1000), resolution=(1, 1), bitness=8, hide_border=True):
-        super(SLMDisplay, self).__init__()
+        super(SlmDisplay, self).__init__()
 
         self._pixels = [int(x[0]/x[1]) for x in zip(shape, resolution)]
         self._bitness = bitness
@@ -121,7 +121,7 @@ class SLMDisplay(QtWidgets.QWidget):
             self.move(slm_screen.x(), slm_screen.y())
 
 
-class SLMBase(Instrument):
+class SlmBase(Instrument):
     """Base SLM class. Together with it's GUI it implements all of the basic displaying of phase arrays and the static
     corrections (if any) to be applied to the SLM display
 
@@ -129,7 +129,7 @@ class SLMBase(Instrument):
     connect to a GUI that subclasses SLMBaseUI replacing get_gui_phase_params
     """
     def __init__(self, slm_monitor, correction_phase=None, **kwargs):
-        super(SLMBase, self).__init__()
+        super(SlmBase, self).__init__()
 
         self._shape = self._get_monitor_size(slm_monitor)
         if correction_phase is None:
@@ -162,7 +162,7 @@ class SLMBase(Instrument):
         :return:
         """
         if self.Display is None:
-            self.Display = SLMDisplay(self._shape, **kwargs)
+            self.Display = SlmDisplay(self._shape, **kwargs)
 
         self._logger.debug("Setting phase (min, max)=(%g, %g); shape=%s; monitor=%d" % (np.min(phase), np.max(phase),
                                                                                         np.shape(phase), slm_monitor))
@@ -172,7 +172,7 @@ class SLMBase(Instrument):
             self.Display.show()
 
     def get_qt_ui(self):
-        return SLMBaseUI(self)
+        return SlmBaseUi(self)
 
     def make_phase(self, *args):
         """Called from the GUI every time a new hologram is created. Re-implemented in all subclasses
@@ -183,12 +183,12 @@ class SLMBase(Instrument):
         raise NotImplementedError
 
 
-class SLMBaseUI(QtWidgets.QWidget, UiTools):
+class SlmBaseUi(QtWidgets.QWidget, UiTools):
     """
     To create the GUI for a different application, you only need to subclass and replace the get_gui_phase_params method
     """
     def __init__(self, slm, ui_filename='slm_base.ui'):
-        super(SLMBaseUI, self).__init__()
+        super(SlmBaseUi, self).__init__()
 
         self.PhaseDisplay = None
         self.SLM = slm
@@ -227,10 +227,10 @@ class SLMBaseUI(QtWidgets.QWidget, UiTools):
         raise NotImplementedError
 
 
-class SLMcalibration(SLMBase):
+class SlmCalibration(SlmBase):
     """Simple class for testing an SLM with gratings, lenses and astigmatism"""
     def __init__(self, *args, **kwargs):
-        super(SLMcalibration, self).__init__(*args, **kwargs)
+        super(SlmCalibration, self).__init__(*args, **kwargs)
 
     def make_phase(self, kx=0, ky=0, fcs=0, ax=0, ay=0, contrast=1, offset=0):
         """
@@ -245,19 +245,19 @@ class SLMcalibration(SLMBase):
         """
         x = np.arange(self._shape[0]) - int(self._shape[0]/2)
         y = np.arange(self._shape[1]) - int(self._shape[1]/2)
-        X, Y = np.meshgrid(x, y)
-        rho = np.sqrt(X**2 + Y**2)
-        phi = np.arctan2(X, Y)
+        x, y = np.meshgrid(x, y)
+        rho = np.sqrt(x**2 + y**2)
+        phi = np.arctan2(x, y)
 
         # Grating
-        grating = np.zeros(X.shape)
+        grating = np.zeros(x.shape)
         if kx != 0:
-            grating += (np.pi / kx) * X
+            grating += (np.pi / kx) * x
         if ky != 0:
-            grating += (np.pi / ky) * Y
+            grating += (np.pi / ky) * y
 
         # Focus
-        focus = fcs * (X**2 + Y**2)
+        focus = fcs * (x**2 + y**2)
 
         # Astigmatism
         astigmatism = (ax * np.sin(2*phi) + ay * np.cos(2*phi)) * rho**2
@@ -274,12 +274,12 @@ class SLMcalibration(SLMBase):
         return phase
 
     def get_qt_ui(self):
-        return SLMcalibrationUI(self)
+        return SlmCalibrationUi(self)
 
 
-class SLMcalibrationUI(SLMBaseUI):
+class SlmCalibrationUi(SlmBaseUi):
     def __init__(self, slm):
-        super(SLMcalibrationUI, self).__init__(slm, 'slm_calibration.ui')
+        super(SlmCalibrationUi, self).__init__(slm, 'slm_calibration.ui')
         self._connect()
 
     def _connect(self):
@@ -350,10 +350,10 @@ class SLMcalibrationUI(SLMBaseUI):
         return kx, ky, fcs, ax, ay, contrast, offset
 
 
-class LaguerreSLM(SLMBase):
+class LaguerreSlm(SlmBase):
     """Simple class for creating Laguerre-Gauss beams of arbitrary order and orientation"""
     def __init__(self, *args, **kwargs):
-        super(LaguerreSLM, self).__init__(*args, **kwargs)
+        super(LaguerreSlm, self).__init__(*args, **kwargs)
 
     def make_phase(self, order, angle, contrast=1, offset=0, focus=0, center=None):
         """
@@ -371,14 +371,14 @@ class LaguerreSLM(SLMBase):
 
         x = np.arange(self._shape[0]) - center[0]
         y = np.arange(self._shape[1]) - center[1]
-        X, Y = np.meshgrid(x, y)
-        phase = order * (np.angle(X + Y * 1j) + angle)  # creates a phase vortex
+        x, y = np.meshgrid(x, y)
+        phase = order * (np.angle(x + y * 1j) + angle)  # creates a phase vortex
 
         # Since np.angle goes form -pi to pi, we offset it and and make it go from 0 to 2pi
         phase += order * np.pi
         phase %= 2 * np.pi - 0.000001
 
-        phase += focus * (X**2 + Y**2)
+        phase += focus * (x**2 + y**2)
 
         phase *= contrast
         phase += offset
@@ -386,12 +386,12 @@ class LaguerreSLM(SLMBase):
         return phase
 
     def get_qt_ui(self):
-        return LaguerreSLMUI(self)
+        return LaguerreSlmUi(self)
 
 
-class LaguerreSLMUI(SLMBaseUI):
+class LaguerreSlmUi(SlmBaseUi):
     def __init__(self, slm):
-        super(LaguerreSLMUI, self).__init__(slm, 'slm_laguerre.ui')
+        super(LaguerreSlmUi, self).__init__(slm, 'slm_laguerre.ui')
         self._connect()
 
     def _connect(self):
@@ -452,7 +452,7 @@ class LaguerreSLMUI(SLMBaseUI):
 
 
 if __name__ == "__main__":
-    slm = SLMcalibration(1)
-    # slm = LaguerreSLM(1)
-    slm._logger.setLevel('DEBUG')
-    slm.show_gui()
+    SLM = SlmCalibration(1)
+    # slm = LaguerreSlm(1)
+    SLM._logger.setLevel('DEBUG')
+    SLM.show_gui()
