@@ -56,7 +56,7 @@ class SLMDisplay(QtWidgets.QWidget):
     """Widget for displaying the greyscale holograms on the SLM
     It is simply a plain window with a QImage + QLabel.setPixmap combination for displaying phase arrays
     """
-    def __init__(self, shape=(1000, 1000), resolution=(1, 1), bitness=8, hide_border=True, slm_monitor=None):
+    def __init__(self, shape=(1000, 1000), resolution=(1, 1), bitness=8, hide_border=True):
         super(SLMDisplay, self).__init__()
 
         self._pixels = [int(x[0]/x[1]) for x in zip(shape, resolution)]
@@ -113,7 +113,8 @@ class SLMDisplay(QtWidgets.QWidget):
         self._QLabel.setPixmap(QtGui.QPixmap(self._QImage))
 
         if slm_monitor is not None:
-            desktop = QtWidgets.QApplication.desktop()
+            app = get_qt_app()
+            desktop = app.desktop()
             slm_screen = desktop.screen(slm_monitor)
             assert isinstance(slm_monitor, int)
             assert desktop.screenCount() > slm_monitor >= 0
@@ -128,7 +129,7 @@ class SLMBase(Instrument):
     connect to a GUI that subclasses SLMBaseUI replacing get_gui_phase_params
     """
     def __init__(self, slm_monitor, correction_phase=None, **kwargs):
-        super(Instrument, self).__init__()
+        super(SLMBase, self).__init__()
 
         self._shape = self._get_monitor_size(slm_monitor)
         if correction_phase is None:
@@ -152,17 +153,20 @@ class SLMBase(Instrument):
 
         return [slm_screen.width(), slm_screen.height()]
 
-    def display_phase(self, phase, **kwargs):
+    def display_phase(self, phase, slm_monitor=None, **kwargs):
         """Display a phase array, creating/displaying the appropriate widget if necessary
 
         :param phase: 2D array of phase values
+        :param slm_monitor: index of the monitor to display the array in
         :param kwargs: named arguments to be passed to the display widget
         :return:
         """
         if self.Display is None:
             self.Display = SLMDisplay(self._shape, **kwargs)
 
-        self.Display.set_image(phase + self._correction.transpose(), **kwargs)
+        self._logger.debug("Setting phase (min, max)=(%g, %g); shape=%s; monitor=%d" % (np.min(phase), np.max(phase),
+                                                                                        np.shape(phase), slm_monitor))
+        self.Display.set_image(phase + self._correction.transpose(), slm_monitor=slm_monitor)
 
         if self.Display.isHidden():
             self.Display.show()
@@ -199,7 +203,9 @@ class SLMBaseUI(QtWidgets.QWidget, UiTools):
         self.make_pushButton.pressed.connect(self.make)
 
     def make(self):
-        phase = self.SLM.make_phase(*self.get_gui_phase_params())
+        args = self.get_gui_phase_params()
+        self.SLM._logger.debug('SLMBaseUI.make called with args=%s' % (args, ))
+        phase = self.SLM.make_phase(*args)
 
         # The data is transposed according to the pyqtgraph documentation for axis ordering
         # http://www.pyqtgraph.org/documentation/widgets/imageview.html
@@ -446,6 +452,7 @@ class LaguerreSLMUI(SLMBaseUI):
 
 
 if __name__ == "__main__":
-    # slm = SLMcalibration(3)
-    slm = LaguerreSLM(1)
+    slm = SLMcalibration(1)
+    # slm = LaguerreSLM(1)
+    slm._logger.setLevel('DEBUG')
     slm.show_gui()
