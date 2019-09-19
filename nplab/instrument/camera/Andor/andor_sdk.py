@@ -485,6 +485,7 @@ class AndorBase:
             else:
                 raise NotImplementedError('Read Mode %g' % self._parameters['ReadMode'])
 
+        image_shape = tuple([int(x) for x in image_shape])
         dim = num_of_images * np.prod(image_shape)
         cimageArray = c_int * dim
         cimage = cimageArray()
