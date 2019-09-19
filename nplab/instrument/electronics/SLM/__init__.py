@@ -8,12 +8,12 @@ import pyqtgraph.dockarea as dockarea
 import numpy as np
 import os
 import math
+import gui
+import pattern_generators
 
 
-# TODO: make each of the subwidgets modular (focus, astigmatism, Laguerre-Gauss, gratings...) and make a class that can create arbitrary combinations of these, taking care of the relevant phase making methods
 # TODO: make calibration class https://doi.org/10.1364/AO.43.006400
-# TODO: plot also the array on the SLM (with the correction)
-# TODO: figure out how to have the scaling between the image and the widgets so that the image is maximised
+
 
 def zernike_polynomial(array_size, n, m, beam_size=1):
     """
@@ -82,22 +82,14 @@ class SlmDisplay(QtWidgets.QWidget):
         :param hide_border: bool. Whether to show the standard window border in your OS. Useful for debugging.
         :return:
         """
+        self._QLabel = QtWidgets.QLabel(self)
+
         layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-
-        img_slm_zero = np.zeros(np.prod(self._pixels))
-        img_slm = np.dstack((img_slm_zero, img_slm_zero, img_slm_zero, img_slm_zero)).astype(np.uint8)
-        self._QImage = QtGui.QImage(img_slm, self._pixels[0], self._pixels[1], QtGui.QImage.Format_RGB32)
-
-        label = QtWidgets.QLabel(self)
-        label.setPixmap(QtGui.QPixmap(self._QImage))
-        self._QLabel = label
-
-        layout.addWidget(label)
+        layout.addWidget(self._QLabel)
         self.setLayout(layout)
 
         self.setWindowTitle('SLM Phase')
-
         if hide_border:
             self.setWindowFlags(QtCore.Qt.CustomizeWindowHint | QtCore.Qt.FramelessWindowHint)
 
@@ -127,25 +119,34 @@ class SlmDisplay(QtWidgets.QWidget):
             self.move(slm_screen.x(), slm_screen.y())
 
 
-class SlmBase(Instrument):
-    """Base SLM class. Together with it's GUI it implements all of the basic displaying of phase arrays and the static
-    corrections (if any) to be applied to the SLM display
-
-    To create an SLM class for a different application, you need only subclass and replace the make_phase method, and
-    connect to a GUI that subclasses SLMBaseUI replacing get_gui_phase_params
-    """
-    def __init__(self, slm_monitor, correction_phase=None, **kwargs):
-        super(SlmBase, self).__init__()
+class Slm(Instrument):
+    def __init__(self, options, slm_monitor, correction_phase=None, **kwargs):
+        super(Slm, self).__init__()
 
         self._shape = self._get_monitor_size(slm_monitor)
         if correction_phase is None:
-            self._correction = np.zeros(self._shape)
+            self._correction = np.zeros(self._shape[::-1])
         else:
             assert correction_phase.shape == self._shape
             self._correction = correction_phase
 
         self.phase = None
         self.Display = None
+        self.options = options
+
+    def make_phase(self, **kwargs):
+        self._logger.debug('Making phases: %s, %s' % (self._shape, kwargs))
+        self.phase = np.zeros(self._shape[::-1])
+        for option in self.options:
+            self._logger.debug('Making phase: %s' % option)
+            try:
+                self.phase = getattr(pattern_generators, option)(self.phase, *kwargs[option])
+            except Exception as e:
+                self._logger.warn('Failed because: %s' % e)
+        return self.phase
+
+    def get_qt_ui(self):
+        return SlmUi(self)
 
     @staticmethod
     def _get_monitor_size(monitor_index):
@@ -172,78 +173,10 @@ class SlmBase(Instrument):
 
         self._logger.debug("Setting phase (min, max)=(%g, %g); shape=%s; monitor=%d" % (np.min(phase), np.max(phase),
                                                                                         np.shape(phase), slm_monitor))
-        self.Display.set_image(phase + self._correction.transpose(), slm_monitor=slm_monitor)
+        self.Display.set_image(phase + self._correction, slm_monitor=slm_monitor)
 
         if self.Display.isHidden():
             self.Display.show()
-
-    def get_qt_ui(self):
-        return SlmBaseUi(self)
-
-    def make_phase(self, *args, **kwargs):
-        """Called from the GUI every time a new hologram is created. Re-implemented in all subclasses
-
-        :param args:
-        :return:
-        """
-        raise NotImplementedError
-
-
-class SlmBaseUi(QtWidgets.QWidget, UiTools):
-    """
-    To create the GUI for a different application, you only need to subclass and replace the get_gui_phase_params method
-    """
-    def __init__(self, slm, ui_filename='slm_base.ui'):
-        super(SlmBaseUi, self).__init__()
-
-        self.PhaseDisplay = None
-        self.SLM = slm
-        self.setup_gui(ui_filename)
-
-    def setup_gui(self, ui_filename):
-        uic.loadUi(os.path.join(os.path.dirname(__file__), ui_filename), self)
-        self.PhaseDisplay = pg.ImageView()
-        self.Display_frame.layout().addWidget(self.PhaseDisplay, 0, 0)
-
-        self.auto_connect_by_name()
-        self.make_pushButton.pressed.connect(self.make)
-
-    def make(self):
-        args = self.get_gui_phase_params()
-        self.SLM._logger.debug('SLMBaseUI.make called with args=%s' % (args, ))
-        phase = self.SLM.make_phase(*args)
-
-        # The data is transposed according to the pyqtgraph documentation for axis ordering
-        # http://www.pyqtgraph.org/documentation/widgets/imageview.html
-        self.PhaseDisplay.setImage(np.copy(phase).transpose())
-
-        slm_monitor = self.slm_monitor_lineEdit.text()
-        if slm_monitor == '':
-            slm_monitor = None
-        else:
-            slm_monitor = int(slm_monitor)
-
-        self.SLM.display_phase(np.copy(phase), slm_monitor=slm_monitor)
-
-    def get_gui_phase_params(self):
-        """Reads parameters from the user-created GUI to be passed to the SLMBase.make_phase method. Needs to be
-        reimplemented for all subclasses
-        :return:
-        """
-        raise NotImplementedError
-
-
-class Slm(SlmBase):
-    def __init__(self, settings, *args, **kwargs):
-        super(Slm, self).__init__(*args, **kwargs)
-        self.settings = settings
-
-    def make_phase(self, *args, **kwargs):
-        for setting in self.settings:
-            setting['function'](kwargs['function'])
-
-    def get_qt_ui(self):
-        return SlmUi(self)
 
 
 class SlmUi(QtWidgets.QWidget, UiTools):
@@ -263,23 +196,23 @@ class SlmUi(QtWidgets.QWidget, UiTools):
         uic.loadUi(os.path.join(os.path.dirname(__file__), 'ui_base.ui'), self)
         self.dockarea = dockarea.DockArea()
         self.splitter.replaceWidget(0, self.dockarea)
-        self.dockarea.show()  # Absolutely no idea why this works
+        self.dockarea.show()  # Absolutely no idea why this is needed
 
-        self.all_widgets = []
+        self.all_widgets = dict()
         self.all_docks = []
-        for setting in self.SLM.settings:
-            widget = QtWidgets.QWidget()
-            uic.loadUi(os.path.join(os.path.dirname(__file__), 'ui_%s.ui' % setting['function']), widget)
-            dock = dockarea.Dock(setting['function'])
+        for option in self.SLM.options:
+            widget = getattr(gui, '%sUi' % option)()
+            dock = dockarea.Dock(option)
             dock.addWidget(widget)
             self.dockarea.addDock(dock, 'bottom')
-            self.all_widgets += [widget]
+            self.all_widgets[option] = widget
             self.all_docks += [dock]
+        self.make_pushButton.pressed.connect(self.make)
 
     def make(self):
         args = self.get_gui_phase_params()
-        self.SLM._logger.debug('SLMBaseUI.make called with args=%s' % (args, ))
-        phase = self.SLM.make_phase(*args)
+        self.SLM._logger.debug('SlmUi.make called with args=%s' % (args, ))
+        phase = self.SLM.make_phase(**args)
 
         # The data is transposed according to the pyqtgraph documentation for axis ordering
         # http://www.pyqtgraph.org/documentation/widgets/imageview.html
@@ -294,245 +227,19 @@ class SlmUi(QtWidgets.QWidget, UiTools):
         self.SLM.display_phase(np.copy(phase), slm_monitor=slm_monitor)
 
     def get_gui_phase_params(self):
-        """Reads parameters from the user-created GUI to be passed to the SLMBase.make_phase method. Needs to be
+        """Reads parameters from the user-created GUI to be passed to the Slm.make_phase method. Needs to be
         reimplemented for all subclasses
         :return:
         """
-        raise NotImplementedError
-
-
-class SlmCalibration(SlmBase):
-    """Simple class for testing an SLM with gratings, lenses and astigmatism"""
-    def __init__(self, *args, **kwargs):
-        super(SlmCalibration, self).__init__(*args, **kwargs)
-
-    def make_phase(self, kx=0, ky=0, fcs=0, ax=0, ay=0, contrast=1, offset=0):
-        """
-        :param kx: grating constant along the width
-        :param ky: grating constant along the height
-        :param fcs: focal value (currently in arbitrary units)
-        :param ax: horizongal-vertical astigmatism
-        :param ay: diagonal-antidiagonal astigmatism
-        :param contrast: voltage difference between 0 and 2*pi phase
-        :param offset: voltage offset for 0 phase
-        :return:
-        """
-        x = np.arange(self._shape[0]) - int(self._shape[0]/2)
-        y = np.arange(self._shape[1]) - int(self._shape[1]/2)
-        x, y = np.meshgrid(x, y)
-        rho = np.sqrt(x**2 + y**2)
-        phi = np.arctan2(x, y)
-
-        # Grating
-        grating = np.zeros(x.shape)
-        if kx != 0:
-            grating += (np.pi / kx) * x
-        if ky != 0:
-            grating += (np.pi / ky) * y
-
-        # Focus
-        focus = fcs * (x**2 + y**2)
-
-        # Astigmatism
-        astigmatism = (ax * np.sin(2*phi) + ay * np.cos(2*phi)) * rho**2
-
-        phase = grating + focus + astigmatism
-        phase -= phase.min()
-        phase %= 2 * np.pi - 0.000001  # The substraction takes care of rounding errors
-
-        try:
-            phase *= contrast
-            phase += offset
-        except AssertionError:
-            self._logger.warn('You tried setting a phase modulation of more than 2 pi')
-        return phase
-
-    def get_qt_ui(self):
-        return SlmCalibrationUi(self)
-
-
-class SlmCalibrationUi(SlmBaseUi):
-    def __init__(self, slm):
-        super(SlmCalibrationUi, self).__init__(slm, 'slm_calibration.ui')
-        self._connect()
-
-    def _connect(self):
-        # Connects the offset slider to the lineEdits
-        self.offset_lineEdit_step.returnPressed.connect(self.update_offset_lineedit)
-        self.offset_lineEdit_offset.returnPressed.connect(self.update_offset_lineedit)
-        self.offset_slider.valueChanged.connect(self.update_offset_lineedit)
-        self.offset_lineEdit.returnPressed.connect(self.update_offset_slider)
-        self.offset_slider.valueChanged.connect(self.make)
-
-        # Connects the contrast slider to the lineEdits
-        self.contrast_lineEdit_step.returnPressed.connect(self.update_contrast_lineedit)
-        self.contrast_lineEdit_offset.returnPressed.connect(self.update_contrast_lineedit)
-        self.contrast_slider.valueChanged.connect(self.update_contrast_lineedit)
-        self.contrast_lineEdit.returnPressed.connect(self.update_contrast_slider)
-        self.contrast_slider.valueChanged.connect(self.make)
-
-    def update_offset_lineedit(self):
-        step_size = float(self.offset_lineEdit_step.text())
-        offset = float(self.offset_lineEdit_offset.text())
-        steps = self.offset_slider.value()
-        value = offset + steps * step_size
-
-        self.offset_lineEdit.setText(str(value))
-
-    def update_offset_slider(self):
-        value = float(self.offset_lineEdit.text())
-        step_size = float(self.offset_lineEdit_step.text())
-        offset = float(self.offset_lineEdit_offset.text())
-
-        steps = int((value - offset) / step_size)
-        self.offset_slider.setValue(steps)
-
-    def update_contrast_lineedit(self):
-        step_size = float(self.contrast_lineEdit_step.text())
-        offset = float(self.contrast_lineEdit_offset.text())
-        steps = self.contrast_slider.value()
-        value = offset + steps * step_size
-
-        self.contrast_lineEdit.setText(str(value))
-
-    def update_contrast_slider(self):
-        value = float(self.contrast_lineEdit.text())
-        step_size = float(self.contrast_lineEdit_step.text())
-        offset = float(self.contrast_lineEdit_offset.text())
-
-        steps = int((value - offset) / step_size)
-        self.contrast_slider.setValue(steps)
-
-    def get_gui_phase_params(self):
-        """
-
-        :return:
-        """
-        # Grating
-        kx = float(self.gratingx_lineEdit.text())
-        ky = float(self.gratingy_lineEdit.text())
-
-        # Astigmatism
-        ax = float(self.astigmatismx_lineEdit.text())
-        ay = float(self.astigmatismy_lineEdit.text())
-
-        # Focus
-        fcs = float(self.focus_lineEdit.text())
-
-        # Contrast and offset
-        contrast = float(self.contrast_lineEdit.text())
-        offset = float(self.offset_lineEdit.text())
-
-        return kx, ky, fcs, ax, ay, contrast, offset
-
-
-class LaguerreSlm(SlmBase):
-    """Simple class for creating Laguerre-Gauss beams of arbitrary order and orientation"""
-    def __init__(self, *args, **kwargs):
-        super(LaguerreSlm, self).__init__(*args, **kwargs)
-
-    def make_phase(self, order, angle, contrast=1, offset=0, focus=0, center=None):
-        """
-
-        :param order:
-        :param angle:
-        :param contrast:
-        :param offset:
-        :param focus:
-        :param center:
-        :return:
-        """
-        if center is None:
-            center = [int(x/2) for x in self._shape]
-
-        x = np.arange(self._shape[0]) - center[0]
-        y = np.arange(self._shape[1]) - center[1]
-        x, y = np.meshgrid(x, y)
-        phase = order * (np.angle(x + y * 1j) + angle)  # creates a phase vortex
-
-        # Since np.angle goes form -pi to pi, we offset it and and make it go from 0 to 2pi
-        phase += order * np.pi
-        phase %= 2 * np.pi - 0.000001
-
-        phase += focus * (x**2 + y**2)
-
-        phase *= contrast
-        phase += offset
-
-        return phase
-
-    def get_qt_ui(self):
-        return LaguerreSlmUi(self)
-
-
-class LaguerreSlmUi(SlmBaseUi):
-    def __init__(self, slm):
-        super(LaguerreSlmUi, self).__init__(slm, 'slm_laguerre.ui')
-        self._connect()
-
-    def _connect(self):
-        self.offset_lineEdit_step.returnPressed.connect(self.update_offset_lineedit)
-        self.offset_lineEdit_offset.returnPressed.connect(self.update_offset_lineedit)
-        self.offset_slider.valueChanged.connect(self.update_offset_lineedit)
-        self.offset_lineEdit.returnPressed.connect(self.update_offset_slider)
-        self.offset_slider.valueChanged.connect(self.make)
-
-        self.contrast_lineEdit_step.returnPressed.connect(self.update_contrast_lineedit)
-        self.contrast_lineEdit_offset.returnPressed.connect(self.update_contrast_lineedit)
-        self.contrast_slider.valueChanged.connect(self.update_contrast_lineedit)
-        self.contrast_lineEdit.returnPressed.connect(self.update_contrast_slider)
-        self.contrast_slider.valueChanged.connect(self.make)
-
-    def update_offset_lineedit(self):
-        step_size = float(self.offset_lineEdit_step.text())
-        offset = float(self.offset_lineEdit_offset.text())
-        steps = self.offset_slider.value()
-        value = offset + steps * step_size
-
-        self.offset_lineEdit.setText(str(value))
-
-    def update_offset_slider(self):
-        value = float(self.offset_lineEdit.text())
-        step_size = float(self.offset_lineEdit_step.text())
-        offset = float(self.offset_lineEdit_offset.text())
-
-        steps = int((value - offset) / step_size)
-        self.offset_slider.setValue(steps)
-
-    def update_contrast_lineedit(self):
-        step_size = float(self.contrast_lineEdit_step.text())
-        offset = float(self.contrast_lineEdit_offset.text())
-        steps = self.contrast_slider.value()
-        value = offset + steps * step_size
-
-        self.contrast_lineEdit.setText(str(value))
-
-    def update_contrast_slider(self):
-        value = float(self.contrast_lineEdit.text())
-        step_size = float(self.contrast_lineEdit_step.text())
-        offset = float(self.contrast_lineEdit_offset.text())
-
-        steps = int((value - offset) / step_size)
-        self.contrast_slider.setValue(steps)
-
-    def get_gui_phase_params(self):
-        """
-
-        :return:
-        """
-        contrast = float(self.contrast_lineEdit.text())
-        offset = float(self.offset_lineEdit.text())
-        angle = float(self.LGangle_lineEdit.text())
-        order = int(self.LGorder_lineEdit.text())
-        focus = float(self.focus_lineEdit.text())
-
-        return order, angle, contrast, offset, focus
+        all_params = dict()
+        for name, widget in self.all_widgets.items():
+            all_params[name] = widget.get_params()
+        self.SLM._logger.debug('get_gui_phase_params: %s' % all_params)
+        return all_params
 
 
 if __name__ == "__main__":
-    # SLM = SlmCalibration(1)
-    # SLM = LaguerreSlm(1)
-    settings = [dict(function='focus'), dict(function='astigmatism')]
+    settings = ['gratings', 'vortexbeam', 'focus', 'astigmatism', 'linear_lut']
     SLM = Slm(settings, 1)
-    # SLM._logger.setLevel('DEBUG')
+    SLM._logger.setLevel('DEBUG')
     SLM.show_gui()
