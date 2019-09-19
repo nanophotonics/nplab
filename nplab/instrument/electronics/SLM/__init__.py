@@ -3,13 +3,12 @@
 from nplab.utils.gui import QtWidgets, QtGui, QtCore, uic, get_qt_app
 from nplab.ui.ui_tools import UiTools
 from nplab.instrument import Instrument
-import pyqtgraph as pg
 import pyqtgraph.dockarea as dockarea
 import numpy as np
 import os
 import math
-import gui
-import pattern_generators
+import nplab.instrument.electronics.SLM.gui as gui
+import nplab.instrument.electronics.SLM.pattern_generators as pattern_generators
 
 
 # TODO: make calibration class https://doi.org/10.1364/AO.43.006400
@@ -201,7 +200,7 @@ class SlmUi(QtWidgets.QWidget, UiTools):
         self.all_widgets = dict()
         self.all_docks = []
         for option in self.SLM.options:
-            widget = getattr(gui, '%sUi' % option)()
+            widget = getattr(gui, '%sUi' % option)(self)
             dock = dockarea.Dock(option)
             dock.addWidget(widget)
             self.dockarea.addDock(dock, 'bottom')

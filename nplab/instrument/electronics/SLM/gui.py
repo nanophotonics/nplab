@@ -6,9 +6,10 @@ import os
 
 
 class gratingsUi(QtWidgets.QWidget):
-    def __init__(self):
+    def __init__(self, slm_gui):
         super(gratingsUi, self).__init__()
         uic.loadUi(os.path.join(os.path.dirname(__file__), 'ui_gratings.ui'), self)
+        self.slm_gui = slm_gui
         self._connect()
 
     def _connect(self):
@@ -41,9 +42,10 @@ class gratingsUi(QtWidgets.QWidget):
 
 
 class astigmatismUi(QtWidgets.QWidget):
-    def __init__(self):
+    def __init__(self, slm_gui):
         super(astigmatismUi, self).__init__()
         uic.loadUi(os.path.join(os.path.dirname(__file__), 'ui_astigmatism.ui'), self)
+        self.slm_gui = slm_gui
         self._connect()
 
     def _connect(self):
@@ -76,9 +78,10 @@ class astigmatismUi(QtWidgets.QWidget):
 
 
 class focusUi(QtWidgets.QWidget):
-    def __init__(self):
+    def __init__(self, slm_gui):
         super(focusUi, self).__init__()
         uic.loadUi(os.path.join(os.path.dirname(__file__), 'ui_focus.ui'), self)
+        self.slm_gui = slm_gui
         self._connect()
 
     def _connect(self):
@@ -111,9 +114,10 @@ class focusUi(QtWidgets.QWidget):
 
 
 class vortexbeamUi(QtWidgets.QWidget):
-    def __init__(self):
+    def __init__(self, slm_gui):
         super(vortexbeamUi, self).__init__()
         uic.loadUi(os.path.join(os.path.dirname(__file__), 'ui_vortexbeam.ui'), self)
+        self.slm_gui = slm_gui
 
     def get_params(self):
         order = int(float(self.lineEdit_order.text()))
@@ -122,9 +126,10 @@ class vortexbeamUi(QtWidgets.QWidget):
 
 
 class linear_lutUi(QtWidgets.QWidget):
-    def __init__(self):
+    def __init__(self, slm_gui):
         super(linear_lutUi, self).__init__()
         uic.loadUi(os.path.join(os.path.dirname(__file__), 'ui_linear_lut.ui'), self)
+        self.slm_gui = slm_gui
         self._connect()
 
     def _connect(self):
@@ -133,14 +138,14 @@ class linear_lutUi(QtWidgets.QWidget):
         self.offset_lineEdit_offset.returnPressed.connect(self.update_offset_lineedit)
         self.offset_slider.valueChanged.connect(self.update_offset_lineedit)
         self.offset_lineEdit.returnPressed.connect(self.update_offset_slider)
-        # self.offset_slider.valueChanged.connect(self.make)
+        self.offset_slider.valueChanged.connect(self.slm_gui.make)
 
         # Connects the contrast slider to the lineEdits
         self.contrast_lineEdit_step.returnPressed.connect(self.update_contrast_lineedit)
         self.contrast_lineEdit_offset.returnPressed.connect(self.update_contrast_lineedit)
         self.contrast_slider.valueChanged.connect(self.update_contrast_lineedit)
         self.contrast_lineEdit.returnPressed.connect(self.update_contrast_slider)
-        # self.contrast_slider.valueChanged.connect(self.make)
+        self.contrast_slider.valueChanged.connect(self.slm_gui.make)
 
     def update_offset_lineedit(self):
         step_size = float(self.offset_lineEdit_step.text())
