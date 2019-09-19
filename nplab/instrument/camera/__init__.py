@@ -237,7 +237,7 @@ class Camera(Instrument):
         
         # TODO: use the NotifiedProperty to do this with less code?
         self.update_widgets()
-
+    
     def update_widgets(self):
         """Iterates over the preview widgets and updates them. It's a good method to override in subclasses"""
         if self._preview_widgets is not None:
@@ -456,7 +456,7 @@ class CameraControlWidget(QtWidgets.QWidget, UiTools):
         
     def save_jpeg(self):
         cur_img = self.camera.color_image()
-        fname = QtWidgets.QFileDialog.getSaveFileName(
+        fname, _ = QtWidgets.QFileDialog.getSaveFileName(
                                 caption = "Select JPEG filename",
                                 directory = os.path.join(os.getcwd(),datetime.date.today().strftime("%Y-%m-%d.jpg")),
                                 filter = "Images (*.jpg *.jpeg)",

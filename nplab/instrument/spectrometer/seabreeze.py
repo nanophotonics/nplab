@@ -214,7 +214,7 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
             e = ctypes.c_int()
             seabreeze.seabreeze_get_spectrometer_type(self.index, byref(e), byref(s), N)
             check_error(e)
-            self._model_name = s.value
+            self._model_name = str(s.value)
         return self._model_name
 
     model_name = property(get_model_name)
@@ -227,7 +227,7 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
             e = ctypes.c_int()
             seabreeze.seabreeze_get_serial_number(self.index, byref(e), byref(s), N)
             check_error(e)
-            self._serial_number = s.value
+            self._serial_number = str(s.value)
         return self._serial_number
 
     serial_number = property(get_serial_number)
@@ -382,7 +382,7 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
                 datafile_group.create_dataset('continuous_spectra_%d', data=self.spectra_buffer, attrs=attrs)
                 self.spectra_buffer = np.zeros(0)
                 self.spectra_saved = 0
-                print "continuous acquistion of spectra completed!"
+                print("continuous acquistion of spectra completed!")
 
         if bundle_metadata:
             return ArrayWithAttrs(new_spectrum, attrs=self.metadata)

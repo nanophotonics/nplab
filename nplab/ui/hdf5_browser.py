@@ -14,7 +14,7 @@ import matplotlib
 import numpy as np
 import h5py
 
-matplotlib.use('Qt4Agg')
+#matplotlib.use('Qt4Agg')
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from nplab.ui.data_renderers import suitable_renderers

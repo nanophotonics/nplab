@@ -303,7 +303,7 @@ class CameraWithLocation(Instrument):
 
         dz is a single number - we move this far above and below the current position."""
         shift, pos, powers = self.autofocus(np.array([-dz,0,dz]), method="parabola", update_progress=update_progress)
-        if np.abs(shift) >= dz and trigger_full_af:
+        if np.linalg.norm(shift) >= dz and trigger_full_af:
             return self.autofocus(full_dz, update_progress=update_progress, **kwargs)
         else:
             return shift, pos, powers
@@ -340,7 +340,7 @@ class CameraWithLocation(Instrument):
         starting_image = self.color_image()
         starting_location = self.datum_location
         w, h = starting_image.shape[:2]
-        template = starting_image[w/4:3*w/4,h/4:3*h/4, ...] # Use the central 50%x50% as template
+        template = starting_image[int(w/4):int(3*w/4),int(h/4):int(3*h/4), ...] # Use the central 50%x50% as template
         threshold_shift = w*0.02 # Require a shift of at least 2% of the image's width ,changed s[0] to w
         target_shift = w*0.1 # Aim for a shift of about 10%
 #Swapping images[-1] for starting_image
@@ -350,7 +350,7 @@ class CameraWithLocation(Instrument):
             # Next, move a small distance until we see a shift, to auto-determine the calibration distance.
             step = min_step
             shift = 0
-            while shift < threshold_shift:
+            while np.linalg.norm(shift) < threshold_shift:
                 assert step < max_step, "Error, we hit the maximum step before we saw the sample move."
                 self.move(starting_location + np.array([step,0,0]))
                 image = self.color_image()
