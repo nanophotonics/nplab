@@ -16,13 +16,13 @@ The fullfit class is the main thing here - sample use:
     ff.bg gives the background as a 1d array.
 
 The fitting works as follows: 
-    Run(self,minwidth_fac=0.1,initial_fit=None, maxwidth = 7, regions = 20, noise_factor = 0.6, min_peak_separation = 8, comparison_thresh = 0.1):   
+    Run(self,minwidth_fac=0.1,initial_fit=None, maxwidth = 7, regions = 20, noise_factor = 0.6, min_peak_spacing = 8, comparison_thresh = 0.1):   
         minwidth fac is the minimum fraction of the guessed peak width a fitted peak can have.
         initial_fit should be a 1d array of the  order+1 background VALUES (see below) and the peaks
         maxwidth is the maximum width a peak can have.
         regions works as in Iterative_Raman_Fitting
         noise_factor is the minimum height above the noise level a peak must have. It's not connected to anything physical however, just tune it to exclude/include lower S:N peaks
-        min_peak_overlap is the minimum separation (in # of peak widths) a new peak must have from all existing peaks. Prevents multiple Lorentzians being fitted to the one peak.
+        min_peak_spacing is the minimum separation (in # of peak widths) a new peak must have from all existing peaks. Prevents multiple Lorentzians being fitted to the one peak.
         comparison_thresh  is the fractional difference allowed between fit optimisations for the peak to be considered fitted.
     
     If there's no intial fit then initial_bg_poly() takes a guess at what the background is. The signal is spectrum-bg
@@ -52,14 +52,15 @@ as is fitting the stokes and anti-stokes spectra separately.
 """
 import numpy as np
 from scipy.optimize import minimize
+from scipy.optimize import curve_fit as curve_fit
 import matplotlib.pyplot as plt
 import scipy.interpolate as scint
 import scipy.ndimage.filters as ndimf
+from scipy import constants as constants
 import pywt
 import misc as ms # these are some convenience functions I've written
-import ipdb
-import scipy
-from nplab.analysis import smoothing as sm
+import conversions as cnv
+
 
 def Grad(Array):
 	"""
@@ -71,19 +72,23 @@ def Grad(Array):
 
 
 class fullfit:
-    def __init__(self, spec, shifts, order = 3, transmission = None):
+    def __init__(self, spec, shifts, order = 3, transmission = None, use_exponential = False):
         self.spec = spec
         self.shifts = shifts
         self.order = order
         self.peaks = []
         self.peaks_stack = [[]]
         self.bg_bounds = [(0, max(self.spec))]
-        if type(transmission) != np.ndarray: self.transmission = np.ones(len(self.spec))
-        else: self.transmission = transmission
+        self.transmission = np.ones(len(spec))
+        if transmission is not None: self.transmission*=transmission
         i=0
         while i<order: 
             self.bg_bounds.append(self.bg_bounds[0])
             i+=1
+        
+        self.use_exponential = use_exponential
+        if use_exponential == True: self.exp_bounds = ([0, 0, 0,],[np.inf,np.inf, max(self.spec)])
+    
     def L(self,x,H,C,W): # height centre width
     	"""
     	Defines a lorentzian
@@ -94,13 +99,16 @@ class fullfit:
     	"""
     	Defines a sum of Lorentzians. Params goes Height1,Centre1, Width1,Height2.....
     	"""
-    	Output=0
+    	Output=np.zeros(len(x))
     	n=0
         while n<len(Params):
     		Output+=self.L(x,*Params[n:n+3])
     		n+=3
     	return Output
     
+    def exponential(self, x, A, T, bg):
+        omega = -cnv.cm_to_omega(x)
+        return A*(np.exp((constants.hbar/constants.k)*omega/T) -1)**-1 +bg 
     def plot_result(self):
         '''
         plots the spectrum and the individual peaks
@@ -109,12 +117,7 @@ class fullfit:
         plt.figure()
         plt.plot(self.shifts, self.spec)
         plt.plot(self.shifts,self.bg)
-        peaks_stack = []
-        n = 0
-        while n < len(self.peaks):
-                peaks_stack.append(self.peaks[n:n+3])
-                n+=3
-        for peak in peaks_stack:
+        for peak in self.peaks_stack:
             
             plt.plot(self.shifts,self.bg+self.L(self.shifts,*peak)*self.transmission)
                 
@@ -159,7 +162,7 @@ class fullfit:
         
         self.peak_added = False
         i=-1
-        while self.peak_added == False and i<(5): #self.region/5s
+        while self.peak_added == False and i<(self.regions/100): #self.region/5s
             i+=1
             peak_candidate = Results[sorted_indices[i]]
             if len(self.peaks)!=0:
@@ -169,14 +172,14 @@ class fullfit:
                         self.peaks = np.append(self.peaks,peak_candidate)
                         self.peaks_stack = self.peaks_to_matrix(self.peaks)
                         self.peak_added = True
-                        
+                    
                         
             else:
                 self.peaks = np.append(self.peaks,peak_candidate)
                 self.peaks_stack = self.peaks_to_matrix(self.peaks)
                 self.peak_added = True
         
-        
+
     def Wavelet_Estimate_Width(self,Smooth_Loss_Function=2):
     	#Uses the CWT to estimate the typical peak FWHM in the signal
     	#First, intepolates the signal onto a linear x_scale with the smallest spacing present in the signal
@@ -196,37 +199,57 @@ class fullfit:
         takes an inital guess at the background VALUES (see optimize bg) by taking order+1 evenly spaced segments
         of the spectum, and taking the minimum as the background value
         '''
-
-        self.bg_vals = []
-        self.bg_indices = []
-        for section in range(self.order+1):
-            seg_indices = np.array([section,section+1])*len(self.spec)/(self.order+1)
-            seg = self.spec[seg_indices[0]:seg_indices[1]]
-            self.bg_vals.append(np.min(seg))
-            self.bg_indices.append(np.argmin(seg)+section*len(self.spec)/(self.order+1))
-        self.bg_p = np.polyfit(self.shifts[self.bg_indices], self.bg_vals, self.order)
-        self.bg = np.polyval(self.bg_p, self.shifts)
-        self.signal = (np.array(self.spec - self.bg)/np.array(self.transmission)).tolist()
-
+        if self.use_exponential == False:
+            self.bg_vals = []
+            self.bg_indices = []
+            for section in range(self.order+1):
+                seg_indices = np.array([section,section+1])*len(self.spec)/(self.order+1)
+                seg = self.spec[seg_indices[0]:seg_indices[1]]
+                self.bg_vals.append(np.min(seg))
+                self.bg_indices.append(np.argmin(seg)+section*len(self.spec)/(self.order+1))
+            self.bg_p = np.polyfit(self.shifts[self.bg_indices], self.bg_vals, self.order)
+            self.bg = np.polyval(self.bg_p, self.shifts)
+            self.signal = ((np.array(self.spec - self.bg))/self.transmission).tolist()
+        else:
+            self.bg_vals = []
+            self.bg_indices = []
+            for section in range(5):  # A, T, bg
+                    seg_indices = np.array([section,section+1])*len(self.spec)/(5)
+                    seg = self.spec[seg_indices[0]:seg_indices[1]]
+                    self.bg_vals.append(np.min(seg))
+                    self.bg_indices.append(np.argmin(seg)+section*len(self.spec)/(5))
+            #ipdb.set_trace()
+            #self.bg_p = curve_fit(self.exponential, self.shifts[self.bg_indices], self.bg_vals)[0] # p0 = [self.spec[-1]*3, 300, min(self.spec)]
+            self.bg_p = curve_fit(self.exponential, self.shifts[self.bg_indices], self.bg_vals, p0 = [0.5*max(self.spec), 300, min(self.spec)], maxfev = 10000)[0]#, bounds = self.exp_bounds)[0]
+            self.bg = self.exponential(self.shifts, *self.bg_p)
+            self.signal = ((np.array(self.spec - self.bg))/self.transmission).tolist()
+    
+    
     def bg_loss(self,bg_vals):
         '''
         evaluates the fit of the background to spectrum-peaks
         '''
         self.bg_p = np.polyfit(self.shifts[self.bg_indices], bg_vals, self.order)
         fit = np.polyval(self.bg_p, self.shifts)
-        obj = np.sum(np.square(self.spec - self.multi_L(self.shifts,*self.peaks) - fit))
+        obj = np.sum(np.square(self.spec - self.peaks_evaluated - fit))
         return obj
-    
+
     def optimize_bg(self):# takes bg_vals
         '''
         it's important to note that the parameter optimised isn't the polynomial coefficients bg_p , 
         but order+1 points on the spectrum-peaks curve (bg_vals) at positions bg_indices.
         This is because it's easy to put the bounds of the minimum and maximum of the spectrum on these to improve optimisation time. (maybe)
         '''
-        self.bg_vals = minimize(self.bg_loss, self.bg_vals, bounds = self.bg_bounds).x       
-        self.bg_p = np.polyfit(self.shifts[self.bg_indices], self.bg_vals, self.order)
-        self.bg = np.polyval(self.bg_p, self.shifts)
-        self.signal = (np.array(self.spec - self.bg)/np.array(self.transmission)).tolist()
+        if self.use_exponential == False:    
+            self.peaks_evaluated = self.multi_L(self.shifts, *self.peaks)*self.transmission
+            self.bg_vals = minimize(self.bg_loss, self.bg_vals, bounds = self.bg_bounds).x       
+            self.bg_p = np.polyfit(self.shifts[self.bg_indices], self.bg_vals, self.order)
+            self.bg = np.polyval(self.bg_p, self.shifts)
+            self.signal =(np.array(self.spec - self.bg)/self.transmission).tolist()
+        else:
+            self.bg_p = curve_fit(self.exponential, self.shifts, self.spec - self.multi_L(self.shifts, *self.peaks)*self.transmission, p0 = self.bg_p, bounds = self.exp_bounds, maxfev = 10000)[0]
+            self.bg = self.exponential(self.shifts, *self.bg_p)
+
     def peaks_to_matrix(self, peak_array):
         '''
         converts a 1d peak_array into a 2d one
@@ -250,7 +273,7 @@ class fullfit:
     def optimize_peaks(self):
         peak_bounds = []
         n=0
-        height_bound = (0,max(self.spec))
+        height_bound = (self.noise_threshold,max(self.signal))
         pos_bound = (np.min(self.shifts),np.max(self.shifts))
         width_bound = (self.minwidth,self.maxwidth)
         while n<len(self.peaks):
@@ -315,46 +338,61 @@ class fullfit:
         for peak in self.peaks_stack:#flattens the stack
             for parameter in peak:
                 self.peaks.append(parameter)
-    def loss_function(self, loss_vector):
+    
+    def loss_function(self):
         '''
         evaluates the overall (bg+peaks) fit to the spectrum
         '''
-        self.bg_p = np.polyfit(self.shifts[self.bg_indices], loss_vector[0:self.order+1], self.order)
-        self.bg = np.polyval(self.bg_p, self.shifts)
-        fit = self.bg + self.multi_L(self.shifts,*loss_vector[self.order+1:])*self.transmission
+        
+        fit = self.bg + self.multi_L(self.shifts,*self.peaks)*self.transmission
         obj = np.sum(np.square(self.spec - fit))
         return obj
     
-    def Run(self,initial_fit=None, minwidth = 2, maxwidth = 10, regions = 20, noise_factor = 0.1, min_peak_spacing = 7, comparison_thresh = 0.01, verbose = False):    
-    	self.maxwidth = maxwidth
+    def optimize_peaks_asymmetrically(self):
+        
+        def asymmetric_loss(alpha, beta):
+            alphas = alpha*ms.truncate(np.ones(len(self.spec)), self.shifts, -np.inf, peak[1])
+            betas = beta*ms.truncate(np.ones(len(self.spec)), self.shifts, peak[1], np.inf)
+            exponent = np.append(alphas, betas)
+            fit = np.power(self.L(*peak), exponent)
+            obj = np.sum(np.square(self.signal - fit))
+            return obj
+        for peak in self.peaks_stack:
+            minimize(asymmetric_loss, 1,1)
+            
+    
+    def Run(self,initial_fit=None, minwidth = 2, maxwidth = 10, regions = 20, noise_factor = 0.6, min_peak_spacing = 7, comparison_thresh = 0.1, verbose = False):    
+    	
+        self.maxwidth = maxwidth
         self.min_peak_spacing = min_peak_spacing
-        self.width=self.Wavelet_Estimate_Width()
+        self.width=4*self.Wavelet_Estimate_Width()
         self.regions = regions
         if self.regions>len(self.spec):	self.regions = len(self.spec)/2 
     	self.minwidth=minwidth
     	self.noise_threshold = noise_factor*np.std(Grad(self.spec))
+        self.initial_bg_poly()
         if initial_fit is not None:
-            self.bg_vals = initial_fit[0:self.order+1]
-            self.peaks = initial_fit[self.order+1:]
-        else:
-            self.initial_bg_poly() # gives initial bg_vals, and bg_indices
-        while self.regions <= len(self.spec):
-            if verbose == True: print 'Region fraction: ', np.around(self.regions/float(len(self.spec)), decimals = 2)
-            
-            loss_vector = np.append(self.bg_vals,self.peaks)
-            existing_loss_score = self.loss_function(loss_vector)
-            self.Add_New_Peak()
-            if verbose == True: print '# of peaks:', len(self.peaks)/3
-            
-            try:
-                self.optimize_heights()
-                
-            except:
-                dump = 1
+            self.peaks = initial_fit
+            self.regions = len(self.spec)/2
+            self.peaks_stack = self.peaks_to_matrix(self.peaks)
+            self.optimize_heights()
             self.optimize_centre_and_width()
             #self.optimize_peaks()
-            vector = np.append(self.bg_vals, self.peaks)
-            new_loss_score = self.loss_function(vector)
+         # gives initial bg_vals, and bg_indices
+        while self.regions <= len(self.spec):
+            if verbose == True: print 'Region fraction: ', np.around(self.regions/float(len(self.spec)), decimals = 2)
+            existing_loss_score = self.loss_function()
+            Old = self.peaks_stack
+            self.Add_New_Peak()
+            if verbose == True: print '# of peaks:', len(self.peaks)/3
+#            try:
+#                self.optimize_heights()
+#            except:
+#                dump = 1
+#            self.optimize_centre_and_width()
+            #self.optimize_peaks()
+            
+            new_loss_score = self.loss_function()
     		
             #---Check to increase region by x5
             
@@ -362,7 +400,7 @@ class fullfit:
                 if self.peak_added == True:                        
                     self.peaks = self.peaks[0:-3]
                     self.peaks_stack = self.peaks_stack[0:-1]
-                self.regions*=3
+                self.regions*=5
             
             elif self.peak_added == False:  #Otherwise, same number of peaks?
                 self.optimize_bg()
@@ -372,7 +410,7 @@ class fullfit:
                     dump = 1
                 self.optimize_centre_and_width()
                 self.optimize_peaks()
-                Old = self.peaks_to_matrix(loss_vector[self.order+1:].tolist())
+                #self.optimize_bg()
                 New = self.peaks_stack
                 New_trnsp = np.transpose(New)
                 residual = []
@@ -388,12 +426,13 @@ class fullfit:
                 comparison = residual>comparison_thresh
                 if type(comparison) == bool:
                     if comparison ==False:
-                        self.regions*=3
+                        self.regions*=5
                 else:
                     if any(comparison) == False: #if none of the peaks have changed by more than comparison_thresh fraction
-                        self.regions*=3
+                        self.regions*=5
             elif len(self.peaks)==0:
-                self.regions*=3
+                self.regions*=5
+            
         #---One last round of optimization for luck---#
         self.optimize_bg()
         try:
@@ -401,34 +440,34 @@ class fullfit:
             
         except:
             dump = 1
-            self.optimize_centre_and_width()
         
-        #self.optimize_peaks()
-
+        self.optimize_centre_and_width()
+        
+        self.optimize_peaks()
+        
                
             	
 
 if __name__ =='__main__':
     import time
     import h5py
-    import conversions as cnv
     import os
     os.chdir(r'R:\ee306\Experimental data\2019.09.06 Lab 5 two temperature with full calibration')
     #File = h5py.File('Wavenumbered_plots.h5', mode = 'r')
    
     start = time.time()
     File = h5py.File(ms.findH5File(os.getcwd()), mode = 'r')
-    spec = File['BPT_1']['Power_Series'][0]
+    spec = File['TPT_3']['Power_Series'][0]
     shifts = -cnv.wavelength_to_cm(File['BPT_1']['Power_Series'].attrs['wavelengths'], centre_wl = 785)
-    notch = 200
+    notch = 170
     
     S_portion, S_shifts = ms.truncate(spec,shifts, notch, 850)
-    AS_portion, AS_shifts = ms.truncate(spec,shifts, -600, -notch)
+    AS_portion, AS_shifts = ms.truncate(spec,shifts, -np.inf, -notch)
     #S_portion, S_shifts = an.truncate(spec,shifts, 796, 850)
-    transmission = np.ones(len(S_portion))*0.4
-    ff = fullfit(S_portion, S_shifts, order = 3, transmission = transmission )
-    
-    ff.Run(verbose = True)
+    transmission = np.ones(len(AS_portion))*0.4
+    ff = fullfit(AS_portion, AS_shifts, use_exponential = True, transmission = transmission )
+    kwargs = {'min_peak_spacing' : 4, 'noise_factor' : 0.5, 'maxwidth' : 15, 'minwidth' : 5}
+    ff.Run(verbose = True, **kwargs)
     ff.plot_result()
     end = time.time()
     print 'that took '+ str(np.round(end-start,decimals = 0))+ ' seconds'

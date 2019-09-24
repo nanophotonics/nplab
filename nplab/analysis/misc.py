@@ -16,6 +16,7 @@ from lmfit import Minimizer
 from nplab.analysis import Adaptive_Polynomial as AP
 from nplab.analysis import Auto_Fit_Raman as AFR
 import matplotlib.pyplot as plt
+from nplab.analysis import smoothing as sm
 
 
 
@@ -178,7 +179,13 @@ class exponential3: # work in omega, more complicated exponential
 
 
 
-
+def get_laser_power_from_leak(power_series):
+    extracted_powers = []
+    for spectrum in power_series:
+        cut = truncate(spectrum, power_series.attrs['wavelengths'], 784, 786)[0]
+        cut =  AP.Run(cut, 1, Auto_Remove = True)
+        extracted_powers.append(np.sum(cut))
+    return extracted_powers
 def get_peak_heights(counts, wavelengths, shift, Range=4., return_wavelength = False, antiStokes = True, inputcm = False): # shift is in cm-1, range is in nm
     
     if inputcm==False:    
@@ -376,8 +383,55 @@ def calibrate_BPT(counts, wavelengths, notch, analysis_range, Si_counts=None, Si
         
         init_shifts = -cnv.wavelength_to_cm(wavelengths, centre_wl = 785.)
         calibrated_shifts = np.append(calibrated_AS_shifts, calibrated_S_shifts)
+        np.savetxt(r'C:\Users\Eoin Elliott\Documents\GitHub\nplab\nplab\calibration\Lab 5\785nm_Stokes_polynomial.txt', S_fit)
+        np.savetxt(r'C:\Users\Eoin Elliott\Documents\GitHub\nplab\nplab\calibration\Lab 5\785nm_anti_Stokes_polynomial.txt', AS_fit)
         return calibrated_shifts, S_fit, AS_fit
-        
+def transmission_function(S_fit, AS_fit):
+  
+    print r'C:\Users\Eoin Elliott\Documents\GitHub\nplab\nplab\calibration\Lab 5' 
+    OO_wl = np.transpose(np.loadtxt(r'C:\Users\Eoin Elliott\Documents\GitHub\nplab\nplab\calibration\Lab 5\Ocean_Optics_halogen_and_xenon.txt' ))[0]
+    OO_halogen = np.transpose(np.loadtxt(r'C:\Users\Eoin Elliott\Documents\GitHub\nplab\nplab\calibration\Lab 5\Ocean_Optics_halogen_and_xenon.txt' ))[1]
+    OO_xenon = np.transpose(np.loadtxt(r'C:\Users\Eoin Elliott\Documents\GitHub\nplab\nplab\calibration\Lab 5\Ocean_Optics_halogen_and_xenon.txt' ))[2]
+    xenon_reference = np.transpose(np.loadtxt(r'C:\Users\Eoin Elliott\Documents\GitHub\nplab\nplab\calibration\Lab 5\Ocean_Optics_halogen_and_xenon.txt' ))[1]
+    xenon_wl = np.transpose(np.loadtxt(r'C:\Users\Eoin Elliott\Documents\GitHub\nplab\nplab\calibration\Lab 5\Ocean_Optics_halogen_and_xenon.txt' ))[0]
+    OO_halogen = sm.convex_smooth(OO_halogen,10, normalise = False)[0]
+    OO_xenon = sm.convex_smooth(OO_xenon,10, normalise = False)[0]
+    andor_wl = np.transpose(np.loadtxt(r'C:\Users\Eoin Elliott\Documents\GitHub\nplab\nplab\calibration\Lab 5\100x_09_NA_600lmm_800nm_5050bs.txt' ))[0][::-1]
+    andor_halogen = np.transpose(np.loadtxt(r'C:\Users\Eoin Elliott\Documents\GitHub\nplab\nplab\calibration\Lab 5\100x_09_NA_600lmm_800nm_5050bs.txt' ))[1][::-1]
+    
+    andor_halogen = sm.convex_smooth(andor_halogen,10, normalise = True)[0]
+
+    
+    andor_wl = -cnv.wavelength_to_cm(andor_wl, centre_wl = 785)
+    
+    S_andor_halogen, S_andor_wl = truncate(andor_halogen, andor_wl, 0, np.inf)
+    AS_andor_halogen, AS_andor_wl = truncate(andor_halogen, andor_wl, -np.inf, 0)
+    andor_halogen = np.append(AS_andor_halogen, S_andor_halogen)
+    
+    S_andor_wl = np.polyval(S_fit, S_andor_wl)
+    AS_andor_wl = np.polyval(AS_fit, AS_andor_wl)
+    andor_cm = np.append(AS_andor_wl, S_andor_wl)
+    andor_wl = cnv.cm_to_wavelength(-andor_cm, centre_wl = 785)
+    
+
+    OO_halogen = scipy.interpolate.interp1d(OO_wl, OO_halogen)(andor_wl)
+    OO_xenon = scipy.interpolate.interp1d(OO_wl, OO_xenon)(andor_wl)
+    xenon_reference = scipy.interpolate.interp1d(xenon_wl, xenon_reference)(andor_wl)
+    T = OO_xenon*andor_halogen/OO_halogen*xenon_reference
+    
+    
+    
+    plt.figure('Transmission_functions')
+    plt.plot(andor_wl, OO_xenon/float(max(OO_xenon)), label = 'OO_xenon')
+    plt.plot(andor_wl, andor_halogen/float(max(andor_halogen)), label = 'andor_halogen')
+    plt.plot(andor_wl, OO_halogen/float(max(OO_halogen)), label = 'OO_halogen')
+    plt.plot(andor_wl, xenon_reference/float(max(xenon_reference)), label = 'xenon_reference')
+    plt.plot(andor_wl, T/float(max(T)), label = 'transmission')
+    plt.legend()
+    plt.savefig(r'C:\Users\Eoin Elliott\Documents\GitHub\nplab\nplab\calibration\Lab 5\Transmission_function')
+    T_tuple = np.append([andor_wl], [T], axis = 0)
+    np.savetxt(r'C:\Users\Eoin Elliott\Documents\GitHub\nplab\nplab\calibration\Lab 5\Transmission_function_100x_09_NA_600lmm_800nm_5050bs.txt',T_tuple)
+    return T/max(T), andor_cm       
 
 
 
