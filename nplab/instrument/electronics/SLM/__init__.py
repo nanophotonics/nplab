@@ -62,6 +62,12 @@ class SlmDisplay(QtWidgets.QWidget):
     It is simply a plain window with a QImage + QLabel.setPixmap combination for displaying phase arrays
     """
     def __init__(self, shape=(1000, 1000), resolution=(1, 1), bitness=8, hide_border=True):
+        """
+        :param shape: 2-tuple of int. Width and height of the SLM panel in pixels
+        :param resolution:
+        :param bitness: int. Number of addressing levels of the SLM
+        :param hide_border: bool. Whether to show the standard window border in your OS. Set to False only for debugging
+        """
         super(SlmDisplay, self).__init__()
 
         self._pixels = [int(x[0]/x[1]) for x in zip(shape, resolution)]
@@ -77,8 +83,7 @@ class SlmDisplay(QtWidgets.QWidget):
 
     def _make_gui(self, hide_border=True):
         """Creates and sets the widget layout
-
-        :param hide_border: bool. Whether to show the standard window border in your OS. Useful for debugging.
+        :param hide_border: bool. See __init__
         :return:
         """
         self._QLabel = QtWidgets.QLabel(self)
@@ -120,6 +125,18 @@ class SlmDisplay(QtWidgets.QWidget):
 
 class Slm(Instrument):
     def __init__(self, options, slm_monitor, correction_phase=None, **kwargs):
+        """
+        :param options: list of strings. Names of the functionalities you want your SLM to have:
+            - gratings
+            - vortexbeam
+            - focus
+            - astigmatism
+            - linear_lut
+            The order you give these in is important, as they act on the phase pattern sequentially (see make_phase)
+        :param slm_monitor: int. Monitor index for the SLM. See _get_monitor_size
+        :param correction_phase: array. Some SLMs require a large spatial correction to provide a flat phase
+        :param kwargs:
+        """
         super(Slm, self).__init__()
 
         self._shape = self._get_monitor_size(slm_monitor)
@@ -133,23 +150,9 @@ class Slm(Instrument):
         self.Display = None
         self.options = options
 
-    def make_phase(self, **kwargs):
-        self._logger.debug('Making phases: %s, %s' % (self._shape, kwargs))
-        self.phase = np.zeros(self._shape[::-1])
-        for option in self.options:
-            self._logger.debug('Making phase: %s' % option)
-            try:
-                self.phase = getattr(pattern_generators, option)(self.phase, *kwargs[option])
-            except Exception as e:
-                self._logger.warn('Failed because: %s' % e)
-        return self.phase
-
-    def get_qt_ui(self):
-        return SlmUi(self)
-
     @staticmethod
     def _get_monitor_size(monitor_index):
-        """
+        """Utility function to automatically detect the SLM panel size
         :param monitor_index: int. Monitor number
         :return: tuple of two integers, width and height in pixels
         """
@@ -158,6 +161,27 @@ class Slm(Instrument):
         slm_screen = desktop.screen(monitor_index)
 
         return [slm_screen.width(), slm_screen.height()]
+
+    def make_phase(self, parameters):
+        """Creates and returns the phase pattern
+
+        Iterates over self.options, getting the correct pattern_generator by name and applying them sequentially to an
+        array initially full of zeros.
+
+        :param parameters: dict. Keys correspond to the self.options keys, values are the arguments to be passed to the
+        pattern_generators as unnamed arguments
+        :return:
+        """
+        self._logger.debug('Making phases: %s, %s' % (self._shape, parameters))
+        self.phase = np.zeros(self._shape[::-1])
+        for option in self.options:
+            self._logger.debug('Making phase: %s' % option)
+            try:
+                self.phase = getattr(pattern_generators, option)(self.phase, *parameters[option])
+            except Exception as e:
+                self._logger.warn('Failed because: %s' % e)
+        self._logger.debug('Finished making phases')
+        return self.phase
 
     def display_phase(self, phase, slm_monitor=None, **kwargs):
         """Display a phase array, creating/displaying the appropriate widget if necessary
@@ -170,19 +194,22 @@ class Slm(Instrument):
         if self.Display is None:
             self.Display = SlmDisplay(self._shape, **kwargs)
 
-        self._logger.debug("Setting phase (min, max)=(%g, %g); shape=%s; monitor=%d" % (np.min(phase), np.max(phase),
+        self._logger.debug("Setting phase (min, max)=(%g, %g); shape=%s; monitor=%s" % (np.min(phase), np.max(phase),
                                                                                         np.shape(phase), slm_monitor))
         self.Display.set_image(phase + self._correction, slm_monitor=slm_monitor)
 
         if self.Display.isHidden():
             self.Display.show()
 
+    def get_qt_ui(self):
+        return SlmUi(self)
+
 
 class SlmUi(QtWidgets.QWidget, UiTools):
-    """
-    To create the GUI for a different application, you only need to subclass and replace the get_gui_phase_params method
-    """
     def __init__(self, slm):
+        """
+        :param slm: instance of Slm
+        """
         super(SlmUi, self).__init__()
         self.all_widgets = None
         self.all_docks = None
@@ -192,6 +219,12 @@ class SlmUi(QtWidgets.QWidget, UiTools):
         self.setup_gui()
 
     def setup_gui(self):
+        """Creates a DockArea and fills it with the Slm.options given
+
+        For each option, it extracts the correct ui from gui by name, loads it into a widget and adds it to the DockArea
+
+        :return:
+        """
         uic.loadUi(os.path.join(os.path.dirname(__file__), 'ui_base.ui'), self)
         self.dockarea = dockarea.DockArea()
         self.splitter.replaceWidget(0, self.dockarea)
@@ -209,9 +242,9 @@ class SlmUi(QtWidgets.QWidget, UiTools):
         self.make_pushButton.pressed.connect(self.make)
 
     def make(self):
-        args = self.get_gui_phase_params()
-        self.SLM._logger.debug('SlmUi.make called with args=%s' % (args, ))
-        phase = self.SLM.make_phase(**args)
+        parameters = self.get_gui_phase_params()
+        self.SLM._logger.debug('SlmUi.make called with args=%s' % (parameters, ))
+        phase = self.SLM.make_phase(parameters)
 
         # The data is transposed according to the pyqtgraph documentation for axis ordering
         # http://www.pyqtgraph.org/documentation/widgets/imageview.html
@@ -226,9 +259,9 @@ class SlmUi(QtWidgets.QWidget, UiTools):
         self.SLM.display_phase(np.copy(phase), slm_monitor=slm_monitor)
 
     def get_gui_phase_params(self):
-        """Reads parameters from the user-created GUI to be passed to the Slm.make_phase method. Needs to be
-        reimplemented for all subclasses
-        :return:
+        """Iterates over all widgets, calling get_params, and storing the returns in a dictionary
+
+        :return: dict. Keys are the self.options.keys() and the values are whatever the widgets return from get_params
         """
         all_params = dict()
         for name, widget in self.all_widgets.items():

@@ -1,16 +1,34 @@
 # -*- coding: utf-8 -*-
+"""
+Collection of modular GUIs that can be used for creating SLM patterns.
 
-from nplab.utils.gui import QtWidgets, QtGui, QtCore, uic, get_qt_app
-import numpy as np
+When a new SLM class is called, the GUI created adds any of the following to a pyqtgraph.DockArea by importing them by
+name (so the naming of these classes is not arbitrary).
+"""
+from nplab.utils.gui import QtWidgets, uic
 import os
 
 
-class gratingsUi(QtWidgets.QWidget):
-    def __init__(self, slm_gui):
-        super(gratingsUi, self).__init__()
-        uic.loadUi(os.path.join(os.path.dirname(__file__), 'ui_gratings.ui'), self)
+class BaseUi(QtWidgets.QWidget):
+    def __init__(self, slm_gui, name):
+        super(BaseUi, self).__init__()
+        uic.loadUi(os.path.join(os.path.dirname(__file__), 'ui_%s.ui' % name), self)
         self.slm_gui = slm_gui
         self._connect()
+
+    def _connect(self):
+        return
+
+    def get_params(self):
+        """
+        :return: list of parameters to be passed to the pattern_generator of the same name as the class
+        """
+        raise NotImplementedError
+
+
+class gratingsUi(BaseUi):
+    def __init__(self, slm_gui):
+        super(gratingsUi, self).__init__(slm_gui, 'gratings')
 
     def _connect(self):
         self.pushButton_center.clicked.connect(lambda: self.update_gratings('center'))
@@ -41,12 +59,9 @@ class gratingsUi(QtWidgets.QWidget):
         return grating_x, grating_y
 
 
-class astigmatismUi(QtWidgets.QWidget):
+class astigmatismUi(BaseUi):
     def __init__(self, slm_gui):
-        super(astigmatismUi, self).__init__()
-        uic.loadUi(os.path.join(os.path.dirname(__file__), 'ui_astigmatism.ui'), self)
-        self.slm_gui = slm_gui
-        self._connect()
+        super(astigmatismUi, self).__init__(slm_gui, 'astigmatism')
 
     def _connect(self):
         self.pushButton_center.clicked.connect(lambda: self.update_astigmatism('center'))
@@ -77,12 +92,9 @@ class astigmatismUi(QtWidgets.QWidget):
         return astigmatism_x, astigmatism_y
 
 
-class focusUi(QtWidgets.QWidget):
+class focusUi(BaseUi):
     def __init__(self, slm_gui):
-        super(focusUi, self).__init__()
-        uic.loadUi(os.path.join(os.path.dirname(__file__), 'ui_focus.ui'), self)
-        self.slm_gui = slm_gui
-        self._connect()
+        super(focusUi, self).__init__(slm_gui, 'focus')
 
     def _connect(self):
         # Connects the offset slider to the lineEdits
@@ -113,11 +125,9 @@ class focusUi(QtWidgets.QWidget):
         return curvature,
 
 
-class vortexbeamUi(QtWidgets.QWidget):
+class vortexbeamUi(BaseUi):
     def __init__(self, slm_gui):
-        super(vortexbeamUi, self).__init__()
-        uic.loadUi(os.path.join(os.path.dirname(__file__), 'ui_vortexbeam.ui'), self)
-        self.slm_gui = slm_gui
+        super(vortexbeamUi, self).__init__(slm_gui, 'vortexbeam')
 
     def get_params(self):
         order = int(float(self.lineEdit_order.text()))
@@ -125,12 +135,9 @@ class vortexbeamUi(QtWidgets.QWidget):
         return order, angle
 
 
-class linear_lutUi(QtWidgets.QWidget):
+class linear_lutUi(BaseUi):
     def __init__(self, slm_gui):
-        super(linear_lutUi, self).__init__()
-        uic.loadUi(os.path.join(os.path.dirname(__file__), 'ui_linear_lut.ui'), self)
-        self.slm_gui = slm_gui
-        self._connect()
+        super(linear_lutUi, self).__init__(slm_gui, 'linear_lut')
 
     def _connect(self):
         # Connects the offset slider to the lineEdits

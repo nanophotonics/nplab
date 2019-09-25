@@ -60,7 +60,7 @@
       </size>
      </property>
      <property name="text">
-      <string>1</string>
+      <string>0.0001</string>
      </property>
     </widget>
    </item>
@@ -126,7 +126,17 @@
     </widget>
    </item>
    <item row="5" column="2">
-    <widget class="QLineEdit" name="lineEdit_value"/>
+    <widget class="QLineEdit" name="lineEdit_value">
+     <property name="inputMask">
+      <string/>
+     </property>
+     <property name="text">
+      <string>0</string>
+     </property>
+     <property name="placeholderText">
+      <string/>
+     </property>
+    </widget>
    </item>
    <item row="3" column="2">
     <widget class="QSlider" name="slider">

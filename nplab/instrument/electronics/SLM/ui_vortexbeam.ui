@@ -34,6 +34,9 @@
        <height>20</height>
       </size>
      </property>
+     <property name="text">
+      <string>0</string>
+     </property>
      <property name="placeholderText">
       <string>Order</string>
      </property>
@@ -47,6 +50,9 @@
        <height>20</height>
       </size>
      </property>
+     <property name="text">
+      <string>0</string>
+     </property>
      <property name="placeholderText">
       <string>Angle</string>
      </property>
@@ -55,7 +61,7 @@
    <item row="1" column="0">
     <widget class="QLabel" name="label">
      <property name="text">
-      <string>Order</string>
+      <string>Order (int)</string>
      </property>
     </widget>
    </item>
