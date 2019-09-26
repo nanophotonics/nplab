@@ -350,7 +350,7 @@ class SHOT(VisaInstrument, Stage):
         counts = list(map(int, status.split(',')[:2]))
         if axis is None:
             return counts
-        elif hasattr(axis, '__iter__'):
+        elif isinstance(axis, list) or isinstance(axis, tuple):
             return [counts[int(ax)-1] for ax in axis]
         else:
             return counts[int(axis)-1]
@@ -501,7 +501,7 @@ class HIT(SerialInstrument, Stage):
         """
         if axes is None:
             axes = self.axis_names
-        if not hasattr(axes, '__iter__'):
+        if not isinstance(axes, list) and not isinstance(axes, tuple):
             axes = (axes, )
         axes_iter = []
         for ax in axes:
@@ -522,10 +522,7 @@ class HIT(SerialInstrument, Stage):
         :param wait: bool
         :return:
         """
-        if axes is None:
-            axes = self.axis_names
-        elif not hasattr(axes, '__iter__'):
-            axes = (axes, )
+        axes = self._axes_iterable(axes)
         if not hasattr(counts, '__iter__'):
             counts = [counts] * len(axes)
         for count in counts:
