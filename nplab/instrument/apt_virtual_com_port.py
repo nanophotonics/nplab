@@ -234,12 +234,11 @@ class APT_VCP(serial_instrument.SerialInstrument):
         message_dict = self.query(0x0005,destination_id = destination_id)
         serialnum, model, hwtype, swversion, notes, hwversion, modstate, nchans = struct.unpack('<I8sHI48s12xHHH',
                                                                                                 message_dict['data'])
-
         if serialnum != 0 and len(str(serialnum)) != 8:
             serialnum = int(hex(serialnum)[2:-1])
 
-        hardware_dict = {'serial_number': serialnum, 'model': model.replace('\x00', ''), 'hardware_type': hwtype,
-                         'software_version': swversion, 'notes': notes.replace('\x00', ''),
+        hardware_dict = {'serial_number': serialnum, 'model': str(model).replace('\x00', ''), 'hardware_type': hwtype,
+                         'software_version': swversion, 'notes': str(notes).replace('\x00', ''),
                          'hardware_version': hwversion,
                          'modstate': modstate, 'number_of_channels': nchans}
         self.serial_number = serialnum

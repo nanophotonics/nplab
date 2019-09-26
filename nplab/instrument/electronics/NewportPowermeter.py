@@ -32,8 +32,8 @@ class NewportPowermeter(Instrument):
 
         self.wvl_range = [int(self.query('PM:MIN:Lambda?')), int(self.query('PM:MAX:Lambda?'))]
 
-    def __del__(self):
-        self.close_device()
+    # def __del__(self):
+    #     self.close_device()
 
     def _dllWrapper(self, command, *args):
         """Simple dll wrapper
@@ -44,7 +44,7 @@ class NewportPowermeter(Instrument):
         """
         status = getattr(self.dll, command)(*args)
         if status != 0:
-            raise Exception('Command failed: %s' % command)
+            raise Exception('%s failed with status %s' % (command, status))
         else:
             pass
 
@@ -86,11 +86,11 @@ class NewportPowermeter(Instrument):
         self.write(query_string)
         cdevice_id = c_long(self.device_id)
         time.sleep(0.2)
-        response = create_string_buffer('\000' * 1024)
+        response = create_string_buffer(('\000' * 1024).encode())
         leng = c_ulong(1024)
         read_bytes = c_ulong()
         self._dllWrapper("newp_usb_get_ascii", cdevice_id, byref(response), leng, byref(read_bytes))
-        answer = response.value[0:read_bytes.value].rstrip('\r\n')
+        answer = response.value[0:read_bytes.value].rstrip(b'\r\n')
         return answer
 
     def write(self, command_string):
@@ -100,9 +100,10 @@ class NewportPowermeter(Instrument):
         :param command_string: Name of the string to be sent. Check Manual for commands
         :raise:
         """
-        command = create_string_buffer(command_string)
+        command = create_string_buffer(command_string.encode())
         length = c_ulong(sizeof(command))
         cdevice_id = c_long(self.device_id)
+
         self._dllWrapper("newp_usb_send_ascii", cdevice_id, byref(command), length)
 
     @property
@@ -183,7 +184,7 @@ class NewportPowermeter(Instrument):
 if __name__ == '__main__':
     nd = NewportPowermeter(0xCEC7)
     nd._logger.setLevel("DEBUG")
-
+    print('Init finished')
     print(nd.get_instrument_list())
     print(nd.wavelength)
     print(nd.power)
