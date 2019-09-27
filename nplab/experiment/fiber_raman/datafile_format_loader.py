@@ -5,27 +5,23 @@ from datetime import datetime
 
 from nplab import datafile as df
 
- def legacy_dataset_extractor(dset):
-        intensity = np.array(dset)
-        assert intensity.shape[0] == 1014, 'number of datapoints in spctra should be 1014, =1024-10 truncating the left side'
-        center_wl = dset.attrs["center_wavelength"]
-        dt = datetime.strptime(str(dset.attrs["creation_timestamp"]),"%Y-%m-%dT%H:%M:%S.%f")
-        return (dt, center_wl, intensity)
-    
+def legacy_dataset_extractor(dset):
+        return dataset_extractor(dset,["creation_timestamp","center_wavelength"])
+        
 def dataset_extractor(dset,attributes):
-	output = {}
-	output["intensity"] = np.array(dset.value)
-	assert "intensity" not in attributes
-	
-	for a in attributes:
-		try:
-			output[a] = dset.attrs[a]
-			if a == "creation_timestamp":
-				output[a] = datetime.strptime(str(output[a]),"%Y-%m-%dT%H:%M:%S.%f")
-		except KeyError:
-			print("WARNING! Key {0} not found in dataset!".format(a))
+    output = {}
+    output["intensity"] = np.array(dset.value)
+    assert "intensity" not in attributes
 
-	return output
+    for a in attributes:
+        try:
+            output[a] = dset.attrs[a]
+            if a == "creation_timestamp":
+                output[a] = datetime.strptime(str(output[a]),"%Y-%m-%dT%H:%M:%S.%f")
+        except KeyError:
+            print("WARNING! Key {0} not found in dataset!".format(a))
+
+    return output
 
 
 def list_datafile_content(filepath, folderpath):
@@ -76,7 +72,7 @@ def list_datafile_content(filepath, folderpath):
     f = df.DataFile(os.path.normpath(filepath), 'r')
     return f[folderpath].keys()
 
-def extractor(filepath, folderpath,extraction_function=legacy_dataset_extractor):
+def extractor(filepath, folderpath,extraction_function=None):
     """
     Extracts spectral data from hdf5 file written by fiber raman rig.
     
@@ -104,10 +100,11 @@ def extractor(filepath, folderpath,extraction_function=legacy_dataset_extractor)
     ks = list_datafile_content(filepath, folderpath)
    
 
-   
+    if extraction_function is None:
+        extraction_function = legacy_dataset_extractor
     data = [extraction_function(dset=f[folderpath][k]) for k in ks]
-    data = sorted(data, key = lambda x: unix_timestamp(x[0]), reverse = False)
-    assert unix_timestamp(data[0][0]) < unix_timestamp(data[1][0]),"timestamp of first element is less than timestamp of second element"
+    data = sorted(data, key = lambda x: unix_timestamp(x["creation_timestamp"]), reverse = False)
+    assert unix_timestamp(data[0]["creation_timestamp"]) < unix_timestamp(data[1]["creation_timestamp"]),"timestamp of first element is less than timestamp of second element"
     return data
     
 def mapped_extractor(filepath, folderpath, mapper, assert_center_wavelengths_equal=False, laser_wavelength = None,extraction_function=None):
@@ -143,7 +140,11 @@ def mapped_extractor(filepath, folderpath, mapper, assert_center_wavelengths_equ
         return wavelengths
     mapped_data = []
     for i in range(len(raw_data)):
-        (dt, center_wl, intensity) = raw_data[i]
+        raw = raw_data[i]
+        dt = raw["creation_timestamp"]
+        center_wl =raw["center_wavelength"]
+        intensity = raw["intensity"]
+
         wavelengths = array_mapper(center_wl, pixel_offsets, mapper)
         
         #if laser wavelength is passed - compute raman shifts
@@ -163,9 +164,9 @@ def mapped_extractor(filepath, folderpath, mapper, assert_center_wavelengths_equ
     return mapped_data
 
 if __name__ == "__main__":
-	print("start")
-	from nplab.experiment.fiber_raman.spectrum_aligner_ir import grating_1200gmm as make_mapper
-	mapper_1200 = make_mapper()
-	FILEPATH = 'C:\\Users\\Hera\\OneDrive - University Of Cambridge\\20190522\\Spectra\\840_1s_38mW.hdf5'
-	FOLDERPATH = 'spectrum'
-	print(mapped_extractor(filepath=FILEPATH, folderpath=FOLDERPATH, mapper = mapper_1200))
+    print("start")
+    from nplab.experiment.fiber_raman.spectrum_aligner_ir import grating_1200gmm as make_mapper
+    mapper_1200 = make_mapper()
+    FILEPATH = 'C:\\Users\\Hera\\OneDrive - University Of Cambridge\\20190522\\Spectra\\840_1s_38mW.hdf5'
+    FOLDERPATH = 'spectrum'
+    print(mapped_extractor(filepath=FILEPATH, folderpath=FOLDERPATH, mapper = mapper_1200))
