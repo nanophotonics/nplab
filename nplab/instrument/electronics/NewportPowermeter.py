@@ -19,11 +19,13 @@ class NewportPowermeter(Instrument):
         :param kwargs:
         """
         super(NewportPowermeter, self).__init__()
+        self._logger.setLevel('DEBUG')
         if "libname" in kwargs:
             libname = kwargs["libname"]
         else:
             libname = "usbdll.dll"
         self.dll = windll.LoadLibrary(libname)
+
         self.product_id = product_id
 
         self.open_device_with_product_id()
@@ -42,6 +44,7 @@ class NewportPowermeter(Instrument):
         :param args: list of (optional) arguments to pass to the dll function
         :return:
         """
+        self._logger.debug("Calling DLL with: %s %s" % (command, args))
         status = getattr(self.dll, command)(*args)
         if status != 0:
             raise Exception('%s failed with status %s' % (command, status))
@@ -84,6 +87,9 @@ class NewportPowermeter(Instrument):
         :return:
         """
         self.write(query_string)
+        return self.read()
+
+    def read(self):
         cdevice_id = c_long(self.device_id)
         time.sleep(0.2)
         response = create_string_buffer(('\000' * 1024).encode())
