@@ -52,6 +52,7 @@ class MessageBusInstrument(nplab.instrument.Instrument):
     acquiring it twice.
     """
     termination_character = "\n" #: All messages to or from the instrument end with this character.
+    termination_read = None  #: Can be used if the writing and reading termination characters are different. Currently implemented in serial_instrument
     termination_line = None #: If multi-line responses are recieved, they must end with this string
     ignore_echo = False
 

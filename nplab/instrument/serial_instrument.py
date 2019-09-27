@@ -58,6 +58,8 @@ class SerialInstrument(MessageBusInstrument):
         """
         MessageBusInstrument.__init__(self) # Using super() here can cause issues with multiple inheritance.
         self.open(port, False) # Eventually this shouldn't rely on init...
+        if self.termination_read is None:
+            self.termination_read = self.termination_character
 
     def open(self, port=None, quiet=True):
         """Open communications with the serial port.
@@ -108,7 +110,7 @@ class SerialInstrument(MessageBusInstrument):
     def readline(self, timeout=None):
         """Read one line from the serial port."""
         with self.communications_lock:
-            return self.ser_io.readline().replace(self.termination_character,"\n")
+            return self.ser_io.readline().replace(self.termination_read,"\n")
     def test_communications(self):
         """Check if the device is available on the current port.  
         
