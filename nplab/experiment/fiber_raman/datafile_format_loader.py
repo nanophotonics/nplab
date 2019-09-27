@@ -1,8 +1,60 @@
+
 import time, os
 import numpy as np
 from datetime import datetime
 
 from nplab import datafile as df
+
+ def legacy_dataset_extractor(dset):
+        intensity = np.array(dset)
+        assert intensity.shape[0] == 1014, 'number of datapoints in spctra should be 1014, =1024-10 truncating the left side'
+        center_wl = dset.attrs["center_wavelength"]
+        dt = datetime.strptime(str(dset.attrs["creation_timestamp"]),"%Y-%m-%dT%H:%M:%S.%f")
+        return (dt, center_wl, intensity)
+    
+def dataset_extractor(dset,attributes):
+	output = {}
+	output["intensity"] = np.array(dset.value)
+	assert "intensity" not in attributes
+	
+	for a in attributes:
+		try:
+			output[a] = dset.attrs[a]
+			if a == "creation_timestamp":
+				output[a] = datetime.strptime(str(output[a]),"%Y-%m-%dT%H:%M:%S.%f")
+		except KeyError:
+			print("WARNING! Key {0} not found in dataset!".format(a))
+
+	return output
+
+
+def list_datafile_content(filepath, folderpath):
+    """
+    Lists datasets from hdf5 file written by fiber raman rig in 'folderpath' inside file
+    
+    Parameters
+    ----------
+    filepath : string
+        Path to HDF5 file containing data. 
+        
+    folderpath : string
+        Path to group containing spectra inside HDF5 file
+    
+    Returns
+    -------
+    list of string keys of datasets
+    
+    """
+    f = df.DataFile(os.path.normpath(filepath), 'r')
+    return f[folderpath].keys()
+    
+def unix_timestamp(dt):
+    return time.mktime(dt.timetuple())
+
+
+def nm_to_raman_shift(laser_wavelength,wavelength):
+    raman_shift = 1e7*(1.0/laser_wavelength - 1.0/wavelength)
+    return raman_shift
 
 def list_datafile_content(filepath, folderpath):
     """
@@ -24,7 +76,7 @@ def list_datafile_content(filepath, folderpath):
     f = df.DataFile(os.path.normpath(filepath), 'r')
     return f[folderpath].keys()
 
-def extractor(filepath, folderpath):
+def extractor(filepath, folderpath,extraction_function=legacy_dataset_extractor):
     """
     Extracts spectral data from hdf5 file written by fiber raman rig.
     
@@ -50,22 +102,15 @@ def extractor(filepath, folderpath):
     """
     f = df.DataFile(os.path.normpath(filepath), 'r')
     ks = list_datafile_content(filepath, folderpath)
-    def unix_timestamp(dt):
-        return time.mktime(dt.timetuple())
+   
 
-    def dataset_extractor(dset):
-        intensity = np.array(dset)
-        assert intensity.shape[0] == 1014, 'number of datapoints in spctra should be 1014, =1024-10 truncating the left side'
-        center_wl = dset.attrs["center_wavelength"]
-        dt = datetime.strptime(str(dset.attrs["creation_timestamp"]),"%Y-%m-%dT%H:%M:%S.%f")
-        return (dt, center_wl, intensity)
-    
-    data = [dataset_extractor(dset=f[folderpath][k]) for k in ks]
-    data = sorted(data, key = lambda x: unix_timestamp(x[0]),reverse = False)
+   
+    data = [extraction_function(dset=f[folderpath][k]) for k in ks]
+    data = sorted(data, key = lambda x: unix_timestamp(x[0]), reverse = False)
     assert unix_timestamp(data[0][0]) < unix_timestamp(data[1][0]),"timestamp of first element is less than timestamp of second element"
     return data
     
-def mapped_extractor(filepath, folderpath, mapper):
+def mapped_extractor(filepath, folderpath, mapper, assert_center_wavelengths_equal=False, laser_wavelength = None,extraction_function=None):
     """
     Extracts spectral data from hdf5 file written by fiber raman rig, uses 'mapper' to convert from Acton center wavelength, pixel position to a 
     wavelength.
@@ -90,15 +135,31 @@ def mapped_extractor(filepath, folderpath, mapper):
             intensity: numpy.array [type:integer], .shape: (1014,) 
                 CCD size is 1024 but leftmost 10 pixels cut to remove edge effects
     """
-    raw_data = extractor(filepath, folderpath)
+    raw_data = extractor(filepath, folderpath,extraction_function=extraction_function)
     pixel_offsets = np.arange(0,1014) #pixel offsets in image
     def array_mapper(center_wavelength,pixel_offsets,mapper):
         wavelengths =  np.array([mapper(center_wavelength, offset) for offset in pixel_offsets])
         assert wavelengths.shape[0] == 1014, "wavelength list should contain 1014 values - one for every pixel/intensity value"
-
-    mapped_data = [ (dt,array_mapper(center_wl, pixel_offsets, mapper),intensity) for (dt, center_wl, intensity) in raw_data]
-    return mapped_data
-
+        return wavelengths
+    mapped_data = []
+    for i in range(len(raw_data)):
+        (dt, center_wl, intensity) = raw_data[i]
+        wavelengths = array_mapper(center_wl, pixel_offsets, mapper)
+        
+        #if laser wavelength is passed - compute raman shifts
+        if laser_wavelength is not None:
+            raman_shifts = [nm_to_raman_shift(laser_wavelength, wl) for wl in wavelengths]
+        #otherwise return NaNs if unspecified
+        else:
+            print "WARNING: No laser wavelength passed to mapped_extractor - returning NaNs for raman shifts!"
+            raman_shifts = [np.nan for i in range(len(wavelengths))]
+            
+        mapped_data = mapped_data + [(dt, wavelengths, np.array(raman_shifts), intensity)]
+        
+    if assert_center_wavelengths_equal == True:
+        center_wavelengths = [center_wl for (_,center_wl,_) in raw_data]
+        for i in range(len(center_wavelengths)-1):
+            assert center_wavelengths[i] - center_wavelengths[i] < 1e-12, "Center wavelength equality flag is set, wavelengths should be identical"
     return mapped_data
 
 if __name__ == "__main__":
