@@ -11,9 +11,9 @@ import struct
 from nplab.instrument import serial_instrument as serial
 import numpy as np
 
-class ELL18K:
+class ELL18K(SerialInstrument,Stage):
 
-	def __init__(self,Port=None,Counts_per_Rev=143360,Backlash_Correct=True):
+	def __init__(self,Port=None,Backlash_Correct=True):
 		"""
 		Class for Thorlabs Ellipical Motor Rotation Stage.
 
@@ -27,7 +27,7 @@ class ELL18K:
 
 		self.Port=serial.SerialInstrument(Port)
 		self.Port.open()
-		self.Counts_per_Rev=Counts_per_Rev
+		self.Counts_per_Rev=int('0x'+self.Write_Hex('0in')[-9:-2],0) #Cuts off return characters
 		self.Backlash_Correct=Backlash_Correct
 
 		self.Calibrate_Motors() #Calibrates motor resonance frequencies to account for load etc.
@@ -179,7 +179,7 @@ class ELL18K:
 		if isinstance(Current_Angle,str)==True: #Check is status returned
 			return Current_Angle
 		else:
-			return  self.Rotate_To(Current_Angle+Angle)
+			return self.Rotate_To(Current_Angle+Angle)
 
 			
 			

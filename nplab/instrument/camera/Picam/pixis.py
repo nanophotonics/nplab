@@ -26,8 +26,10 @@ import ctypes as ct
 import numpy as np
 from matplotlib import pyplot as plt
 from nplab.instrument.camera import Camera
+
 import sys,os, time
 from picam_constants import PicamSensorTemperatureStatus,PicamParameter,PicamValueType,PicamError,transpose_dictionary,PI_V,PicamConstraintType
+
 import logging
 PARENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -104,6 +106,7 @@ class Pixis(Camera):
             print "pixis:get_parameter::param_type: {}".format(param_type)
             print "pixis:get_parameter::constraint_type: {}".format(constraint_type)
             print "pixis:get_parameter::n: {}".format(n)
+
         param_id = PI_V(value_type=param_type, constraint_type= constraint_type, parameter_index=n)
 
         #assert returned parameter value type is valid one
@@ -115,11 +118,13 @@ class Pixis(Camera):
         assert(constraint_type in valid_constraint_types)
         
         paramtype = param_type.replace("PicamValueType_","")
+
         if self.debug > 0:
             print "paramtype:", paramtype
 
         if paramtype == "Enumeration":
             paramtype="IntegerValue"
+
         else:
             paramtype=paramtype+"Value"
 
@@ -140,7 +145,9 @@ class Pixis(Camera):
             "PicamValueType_Integer" : ct.c_int(),
             "PicamValueType_Boolean" : ct.c_bool(),
             "PicamValueType_LargeInteger" : ct.c_long(),
+
             "PicamValueType_FloatingPoint" : ct.c_double(),
+
             "PicamValueType_Enumeration": ct.c_int(), #TODO 
             "PicamValueType_Rois": None, #TODO
             "PicamValueType_Pulse": None, #TODO
@@ -148,12 +155,14 @@ class Pixis(Camera):
         }
         
 
+
         value = temp[param_type]
         if self.debug > 0:
             print "pixis.get_parameter::param_type: {}".format(param_type)
             print "pixis.get_parameter::value: {}".format(value)
         if value is not None:
             response = getter(self.CameraHandle,param_id, ct.pointer(value))
+
             if response != 0:
                 print("Could not GET value of parameter {0} [label:{1}]".format(parameter_name,label))
                 print("[Code:{0}] {1}".format(response, PicamError[response]))
@@ -276,6 +285,7 @@ class Pixis(Camera):
         print "Frame size:", self.x_max, self.y_max
         self.bolRunning = True
         self.SetTemperatureWithLock(-80.0)
+
     
     def ShutDown(self):
         if self.bolRunning == False:
@@ -294,6 +304,7 @@ class Pixis(Camera):
         param_value = time #in milliseconds
         self.set_parameter(parameter_name=param_name,parameter_value=param_value)
 
+
     def SetTemperatureWithLock(self,temperature):
         self.__SetSensorTemperatureSetPoint(temperature)
         status_code = p.GetTemperatureStatus()
@@ -305,6 +316,7 @@ class Pixis(Camera):
         status_code = p.GetTemperatureStatus()
         print "TemperatureStatus: {0} [{1}]".format(PicamSensorTemperatureStatus[status_code], status_code)
         return
+
 
     def GetSensorTemperatureReading(self):
         param_name = "PicamParameter_SensorTemperatureReading"
@@ -325,6 +337,7 @@ class Pixis(Camera):
         param_name = "PicamParameter_SensorTemperatureStatus"
         return self.get_parameter(param_name)
 
+
     def GetExposureTime(self):
         param_name = "PicamParameter_ExposureTime"
         #function call: PicamEnumeratedType_CoolingFanStatus
@@ -332,6 +345,7 @@ class Pixis(Camera):
         
         # return self.get_parameter(parameter=33685527, label="exposure time")
     
+
     def GetSensorType(self):
         param_name = "PicamParameter_SensorType"
         return self.get_parameter(parameter_name=param_name)
@@ -339,6 +353,7 @@ class Pixis(Camera):
     def GetIntensifierStatus(self):
         param_name = "PicamParameter_IntensifierStatus"
         return self.get_parameter(parameter_name=param_name)
+
 
     def GetCurrentFrame(self):
         
@@ -367,6 +382,7 @@ class Pixis(Camera):
         
 if __name__ == "__main__":
     
+
     p = Pixis(debug=0)
     p.StartUp()
 
@@ -396,6 +412,7 @@ if __name__ == "__main__":
     #     print "value:", s
         
     #     time.sleep(0.5)
+
 
     # print p.GetSensorTemperatureReading()
     # print p.GetExposureTime()

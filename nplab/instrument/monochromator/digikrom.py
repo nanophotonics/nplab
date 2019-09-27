@@ -26,7 +26,7 @@ class Digikrom(SerialInstrument):
         super(Digikrom, self).__init__(port=port)
     def query(self,message,convert_to_hex = True,return_as_dec = True,
               max_len_returned = 10,block = True):
-        """The digikrom uses fixed length commands and has no termination charcter
+        """The digikrom uses fixed length commands and has no termination character
         therefore the query function from serialinstrument needs to be overwritten.
         As the digikrom requires input in hex commands must be changed from decimal
         (as listed in the manual) to hex. The returned messages also need the same treatment
@@ -76,7 +76,7 @@ class Digikrom(SerialInstrument):
             byte = chr(decimal)
             byte_str+=byte
         return byte_str
-#
+
     def set_status_byte(self,status_byte):
         """Extract the status from the status byte """
         binary_byte = bin(status_byte)[2:]
@@ -148,7 +148,7 @@ class Digikrom(SerialInstrument):
                      'grating_ruling':info[3]*256+info[4],
                      'grating_blaze':info[5]*256+info[6]}
         return info_dict
-    def set_gratimg(self,grating_number):
+    def set_grating(self,grating_number):
         """This command changes gratings , if additional gratings installed.."""
         self.query(26)
         self.query(grating_number)
@@ -226,6 +226,7 @@ class Digikrom(SerialInstrument):
 
     def set_slit_2_width(self,slit_width):
         """Adjusts exit slit to a given width."""
+        """Slit 2 (exit) not installed 05042019"""
         high_byte = int(slit_width/256)
         slit_width = slit_width-high_byte*256
         low_byte = int(slit_width)
@@ -252,5 +253,15 @@ class Digikrom(SerialInstrument):
         else:
             return False
 
+def init():
+    spec = Digikrom(port="COM9",serial_number = [50, 52, 51, 49, 55])
+    return spec 
+
 if __name__ == '__main__':
     spec = Digikrom(serial_number = [50, 52, 51, 49, 55])
+    print spec
+    # spec.set_wavelength(0)
+    wavel =spec.get_wavelength()
+    print wavel
+    slit=spec.get_slit_widths()
+    print slit
