@@ -18,7 +18,7 @@ def monitor_property(instance, property_name, how_long, how_often, warn_limits=N
     :param warn_limits: None or 2-tuple. If the monitored value goes outside these limits, throws out a warning.
     :return:
     """
-    setattr(instance, property_name + '_history', collections.deque(maxlen=how_long / how_often))
+    setattr(instance, property_name + '_history', collections.deque(maxlen=int(how_long / how_often)))
     setattr(instance, '_monitoring_' + property_name, True)
 
     def monitor():
