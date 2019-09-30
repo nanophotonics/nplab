@@ -478,7 +478,7 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
                 if 'background_gradient' in self.spectrometer.config_file:
                     self.spectrometer.background_gradient = self.spectrometer.config_file['background_gradient'][:]
                 if 'background_int' in self.spectrometer.config_file:
-                    self.spectrometer.background_int = self.spectrometer.config_file['background_constant'][...]
+                    self.spectrometer.background_int = self.spectrometer.config_file['background_int'][...]
                     
                 self.background_subtracted.blockSignals(True)
                 self.background_subtracted.setCheckState(QtCore.Qt.Checked)

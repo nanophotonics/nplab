@@ -415,6 +415,7 @@ class AndorBase:
     def initialize(self):
         """Sets the initial parameters for the Andor typical for our experiments"""
         self._dll_wrapper('Initialize', outputs=(c_char(),))
+        self.channel = 0
         self.set_andor_parameter('ReadMode', 4)
         self.set_andor_parameter('AcquisitionMode', 1)
         self.set_andor_parameter('TriggerMode', 0)
@@ -427,6 +428,8 @@ class AndorBase:
         self.set_andor_parameter('FanMode', 0)
         if self.Capabilities['EMGainCapability'] > 1:
             self.set_andor_parameter('OutAmp', 1)
+        else:
+            self.set_andor_parameter('OutAmp', 0)
         self.cooler = 1
 
     @locked_action
