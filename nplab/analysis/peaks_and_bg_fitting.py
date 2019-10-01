@@ -7,6 +7,7 @@ Created on Mon Jul 15 11:50:45 2019
 The fullfit class is the main thing here - sample use:
     from nplab.analysis.peaks_and_bg_fitting import fullfit
     ff = fullfit(spectrum, shifts) # initialise the object. The order key-word argument is the order of the background polynomial. 3 works well. above 9 is unstable.
+    use_exponential determines whether or not to use an exponential fit rather than a polynomial
     ff.Run() # this does the actual fitting.
     then the peaks are stored as 
     ff.peaks # 1d list of parameters: height, x-position, and width. Plot with ff.multi_L
@@ -57,6 +58,7 @@ import matplotlib.pyplot as plt
 import scipy.interpolate as scint
 import scipy.ndimage.filters as ndimf
 from scipy import constants as constants
+from scipy.interpolate import interp1d as interp
 import pywt
 import misc as ms # these are some convenience functions I've written
 import conversions as cnv
@@ -73,6 +75,7 @@ def Grad(Array):
 
 class fullfit:
     def __init__(self, spec, shifts, order = 3, transmission = None, use_exponential = False):
+        
         self.spec = spec
         self.shifts = shifts
         self.order = order
@@ -107,8 +110,11 @@ class fullfit:
     	return Output
     
     def exponential(self, x, A, T, bg):
+        '''
+        uses the transmission for the exponential term, not the constant background.
+        '''
         omega = -cnv.cm_to_omega(x)
-        return A*(np.exp((constants.hbar/constants.k)*omega/T) -1)**-1 +bg 
+        return (A*(np.exp((constants.hbar/constants.k)*omega/T) -1)**-1)*interp(self.transmission, self.shifts)(x) +bg 
     def plot_result(self):
         '''
         plots the spectrum and the individual peaks
@@ -443,7 +449,7 @@ class fullfit:
         
         self.optimize_centre_and_width()
         
-        self.optimize_peaks()
+       # self.optimize_peaks()
         
                
             	

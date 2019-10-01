@@ -81,6 +81,9 @@ class QIPythonWidget(RichJupyterWidget):
         kernel_manager.kernel.gui = 'qt'
         self.kernel_client = kernel_client = self._kernel_manager.client()
         kernel_client.start_channels()
+        self.kernel = self.kernel_manager.kernel
+        sys.stdout = self.kernel.stdout
+        sys.stderr = self.kernel.stderr
 
         def stop():
             kernel_client.stop_channels()
