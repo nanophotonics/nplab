@@ -41,7 +41,7 @@ The function returns two things, the first is an array containing:
 	-The full fit of the signal
 	-The original signal with the fitted background removed
 	-The fit of the signal peaks
-	
+
 The second is a dictionary containing the centres, widths and heights of the found peaks.
 """
 
@@ -85,36 +85,19 @@ def Fit(Shift,Signal,Poly_Order_AS=4,Poly_Order_S=4,Smoothing_Width=30,Noise_Smo
 	while Smooth[Position-1]>Smooth[Position]:
 		Position-=1
 
-	AS_Anchors.append(copy.deepcopy(Position))
+	AS_Anchors.append(copy.deepcopy(Shift[Position]))
 	AS_Anchor_Values.append(copy.deepcopy(Smooth[Position])-Constant)
 
-	Starting_Positions=np.round(np.linspace(0,Position,Poly_Order_AS+1)[:-1]).astype(int)
-	for i in Starting_Positions:
-		Position=i 
-		End=False
-		while End is False:
-			Possible=[]
-			if Position>1:
-				Possible.append(Smooth[Position-1])
-			else:
-				Possible.append(np.inf)
-			if Position<AS_Anchors[0]-1:
-				Possible.append(Smooth[Position+1])
-			else:
-				Possible.append(np.inf)
-			if np.min(Possible)<Smooth[Position]:
-				if np.argmin(Possible)==0:
-					Position-=1
-				else:
-					Position+=1
-			else:
-				End=True 
+	Edges=np.round(np.linspace(0,Position,Poly_Order_AS+2)).astype(int)
 
-		AS_Anchors.append(copy.deepcopy(Position))
-		AS_Anchor_Values.append(copy.deepcopy(Smooth[Position])-Constant)
+	for i in range(len(Edges))[1:-1]:
+		Best=np.argmin(Smooth[Edges[i-1]:Edges[i]])+Edges[i-1]
+		AS_Anchors.append(Shift[Best])
+		AS_Anchor_Values.append(Smooth[Best]-Constant)
 
-	for i in range(len(AS_Anchors)):
-		AS_Anchors[i]=Shift[AS_Anchors[i]]
+	AS_Anchor_Values=AS_Anchor_Values[1:]+[AS_Anchor_Values[0]]
+	AS_Anchors=AS_Anchors[1:]+[AS_Anchors[0]]
+
 
 	S_Anchors=[]
 	S_Anchor_Values=[]
@@ -123,36 +106,15 @@ def Fit(Shift,Signal,Poly_Order_AS=4,Poly_Order_S=4,Smoothing_Width=30,Noise_Smo
 	while Smooth[Position+1]>Smooth[Position]:
 		Position+=1
 
-	S_Anchors.append(copy.deepcopy(Position))
+	Edges=np.round(np.linspace(Position,len(Smooth)-1,Poly_Order_S+2)).astype(int)
+
+	S_Anchors.append(copy.deepcopy(Shift[Position]))
 	S_Anchor_Values.append(copy.deepcopy(Smooth[Position])-Constant)
 
-	Starting_Positions=np.round(np.linspace(Position,len(Shift)-1,Poly_Order_S+1)[1:]).astype(int)
-	for i in Starting_Positions:
-		Position=i 
-		End=False
-		while End is False:
-			Possible=[]
-			if Position<len(Shift)-1:
-				Possible.append(Smooth[Position+1])
-			else:
-				Possible.append(np.inf)
-			if Position>S_Anchors[0]+1:
-				Possible.append(Smooth[Position-1])
-			else:
-				Possible.append(np.inf)
-			if np.min(Possible)<Smooth[Position]:
-				if np.argmin(Possible)==0:
-					Position+=1
-				else:
-					Position-=1
-			else:
-				End=True 
-
-		S_Anchors.append(copy.deepcopy(Position))
-		S_Anchor_Values.append(copy.deepcopy(Smooth[Position])-Constant)
-
-	for i in range(len(S_Anchors)):
-		S_Anchors[i]=Shift[S_Anchors[i]]
+	for i in range(len(Edges))[2:]:
+		Best=np.argmin(Smooth[Edges[i-1]:Edges[i]])+Edges[i-1]
+		S_Anchors.append(Shift[Best])
+		S_Anchor_Values.append(Smooth[Best]-Constant)
 
 	def Generate(Vector):
 		Constant=Vector[0]
