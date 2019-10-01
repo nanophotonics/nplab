@@ -203,7 +203,7 @@ class Group(h5py.Group, ShowGUIMixin):
             name = self.find_unique_name(name) #name is None if creating via the dict interface
         g = super(Group, self).create_group(name)
         if timestamp:
-            g.attrs.create('creation_timestamp', datetime.datetime.now().isoformat())
+            g.attrs.create('creation_timestamp', datetime.datetime.now().isoformat().encode())
         if attrs is not None:
             attributes_from_dict(g, attrs)
         return Group(g.id)  # make sure it's wrapped!
@@ -231,7 +231,7 @@ class Group(h5py.Group, ShowGUIMixin):
             name = self.find_unique_name(name)
         dset = super(Group, self).create_dataset(name, shape, dtype, data, *args, **kwargs)
         if timestamp:
-            dset.attrs.create('creation_timestamp', datetime.datetime.now().isoformat())
+            dset.attrs.create('creation_timestamp', datetime.datetime.now().isoformat().encode())
         if hasattr(data, "attrs"): #if we have an ArrayWithAttrs, use the attrs!
             attributes_from_dict(dset, data.attrs)
         if attrs is not None:
