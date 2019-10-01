@@ -19,7 +19,6 @@ class NewportPowermeter(Instrument):
         :param kwargs:
         """
         super(NewportPowermeter, self).__init__()
-        self._logger.setLevel('DEBUG')
         if "libname" in kwargs:
             libname = kwargs["libname"]
         else:
