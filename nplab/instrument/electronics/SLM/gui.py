@@ -102,7 +102,7 @@ class focusUi(BaseUi):
         self.lineEdit_offset.returnPressed.connect(self.update_lineedit)
         self.slider.valueChanged.connect(self.update_lineedit)
         self.lineEdit_value.returnPressed.connect(self.update_slider)
-        # self.offset_slider.valueChanged.connect(self.make)
+        self.slider.valueChanged.connect(self.slm_gui.make)
 
     def update_lineedit(self):
         step_size = float(self.lineEdit_step.text())
