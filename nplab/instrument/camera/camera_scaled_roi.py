@@ -5,6 +5,7 @@ Subclass of Camera that has units for its axis. The GUI also provides crosshairs
 
 from nplab.utils.gui import QtCore, QtGui, QtWidgets, uic
 from nplab.ui.ui_tools import UiTools
+from nplab.ui.widgets.imageview import ArbitraryAxis, Crosshair
 from nplab.instrument.camera import Camera
 import pyqtgraph
 import numpy as np
@@ -132,84 +133,6 @@ class CameraRoiScale(Camera):
                         xhair.update()
 
         super(CameraRoiScale, self).update_widgets()
-
-
-class ArbitraryAxis(pyqtgraph.AxisItem):
-    """
-    Axis that retains it's underlying coordinates, while displaying different coordinates as ticks.
-    It allows one to retain the sizes, shapes and location of widgets added on top the same independently of scaling
-    (e.g. CrossHairs)
-    """
-
-    def __init__(self, *args, **kwargs):
-        super(ArbitraryAxis, self).__init__(*args, **kwargs)
-        self.axis_values = None
-
-    def pos_to_unit(self, value):
-        def get_value(index):
-            """Function that extracts the value from a list (axis_vectors) according to some given position (index),
-            returning NaN if the index is out of range"""
-            if int(index) < 0 or int(index) > len(self.axis_values):
-                return np.nan
-            else:
-                return self.axis_values[int(index)]
-
-        if self.axis_values is None:
-            func = int
-        else:
-            func = get_value
-
-        if not hasattr(value, '__iter__'):
-            return func(value)
-        else:
-            return list(map(func, value))
-
-    def tickStrings(self, values, scale, spacing):
-        try:
-            values = self.pos_to_unit(values)
-            spacing = np.abs(np.diff(self.pos_to_unit([0, spacing]))[0])
-            spacing += 0.001
-            returnval = super(ArbitraryAxis, self).tickStrings(values, scale, spacing)
-        except Exception as e:
-            # pyqtgraph throws out a TypeError/RuntimeWarning when there's no ticks. We ignore it
-            returnval = [''] * len(values)
-            print(e)
-        return returnval
-
-
-class Crosshair(pyqtgraph.GraphicsObject):
-    Released = QtCore.Signal()
-
-    def __init__(self, color, size=5, *args):
-        super(Crosshair, self).__init__(*args)
-        self.color = color
-        self._size = size
-        self._origin = [0, 0]
-
-    def paint(self, p, *args):
-        p.setPen(pyqtgraph.mkPen(self.color))
-        p.drawLine(-self._size, 0, self._size, 0)
-        p.drawLine(0, -self._size, 0, self._size)
-
-    def boundingRect(self):
-        """Makes a clickable rectangle around the center, which is half the size of the cross hair"""
-        return QtCore.QRectF(-self._size, -self._size, 2*self._size, 2*self._size)
-
-    def mouseDragEvent(self, ev):
-        # Ensures the Crosshair always remains in the center of a pixel, which makes the ROI selection easier
-        ev.accept()
-        if ev.isStart():
-            self.startPos = self.pos()
-        elif ev.isFinish():
-            rounded_pos = [int(x) + 0.5 for x in self.pos()]
-            self.setPos(*rounded_pos)
-        else:
-            self.setPos(self.startPos + ev.pos() - ev.buttonDownPos())
-        self.Released.emit()
-
-    def referenced_pos(self):
-        pos = self.pos()
-        return [np.abs(pos[x] - self._origin[x]) for x in [0, 1]]
 
 
 class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
