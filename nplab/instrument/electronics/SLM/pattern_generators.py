@@ -13,8 +13,8 @@ def gratings(input_phase, grating_const_x=0, grating_const_y=0):
     """Linear phase pattern corresponding to a grating/mirror
 
     :param input_phase:
-    :param grating_const_x: int. Period (in pixels) of the grating along the x direction. Default is no grating
-    :param grating_const_y: int. Period (in pixels) of the grating along the y direction. Default is no grating
+    :param grating_const_x: float. Period (in pixels) of the grating along the x direction. Default is no grating
+    :param grating_const_y: float. Period (in pixels) of the grating along the y direction. Default is no grating
     :return:
     """
     shape = np.shape(input_phase)

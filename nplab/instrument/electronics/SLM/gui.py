@@ -7,6 +7,7 @@ name (so the naming of these classes is not arbitrary).
 """
 from nplab.utils.gui import QtWidgets, uic
 import os
+import numpy as np
 
 
 class BaseUi(QtWidgets.QWidget):
@@ -36,6 +37,8 @@ class gratingsUi(BaseUi):
         self.pushButton_down.clicked.connect(lambda: self.update_gratings('down'))
         self.pushButton_left.clicked.connect(lambda: self.update_gratings('left'))
         self.pushButton_right.clicked.connect(lambda: self.update_gratings('right'))
+        self.gratingx_lineEdit.textChanged.connect(self.slm_gui.make)
+        self.gratingy_lineEdit.textChanged.connect(self.slm_gui.make)
 
     def update_gratings(self, direction):
         step = float(self.lineEdit_step.text())
@@ -45,13 +48,13 @@ class gratingsUi(BaseUi):
             self.gratingx_lineEdit.setText(str(0))
             self.gratingy_lineEdit.setText(str(0))
         elif direction == 'up':
-            self.gratingy_lineEdit.setText(str(grating_y + step))
+            self.gratingy_lineEdit.setText('%g' % (grating_y + step))
         elif direction == 'down':
-            self.gratingy_lineEdit.setText(str(grating_y - step))
+            self.gratingy_lineEdit.setText('%g' % (grating_y - step))
         elif direction == 'left':
-            self.gratingx_lineEdit.setText(str(grating_x + step))
+            self.gratingx_lineEdit.setText('%g' % (grating_x + step))
         elif direction == 'right':
-            self.gratingx_lineEdit.setText(str(grating_x - step))
+            self.gratingx_lineEdit.setText('%g' % (grating_x - step))
 
     def get_params(self):
         grating_x = float(self.gratingx_lineEdit.text())
@@ -69,6 +72,8 @@ class astigmatismUi(BaseUi):
         self.pushButton_down.clicked.connect(lambda: self.update_astigmatism('down'))
         self.pushButton_left.clicked.connect(lambda: self.update_astigmatism('left'))
         self.pushButton_right.clicked.connect(lambda: self.update_astigmatism('right'))
+        self.astigmatismx_lineEdit.textChanged.connect(self.slm_gui.make)
+        self.astigmatismy_lineEdit.textChanged.connect(self.slm_gui.make)
 
     def update_astigmatism(self, direction):
         step = float(self.lineEdit_step.text())
@@ -78,13 +83,13 @@ class astigmatismUi(BaseUi):
             self.astigmatismx_lineEdit.setText(str(0))
             self.astigmatismy_lineEdit.setText(str(0))
         elif direction == 'up':
-            self.astigmatismy_lineEdit.setText(str(astigmatism_y + step))
+            self.astigmatismy_lineEdit.setText('%g' % (astigmatism_y + step))
         elif direction == 'down':
-            self.astigmatismy_lineEdit.setText(str(astigmatism_y - step))
+            self.astigmatismy_lineEdit.setText('%g' % (astigmatism_y - step))
         elif direction == 'left':
-            self.astigmatismx_lineEdit.setText(str(astigmatism_x + step))
+            self.astigmatismx_lineEdit.setText('%g' % (astigmatism_x + step))
         elif direction == 'right':
-            self.astigmatismx_lineEdit.setText(str(astigmatism_x - step))
+            self.astigmatismx_lineEdit.setText('%g' % (astigmatism_x - step))
 
     def get_params(self):
         astigmatism_x = float(self.astigmatismx_lineEdit.text())
@@ -110,7 +115,7 @@ class focusUi(BaseUi):
         steps = self.slider.value()
         value = offset + steps * step_size
 
-        self.lineEdit_value.setText(str(value))
+        self.lineEdit_value.setText('%g' % value)
 
     def update_slider(self):
         value = float(self.lineEdit_value.text())
@@ -160,7 +165,7 @@ class linear_lutUi(BaseUi):
         steps = self.offset_slider.value()
         value = offset + steps * step_size
 
-        self.offset_lineEdit.setText(str(value))
+        self.offset_lineEdit.setText('%g' % value)
 
     def update_offset_slider(self):
         value = float(self.offset_lineEdit.text())
@@ -176,7 +181,7 @@ class linear_lutUi(BaseUi):
         steps = self.contrast_slider.value()
         value = offset + steps * step_size
 
-        self.contrast_lineEdit.setText(str(value))
+        self.contrast_lineEdit.setText('%g' % value)
 
     def update_contrast_slider(self):
         value = float(self.contrast_lineEdit.text())
