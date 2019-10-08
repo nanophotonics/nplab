@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from nplab.utils.gui import QtCore
 from nplab.instrument.camera import CameraParameter
 from nplab.utils.thread_utils import locked_action, background_action
 from nplab.utils.log import create_logger
@@ -214,14 +213,17 @@ class AndorBase:
 
                 if 'Finally' in self.parameters[param_loc]:
                     self.get_andor_parameter(self.parameters[param_loc]['Finally'])
-            except AndorWarning:
-                if self.parameters[param_loc]['value'] is None:
-                    self._logger.error('Not supported parameter and None value in the parameter dictionary')
+            except AndorWarning as andor_warning:
+                if andor_warning.error_name == 'DRV_NOT_SUPPORTED':
+                    if self.parameters[param_loc]['value'] is None:
+                        self._logger.error('Not supported parameter and None value in the parameter dictionary')
+                    else:
+                        self.parameters[param_loc]['not_supported'] = True
+                        inputs = self.parameters[param_loc]['value']
+                        if not isinstance(inputs, tuple):
+                            inputs = (inputs, )
                 else:
-                    self.parameters[param_loc]['not_supported'] = True
-                    inputs = self.parameters[param_loc]['value']
-                    if not isinstance(inputs, tuple):
-                        inputs = (inputs, )
+                    self._logger.warn(andor_warning)
 
         if 'Get' not in list(self.parameters[param_loc].keys()):
             if len(inputs) == 1:
@@ -507,35 +509,37 @@ class AndorBase:
 
         return imageArray, num_of_images, image_shape
 
-    def set_image(self, *params):
-        """Set camera parameters for either the IsolatedCrop mode or Image mode
+    @property
+    def Image(self):
+        return self.get_andor_parameter('Image')
 
-        :param params: optional, inputs for either the IsolatedCrop mode or Image mode
+    @Image.setter
+    def Image(self, value):
+        """Ensures a valid image shape is passed
+
+        e.g. if binning is 2x2, and an image with an odd number of pixels along one direction is passed, this function
+        rounds it down to the nearest even number, providing a valid image shape
+
+        :param value:
         :return:
         """
-
+        if len(value) == 4:
+            image = self._parameters['Image']
+            value = image[:2] + value
         if self._parameters['IsolatedCropMode'][0]:
-            if len(params) == 0:
-                params += (self._parameters['IsolatedCropMode'])
-            elif len(params) != 5:
-                raise ValueError('Wrong number of parameters (need bool, cropheight, cropwidth, vbin, hbin')
-
             # Making sure we pass a valid set of parameters
-            params = list(params)
+            # CURRENTLY NOT TESTED
+            params = list(image)
             params[1] -= (params[1]) % params[3]
             params[2] -= (params[2]) % params[4]
             self.set_andor_parameter('IsolatedCropMode', *params)
         else:
-            if len(params) == 0:
-                params = self._parameters['Image']
-            elif len(params) != 6:
-                raise ValueError('Wrong number of parameters (need hbin, vbin, hstart, hend, vstart, vend')
-
             # Making sure we pass a valid set of parameters
-            params = list(params)
-            params[3] -= (params[3] - params[2] + 1) % params[0]
-            params[5] -= (params[5] - params[4] + 1) % params[1]
-            self.set_andor_parameter('Image', *params)
+            value = list(value)
+            value[3] -= (value[3] - value[2] + 1) % value[0]
+            value[5] -= (value[5] - value[4] + 1) % value[1]
+
+            self.set_andor_parameter('Image', *value)
 
     @locked_action
     def set_fast_kinetics(self, n_rows=None):
@@ -686,7 +690,8 @@ parameters = dict(
     BitDepth=dict(Get=dict(cmdName='GetBitDepth', Inputs=(c_int,), Outputs=(c_int,), Iterator='NumADChannels'))
 )
 for param_name in parameters:
-    setattr(AndorBase, param_name, AndorParameter(param_name))
+    if param_name != 'Image':
+        setattr(AndorBase, param_name, AndorParameter(param_name))
 
 
 ERROR_CODE = {

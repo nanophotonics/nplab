@@ -3,13 +3,11 @@
 Subclass of Camera that has units for its axis. The GUI also provides crosshairs for defining ROIs
 """
 
-from nplab.utils.gui import QtCore, QtGui, QtWidgets, uic
-from nplab.ui.ui_tools import UiTools
-from nplab.ui.widgets.imageview import ArbitraryAxis, Crosshair
+from nplab.utils.gui import QtCore, QtGui, QtWidgets
+from nplab.ui.widgets.imageview import ExtendedImageView
 from nplab.instrument.camera import Camera
 import pyqtgraph
 import numpy as np
-import os
 from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 
 
@@ -111,7 +109,7 @@ class CameraRoiScale(Camera):
                     widgt.y_axis = self.y_axis
                     if not self.live_view:  # not sure why it doesn't work in live view
                         widgt.update_axes()
-                    widgt.mouseMoved()
+                    widgt.crosshair_moved()
 
                     # Resize the crosshairs, so that they are always 1/40th of the total size of the image, but never
                     # less than 5 pixels
@@ -135,61 +133,35 @@ class CameraRoiScale(Camera):
         super(CameraRoiScale, self).update_widgets()
 
 
-class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
+class DisplayWidgetRoiScale(ExtendedImageView):
     _max_num_line_plots = 4
     update_data_signal = QtCore.Signal(np.ndarray)
 
     def __init__(self, scale=(1, 1), offset=(0, 0)):
-        """TODO: have the checkboxes in a splitter, so they can be taken out of the way"""
-        self.axis_values = dict(bottom=None, left=None, top=None, right=None)
-        self.axis_units = dict(bottom=None, left=None, top=None, right=None)
-
         super(DisplayWidgetRoiScale, self).__init__()
-        uic.loadUi(os.path.join(os.path.dirname(__file__), 'camera_display_scaled.ui'), self)
 
         self._pxl_scale = scale
         self._pxl_offset = offset
 
-        # Create a PlotItem in which the shown axis display coordinates that are offset and scaled, without changing the
-        # underlying coordinates
-        self.splitter = QtWidgets.QSplitter()
-        layout = self.layout()
-        layout.addWidget(self.splitter, 0, 0, 1, 1)
-
-        _item = pyqtgraph.PlotItem(axisItems=dict(bottom=ArbitraryAxis(orientation="bottom"),
-                                                  left=ArbitraryAxis(orientation="left"),
-                                                  top=ArbitraryAxis(orientation="top"),
-                                                  right=ArbitraryAxis(orientation="right")))
-        self.ImageDisplay = pyqtgraph.ImageView(view=_item)
-        self.ImageDisplay.imageItem.axisOrder = 'row-major'
-        self.splitter.addWidget(self.ImageDisplay)
-
-        self.LineDisplay = pyqtgraph.PlotWidget()
+        self.LineDisplay = self.ui.roiPlot
         self.LineDisplay.showGrid(x=True, y=True)
-        self.splitter.addWidget(self.LineDisplay)
-        self.splitter.setHandleWidth(10)
-        self.ImageDisplay.getHistogramWidget().gradient.restoreState(list(Gradients.values())[1])
-        self.ImageDisplay.imageItem.setTransform(QtGui.QTransform())
+        self.ui.splitter.setHandleWidth(10)
+        self.getHistogramWidget().gradient.restoreState(list(Gradients.values())[1])
+        self.imageItem.setTransform(QtGui.QTransform())
+        self.LineDisplay.show()
 
         self.plot = ()
         for ii in range(self._max_num_line_plots):
             self.plot += (self.LineDisplay.plot(pen=pyqtgraph.intColor(ii, self._max_num_line_plots)),)
 
-        for idx, color in enumerate(['r', 'g']):
-            crosshair = Crosshair(color)
-            self.ImageDisplay.getView().addItem(crosshair)
-            crosshair.Released.connect(self.mouseMoved)
-            setattr(self, 'CrossHair%d' % (idx + 1), crosshair)
+        self.toggle_displays()
 
-        self.checkbox_aspectratio.stateChanged.connect(self.fix_aspect_ratio)
-        self.checkbox_tools.stateChanged.connect(self.show_tools)
-        self.checkbox_axes.stateChanged.connect(self.hide_axes)
-        self.checkbox_autolevel.stateChanged.connect(self.autoLevel)
-        self.splitter.setSizes([1, 0])
-        self.hide_axes()
+        self.checkbox_autorange = QtWidgets.QCheckBox('Autorange')
+        self.tools.gridLayout.addWidget(self.checkbox_autorange, 0, 3, 1, 1)
 
     @property
     def x_axis(self):
+        """Convenience wrapper for integration with spectrometer code"""
         return self.axis_values['bottom']
 
     @x_axis.setter
@@ -198,18 +170,12 @@ class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
 
     @property
     def y_axis(self):
+        """Convenience wrapper for integration with spectrometer code"""
         return self.axis_values['left']
 
     @y_axis.setter
     def y_axis(self, value):
         self.axis_values['left'] = value
-
-    def get_axes(self):
-        """Returns the pyqtgraph AxisItems"""
-        axes_dict = self.ImageDisplay.getView().axes
-        names = ["bottom", "left", "top", "right"]  # Ensures its always in the same order
-        axs = [axes_dict[name]['item'] for name in names]
-        return axs
 
     def update_axes(self):
         gui_axes = self.get_axes()
@@ -224,167 +190,48 @@ class DisplayWidgetRoiScale(QtWidgets.QWidget, UiTools):
             if value is not None:
                 setattr(ax, 'axis_values', value)
 
-    @property
-    def autoRange(self):
-        return self.checkbox_autorange.isChecked()
+    def toggle_displays(self, boolean=False):
+        """Toggle between an Image display and a Plot widget for Line displays
 
-    def autoLevel(self):
-        if self.checkbox_autolevel.isChecked():
-            self.lineEdit_minLevel.setText('0')
-            self.lineEdit_maxLevel.setText('100')
-            self.lineEdit_minLevel.setReadOnly(True)
-            self.lineEdit_maxLevel.setReadOnly(True)
+        :param boolean: if True, display lines. If False, display images
+        :return:
+        """
+        if boolean:
+            self.LineDisplay.show()
+            self.ui.splitter.setSizes([0, self.height()-35, 35])
         else:
-            self.lineEdit_minLevel.setReadOnly(False)
-            self.lineEdit_maxLevel.setReadOnly(False)
-
-    def levels(self):
-        min_level = float(self.lineEdit_minLevel.text())
-        max_level = float(self.lineEdit_maxLevel.text())
-        return min_level, max_level
-
-    def pos_to_unit(self, positions):
-        """
-        Given an iterable of positions (bottom, left, top, right) returns the scaled values on those axes
-
-        :param positions: 2- or 4-tuple of floats.
-        :return:
-        """
-        axs = self.get_axes()
-        units = ()
-        # If only 2-tuple given, it corresponds to (bottom, left) axes
-        if len(positions) == 2:
-            axs = axs[:2]
-        for ax, pos in zip(axs, positions):
-            if hasattr(ax, 'pos_to_unit'):
-                units += (ax.pos_to_unit(pos), )
-            else:
-                units += (pos, )
-
-        return units
-
-    def mouseMoved(self):
-        """
-        Displays the current position of the two cross-hairs, as well as the distance between them, in pixels and in
-        units (when given)
-        :return:
-        """
-        try:
-            # First gets the crosshair positions, and finds the distance between them
-            positions = ()
-            for idx in [1, 2]:
-                xhair = getattr(self, "CrossHair%d" % idx)
-                pos = tuple(xhair.referenced_pos())
-                positions += pos
-            diff = np.linalg.norm(np.array(positions[:2]) - np.array(positions[2:]))
-            positions += (diff, )
-
-            display_string = "Pixels: <span style='color: red'>[%i,%i] </span> " \
-                             "<span style='color: green'> [%i,%i] </span> " \
-                             "\u0394px=%g" % positions
-
-            # If any units are given, get the positions and scale them using pos_to_unit
-            if any([self.axis_units[x] is not None for x in ['bottom', 'left']]):
-                scaled_positions = ()
-                for idx in [1, 2]:
-                    xhair = getattr(self, "CrossHair%d" % idx)
-                    pos = tuple(xhair.referenced_pos())
-                    scaled_positions += self.pos_to_unit(pos)
-                units = ()
-                for ax in ['bottom', 'left']:
-                    if self.axis_units[ax] is None:
-                        units += ('px', )
-                    else:
-                        units += (self.axis_units[ax],)
-                display_string += "\t(%s, %s):" \
-                                  "<span style='color: red'> (%g, %g)</span> " \
-                                  "<span style='color: green'> (%g, %g)</span> " % (units + scaled_positions)
-
-                # If the bottom and left axis have the same units, display the distance between the crosshairs
-                if self.axis_units['bottom'] == self.axis_units['left']:
-                    difft = np.linalg.norm(np.array(scaled_positions[:2]) - np.array(scaled_positions[2:]))
-                    unit = self.axis_units['bottom']
-                    display_string += "\u0394%s=%g" % (unit, difft)
-
-            self.label_crosshairpos.setText(display_string)
-        except Exception:
-            print('Failed updating mouse')
+            self.ui.splitter.setSizes([self.height()-35, 0, 35])
 
     def update_image(self, newimage):
         scale = self._pxl_scale
         offset = self._pxl_offset
 
         if len(newimage.shape) == 1:
-            self.splitter.setSizes([0, 1])
+            self.toggle_displays(True)
             self.plot[0].setData(x=self.x_axis, y=newimage)
         elif len(newimage.shape) == 2:
             if newimage.shape[0] > self._max_num_line_plots:
-                self.splitter.setSizes([1, 0])
-                levels = [np.percentile(newimage, x) for x in self.levels()]
-                self.ImageDisplay.setImage(newimage,
-                                           pos=offset,
-                                           autoRange=self.autoRange,
-                                           levels=levels,
-                                           scale=scale)
+                self.toggle_displays(False)
+                # levels = [np.percentile(newimage, x) for x in self.levels()]
+                self.setImage(newimage,
+                              pos=offset,
+                              autoRange=self.checkbox_autorange.isChecked(),
+                              # levels=levels,
+                              scale=scale)
             else:
-                self.splitter.setSizes([0, 1])
-                for ii in range(newimage.shape[0]):
-                    self.plot[ii].setData(x=0, y=newimage[ii])
+                self.toggle_displays(True)
+                for ii, ydata in enumerate(newimage):
+                    self.plot[ii].setData(x=self.x_axis, y=ydata)
         elif len(newimage.shape) == 3:
-            self.splitter.setSizes([1, 0])
+            self.toggle_displays(False)
             zvals = 0.99 * np.linspace(0, newimage.shape[0] - 1, newimage.shape[0])
             if newimage.shape[0] == 1:
                 newimage = newimage[0]
-            levels = [np.percentile(newimage, x) for x in self.levels()]
-            self.ImageDisplay.setImage(newimage, xvals=zvals,
-                                       pos=offset,
-                                       autoRange=self.autoRange,
-                                       levels=levels,
-                                       scale=scale)
+            # levels = [np.percentile(newimage, x) for x in self.levels()]
+            self.setImage(newimage, xvals=zvals,
+                          pos=offset,
+                          autoRange=self.checkbox_autorange.isChecked(),
+                          # levels=levels,
+                          scale=scale)
         else:
             raise ValueError('Cannot display. Array shape unrecognised')
-
-    def fix_aspect_ratio(self):
-        boolean = self.checkbox_aspectratio.isChecked()
-        self.ImageDisplay.getView().getViewBox().setAspectLocked(boolean, 1)
-
-    def show_tools(self):
-        boolean = self.checkbox_tools.isChecked()
-        if boolean:
-            self.ImageDisplay.getHistogramWidget().show()
-            self.ImageDisplay.ui.roiBtn.show()
-            self.ImageDisplay.ui.menuBtn.show()
-        else:
-            self.ImageDisplay.getHistogramWidget().hide()
-            self.ImageDisplay.ui.roiBtn.hide()
-            self.ImageDisplay.ui.menuBtn.hide()
-
-    def hide_axes(self):
-        boolean = self.checkbox_axes.isChecked()
-        if boolean:
-            for ax in self.get_axes():
-                ax.hide()
-        else:
-            for ax in self.get_axes():
-                ax.show()
-
-    def get_roi(self):
-        """
-        Returns the cross hair positions
-        :return:
-        """
-        assert hasattr(self, 'CrossHair1')
-        assert hasattr(self, 'CrossHair2')
-
-        pos1 = self.CrossHair1.referenced_pos()
-        pos2 = self.CrossHair2.referenced_pos()
-        if pos1 == pos2:
-            return None
-
-        minx, maxx = [int(x) for x in (min(pos1[0], pos2[0]), max(pos1[0], pos2[0]))]
-        miny, maxy = [int(x) for x in (min(pos1[1], pos2[1]), max(pos1[1], pos2[1]))]
-
-        return minx, maxx, miny, maxy
-
-
-

@@ -90,7 +90,7 @@ class Andor(CameraRoiScale, AndorBase):
 
     @roi.setter
     def roi(self, value):
-        image = self.Image
+        image = self._parameters['Image']
         self.Image = image[:2] + tuple([x + 1 for x in value])
 
     @property
@@ -101,7 +101,7 @@ class Andor(CameraRoiScale, AndorBase):
     def binning(self, value):
         if not isinstance(value, tuple):
             value = (value, value)
-        image = self.Image
+        image = self._parameters['Image']
         self.Image = value + image[2:]
 
     def get_control_widget(self):
@@ -115,19 +115,6 @@ class Andor(CameraRoiScale, AndorBase):
         self._preview_widgets.add(new_widget)
 
         return new_widget
-
-    def set_image(self, *params):
-        """Set camera parameters for either the IsolatedCrop mode or Image mode
-
-        Parameters
-        ----------
-        params  optional, inputs for either the IsolatedCrop mode or Image mode
-
-        Returns
-        -------
-
-        """
-        AndorBase.set_image(self, *params)
 
 
 class AndorUI(QtWidgets.QWidget, UiTools):
@@ -419,4 +406,5 @@ class AndorUI(QtWidgets.QWidget, UiTools):
 
 if __name__ == '__main__':
     andor = Andor()
+    andor._logger.setLevel('DEBUG')
     andor.show_gui()

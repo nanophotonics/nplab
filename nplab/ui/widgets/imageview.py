@@ -88,6 +88,8 @@ class ExtendedImageView(pg.ImageView):
     Extension of the pg ImageView so that it's possible to put percentile levels instead of playing around with
     the histogram. Also adds the possibility of normalising each image when given a 3D array, instead of normalising to
     the maximum of the whole array.
+
+    # TODO: link the histogram region with the lineedit levels
     """
     def __init__(self, *args, **kwargs):
         self.axis_values = dict(bottom=None, left=None, top=None, right=None)
@@ -100,7 +102,7 @@ class ExtendedImageView(pg.ImageView):
         self.imageItem.axisOrder = 'row-major'
 
         # Setting up the autoleveling GUI
-        self.level_percentiles = None
+        self.level_percentiles = [0, 100]
         self.levelGroup = uic.loadUi(os.path.join(os.path.dirname(__file__), 'autolevel.ui'))
         self.ui.gridLayout_3.addWidget(self.levelGroup, 2, 0, 1, 1)
         self.levelGroup.setVisible(False)
@@ -183,7 +185,7 @@ class ExtendedImageView(pg.ImageView):
         image = super(ExtendedImageView, self).getProcessedImage()
         if self.levelGroup.checkbox_singleimagelevel.isChecked() and self.hasTimeAxis():
             cur_image = image[self.currentIndex]
-            self.levelMin, self.levelMax = self._percentile(cur_image, self.level_percentiles)
+            self.levelMin, self.levelMax = self.quickMinMax(cur_image)
             self.autoLevels()  # sets the histogram setLevels(self.levelMin, self.levelMax)
         return image
 
@@ -199,7 +201,7 @@ class ExtendedImageView(pg.ImageView):
         self.level_percentiles = [min_level, max_level]
         if not self.levelGroup.checkbox_singleimagelevel.isChecked():
             image = self.getProcessedImage()
-            self.levelMin, self.levelMax = self._percentile(image, self.level_percentiles)
+            self.levelMin, self.levelMax = self.quickMinMax(image)
             self.autoLevels()
         self.updateImage()
 
@@ -208,22 +210,16 @@ class ExtendedImageView(pg.ImageView):
         self.levelGroup.lineEdit_maxLevel.setText('100')
         self.set_level_percentiles()
 
-    def _percentile(self, image, percentiles):
-        """Simple percentiles for getting the levels of an image
+    def quickMinMax(self, data):
+        """Reimplements the ImageView.quickMinMax to set level percentiles
 
-        For some reason the following is more than 20x faster than the direct numpy implementation:
-        >>> levelmin = np.percentile(image, percentiles[0])
-        >>> levelmax = np.percentile(image, percentiles[1])
-        And it's also faster if you change the self.quickMinMax with two calls to np.min and np.max
-
-        :param image: array
-        :param percentiles: two-iterable of the percentiles
+        :param data:
         :return:
         """
-        minval, maxval = self.quickMinMax(image)
+        minval, maxval = super(ExtendedImageView, self).quickMinMax(data)
         rng = maxval - minval
-        levelmin = minval + rng * percentiles[0] / 100.
-        levelmax = minval + rng * percentiles[1] / 100.
+        levelmin = minval + rng * self.level_percentiles[0] / 100.
+        levelmax = minval + rng * self.level_percentiles[1] / 100.
 
         return levelmin, levelmax
 
@@ -320,7 +316,10 @@ def test():
     from nplab.utils.gui import get_qt_app
     app = get_qt_app()
     ui = ExtendedImageView()
-    data = np.random.random((10, 50, 50))
+    data = []
+    for ii, dum in enumerate(np.random.random((10, 50, 50))):
+        data += [dum + ii]
+    data = np.array(data)
     ui.setImage(data)
     ui.show()
     app.exec_()
