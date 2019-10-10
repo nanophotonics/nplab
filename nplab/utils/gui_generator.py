@@ -227,10 +227,11 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
                 directory=self.working_directory,
             )[0]
         try:
-            loaded_state = np.load(self.dock_settings_path)
+            loaded_state = np.load(self.dock_settings_path, allow_pickle=True)
             loaded_state = loaded_state[()]
             self.dockWidgetArea.restoreState(loaded_state)
-        except:
+        except Exception as e:
+            self._logger.debug(e)
             self._logger.warn(
                 'The dock_settings file does not exist! or it is for the wrong docks!')
 
