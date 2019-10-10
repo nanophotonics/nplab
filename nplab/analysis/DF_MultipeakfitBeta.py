@@ -63,7 +63,7 @@ def findH5File(rootDir, mostRecent = True, nameFormat = 'date'):
 
     return h5File
 
-def removeNaNs(array):
+def removeNaNs(array, noisy = True):
     '''
     Converts NaN values to numbers via linear interpolation between adjacent finite elements.
     Input = 1D array or list.
@@ -77,41 +77,50 @@ def removeNaNs(array):
 
     newArray = np.copy(array)
 
-    i = -1
+    for n, i in enumerate(newArray):
 
-    if not np.isfinite(newArray[i]) == True:
+        if np.isfinite(i):
+            break
 
-        while not np.isfinite(newArray[i]) == True:
-            i -= 1
+    if noisy == True:
+        newArray[:n] = np.average(newArray[n:n+3])
 
-        for j in range(len(newArray[i:])):
-            array[i+j] = newArray[i]
+    else:
+        newArray[:n] = newArray[n]
 
-    for i in range(len(newArray)):
+    for n, i in enumerate(newArray[::-1]):
 
-        if not np.isfinite(newArray[i]) == True:
+        if np.isfinite(i):
+            break
 
-            if i == 0:
-                j = i
+    if noisy == True:
+        newArray[-n:] = np.average(newArray[-(n+4):-(n + 1)])
 
-                while not np.isfinite(newArray[j]) == True:
-                    j += 1
+    else:
+        newArray[-n:] = newArray[-(n + 1)]
 
-                for k in range(len(newArray[i:j])):
-                    newArray[i+k] = newArray[j]
+    nandices = np.array([n for n, i in enumerate(newArray) if not np.isfinite(i)])
 
-            elif i != len(newArray) - 1:
-                j = i
+    for nandex in nandices:
 
-                while not np.isfinite(newArray[j]) == True:
-                    j += 1
+        if np.isfinite(newArray[nandex]):
+            continue
 
-                start = newArray[i-1]
-                end = newArray[j]
-                diff = end - start
+        for n, i in enumerate(newArray[nandex:]):
 
-                for k in range(len(newArray[i:j])):
-                    newArray[i+k] = float(start) + float(k)*float(diff)/(len(newArray[i:j]))
+            if np.isfinite(i):
+                break
+
+        if noisy == True:
+            interpInit = np.average(newArray[nandex - 3:nandex])
+            interpEnd = np.average(newArray[nandex + n :nandex + n + 3])
+
+        else:
+            interpInit = newArray[nandex - 1]
+            interpEnd = newArray[nandex + n]
+
+        interPlump = np.linspace(interpInit, interpEnd, n + 2)
+        newArray[nandex:nandex+n] = interPlump[1:-1]
 
     return newArray
 
@@ -550,6 +559,9 @@ def centDiff(x, y):
     dy = y2 - y1
     dy = dy[1:-1]
 
+    if 0 in dx:
+        dx = removeNaNs(np.where(dx == 0, np.nan, dx))
+
     d = (dy/dx)
     d /= 2
 
@@ -881,7 +893,7 @@ def analyseNpomSpectrum(x, y, cutoff = 1500, fs = 60000, doublesThreshold = 2, c
         metadata['Transverse mode intensity (raw)'] = transHeight
         metadata['Transverse mode intensity (normalised)'] = 1.
 
-        weird = testIfWeirdPeak(x, y, factor = weirdFactor, plot = plot, transWl = transWl)
+        weird = testIfWeirdPeak(x, y, factor = weirdFactor, upperLimit = peakFindMidpoint, plot = plot, transWl = transWl)
         metadata['Weird Peak?'] = weird
 
         rawPeakFindMetadata, weirdGauss, cmGauss = findMainPeaks(xRaw, yRaw, fwhmFactor = 1.1, plot = False, midpoint = peakFindMidpoint,
@@ -1193,7 +1205,7 @@ def plotAllHists(outputFileName, closeFigures = True, irThreshold = 8, minBinFac
     histPlotStart = time.time()
 
     with h5py.File(outputFileName) as opf:
-        npomTypes = ['All NPoMs', 'Non-Weird-Peakers', 'Weird Peakers', 'Ideal NPoMs']
+        npomTypes = ['All NPoMs', 'Non-Weird-Peakers', 'Weird Peakers', 'Ideal NPoMs', 'Doubles', 'Singles']
 
         #if 'Aligned NPoMs' in opf['NPoMs'].keys():
         #    npomTypes.append('Aligned NPoMs')
@@ -1426,8 +1438,7 @@ def calcAllPeakAverages(outputFileName, groupAvgs = True, histAvgs = True, singl
     with h5py.File(outputFileName) as opf:
 
         gNPoMs = opf['NPoMs']
-        npTypes = gNPoMs.keys()
-
+        npTypes = ['All NPoMs', 'Non-Weird-Peakers', 'Weird Peakers', 'Ideal NPoMs', 'Doubles', 'Singles']
         for npType in npTypes:
 
             try:
@@ -1457,7 +1468,7 @@ def calcAllPeakAverages(outputFileName, groupAvgs = True, histAvgs = True, singl
                     calcGroupAttrAvgs(gSpectra)
 
             except Exception as e:
-                print 'PEak data collection failed for %s because %s' % (npType, e)
+                print 'Peak data collection failed for %s because %s' % (npType, e)
 
 
     peakAvgEnd = time.time()
@@ -1465,13 +1476,13 @@ def calcAllPeakAverages(outputFileName, groupAvgs = True, histAvgs = True, singl
 
     print '\tPeak averages collected in %s seconds\n' % timeElapsed
 
-def analyseRepresentative(outputFileName):
+def analyseRepresentative(outputFileName, peakFindMidpoint = 680):
     print 'Collecting representative spectrum info...'
 
     with h5py.File(outputFileName) as opf:
 
         gNPoMs = opf['NPoMs']
-        npTypes = gNPoMs.keys()
+        npTypes = ['All NPoMs', 'Non-Weird-Peakers', 'Weird Peakers', 'Ideal NPoMs', 'Doubles', 'Singles']
 
         for npType in npTypes:
 
@@ -1499,7 +1510,7 @@ def analyseRepresentative(outputFileName):
                     dAvg = gBin['Sum']
                     x = dAvg.attrs['wavelengths']
                     y = dAvg[()]
-                    avgMetadata = analyseNpomSpectrum(x, y, avg = True)
+                    avgMetadata = analyseNpomSpectrum(x, y, avg = True, peakFindMidpoint = peakFindMidpoint)
                     gBin.attrs.update(avgMetadata)
 
                 except Exception as e:
@@ -1533,7 +1544,7 @@ def analyseRepresentative(outputFileName):
     print '\n\tRepresentative spectrum info collected\n'
 
 def doStats(outputFileName, closeFigures = True, stacks = True, hist = True, allHists = True, irThreshold = 8, minBinFactor = 5, intensityRatios = False,
-            peakAvgs = True, analRep = True):
+            peakAvgs = True, analRep = True, peakFindMidpoint = 680):
 
     if stacks == True:
         plotAllStacks(outputFileName, closeFigures = closeFigures)
@@ -1550,10 +1561,13 @@ def doStats(outputFileName, closeFigures = True, stacks = True, hist = True, all
         calcAllPeakAverages(outputFileName, groupAvgs = True, histAvgs = True, singleBin = False)
 
     if analRep == True:
-        analyseRepresentative(outputFileName)
+        analyseRepresentative(outputFileName, peakFindMidpoint = peakFindMidpoint)
 
-def fitAllSpectra(x, yData, outputFileName, summaryAttrs = False, first = 0, last = 0, stats = True, raiseExceptions = False, closeFigures = True):
+def fitAllSpectra(x, yData, outputFileName, npSize = 80, summaryAttrs = False, first = 0, last = 0, stats = True, raiseExceptions = False, closeFigures = True):
     absoluteStartTime = time.time()
+
+    peakFindMidpointDict = {80: 680, 70 : 630, 60 : 580, 50 : 550, 40 : 540}
+    peakFindMidpoint = peakFindMidpointDict[npSize]
 
     if last == 0:
         last = len(yData)
@@ -1633,12 +1647,12 @@ def fitAllSpectra(x, yData, outputFileName, summaryAttrs = False, first = 0, las
                 gAllRaw[spectrumName].attrs['wavelengths'] = gAllRaw['Spectrum 0'].attrs['wavelengths']
 
             if raiseExceptions == True:
-                specAttrs = analyseNpomSpectrum(x, spectrum)
+                specAttrs = analyseNpomSpectrum(x, spectrum, peakFindMidpoint = peakFindMidpoint)
 
             else:
 
                 try:
-                    specAttrs = analyseNpomSpectrum(x, spectrum)#Main spectral analysis function
+                    specAttrs = analyseNpomSpectrum(x, spectrum, peakFindMidpoint = peakFindMidpoint)#Main spectral analysis function
 
                 except Exception as e:
 
@@ -1724,7 +1738,7 @@ def fitAllSpectra(x, yData, outputFileName, summaryAttrs = False, first = 0, las
     print '100%% (%s spectra) analysed in %s min %s sec\n' % (last, mins, secs)
 
     if stats == True:
-        doStats(outputFileName, closeFigures = closeFigures)
+        doStats(outputFileName, closeFigures = closeFigures, peakFindMidpoint = peakFindMidpoint)
 
     absoluteEndTime = time.time()
     timeElapsed = absoluteEndTime - absoluteStartTime
