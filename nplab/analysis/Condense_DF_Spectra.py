@@ -340,7 +340,7 @@ def extractAllSpectra(rootDir, returnIndividual = False, pl = False, dodgyThresh
                     continue
 
                 if fileType == '2018':
-                    dParticleFormat = 'alinger.z_scan_0' % n
+                    dParticleFormat = 'alinger.z_scan_0'
 
                 nummers = range(10, 101, 10)
                 scanStart = time.time()
