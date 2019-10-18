@@ -11,7 +11,9 @@ import numpy as np
 
 from nplab.utils.gui import QtWidgets, QtCore, uic
 from nplab.instrument import Instrument
-from nplab.instrument.camera.camera_scaled_roi import DisplayWidgetRoiScale
+from nplab.instrument.camera.camera_scaled_roi import DisplayWidgetRoiScale, CameraRoiScale
+from nplab.instrument.camera.Hamamatsu_streak.streak_sdk import StreakSdk
+from weakref import WeakSet
 
 PrettyPrinter = pprint.PrettyPrinter(indent=4)
 
@@ -142,7 +144,7 @@ class StreakBase(Instrument):
         self.current_message += '\r'
         self.message_history.append({'sent': self.current_message.rstrip(), 'received': []})
 
-        self.socket.send(self.current_message)
+        self.socket.send(self.current_message.encode())
         time.sleep(SLEEPING_TIME)
         self._handshake()
 
@@ -155,7 +157,7 @@ class StreakBase(Instrument):
         Once a complete number of messages has been read, it makes a list of them and returns it
 
         """
-        _reply = self.socket.recv(size)
+        _reply = self.socket.recv(size).decode()
 
         time.sleep(SLEEPING_TIME)
         # Ensure we've read a full number of messages by checking that the string ends with newline
@@ -912,6 +914,29 @@ class StreakBase(Instrument):
         return StreakUI(self)
 
 
+class Streak(StreakSdk, CameraRoiScale):
+    def __init__(self, *args, **kwargs):
+        super(Streak, self).__init__(*args, **kwargs)
+
+    def get_control_widget(self):
+        return StreakUI(self)
+
+    def get_preview_widget(self):
+        self._logger.debug('Getting preview widget')
+        if self._preview_widgets is None:
+            self._preview_widgets = WeakSet()
+        new_widget = DisplayWidgetRoiScale()
+        self._preview_widgets.add(new_widget)
+        return new_widget
+
+    def raw_snapshot(self):
+        try:
+            image = self.capture()
+            return True, self.bundle_metadata(image)
+        except Exception as e:
+            self._logger.warn("Couldn't Capture because %s" % e)
+
+
 class StreakThread(QtCore.QThread):
     def __init__(self, streak, mode, save=False, save_kwargs=None):
         super(StreakThread, self).__init__()
@@ -967,81 +992,44 @@ class StreakUI(QtWidgets.QWidget):
     ImageUpdated = QtCore.Signal()
 
     def __init__(self, streak):
-        assert isinstance(streak, StreakBase), "instrument must be an StreakBase"
         super(StreakUI, self).__init__()
 
         self.Streak = streak
         uic.loadUi((os.path.dirname(__file__) + '/Streak.ui'), self)
 
-        self.comboBoxGateMode.activated.connect(self.GateModeChanged)
-        self.comboBoxReadMode.activated.connect(self.ReadModeChanged)
-        self.comboBoxShutter.activated.connect(self.ShutterChanged)
-        self.comboBoxTrigMode.activated.connect(self.TriggerChanged)
-        self.lineEditMCPGain.returnPressed.connect(self.MCPGainChanged)
-        self.lineEditTimeRange.returnPressed.connect(self.TimeRangeChanged)
-        self.comboBoxTimeUnit.activated.connect(self.TimeRangeChanged)
-        self.pushButtonLess.clicked.connect(lambda: self.TimeRangeChanged('-'))
-        self.pushButtonMore.clicked.connect(lambda: self.TimeRangeChanged('+'))
+        self.comboBoxGateMode.activated.connect(self.gate_mode)
+        self.comboBoxReadMode.activated.connect(self.read_mode)
+        self.comboBoxShutter.activated.connect(self.shutter)
+        self.comboBoxTrigMode.activated.connect(self.trigger)
+        self.spinBox_MCPGain.valueChanged.connect(self.mcp_gain)
+        self.lineEditTimeRange.returnPressed.connect(self.time_range)
+        self.comboBoxTimeUnit.activated.connect(self.time_range)
+        self.pushButtonLess.clicked.connect(lambda: self.time_range('-'))
+        self.pushButtonMore.clicked.connect(lambda: self.time_range('+'))
 
-        self.pushButtonCapture.clicked.connect(self.Capture)
+        self.pushButtonCapture.clicked.connect(lambda: self.Streak.raw_image(update_latest_frame=True))
 
-        self.DisplayWidget = None
+    def gate_mode(self):
+        mode = str(self.comboBoxGateMode.currentText())
+        self.Streak.set_parameter('Devices', 'TD', 'Gate Mode', mode)
 
-        # self.Streak.captureThread.finished.connect(self.updateImage)
+    def read_mode(self):
+        mode = str(self.comboBoxReadMode.currentText())
+        self.Streak.set_parameter('Devices', 'TD', 'Mode', mode)
 
-        self.updateGUI()
+    def shutter(self):
+        mode = str(self.comboBoxShutter.currentText())
+        self.Streak.set_parameter('Devices', 'TD', 'Shutter', mode)
 
-    def updateGUI(self):
-        self.Streak.get_parameter('Devices', 'TD')
+    def trigger(self):
+        mode = str(self.comboBoxTrigMode.currentText())
+        self.Streak.set_parameter('Devices', 'TD', 'Trig. Mode', mode)
 
-        # PrettyPrinter.pprint(self.Streak.parameters)
+    def mcp_gain(self):
+        gain = int(self.spinBox_MCPGain.value())
+        self.Streak.set_parameter('Devices', 'TD', 'MCP Gain', gain)
 
-        # gateMode = self.Streak.parameters['Devices']['value']['TD']['Gate Mode']
-        # readMode = self.Streak.parameters['Devices']['value']['TD']['Mode']
-        # shutter = self.Streak.parameters['Devices']['value']['TD']['Shutter']
-        # trig = self.Streak.parameters['Devices']['value']['TD']['Trig. Mode']
-        # gain = self.Streak.parameters['Devices']['value']['TD']['MCP Gain']
-        # time = self.Streak.parameters['Devices']['value']['TD']['Time Range']
-        #
-        # self.comboBoxGateMode.setCurrentIndex(self.comboBoxGateMode.findText(gateMode))
-        # self.comboBoxReadMode.setCurrentIndex(self.comboBoxReadMode.findText(readMode))
-        # self.comboBoxShutter.setCurrentIndex(self.comboBoxShutter.findText(shutter))
-        # self.comboBoxTrigMode.setCurrentIndex(self.comboBoxTrigMode.findText(trig))
-        # self.lineEditMCPGain.setText(str(gain))
-        # self.lineEditTimeRange.setText(time.split(' ')[0])
-        # self.comboBoxTimeUnit.setCurrentIndex(self.comboBoxTimeUnit.findText(time.split(' ')[1]))
-
-    def GateModeChanged(self):
-        currentMode = str(self.comboBoxGateMode.currentText())
-        self.Streak.set_parameter('Devices', 'TD', 'Gate Mode', currentMode)
-
-    def ReadModeChanged(self):
-        currentMode = str(self.comboBoxReadMode.currentText())
-        self.Streak.set_parameter('Devices', 'TD', 'Mode', currentMode)
-
-        # Close Shutter
-        # Bring MCP gain to 0
-
-    def ShutterChanged(self):
-        currentMode = str(self.comboBoxShutter.currentText())
-        self.Streak.set_parameter('Devices', 'TD', 'Shutter', currentMode)
-
-    def TriggerChanged(self):
-        currentMode = str(self.comboBoxTrigMode.currentText())
-        self.Streak.set_parameter('Devices', 'TD', 'Trig. Mode', currentMode)
-
-    def MCPGainChanged(self):
-        currentGain = int(self.lineEditMCPGain.text())
-        if currentGain < 0:
-            currentGain = 0
-            self.comboBoxTrigMode.setText(str(currentGain))
-        if currentGain > 63:
-            currentGain = 63
-            self.comboBoxTrigMode.setText(str(currentGain))
-
-        self.Streak.set_parameter('Devices', 'TD', 'MCP Gain', currentGain)
-
-    def TimeRangeChanged(self, direction=None):
+    def time_range(self, direction=None):
         allowed_times = {'ns': [5, 10, 20, 50, 100, 200, 500],
                          'us': [1, 2, 5, 10, 20, 50, 100, 200, 500],
                          'ms': [1]}
@@ -1063,7 +1051,6 @@ class StreakUI(QtWidgets.QWidget):
                         next_unit = 'ms'
                 self.lineEditTimeRange.setText(str(next_number))
                 unit = str(next_unit)
-                # self.Streak.set_parameter('Devices', 'TD', 'Time Range', str(next_number) + ' ' + next_unit)
             else:
                 self.Streak._logger.info('Tried increasing the maximum time range')
                 return
@@ -1082,7 +1069,6 @@ class StreakUI(QtWidgets.QWidget):
                         next_unit = 'ns'
                 self.lineEditTimeRange.setText(str(next_number))
                 unit = str(next_unit)
-                # self.Streak.set_parameter('Devices', 'TD', 'Time Range', str(next_number) + ' ' + next_unit)
             else:
                 self.Streak._logger.info('Tried decreasing the minimum time range')
                 return
@@ -1096,26 +1082,6 @@ class StreakUI(QtWidgets.QWidget):
             self.Streak.set_parameter('Devices', 'TD', 'Time Range', str(next_number) + ' ' + unit)
         except StreakError:
             self.Streak.set_parameter('Devices', 'TD', 'Time Range', str(next_number))
-
-    def Capture(self):
-        self.Streak.capture()
-        self.updateImage()
-
-    def updateImage(self):
-        if self.DisplayWidget is None:
-            self.DisplayWidget = DisplayWidgetRoiScale()
-        if self.DisplayWidget.isHidden():
-            self.DisplayWidget.show()
-        if len(self.Streak.image.shape) == 0:
-            self.DisplayWidget.splitter.setSizes([0, 1])
-        else:
-            self.DisplayWidget.splitter.setSizes([1, 0])
-
-        self.DisplayWidget.ImageDisplay.setImage(np.array(self.Streak.image[0]), autoRange=False,
-                                                 autoLevels=True)  # np.array(self.Streak.image))
-
-        self.ImageUpdated.emit()
-        # , 'Streak')
 
 
 PARAMETER_TYPES = {0: 'Boolean', 1: 'Numeric', 2: 'List', 3: 'String', 4: 'Exposure Time', 5: 'String'}
@@ -1138,5 +1104,8 @@ ERROR_CODES = {0: 'Success',
                10: 'Value of a parameter is out of range'}
 
 if __name__ == "__main__":
-    streak = StreakBase(('localhost', 1001))
+    # streak = StreakBase(('localhost', 1001))
+    # streak.show_gui()
+
+    streak = Streak(("172.27.25.39", 1001))
     streak.show_gui()
