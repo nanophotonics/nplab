@@ -651,26 +651,34 @@ class CameraPreviewWidget(pg.GraphicsView):
 
 
 class DummyCamera(Camera):
+    """A version of the Camera code  """
     exposure = CameraParameter("exposure", "The exposure time in ms.")
     gain = CameraParameter("gain", "The gain in units of bananas.")
     def __init__(self):
         super(DummyCamera, self).__init__()
         self._camera_parameters = {'exposure':40, 'gain':1}
     def raw_snapshot(self):
+        """Returns a True, stating a succesful snapshot, followed by a (100,100)
+        picture randomly generated image"""
         ran = np.random.random((100,100,3))
         return True, (ran * 255.9).astype(np.uint8)
     def get_camera_parameter(self, name):
+        """Pull a camera paramter of key "name"  from a hidden dictionary"""
         return self._camera_parameters[name]
     def set_camera_parameter(self, name, value):
+        """Set a camera paramter of key "name"  from a hidden dictionary"""
         self._camera_parameters[name] = value
     def print_numbers(self,a = 5.0,b = 10):
+        """A print numbers test function"""
         print(a, b)
     def print_strs(self,a= 'hello'):
+        """Print a str test function"""
         print(a)
     def print_array(self,a = np.array([1, 2, 3, 4])):
+        """Test Function for printing an array of values"""
         print(a)
-        
+
+
 if __name__ == '__main__':
     cam = DummyCamera()
     g=cam.show_gui(blocking=False)
-    
