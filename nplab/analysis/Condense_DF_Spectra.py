@@ -461,9 +461,6 @@ def extractAllSpectra(rootDir, returnIndividual = False, pl = False, dodgyThresh
 def collectPlBackgrounds(inputFile):
     '''inputFile must be open hdf5 file object'''
 
-    if 'PL Background' not in inputFile.keys():
-        return {}
-
     gPlBg = inputFile['PL Background']
 
     powerDict = {}
@@ -704,7 +701,7 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
         print 'File not found'
         return
 
-    print 'About to extract PL data from %s' % inputFile
+    print '\nAbout to extract PL data from %s' % inputFile
     print '\tLooking for summary file...'
 
     outputFile = findH5File(rootDir, nameFormat = 'summary')
@@ -835,7 +832,16 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
                     timeStamp = plData.attrs['creation_timestamp']
                     plSpecName = 'PL Spectrum %s' % nn
 
-                    plBgDict = collectPlBackgrounds(ipf)
+                    if 'PL Background' not in ipf.keys():
+                        powerDir = r'C:\Users\car72\University Of Cambridge\OneDrive - University Of Cambridge\Documents\PhD\Data\NP\Porphyrins\NPoM\DF\2019-09-18 Zn-MTPP Cl 48 h 80 nm + PL'
+                        os.chdir(powerDir)
+                        h5File = '2019-09-18.h5'
+                        with h5py.File(h5File) as powerFile:
+                            plBgDict = collectPlBackgrounds(powerFile)
+
+                    else:
+                        plBgDict = collectPlBackgrounds(ipf)
+
                     laserPower = plData.attrs['laser_power']
                     plBg = plBgDict[laserPower]
 
@@ -854,7 +860,7 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
                     xDf = dfBefore.attrs['wavelengths']
                     yDf = dfBefore[()]
 
-                    xPl, yRef = subtractPlBg(xPl, y, plBg, xDf, yDf)
+                    xPl, yRef = subtractPlBg(xPl, y, plBg, xDf, yDf, remove0 = False)
                     plSpectra.append(yRef)
 
                     if plSpecName not in gPlScan.keys():
