@@ -92,6 +92,12 @@ class StreakSdk(VisaInstrument):
 
         :return:
         """
+        if hasattr(self, 'instr'):
+            del self.instr
+        if hasattr(self, 'data_socket'):
+            self.data_socket.close()
+            del self.data_socket
+
         settings = dict(read_termination='\r', write_termination='\r', timeout=TIMEOUT, query_delay=SLEEPING_TIME)
 
         rm = visa.ResourceManager()
@@ -150,7 +156,7 @@ class StreakSdk(VisaInstrument):
             elif message.split('(')[0] != command:
                 self._logger.error('Comparing this: %s \t to this: %s' % (message.split('(')[0], command))
                 raise RuntimeError('Replied command does not match')
-            elif error_code is '0':
+            elif error_code == '0':
                 self._logger.debug('Handshake worked\t%s\t%s' % (command, reply))
                 return reply
             else:
@@ -309,7 +315,7 @@ class StreakSdk(VisaInstrument):
                                       'value': {key: None for key in dev_params}}
         self.list_dev_params()
 
-    def get_parameter(self, base_name, sub_level=None, sub_sub_level=None):
+    def get_parameter(self, base_name=None, sub_level=None, sub_sub_level=None):
         """Gets and returns streak parameter(s)
 
         If either sub_level or sub_sub_level are None, returns all the values at that hierarchy
@@ -329,7 +335,12 @@ class StreakSdk(VisaInstrument):
         :return:
         """
         self._logger.debug('Getting parameter: %s %s %s' % (base_name, sub_level, sub_sub_level))
-        assert base_name in self.parameters
+        if base_name is None:
+            return_dict = dict()
+            for base_name in self.parameters:
+                return_dict[base_name] = self.get_parameter(base_name)
+            return return_dict
+
         command = self.parameters[base_name]['get']
         base_dictionary = self.parameters[base_name]['value']
 
@@ -811,11 +822,9 @@ class StreakSdk(VisaInstrument):
                 image = []
                 for pxl_num in range(n_pixels):
                     pixel = self.data_socket.recv(pixel_size)
-                    pixel_value = pixel[0]
-                    # No idea what is going on between Python2 and Python3. It's something about string encoding
-                    # pixel_value = struct.unpack('!B', pixel_value)[0]  # Python 2
-                    image += [pixel_value]  # Python 3
-                image = np.array(image).reshape((shape[2] - shape[0], shape[3] - shape[1]))
+                    pixel_value = struct.unpack('h', pixel)[0]
+                    image += [pixel_value]
+                image = np.array(image).reshape((shape[3] - shape[1], shape[2] - shape[0]))
                 if delete:
                     self.delete_image()
                 return image
