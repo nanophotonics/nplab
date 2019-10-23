@@ -13,11 +13,11 @@ rootDir = os.getcwd()
 import numpy as np
 import time
 import matplotlib.pyplot as plt
-#from nplab.analysis import DF_MultipeakfitBeta as mpf
+from nplab.analysis import DF_PL_Multipeakfit as mpf
 from nplab.analysis import Condense_DF_Spectra as cdf
-charDir = r'C:\Users\car72\Documents\GitHub\charlie\charlie'
-os.chdir(charDir)
-import DF_PL_Multipeakfit as mpf
+#charDir = r'C:\Users\car72\Documents\GitHub\charlie\charlie'
+#os.chdir(charDir)
+#import DF_PL_Multipeakfit as mpf
 os.chdir(rootDir) #Important
 
 if __name__ == '__main__':
@@ -50,8 +50,7 @@ if __name__ == '__main__':
             outputFileName = mpf.createOutputFile('MultiPeakFitOutput')
             mpf.fitAllSpectra(os.getcwd(), outputFileName, npSize = 80, first = startSpec, last = finishSpec, pl = pl, closeFigures = True, stats = True,
                               raiseExceptions = raiseExceptions, raiseExceptions = raiseExceptions)
-            #outputFileName = 'MultiPeakFitOutput.h5'
-            #mpf.doStats(outputFileName, closeFigures = True, hist = False, stacks = False, intensityRatios = False)
+
 
             print '\nData fitting complete'
 
@@ -60,8 +59,6 @@ if __name__ == '__main__':
                 outputFileName = mpf.createOutputFile('MultiPeakFitOutput')
                 mpf.fitAllSpectra(os.getcwd(), outputFileName, npSize = 80, first = startSpec, last = finishSpec, pl = pl, closeFigures = True, stats = True,
                                   raiseExceptions = raiseExceptions, raiseSpecExceptions = raiseExceptions)
-                #outputFileName = 'MultiPeakFitOutput.h5'
-                #mpf.doStats(outputFileName, closeFigures = True, hist = False, stacks = False, intensityRatios = False)
 
                 print '\nData fitting complete'
 
@@ -69,9 +66,6 @@ if __name__ == '__main__':
                 print '\nData fitting failed because %s' % (e)
 
     plt.close('all')
-
-    #unpa.updateOutputAttrs(summaryFile)
-
     absoluteEndTime = time.time()
     timeElapsed = absoluteEndTime - absoluteStartTime
 
