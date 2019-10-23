@@ -27,7 +27,7 @@ if __name__ == '__main__':
     '''Set raiseExceptions = True if the anaylsis fails; this will return the traceback'''
     raiseExceptions = False #Setting this to True will stop the analysis return the traceback if an individual spectrum fails
 
-    statsOnly = False #if you have already analysed the spectra and want to re-plot histograms (etc)
+    statsOnly = True #if you have already analysed the spectra and want to re-plot histograms (etc)
     pl = True #Set to True if your dataset contains PL
     npSize = 80 #Peak analysis uses different values for different NP sizes. Valid inputs are 50, 60, 70, 80
 
@@ -51,7 +51,7 @@ if __name__ == '__main__':
         if raiseExceptions == True:
             outputFileName = mpf.createOutputFile('MultiPeakFitOutput')
             mpf.fitAllSpectra(os.getcwd(), outputFileName, npSize = 80, first = startSpec, last = finishSpec, pl = pl, closeFigures = True, stats = True,
-                              raiseExceptions = raiseExceptions, raiseExceptions = raiseExceptions)
+                              raiseExceptions = raiseExceptions, raiseSpecExceptions = raiseExceptions)
 
 
             print '\nData fitting complete'
