@@ -27,6 +27,28 @@ class BaseUi(QtWidgets.QWidget):
         raise NotImplementedError
 
 
+class constantUi(BaseUi):
+    def __init__(self, slm_gui):
+        super(constantUi, self).__init__(slm_gui, 'constant')
+
+    def _connect(self):
+        self.offset_slider.valueChanged.connect(self.update_offset_lineedit)
+        self.offset_lineEdit.returnPressed.connect(self.update_offset_slider)
+
+    def update_offset_lineedit(self):
+        steps = self.offset_slider.value()
+        value = 2 * steps / 100.
+        self.offset_lineEdit.setText('%g' % value)
+
+    def update_offset_slider(self):
+        value = float(self.offset_lineEdit.text())
+        steps = 100 * value / 2.
+        self.offset_slider.setValue(steps)
+
+    def get_params(self):
+        return np.pi * float(self.offset_lineEdit.text()),
+
+
 class gratingsUi(BaseUi):
     def __init__(self, slm_gui):
         super(gratingsUi, self).__init__(slm_gui, 'gratings')

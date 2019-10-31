@@ -271,7 +271,7 @@ class SlmUi(QtWidgets.QWidget, UiTools):
 
 
 if __name__ == "__main__":
-    settings = ['gratings', 'vortexbeam', 'focus', 'astigmatism', 'linear_lut']
+    settings = ['gratings', 'vortexbeam', 'focus', 'astigmatism', 'linear_lut', 'constant']
     SLM = Slm(settings, 1)
     SLM._logger.setLevel('DEBUG')
     SLM.show_gui()

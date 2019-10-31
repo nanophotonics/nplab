@@ -9,6 +9,10 @@ import numpy as np
 # TODO: compare CPU and GPU
 
 
+def constant(input_phase, offset):
+    return input_phase + offset
+
+
 def gratings(input_phase, grating_const_x=0, grating_const_y=0):
     """Linear phase pattern corresponding to a grating/mirror
 
