@@ -461,9 +461,6 @@ def extractAllSpectra(rootDir, returnIndividual = False, pl = False, dodgyThresh
 def collectPlBackgrounds(inputFile):
     '''inputFile must be open hdf5 file object'''
 
-    if 'PL Background' not in inputFile.keys():
-        return {}
-
     gPlBg = inputFile['PL Background']
 
     powerDict = {}
@@ -552,7 +549,21 @@ def gaussian(x, height, center, fwhm, offset = 0):
 
     return y
 
-def subtractPlBg(xPl, yPl, plBg, xDf, yDf, remove0 = False):
+def trapInt(x, y):
+    '''Calculates area under curve using trapezoid method'''
+    '''x and y must have same first dimension'''
+
+    area = 0
+
+    for n, i in enumerate(x[:-1]):
+        h = x[n + 1] - x[n]
+        a = y[n]
+        b = y[n + 1]
+        area += h*(a + b)/2
+
+    return area
+
+def subtractPlBg(xPl, yPl, plBg, xDf, yDf, remove0 = False, returnArea = True):
     plBg = truncateSpectrum(xPl, plBg, startWl = 505, finishWl = 1000)[1]
     yDf = truncateSpectrum(xDf, yDf, startWl = 505, finishWl = 1000)[1]
     yDf = threshold(yDf, 2e-4)
@@ -564,13 +575,14 @@ def subtractPlBg(xPl, yPl, plBg, xDf, yDf, remove0 = False):
     bgScaled = plBg - bgMin
     ySub = yPl - yMin
 
-    bgScaled *= ySub[0]/bgScaled[0]
+    bgScale = ySub[0]/bgScaled[0]
+
+    bgScaled *= bgScale
     bgScaled += yMin
     ySub = yPl - bgScaled
     yRef = ySub/np.sqrt(yDf/yDf.max())
 
     if remove0 == True:
-
         ySmooth = butterLowpassFiltFilt(yRef, cutoff = 1000, fs = 90000)
         xTrunc, yTrunc = truncateSpectrum(xPl, ySmooth, startWl = 505, finishWl = 600)
 
@@ -578,6 +590,10 @@ def subtractPlBg(xPl, yPl, plBg, xDf, yDf, remove0 = False):
         yGauss = gaussian(xPl, height, center, fwhm)
 
         yRef -= yGauss
+
+    if returnArea == True:
+        area = trapInt(xPl, yPl)
+        return xPl, yRef, area, bgScale
 
     return xPl, yRef
 
@@ -704,7 +720,7 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
         print 'File not found'
         return
 
-    print 'About to extract PL data from %s' % inputFile
+    print '\nAbout to extract PL data from %s' % inputFile
     print '\tLooking for summary file...'
 
     outputFile = findH5File(rootDir, nameFormat = 'summary')
@@ -835,7 +851,16 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
                     timeStamp = plData.attrs['creation_timestamp']
                     plSpecName = 'PL Spectrum %s' % nn
 
-                    plBgDict = collectPlBackgrounds(ipf)
+                    if 'PL Background' not in ipf.keys():
+                        powerDir = r'C:\Users\car72\University Of Cambridge\OneDrive - University Of Cambridge\Documents\PhD\Data\NP\Porphyrins\NPoM\DF\2019-09-18 Zn-MTPP Cl 48 h 80 nm + PL'
+                        os.chdir(powerDir)
+                        h5File = '2019-09-18.h5'
+                        with h5py.File(h5File) as powerFile:
+                            plBgDict = collectPlBackgrounds(powerFile)
+
+                    else:
+                        plBgDict = collectPlBackgrounds(ipf)
+
                     laserPower = plData.attrs['laser_power']
                     plBg = plBgDict[laserPower]
 
@@ -854,7 +879,7 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
                     xDf = dfBefore.attrs['wavelengths']
                     yDf = dfBefore[()]
 
-                    xPl, yRef = subtractPlBg(xPl, y, plBg, xDf, yDf)
+                    xPl, yRef, area, bgScale = subtractPlBg(xPl, y, plBg, xDf, yDf, remove0 = False, returnArea = True)
                     plSpectra.append(yRef)
 
                     if plSpecName not in gPlScan.keys():
@@ -863,6 +888,8 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
                     dPl = gPlScan[plSpecName]
                     dPl.attrs['wavelengths'] = xPl
                     dPl.attrs['Raw Spectrum'] = plData[()]
+                    dPl.attrs['Total Area'] = area
+                    dPl.attrs['Background Scale Factor'] = bgScale
 
                     attrNames = ['creation_timestamp', 'integration_time', 'laser_power', 'model_name', 'serial_number', 'tec_temperature']
 
