@@ -10,7 +10,7 @@ DIRPATH = os.path.dirname(FILEPATH)
 
 ATTRS_PATH = "{0}\\{1}".format(DIRPATH,"bentham_DTMc300_attributes.atr")
 CONFIG_PATH = "{0}\\{1}".format(DIRPATH,"bentham_DTMc300_config.cfg")
-DLL_PATH="{0}\\{1}".format(DIRPATH,"bentham_instruments_dlls\\Win64\\benhw64.dll") #NOTE: hardcoded to use 64 bit DLL, for 32bit use the ones in Win32
+DLL_PATH="{0}\\{1}".format(DIRPATH,"bentham_instruments_dlls\\Win32\\benhw32_cdecl.dll") #NOTE: hardcoded to use 64 bit DLL, for 32bit use the ones in Win32
 
 # print DLL_PATH
 
@@ -49,6 +49,8 @@ class Bentham_DTMc300(Instrument):
 		print "BI_load_setup:",response
 		response = self.dll.BI_initialise(None)
 		print "BI_initialise:",response
+		response = self.dll.BI_park(None)
+		print "BI_park:",response
 
 		self.components = self.get_component_list()
 
@@ -66,7 +68,7 @@ class Bentham_DTMc300(Instrument):
 		response = self.dll.BI_get(c_char_p(item_id),ctypes.c_int32(self.token_map[token]),ctypes.c_int32(index),ctypes.byref(value))
 		print "BI_get", response
 		return value.value
-
+  
 	def get_wavelength(self,token="mono"):
 		wavelength = self.get(item_id="mono",token="MonochromatorCurrentWL",index=0)
 		return wavelength
