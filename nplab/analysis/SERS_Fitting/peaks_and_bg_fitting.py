@@ -495,7 +495,7 @@ class fullfit:
                 for parameter in peak:
                     self.peaks.append(parameter)
         
-    
+            self.peaks_stack = np.reshape(self.peaks, [len(self.peaks)/3,3])
     def loss_function(self):
         '''
         evaluates the overall (bg+peaks) fit to the spectrum
@@ -642,20 +642,32 @@ class fullfit:
         '''
         handy to test other scripts quickly
         '''
-        top = max(self.spec)
-        centres = [random.choice(self.shifts[len(self.shifts)/3 : len(self.shifts)*2/3]) for i in range(4)]
-        if initial_fit is not None:
-            self.peaks = initial_fit
-            for index, dump in enumerate(self.peaks):
-                if index%3 == 0:
-                    self.peaks[index] = np.random.rand()*top
-        else:
-            self.peaks = [np.random.rand()*top, centres[0], 15,
-                          np.random.rand()*top, centres[1], 15, 
-                          np.random.rand()*top, centres[2], 15,
-                          np.random.rand()*top, centres[3], 15]
-        self.peaks_stack = np.reshape(self.peaks, [len(self.peaks)/3, 3])
+       
         self.initial_bg_poly()
+        self.minwidth = minwidth
+        self.maxwidth = maxwidth
+#        if initial_fit is not None:
+#            self.peaks = initial_fit
+#            self.peaks_stack = np.reshape(self.peaks, [len(self.peaks)/3, 3])
+#            self.optimize_heights
+#            #self.optimize_centre_and_width()
+            
+       
+        try: smoothed = sm.Run(self.signal)
+        except: smoothed = sm2.convex_smooth(self.spec, 25)[0]
+        maxima = argrelextrema(smoothed, np.greater)[0]
+        heights = smoothed[maxima]
+        maxima = maxima[np.argsort(heights)[-5:]]
+        heights = smoothed[maxima]
+        
+        centres = self.shifts[maxima]
+        widths = np.ones(len(maxima))*17
+        
+        self.peaks_stack = np.transpose(np.stack([heights, centres, widths]))
+        self.peaks = np.ravel(self.peaks_stack)
+    
+        self.optimize_heights
+        self.optimize_centre_and_width()
         
     def Run(self,
             initial_fit=None, 
@@ -772,11 +784,27 @@ if __name__ == '__main__':
    
     import h5py
     import os
+    from mine.analysis import misc as ms
+    from mine.analysis import conversions as cnv
     
-    os.chdir(r'C:\\ path to hdf5')
+    os.chdir(r'R:\ee306\Experimental Data\2019.10.04 Particle track 4hr BPT lab 5 power series')
+    #os.chdir(r'C:\Users\Eoin Elliott\Desktop\2019.10.14 particle track BPT 4hrs 433nm')
+    File = h5py.File(ms.findH5File(os.getcwd()), mode = 'r')
+    scan = File['ParticleScannerScan_0']
+    spec = scan['Particle_6']['power_series_4'][0]
+    shifts = -cnv.wavelength_to_cm(scan['Particle_6']['power_series_4'].attrs['wavelengths'], centre_wl = 785)
+#    spec, shifts = truncate(spec, shifts, -np.inf, -220)
+    spec, shifts = truncate(spec, shifts, -930, -220)
+    ff = fullfit(spec, shifts, order = 11, use_exponential = False, lineshape = 'G')
     
-    ff = fullfit(spectrum, shifts)
-    ff.Run()
+    
+    ff.Run(verbose = True, 
+           comparison_thresh = 0.1, 
+           noise_factor = 1, 
+           minwidth = 2.5,
+           maxwidth = 14,
+           min_peak_spacing = 3,
+           add_peaks = False,
+           allow_asymmetry = False)
+
     ff.plot_result()
-
-
