@@ -12,7 +12,7 @@ The fullfit class is the main thing here - sample use:
                  lineshape = 'L',
                  order = 7,
                  transmission = None,
-                 use_exponential = False,
+                 bg_function = 'poly',
                  vary_const_bg = True)
     #   initialise the object.
         spec, shiftis are the spectrum and their shifts
@@ -20,7 +20,7 @@ The fullfit class is the main thing here - sample use:
         The 'order' key-word argument is the order of the background polynomial. 3 works well. above 9 is unstable.
         transmission is the instrument response function of the detector. It's necessary to include it here rather than in the raw data as most of the background is electronic, so dividing this by the IRF introduces unphysical features.
         This way, the IRF is only applied to the background-subtracted signal 
-        use_exponential determines whether or not to use an exponential fit rather than a polynomial - useful for extracting antistokes temperatures
+        bg function determines what function to use for the background, default is polynomial. Feel free to add your own functions here!
         set vary_const_bg to False if the spectrum is already (electronic) background subtracted and you're using an exponential fit
     
     ff.Run() # this does the actual fitting.
@@ -40,7 +40,8 @@ The fitting works as follows:
             allow_asymmetry = False,
             minwidth = 8, 
             maxwidth = 30, 
-            regions = 20, noise_factor = 0.01, 
+            regions = 20, 
+            noise_factor = 0.01, 
             min_peak_spacing = 5, 
             comparison_thresh = 0.05, 
             verbose = False):  
@@ -152,7 +153,7 @@ class fullfit:
                  lineshape = 'L',
                  order = 7,
                  transmission = None,
-                 use_exponential = False,
+                 bg_function = 'poly',
                  vary_const_bg = True):
         
         self.spec = spec
@@ -169,11 +170,16 @@ class fullfit:
             self.line = self.G
         self.lineshape = lineshape
         self.peak_bounds = []
-        self.use_exponential = use_exponential
+        self.bg_type = bg_function
+        if bg_function == 'exponential':
+            self.bg_function = self.exponential
+        if bg_function == 'exponential2':
+            self.bg_function = self.exponential2
         self.vary_const_bg = vary_const_bg
-        if use_exponential == True:
-            if vary_const_bg != True: self.exp_bounds = ([0, 0, 0,],[np.inf,np.inf, 1e-9])
-            else: self.exp_bounds = ([0, 0, 0,],[np.inf,np.inf, np.inf])
+        if bg_function == 'exponential' or bg_function == 'exponential2':
+            if vary_const_bg != True: self.bg_bounds = ([0, 0, 0,],[np.inf,np.inf, 1e-9])
+            else: self.bg_bounds = ([0, 0, 0,],[np.inf,np.inf, np.inf])
+        
     
     def L(self, x, H, C, W): # height centre width
     	"""
@@ -216,7 +222,7 @@ class fullfit:
         '''
         evaluates fit of exponential to spectrum-signal
         '''
-        residual = self.exponential(self.shifts, *bg_p) - self.bg
+        residual = self.bg_function(self.shifts, *bg_p) - self.bg
         above = residual[residual>0]
         below = residual[residual<0]
         obj = np.sum(np.absolute(above))+np.sum(np.array(below)**2)
@@ -359,7 +365,7 @@ class fullfit:
         self.bg_indices = np.append(self.bg_indices, edges)
         self.bg_vals= np.append(self.bg_vals, smoothed[edges])
             
-        if self.use_exponential == False:
+        if self.bg_type == 'poly':
             self.bg_bound = (min(self.spec), max(self.spec))
             self.bg_bounds = []
             while len(self.bg_bounds)<len(self.bg_vals):
@@ -370,10 +376,10 @@ class fullfit:
         else:
             
             if self.vary_const_bg == False:
-                self.bg_p = curve_fit(self.exponential, self.shifts[self.bg_indices], self.bg_vals, p0 = [0.5*max(self.spec), 300, 1E-10], maxfev = 100000, bounds = self.exp_bounds)[0]
+                self.bg_p = curve_fit(self.bg_function, self.shifts[self.bg_indices], self.bg_vals, p0 = [0.5*max(self.spec), 300, 1E-10], maxfev = 100000, bounds = self.bg_bounds)[0]
             else:
-                self.bg_p = curve_fit(self.exponential, self.shifts[self.bg_indices], self.bg_vals, p0 = [0.5*max(self.spec), 300, min(self.spec)], maxfev = 100000, bounds = self.exp_bounds)[0]
-            self.bg = self.exponential(self.shifts, *self.bg_p)
+                self.bg_p = curve_fit(self.bg_function, self.shifts[self.bg_indices], self.bg_vals, p0 = [0.5*max(self.spec), 300, min(self.spec)], maxfev = 100000, bounds = self.bg_bounds)[0]
+            self.bg = self.bg_function(self.shifts, *self.bg_p)
             self.signal = ((np.array(self.spec - self.bg))/self.transmission).tolist()
             
     def bg_loss(self,bg_p):
@@ -400,19 +406,19 @@ class fullfit:
         else:
             self.peaks_evaluated  = self.asymm_multi_line(self.shifts, self.asymm_peaks)*self.transmission
           
-        if self.use_exponential == False:       
+        if self.bg_type == 'poly':       
             self.bg_p = minimize(self.bg_loss, self.bg_p).x.tolist()
             self.bg = np.polyval(self.bg_p, self.shifts)
             self.signal =(np.array(self.spec - self.bg)/self.transmission).tolist()
-        else:
+        elif self.bg_type == 'exponential' or self.bg_type == 'exponential2':
             
-            self.bg_p = curve_fit(self.exponential,
+            self.bg_p = curve_fit(self.bg_function,
                                   self.shifts,
                                   self.spec - self.multi_line(self.shifts, self.peaks)*self.transmission, 
                                   p0 = self.bg_p,
-                                  bounds = self.exp_bounds,
+                                  bounds = self.bg_bounds,
                                   maxfev = 10000)[0]
-            self.bg = self.exponential(self.shifts, *self.bg_p)
+            self.bg = self.bg_function(self.shifts, *self.bg_p)
 
     def peaks_to_matrix(self, peak_array):
         '''
@@ -509,7 +515,7 @@ class fullfit:
         '''
         optimizes the peaks and background in one procedure, allows for better interplay of peaks and bg
         '''
-        if self.use_exponential == False:
+        if self.bg_type == 'poly':
             def loss(peaks_and_bg):
                 fit = np.polyval(peaks_and_bg[:self.order+1], self.shifts) 
                 fit+= self.multi_line(self.shifts, peaks_and_bg[self.order+1:])*self.transmission
@@ -525,13 +531,13 @@ class fullfit:
                 bounds.append(bgbnd)
             bounds.extend(self.peak_bounds)
             peaks_and_bg = minimize(loss, peaks_and_bg, bounds = bounds).x.tolist()
-            if self.use_exponential == False: 
-                self.bg_p = peaks_and_bg[:self.order+1]
-                self.peaks = peaks_and_bg[self.order+1:]
-                self.bg = np.polyval(self.bg_p, self.shifts)
+             
+            self.bg_p = peaks_and_bg[:self.order+1]
+            self.peaks = peaks_and_bg[self.order+1:]
+            self.bg = np.polyval(self.bg_p, self.shifts)
         else:
             def loss(peaks_and_bg):
-                fit = self.exponential(self.shifts, *peaks_and_bg[:3])
+                fit = self.bg_function(self.shifts, *peaks_and_bg[:3])
                 fit+= self.multi_line(self.shifts, peaks_and_bg[3:])*self.transmission
                 residual = self.spec - fit
                 above = residual[residual>0]
@@ -553,7 +559,7 @@ class fullfit:
             peaks_and_bg = minimize(loss, peaks_and_bg, bounds = bounds).x
             self.bg_p = peaks_and_bg[:3]
             self.peaks = peaks_and_bg[3:]
-            self.bg = self.exponential(self.shifts, *self.bg_p)
+            self.bg = self.bg_function(self.shifts, *self.bg_p)
         
         
 
@@ -781,30 +787,13 @@ class fullfit:
 #           
         
 if __name__ == '__main__':
-   
-    import h5py
     import os
-    from mine.analysis import misc as ms
-    from mine.analysis import conversions as cnv
-    
-    os.chdir(r'R:\ee306\Experimental Data\2019.10.04 Particle track 4hr BPT lab 5 power series')
-    #os.chdir(r'C:\Users\Eoin Elliott\Desktop\2019.10.14 particle track BPT 4hrs 433nm')
-    File = h5py.File(ms.findH5File(os.getcwd()), mode = 'r')
-    scan = File['ParticleScannerScan_0']
-    spec = scan['Particle_6']['power_series_4'][0]
-    shifts = -cnv.wavelength_to_cm(scan['Particle_6']['power_series_4'].attrs['wavelengths'], centre_wl = 785)
-#    spec, shifts = truncate(spec, shifts, -np.inf, -220)
+    os.chdir(r'C:\\ your directory')
+    spec = y
+    shifts = x
     spec, shifts = truncate(spec, shifts, -930, -220)
-    ff = fullfit(spec, shifts, order = 11, use_exponential = False, lineshape = 'G')
     
-    
-    ff.Run(verbose = True, 
-           comparison_thresh = 0.1, 
-           noise_factor = 1, 
-           minwidth = 2.5,
-           maxwidth = 14,
-           min_peak_spacing = 3,
-           add_peaks = False,
-           allow_asymmetry = False)
-
+    ff = fullfit(spec, shifts)
+    ff.Run()
     ff.plot_result()
+   
