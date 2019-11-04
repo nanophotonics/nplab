@@ -15,7 +15,7 @@ The fullfit class is the main thing here - sample use:
                  bg_function = 'poly',
                  vary_const_bg = True)
     #   initialise the object.
-        spec, shiftis are the spectrum and their shifts
+        spec, shifts are the spectrum and their shifts (Raman shifts, i.e. x-axis of spectrum)
         lineshape can be 'L' (Lorentzian) or 'G' (Gaussian). Gaussians are less broad
         The 'order' key-word argument is the order of the background polynomial. 3 works well. above 9 is unstable.
         transmission is the instrument response function of the detector. It's necessary to include it here rather than in the raw data as most of the background is electronic, so dividing this by the IRF introduces unphysical features.
