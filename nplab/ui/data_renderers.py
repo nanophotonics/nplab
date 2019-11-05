@@ -364,7 +364,7 @@ class Normalised_Parameter_renderer(FigureRendererPG):
         for h5object in self.h5object.values(): 
             icolor+=1
             try: x_axis = h5object.attrs['x_axis']
-            except: print 'x-axis not found'
+            except: print('x-axis not found')
             for index, Ydata in enumerate(h5object):
                 try:    
                     Max = float(np.max(Ydata))
@@ -375,7 +375,7 @@ class Normalised_Parameter_renderer(FigureRendererPG):
                                            name = h5object.name)
                     icolor+=1
                 
-                except: print 'failed'
+                except: print('failed')
             
             
         labelStyle = {'font-size': '24pt'}
