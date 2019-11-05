@@ -94,7 +94,7 @@ import pywt
 from nplab.analysis import Auto_Gaussian_Smooth as sm
 from nplab.analysis import smoothing as sm2
 from scipy.signal import argrelextrema
-import random
+
 
 def truncate(counts, wavelengths, lower_cutoff, upper_cutoff, return_indices_only = False):
     '''
@@ -291,7 +291,7 @@ class fullfit:
     
         self.peak_added = False
         i=-1
-        while self.peak_added == False and i<(len(Loss_Results)/2 -1): # test the top 50% of peaks
+        while self.peak_added == False and i<(len(Loss_Results) -1): # test the top 50% of peaks
             i+=1
             peak_candidate = Results[sorted_indices[i]]
             if peak_candidate[0]>self.noise_threshold and self.maxwidth>peak_candidate[2]>self.minwidth: #has a height, minimum width - maximum width are within bounds     
@@ -301,7 +301,7 @@ class fullfit:
                         self.peaks = np.append(self.peaks,peak_candidate)
                         self.peaks_stack = self.peaks_to_matrix(self.peaks)
                         self.peak_added = True
-
+                        
                     
                 else: # If no existing peaks, accept it
                     self.peaks = np.append(self.peaks,peak_candidate)
@@ -314,7 +314,8 @@ class fullfit:
             width_bound = (self.minwidth,self.maxwidth)
     
             self.peak_bounds+=[height_bound, pos_bound, width_bound]  # height, position, width
-
+            if self.verbose == True: print 'peak added'
+        if self.peak_added == False and self.verbose == True: print 'no suitable peaks to add'
     def Wavelet_Estimate_Width(self,Smooth_Loss_Function=2):
     	#Uses the CWT to estimate the typical peak FWHM in the signal
     	#First, intepolates the signal onto a linear x_scale with the smallest spacing present in the signal
@@ -680,11 +681,11 @@ class fullfit:
             add_peaks = True, 
             allow_asymmetry = False,
             minwidth = 2.5, 
-            maxwidth = 30, 
-            regions = 20, 
-            noise_factor = 1, 
-            min_peak_spacing = 5, 
-            comparison_thresh = 0.05, 
+            maxwidth = 20, 
+            regions = 10, 
+            noise_factor = 0.1, 
+            min_peak_spacing = 3.1, 
+            comparison_thresh = 0.01, 
             verbose = False):    
     	'''
         described at the top
@@ -695,7 +696,7 @@ class fullfit:
         if self.lineshape == 'G':
             self.maxwidth = maxwidth/0.95
             self.minwidth = minwidth/0.95
-        
+        self.verbose = verbose
         self.min_peak_spacing = min_peak_spacing
         self.width = 4*self.Wavelet_Estimate_Width() # a guess for the peak width
         self.regions = regions # number of regions the spectrum will be split into to add a new peak
@@ -740,7 +741,7 @@ class fullfit:
                     self.peaks = self.peaks[0:-3]
                     self.peak_bounds = self.peak_bounds[0:-3]
                     self.peaks_stack = self.peaks_stack[0:-1]
-                    
+                    if verbose == True: print 'peak removed as it made the fit worse'
                 self.regions*=4 # increase regions, as this is a sign fit is nearly finished
                 
             elif self.peak_added == False:  #Otherwise, same number of peaks?
@@ -756,20 +757,21 @@ class fullfit:
                         new_peak = find_closest(old_peak[1], New_trnsp[1])[1]# returns index of the new peak which matches it
                         old_height = old_peak[0]
                         old_pos = old_peak[1]/self.width
-
                         new_height = New[new_peak][0]/old_height
                         new_pos = New[new_peak][1]/self.width # normalise the height and position parameters to add them into one comparison score
-                        
                         residual.append(np.linalg.norm(np.array([1,old_pos])-np.array([new_height,new_pos]))) # the difference between old and new for each peak
                 comparison = residual>comparison_thresh
                 if type(comparison) == bool: # happens if only 1 peak
                     if comparison ==False:
                         self.regions*=5
+                         
                 else:
                     if any(comparison) == False: #if none of the peaks have changed by more than comparison_thresh fraction
                         self.regions*=5
+                        if verbose == True: print "peaks haven't changed significantly; regions increased"
             elif len(self.peaks)==0: # if there wasn't a peak added, try harder
                 self.regions*=5
+                
             
         #---One last round of optimization for luck: can comment these in and out as you see fit. 
 #        self.optimize_bg()
@@ -787,13 +789,10 @@ class fullfit:
 #           
         
 if __name__ == '__main__':
-    import os
-    os.chdir(r'C:\\ your directory')
-    spec = y
-    shifts = x
-    spec, shifts = truncate(spec, shifts, -930, -220)
-    
-    ff = fullfit(spec, shifts)
-    ff.Run()
-    ff.plot_result()
-   
+   spec_shifts = np.load('example_spectrum_and_shifts.npy')
+   spec = spec_shifts[0]
+   shifts = spec_shifts[1]
+   spec, shifts = truncate(spec, shifts, 190, np.inf)
+   ff = fullfit(spec, shifts, lineshape = 'G')
+   ff.Run(verbose = True)
+   ff.plot_result()
