@@ -438,7 +438,10 @@ def current(create_if_none=True, create_if_closed=True, mode='a',working_directo
 def set_current(datafile, **kwargs):
     """Set the current datafile, specified by either an HDF5 file object or a filepath"""
     global _current_datafile
-    if isinstance(datafile, h5py.Group):
+    if isinstance(datafile, DataFile):
+        _current_datafile = datafile
+        return _current_datafile
+    elif isinstance(datafile, h5py.Group):
         _current_datafile = DataFile(datafile)
         return _current_datafile
     else:
@@ -502,8 +505,8 @@ def open_file(set_current_bool = True,mode = 'a'):
             fname = fname[0]  # work around version-dependent Qt behaviour :(
         if len(fname) > 0:
             print fname
-            if set_current == True:
-                set_current_bool(fname, mode=mode)
+            if set_current_bool == True:
+                set_current(fname, mode=mode)
             else:
                 return DataFile(fname,mode = mode )
         else:
@@ -514,7 +517,7 @@ def open_file(set_current_bool = True,mode = 'a'):
 
     return _current_datafile  # if there is a file return it
 
-def create_file(set_current = False,mode = 'a'):
+def create_file(set_current_bool = False,mode = 'a'):
     """Create a data file"""
     global _current_datafile
     try:  # we try to pop up a Qt file dialog
@@ -531,7 +534,7 @@ def create_file(set_current = False,mode = 'a'):
             fname = fname[0]  # work around version-dependent Qt behaviour :(
         if len(fname) > 0:
             print fname
-            if set_current == True:
+            if set_current_bool == True:
                 set_current(fname, mode=mode)
             else:
                 return DataFile(fname,mode = mode )

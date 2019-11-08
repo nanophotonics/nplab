@@ -268,11 +268,11 @@ class SHOT(VisaInstrument, Stage):
         """
         return self.query("?:V")
 
-    def _go(self):
+    def _go(self, wait=True):
         """
         Moves the stages. To be used internally.
         """
-        self._write_check('G:')
+        self._write_check('G:', wait=wait)
 
     @locked_action
     def _write_check(self, command, wait=False):
@@ -326,11 +326,11 @@ class SHOT(VisaInstrument, Stage):
 
         if not hasattr(counts, '__iter__'):
             counts = (counts, )
+        for count in counts:
+            if not (-16777214 <= count <= 16777214):
+                raise exceptions.ValueError('stage1 must be between -16777214 and 16777214.')
 
         if relative:
-            for count in counts:
-                if not (-16777214 <= count <= 16777214):
-                    raise exceptions.ValueError('stage1 must be between -16777214 and 16777214.')
             command = "M:"
         else:
             command = "A:"
@@ -342,13 +342,18 @@ class SHOT(VisaInstrument, Stage):
             else:
                 command += '-P%d' % -count
 
-        self._write_check(command)
-        self._go()
+        self._write_check(command, wait=wait)
+        self._go(wait=wait)
 
     def get_position(self, axis=None):
         status = self.status()
         counts = map(int, status.split(',')[:2])
-        return counts
+        if axis is None:
+            return counts
+        elif hasattr(axis, '__iter__'):
+            return [counts[int(ax)-1] for ax in axis]
+        else:
+            return counts[int(axis)-1]
 
     def jog(self, axis="W", direction="+", timeout=2):
         """
@@ -448,7 +453,7 @@ class SHOT(VisaInstrument, Stage):
         """
         reply = self.query("!:")
 
-        if reply == "B":
+        if "B" in reply:
             return True
         else:
             return False
@@ -464,8 +469,11 @@ class HIT(SerialInstrument, Stage):
     https://www.global-optosigma.com/en_jp/software/motorize/manual_en/HIT_En.pdf
     """
 
-    # TODO: add interpolation commands. They allow you to set a position in the plane of two axes and move towards it in a curved or straight path
+    # TODO: interpolation commands. They set a position in the plane of two axes and jog in a curved or straight path
+    # TODO: add units
+
     axis_names = map(str, range(8))
+    axis_LUT = dict(zip(map(str, range(8)), range(8)))
 
     def __init__(self, address, **kwargs):
 
@@ -481,37 +489,60 @@ class HIT(SerialInstrument, Stage):
         SerialInstrument.__init__(self, address)
         self.termination_character = '\r\n'
         Stage.__init__(self, unit="step")
-        # Stage.__init__(self)
 
-        # if 'offsetOrigin' in kwargs:
-        #     self.offsetOrigin(kwargs['offsetOrigin'])  # 20000)
+    def _axes_iterable(self, axes=None):
+        """Convenience function
 
-        # if 'home_on_start' in kwargs.keys():
-        #     if kwargs['home_on_start']:
-        #         self.MechanicalHome()
+        Given a list of axes names or axes numbers (can be mixed), returns an list of the corresponding axes numbers
+        using axis_LUT
 
-    def move(self, counts, axes=None, relative=False):
-        assert -134217728 < counts < +134217727
-
+        :param axes: list of axes names or number (can be mixed)
+        :return:
+        """
         if axes is None:
-            axes = range(len(self.axis_names))
-        if not hasattr(counts, '__iter__'):
-            counts = (counts, )
+            axes = self.axis_names
         if not hasattr(axes, '__iter__'):
             axes = (axes, )
+        axes_iter = []
+        for ax in axes:
+            if ax in self.axis_LUT.keys():
+                axes_iter += [self.axis_LUT[ax]]
+            elif type(ax) == int:
+                axes_iter += [ax]
+            else:
+                raise ValueError("Unrecognised axis: %s %s" % (ax, type(ax)))
+        return axes_iter
+
+    def move(self, counts, axes=None, relative=False, wait=True):
+        """
+
+        :param counts: (int) number of motor steps. If iterable, should be same length as axes.
+        :param axes: list of axes
+        :param relative: (bool)
+        :param wait: bool
+        :return:
+        """
+        if axes is None:
+            axes = self.axis_names
+        elif not hasattr(axes, '__iter__'):
+            axes = (axes, )
+        if not hasattr(counts, '__iter__'):
+            counts = [counts] * len(axes)
+        for count in counts:
+            assert -134217728 < count < +134217727
+        counts = map(int, counts)
 
         if relative:
             command = 'M'
         else:
             command = 'A'
 
-        self.multi_axis_cmd(command, axes, counts, wait=True)
+        self.multi_axis_cmd(command, axes, counts, wait)
 
         # TODO: add checking for Stage limits using status +-LS
 
     def get_position(self, axes=None):
-        if axes is None:
-            axes = range(len(self.axis_names))
+        axes = self._axes_iterable(axes)
         all_positions = self.query("Q:").split(",")
         positions = []
         for ax in axes:
@@ -522,46 +553,54 @@ class HIT(SerialInstrument, Stage):
         return positions
 
     def status(self, axes=None):
+        """
+
+        :param axes: list of strings/integers corresponding to the names or indices of the axes, or a single string/integer
+        :return: string corresponding to the overall status, and a dictionary for the individual axes' status
+        """
         bit_list = ["", "DRV alarm", "Scale alarm", "Z limit", "Near", "ORG", "+LS", "-LS"]
-        if axes is None:
-            axes = range(len(self.axis_names))
-        statuses = self.query("Q:S").split(",")
+        raw_statuses = self.query("Q:S").split(",")
         status = []
-        for ax in axes:
-            if statuses[ax]:
-                _bin = bin(int(statuses[ax], 16))[2:].zfill(8)  # Converting to 8-bit hexadecimal. https://stackoverflow.com/questions/1425493/convert-hex-to-binary
+        for rs in raw_statuses:
+            try:
+                # Converting to 8-bit hexadecimal. https://stackoverflow.com/questions/1425493/convert-hex-to-binary
+                _bin = bin(int(rs, 16))[2:].zfill(8)
                 _status = []
                 for bit, bit_name in zip(_bin, bit_list):
                     if bool(int(bit)):
                         _status += [bit_name]
                 if len(_status) > 0:
-                    status += [",".join(_status)]
+                    status += [_status]
                 else:
                     status += ["OK"]
-            else:
-                status += [statuses[ax]]
-        return status
+            except ValueError:
+                status += [None]
+        overall_status = status[0]
+        axes_status = status[1:]
 
-    def is_busy(self, axes=None):
-        if axes is None:
-            axes = range(len(self.axis_names))
+        axes = self._axes_iterable(axes)
+        reply = dict()
+        for name, indx in zip(self.axis_names, axes):
+            reply[name] = axes_status[indx]
+        return overall_status, reply
+
+    def is_moving(self, axes=None):
+        axes = self._axes_iterable(axes)
         statuses = self.query("!:").split(",")
         status = []
         for ax in axes:
-            status += [bool(statuses[ax])]
-        return status
-
-    def wait(self):
-        '''
-        If any of the axes are in motion, wait.
-
-        :return:
-        '''
-        while '1' in self.query('!:'):
-            time.sleep(0.1)
+            status += [bool(int(statuses[ax]))]  # converting a '0' or '1' to a False or True
+        return any(status)
 
     @locked_action
     def write_check(self, command, wait=False):
+        """
+        Light wrapper providing error checking, locking and waiting
+
+        :param command: full serial command to send to device
+        :param wait: bool
+        :return:
+        """
         self.write(command)
 
         reply = self.readline()[:-1]  # excluding the \n termination
@@ -571,86 +610,83 @@ class HIT(SerialInstrument, Stage):
             self._logger.warn('%s replied %s' % (command, reply))
         else:
             if wait:
-                self.wait()
+                self.wait_until_stopped()
             return reply
 
     def multi_axis_cmd(self, command, axes, parameters, wait=False):
-        '''
-        Adds error checking to the write function
+        """Convenience function
 
-        :param command: serial command to send to device
-        :param wait (bool): if True, calls self.wait before returning
+        Creates commands with the appropriate parameters in the appropriate places.
+        e.g. by simply giving 'H', None, 1 it creates the command H:,1,,,1,,,1 (assuming the stage has three active axes at positions 1, 4 and 7
+
+        :param command: command code to send to device
+        :param axes: axes name or index (or list of)
+        :param parameters: list of parameters to pass. If iterable, it passes each item to each of the axes. Otherwise it passes the same argument to all axes
+        :param wait: if True, calls self.wait before returning
         :return:
-        '''
+        """
+        axes_iter = self._axes_iterable(axes)
 
-        if not hasattr(axes, "__iter__"):
-            axes = (axes,)
         if not hasattr(parameters, "__iter__"):
-            parameters = [parameters] * len(axes)
-        self._logger.debug("Axes: ", axes, " Parameters: ", parameters)
+            parameters = [parameters] * len(axes_iter)
+        if len(parameters) != len(axes_iter):
+            raise ValueError("Length of axes and parameters must be the same")
+
+        self._logger.debug("Axes: %s axes_iter: %s Parameters: %s" % (axes, axes_iter, parameters))
 
         argument_list = ['DUMMY']*8
-        for ax, param in zip(axes, parameters):
+        for ax, param in zip(axes_iter, parameters):
             argument_list[ax] = str(param)
         argument_string = ','.join(argument_list)
         argument_string = argument_string.replace('DUMMY', '')
         command += ':' + argument_string
-        self._logger.debug('Writing: %s' %command)
+        self._logger.debug('Writing: %s' % command)
 
         self.write_check(command, wait)
 
-        # reply = self.readline()[:-1]  # excluding the \n termination
-        #
-        # if reply == 'NG':
-        #     self._logger.warn('%s replied %s' % (command, reply))
-        # else:
-        #     if wait:
-        #         self.wait()
-        #     return reply
-
-    def mechanical_home(self, axes):
-        '''
+    def mechanical_home(self, axes=None):
+        """
         This command is used to detect the mechanical origin for a stage and set that position as the origin. The moving
         speed S: 500pps, F:5000ps, R:200mS. Running a stop command suspends the operation. Any other commands are not
         acceptable.
-
-        :param axes: list of axes
+        :param axes: axes name or index (or list of)
         :return:
-        '''
-
+        """
         self.multi_axis_cmd('H', axes, 1, wait=True)
 
-    def set_home(self, axes):
+    def set_home(self, axes=None):
         """
         Sets the origin to the current position.
+        :param axes: axes name or index (or list of)
+        :return:
         """
-        # cmnd = [0] * 8
-        # for ax in axes:
-        #     cmnd[ax] = 1
+        self.multi_axis_cmd('R', axes, 1)
 
-        self.multi_axis_cmd('R', axes, [1]*len(axes))
-
-    def jog(self, directions, axes, timeout=2):
+    def jog(self, directions, axes=None, timeout=2):
         """
         Moves stage continuously at jogging speed for specified length of time.
-        :param direction: either '+' or '-'
+        :param directions: a single value or iterable of either '+' or '-'
+        :param axes:
         :param timeout: in seconds
         :return:
         """
-        if not hasattr(directions, '__iter__'):
-            directions = (directions, )
-        if not hasattr(axes, '__iter__'):
-            axes = (axes,)
-        self.multi_axis_cmd('J', axes, directions)
-        t0 = time.time()
-        while time.time() - t0 < timeout:
-            time.sleep(0.1)
-        self.decelerate(axes)
 
-    def decelerate(self, axes):
+        # TODO: make the write_check non-blocking for this to work
+        raise NotImplementedError
+        # self.multi_axis_cmd('J', axes, directions)
+        # t0 = time.time()
+        # while time.time() - t0 < timeout:
+        #     time.sleep(0.1)
+        # self.decelerate(axes)
+
+    def decelerate(self, axes=None):
         """
         Decelerates and stop the stages.
+
+        :param axes: axes name or index (or list of)
+        :return:
         """
+
         self.multi_axis_cmd('L', axes, 1)
 
     def stop_all_stages(self):
@@ -661,10 +697,11 @@ class HIT(SerialInstrument, Stage):
 
     def set_speed(self, axis, start_speed, max_speed, acceleration_time):
         """
-        Set minimum and maximum speeds and acceleration time.
-        :param minSpeed1: between 100 and 20000, in steps of 100 [PPS]
-        :param maxSpeed1: between 100 and 20000, in steps of 100 [PPS]
-        :param accelerationTime1: between 0 and 1000 [ms]
+
+        :param axis: axes name or index
+        :param start_speed:  between 100 and 20000, in steps of 100 [PPS]
+        :param max_speed: between 100 and 20000, in steps of 100 [PPS]
+        :param acceleration_time: between 0 and 1000 [ms]
         :return:
         """
 
@@ -674,21 +711,19 @@ class HIT(SerialInstrument, Stage):
         if not (1 <= acceleration_time <= 1000):
             raise exceptions.ValueError('Must be 00 <= acceleration_time <= 1000.')
 
-        self.write_check('D:%d,%d,%d,%d' % (axis, start_speed, max_speed, acceleration_time))
+        axes = self._axes_iterable(axis)
+        for axis in axes:
+            self.write_check('D:%d,%d,%d,%d' % (axis, start_speed, max_speed, acceleration_time))
 
-    def on_off(self, axes, on_off=None):
+    def on_off(self, axes=None, on_off=None):
         """
         Turn motor on/off
-        :param stage1: True (on) or False (off)
+        :param axes: axes name or index (or list of)
+        :param on_off: True (on) or False (off)
         :return:
         """
         if on_off is None:
-            on_off = [1]*len(axes)
-        elif hasattr(axes, '__iter__'):
-            if not hasattr(on_off, '__iter__'):
-                on_off = [on_off] * len(axes)
-            elif len(axes) != len(on_off):
-                raise ValueError('Axes list and on_off list need to be the same length')
+            on_off = 1
 
         self.multi_axis_cmd('C', axes, on_off)
 

@@ -11,7 +11,7 @@ import numpy as np
 
 from nplab.utils.gui import QtWidgets, QtCore, uic
 from nplab.instrument import Instrument
-from nplab.instrument.camera import DisplayWidget
+from nplab.instrument.camera.camera_scaled_roi import DisplayWidgetRoiScale
 
 PrettyPrinter = pprint.PrettyPrinter(indent=4)
 
@@ -57,6 +57,9 @@ class StreakBase(Instrument):
         'acqLiveMonitorTSFormat', 'CamSetupSendSerial', 'ImgStatusSet', 'ImgRingBufferGet', 'ImgAnalyze', 'ImgRoiGet',
         'ImgRoiSet', 'ImgRoiSelectedRoiGet', 'ImgRoiSelectedRoiSet', 'SeqCopyToSeparateImg', 'SeqImgIndexGet', '
         All of the auxiliary devices, processing, defect pixel tools
+
+    TODO:
+        Inherit from message_bus_instrument if you want to use the communication_lock
     """
 
     def set_single_metadata(self, name, value):
@@ -66,21 +69,24 @@ class StreakBase(Instrument):
     def get_single_metadata(self, name):
         return self.get_parameter(*name)
 
-    def __init__(self, address, **kwargs):
+    def __init__(self, address, start_app=False, get_all_parameters=False, **kwargs):
         """
 
-        :param address: tuple of the Streak (TCP_IP,TCP_PORT)
+        :param address: tuple of the streak TCP address (TCP_IP,TCP_PORT)
+        :param kwargs: optional dictionary keys, also passed to nplab.Instrument
+            CloseAppWhenDone:  closes the streak GUI when you delete the Python class instance
+            get_all_parameters:  gets the values of all the parameters on startup
         """
-        Instrument.__init__(self, **kwargs)
 
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        Instrument.__init__(self)
 
-        self.socket.connect(address)
+        # self.address = address
+        self.socket = None
+        self.data_socket = None
+        self._connect(address)
 
-        self.data_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.data_socket.connect((address[0], address[1] + 1))
-        self.data_socket.settimeout(100)
-
+        self.current_message = ''
+        self.current_reply = ''
         self.message_history = collections.deque(maxlen=MAX_MESSAGE_HISTORY)
 
         self.busy = False
@@ -90,31 +96,47 @@ class StreakBase(Instrument):
             self.close_app_when_done = False
         self.image = None
 
-        self.captureThread = QtCore.QThread()
-        self.socket.settimeout(30)
-        self.start_app()
+        # self.captureThread = QtCore.QThread()
         self._setup_parameter_dictionaries()
-        self.socket.settimeout(TIMEOUT)
 
-        # Getting all the parameters and setting some defaults
-        # self.get_parameter()
-        # self.set_parameter('Camera', 'Setup', 'TimingMode', 'External timing')
+        # Starting the HPDTA GUI
+        if start_app:
+            self.socket.settimeout(120)
+            self.start_app()
+            self.socket.settimeout(TIMEOUT)
+
+        # Getting all the parameters
+        if get_all_parameters:
+            self.get_parameter()
 
     def __del__(self):
         if self.close_app_when_done:
             self.end_app()
         self.socket.close()
 
-    def send_command(self, operation, *parameters):
+    def _connect(self, address):
+        if self.socket is not None:
+            del self.socket
+        if self.data_socket is not None:
+            del self.data_socket
+
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.connect(address)
+        self.socket.settimeout(TIMEOUT)
+
+        self.data_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.data_socket.connect((address[0], address[1] + 1))
+        self.data_socket.settimeout(100)
+
+    def send_command(self, operation, *parameters, **kwargs):
         """
         Implements the TCP command structure, saves it to the message_history, sends it to the device and reads the reply
         :param operation:
         :param parameters:
         :return:
         """
-        # if parameters is None:
-        #     self.current_message = operation + '()'
-        # else:
+
+        self._logger.debug("send_command: %s, %s, %s" % (operation, parameters, kwargs))
         params = map(str, parameters)
         self.current_message = operation + '(' + ','.join(params) + ')'
         self.current_message += '\r'
@@ -134,12 +156,14 @@ class StreakBase(Instrument):
 
         """
         _reply = self.socket.recv(size)
+
         time.sleep(SLEEPING_TIME)
+        # Ensure we've read a full number of messages by checking that the string ends with newline
         if not _reply.endswith('\r'):
             return self._read(previous_message + _reply)
         else:
             message_list = str(previous_message + _reply).split('\r')
-            return message_list[:-1]
+            return message_list[:-1]  # the last message is an empty string so we always ignore it
 
     def _handshake(self):
         """Makes sure last sent command executed properly
@@ -151,15 +175,14 @@ class StreakBase(Instrument):
 
         :return:
         """
+        # Read a bunch of messages from the streak and add them to the message history
         message_list = self._read()
         self.message_history[-1]['received'].append(message_list)
 
-        # self.current_reply = message_list[-1]
-
+        # Iterate over the messages received until a handshake is produced or an error raised
         _handshaked = False
         for message in message_list:
             if not _handshaked:
-                # self.current_reply = message
                 if message[0].isdigit():
                     split_reply = message.split(',')
 
@@ -168,21 +191,16 @@ class StreakBase(Instrument):
                             self._error_handling(int(split_reply[0]))
                         elif self.current_message.split('(')[0] != split_reply[1]:
                             self._logger.error('Comparing this: %s' % self.current_message.split('(')[0] +
-                                               'to this: %g' % split_reply[1])
+                                               'to this: %s' % split_reply[1])
                             raise RuntimeError('Handshake did not work')
                         else:
                             _handshaked = True
                             self.current_reply = message
                             self._logger.debug('Handshake worked. %s' % split_reply[1])
                             self._logger.debug('Sent: %s \nReply: %s' % (self.current_message, self.current_reply))
+        # If a handshake was not present in the previous bunch of messages, try to handshake again
         if not _handshaked:
             self._handshake()
-            #     else:
-            #         self._handshake()
-            # else:
-            #     # print self.current_reply
-            #     # print 'WTF is going on'
-            #     self._handshake()
 
     def _error_handling(self, error_code):
         raise StreakError(error_code, self.current_message, self.current_reply)
@@ -523,10 +541,11 @@ class StreakBase(Instrument):
         :param iniFile:
         :return:
         """
+
         if iniFile is not None:
-            self.send_command('AppStart', visible, iniFile)
+            self.send_command('AppStart', visible, iniFile, timeout=120)
         else:
-            self.send_command('AppStart', visible)
+            self.send_command('AppStart', visible, timeout=120)
 
     def end_app(self):
         self.send_command('AppEnd')
@@ -585,7 +604,7 @@ class StreakBase(Instrument):
     def list_dev_params(self, devices=None):
         """
         This command returns a list of all parameters of a specified device.
-        :param device: one of:
+        :param devices: one of:
                 ['TD', 'Streak', 'Streakcamera', 'Spec', 'Spectrograph', 'Del', 'Delay', 'Delaybox',
                     'Del1', 'Del2', 'Delay2', 'DelayBox2']
         :return:
@@ -633,21 +652,25 @@ class StreakBase(Instrument):
 
     '''Image commands'''
 
-    def save_image(self, image_index='Current', image_type='TIF', filename='DefaultImage.tif', overwrite=False):
+    def save_image(self, image_index='Current', image_type='TIF', filename='DefaultImage.tif', overwrite=False,
+                   directory=None):
         """
 
-        :param destination: image to be saved, either 'Current' or a number between 0 and 19
+        :param image_index: image to be saved, either 'Current' or a number between 0 and 19
         :param image_type: one of 'IMG' (ITEX file), 'TIF', 'TIFF', 'ASCII',
                                 'data2tiff', 'data2tif', 'display2tiff', 'display2tif'
         :param filename: file path
         :param overwrite: whether to overwrite existing files
+        :param directory:
         :return:
         """
-        if not filename.startswith('C:'):
-            filename = 'C:/Users/Hera/Desktop/StreakData/' + filename
+        if directory is None:
+            directory = os.getcwd()
+        if not os.path.isabs(filename):
+            filename = os.path.join(directory, filename)
         self.send_command('ImgSave', image_index, image_type, filename, int(overwrite))
 
-    def load_image(self, filename=r'C:/Users/Hera/Desktop/DefaultImage.txt', image_type='ASCII'):
+    def load_image(self, filename='DefaultImage.txt', image_type='ASCII'):
         """
         Not that not all file types which can be saved can also be loaded. Some file types are intended for export only.
         Note: This load functions loads the image always into a new window independently of the setting of
@@ -658,6 +681,8 @@ class StreakBase(Instrument):
                                 'data2tiff', 'data2tif', 'display2tiff', 'display2tif'
         :return:
         """
+        if not os.path.isabs(filename):
+            filename = os.path.join(os.getcwd(), filename)
         self.send_command('ImgLoad', image_type, filename)
 
     def delete_image(self, image_index='Current'):
@@ -787,11 +812,17 @@ class StreakBase(Instrument):
 
     '''Sequence commands'''
 
-    def start_sequence(self, directory=None):
+    def start_sequence(self, directory=None, wait=False):
         if directory is not None:
             self.set_parameter('Sequence', 'StoreTo', 'HD <individual files - all modes>')
             self.set_parameter('Sequence', 'FirstImgToStore', directory)
         self.send_command('SeqStart')
+
+        if wait:
+            status = self.sequence_status()
+            while type(status) == list and status[0] == 'busy':
+                time.sleep(0.5)
+                status = self.sequence_status()
 
     def stop_sequence(self):
         self.send_command('SeqStop')
@@ -814,20 +845,68 @@ class StreakBase(Instrument):
         """
         self.send_command('SeqDelete')
 
-    def save_sequence(self, image_type='ASCII', filename=r'C:\Users\Hera\Desktop/DefaultSequence.txt', overwrite=0):
+    def save_sequence(self, image_type='ASCII', filename='DefaultSequence.txt', overwrite=0):
+        if not os.path.isabs(filename):
+            filename = os.path.join(os.getcwd(), filename)
         self.send_command('SeqSave', image_type, filename, overwrite)
 
-    def load_sequence(self, image_type='ASCII', filename=r'C:\Users\Hera\Desktop/DefaultSequence.txt'):
+    def load_sequence(self, image_type='ASCII', filename='DefaultSequence.txt'):
+        if not os.path.isabs(filename):
+            filename = os.path.join(os.getcwd(), filename)
         self.send_command('SeqLoad', image_type, filename)
 
     '''My commands'''
 
-    def capture(self, mode='Acquire', wait=False, save=False, save_kwargs=None):
-        self.captureThread = StreakThread(self, mode, save, save_kwargs)
-        self.captureThread.start()
-        if wait:
-            self.captureThread.wait()
-        return self.image
+    def capture(self, mode='Acquire', save=False, delete=False, save_kwargs=None):
+        try:
+            if mode == 'Acquire':
+                self.start_acquisition(mode)
+
+                if save:
+                    # time.sleep(1)  # This sleep-time was arrived to by trial and error
+                    self.save_image(**save_kwargs)
+                    if delete:
+                        self.delete_image()
+                else:
+                    time.sleep(1.5)  # This sleep-time was arrived to by trial and error
+                    shape, pixel_size = self.get_img_info()
+                    n_pixels = (shape[2] - shape[0]) * (shape[3] - shape[1])
+
+                    self.get_image_data()
+                    self._logger.debug('Receiving: %s pixels of size %g' % (n_pixels, pixel_size))
+
+                    image = []
+                    for pxl_num in range(n_pixels):
+                        pixel = self.data_socket.recv(pixel_size)
+                        image += [struct.unpack('!B', pixel[0])[0]]
+                    image = np.array(image).reshape((1, shape[2] - shape[0], shape[3] - shape[1]))
+                    self.image = image
+                    if delete:
+                        self.delete_image()
+                    return image
+            elif mode == 'Sequence':
+                self.start_sequence()
+                time.sleep(0.1)
+                status = self.sequence_status()
+                while status[0] == 'busy':
+                    time.sleep(0.5)
+                    status = self.sequence_status()
+                if delete:
+                    self.delete_sequence()
+            else:
+                raise ValueError('Capture mode not recognised')
+        except Exception as e:
+            self._logger.warn("Failed capture at Thread because: %s" % e)
+
+    # def capture(self, mode='Acquire', wait=False, save=False, save_kwargs=None):
+    #     try:
+    #         self.captureThread = StreakThread(self, mode, save, save_kwargs)
+    #         self.captureThread.start()
+    #         if wait:
+    #             self.captureThread.wait()
+    #         return self.image
+    #     except Exception as e:
+    #         self._logger.warn("Failed capture because: %s" % e)
 
     def get_qt_ui(self):
         return StreakUI(self)
@@ -848,37 +927,40 @@ class StreakThread(QtCore.QThread):
         self.wait()
 
     def run(self):
-        if self.mode == 'Acquire':
-            self.Streak.start_acquisition(self.mode)
+        try:
+            if self.mode == 'Acquire':
+                self.Streak.start_acquisition(self.mode)
 
-            if self.save:
-                time.sleep(1)  # This sleep-time was arrived to by trial and error
-                self.Streak.save_image(**self.save_kwargs)
-            else:
-                time.sleep(1.5)  # This sleep-time was arrived to by trial and error
-                shape, pixel_size = self.Streak.get_img_info()
-                n_pixels = (shape[2] - shape[0]) * (shape[3] - shape[1])
+                if self.save:
+                    time.sleep(1)  # This sleep-time was arrived to by trial and error
+                    self.Streak.save_image(**self.save_kwargs)
+                else:
+                    time.sleep(1.5)  # This sleep-time was arrived to by trial and error
+                    shape, pixel_size = self.Streak.get_img_info()
+                    n_pixels = (shape[2] - shape[0]) * (shape[3] - shape[1])
 
-                self.Streak.get_image_data()
-                self.Streak._logger.debug('Receiving: %s pixels of size %g' % (n_pixels, pixel_size))
+                    self.Streak.get_image_data()
+                    self.Streak._logger.debug('Receiving: %s pixels of size %g' % (n_pixels, pixel_size))
 
-                image = []
-                for pxl_num in range(n_pixels):
-                    pixel = self.Streak.data_socket.recv(pixel_size)
-                    image += [struct.unpack('!B', pixel[0])[0]]
-                image = np.array(image).reshape((1, shape[2] - shape[0], shape[3] - shape[1]))
-                self.Streak.image = image
-            self.Streak.delete_image()
-        elif self.mode == 'Sequence':
-            self.Streak.start_sequence()
-            time.sleep(0.5)
-            status = self.Streak.sequence_status()
-            while status[0] == 'busy':
+                    image = []
+                    for pxl_num in range(n_pixels):
+                        pixel = self.Streak.data_socket.recv(pixel_size)
+                        image += [struct.unpack('!B', pixel[0])[0]]
+                    image = np.array(image).reshape((1, shape[2] - shape[0], shape[3] - shape[1]))
+                    self.Streak.image = image
+                self.Streak.delete_image()
+            elif self.mode == 'Sequence':
+                self.Streak.start_sequence()
                 time.sleep(0.5)
                 status = self.Streak.sequence_status()
-            self.Streak.delete_sequence()
-        else:
-            raise ValueError('Capture mode not recognised')
+                while status[0] == 'busy':
+                    time.sleep(0.5)
+                    status = self.Streak.sequence_status()
+                self.Streak.delete_sequence()
+            else:
+                raise ValueError('Capture mode not recognised')
+        except Exception as e:
+            self.Streak._logger.warn("Failed capture at Thread because: %s" % e)
 
 
 class StreakUI(QtWidgets.QWidget):
@@ -912,7 +994,7 @@ class StreakUI(QtWidgets.QWidget):
     def updateGUI(self):
         self.Streak.get_parameter('Devices', 'TD')
 
-        PrettyPrinter.pprint(self.Streak.parameters)
+        # PrettyPrinter.pprint(self.Streak.parameters)
 
         # gateMode = self.Streak.parameters['Devices']['value']['TD']['Gate Mode']
         # readMode = self.Streak.parameters['Devices']['value']['TD']['Mode']
@@ -959,14 +1041,14 @@ class StreakUI(QtWidgets.QWidget):
 
         self.Streak.set_parameter('Devices', 'TD', 'MCP Gain', currentGain)
 
-    def TimeRangeChanged(self, input=None):
+    def TimeRangeChanged(self, direction=None):
         allowed_times = {'ns': [5, 10, 20, 50, 100, 200, 500],
                          'us': [1, 2, 5, 10, 20, 50, 100, 200, 500],
                          'ms': [1]}
         unit = str(self.comboBoxTimeUnit.currentText())
         given_number = int(self.lineEditTimeRange.text())
 
-        if input is '+':
+        if direction is '+':
             if not (unit == 'ms' and given_number == 1):
                 next_unit = str(unit)
                 if given_number != 500:
@@ -982,7 +1064,10 @@ class StreakUI(QtWidgets.QWidget):
                 self.lineEditTimeRange.setText(str(next_number))
                 unit = str(next_unit)
                 # self.Streak.set_parameter('Devices', 'TD', 'Time Range', str(next_number) + ' ' + next_unit)
-        elif input is '-':
+            else:
+                self.Streak._logger.info('Tried increasing the maximum time range')
+                return
+        elif direction is '-':
             if not (unit == 'ns' and given_number == 5):
                 next_unit = str(unit)
                 if given_number != 1:
@@ -998,6 +1083,9 @@ class StreakUI(QtWidgets.QWidget):
                 self.lineEditTimeRange.setText(str(next_number))
                 unit = str(next_unit)
                 # self.Streak.set_parameter('Devices', 'TD', 'Time Range', str(next_number) + ' ' + next_unit)
+            else:
+                self.Streak._logger.info('Tried decreasing the minimum time range')
+                return
         else:
             next_number = min(allowed_times[unit], key=lambda x: abs(x - given_number))
             self.lineEditTimeRange.setText(str(next_number))
@@ -1010,12 +1098,12 @@ class StreakUI(QtWidgets.QWidget):
             self.Streak.set_parameter('Devices', 'TD', 'Time Range', str(next_number))
 
     def Capture(self):
-        self.Streak.capture(wait=True)
+        self.Streak.capture()
         self.updateImage()
 
     def updateImage(self):
         if self.DisplayWidget is None:
-            self.DisplayWidget = DisplayWidget()
+            self.DisplayWidget = DisplayWidgetRoiScale()
         if self.DisplayWidget.isHidden():
             self.DisplayWidget.show()
         if len(self.Streak.image.shape) == 0:

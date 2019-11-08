@@ -119,19 +119,27 @@ def create_logger(name='Experiment', **kwargs):
         LOGGER_FILE = kwargs['filename']
     else:
         LOGGER_FILE = None
-    fh = logging.StreamHandler(sys.stdout)
-    f = ColoredFormatter('[%(name)s] - %(levelname)s: %(message)s - %(asctime)s ', '%H:%M')
-    fh.setFormatter(f)
+
     test = logging.getLogger(name)
     test.propagate = False
     test.setLevel(LOGGER_LEVEL)
-    test.addHandler(fh)
+
+    if any([isinstance(x, logging.StreamHandler) for x in test.handlers]):
+        test.warn('Logger already has a StreamHandler!')
+    else:
+        fh = logging.StreamHandler(sys.stdout)
+        f = ColoredFormatter('[%(name)s] - %(levelname)s: %(message)s - %(asctime)s ', '%H:%M')
+        fh.setFormatter(f)
+        test.addHandler(fh)
 
     if LOGGER_FILE is not None:
-        fh = logging.FileHandler(LOGGER_FILE)
-        fh.setFormatter(logging.Formatter('[%(name)s] - %(levelname)s: %(message)s - %(asctime)s ', datefmt='%H:%M'))
-        fh.setLevel(LOGGER_LEVEL)
-        test.addHandler(fh)
+        if any([isinstance(x, logging.FileHandler) for x in test.handlers]):
+            test.warn('Logger already has a FileHandler!')
+        else:
+            fh = logging.FileHandler(LOGGER_FILE)
+            fh.setFormatter(logging.Formatter('[%(name)s] - %(levelname)s: %(message)s - %(asctime)s ', datefmt='%H:%M'))
+            fh.setLevel(LOGGER_LEVEL)
+            test.addHandler(fh)
 
     return test
 

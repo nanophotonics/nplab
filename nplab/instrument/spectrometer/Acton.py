@@ -3,12 +3,16 @@
 from nplab.instrument.visa_instrument import VisaInstrument
 import re
 import time
+from visa import VisaIOError
 
 
 class SP2750(VisaInstrument):
-    """ftp://ftp.princetoninstruments.com/public/manuals/Acton/SP-2750.pdf"""
+    """ Monochromator class
+    ftp://ftp.princetoninstruments.com/public/manuals/Acton/SP-2750.pdf
+    """
+
     def __init__(self, address):
-        port_settings = dict(baud_rate=9600, read_termination="\r\n", write_termination="\r", timeout=3000)
+        port_settings = dict(baud_rate=9600, read_termination="\r\n", write_termination="\r", timeout=10000)
         super(SP2750, self).__init__(address, port_settings)
         self.clear_read_buffer()
 
@@ -25,8 +29,9 @@ class SP2750(VisaInstrument):
         reply = full_reply[:-2]
 
         if "?" in full_reply:
-            self._logger.warn("Message  %s" %full_reply)
-        elif status == "ok":
+            self._logger.warn("Message  %s" % full_reply)
+
+        if status == "ok":
             return reply.rstrip("").lstrip("")
         else:
             self._logger.info("Multiple reads")
@@ -39,17 +44,12 @@ class SP2750(VisaInstrument):
                     raise ValueError("Too many multiple reads")
             return read
 
-    # def read(self, *args, **kwargs):
-    #
-    #     full_reply = self.instr.read(*args, **kwargs)
-    #
-    #     status = full_reply[-2:]
-    #     reply = full_reply[:-2]
-    #
-    #     if "?" in full_reply:
-    #         self._logger.warn("Message  %s" % full_reply)
-    #     elif status == "ok":
-    #         return reply.rstrip("").lstrip("")
+    def calibrate(self, wvl, to_device=True):
+        if to_device:
+            calibrated = wvl
+        else:
+            calibrated = wvl
+        return calibrated
 
     # MOVEMENT COMMANDS
     def _wait(self):
@@ -57,7 +57,11 @@ class SP2750(VisaInstrument):
         time.sleep(1)
         t0 = time.time()
         while time.time() - t0 < 10 and not self.is_ready():
-            time.sleep(1)  # This you get from testing
+            try:
+                if self.is_ready():
+                    break
+            except VisaIOError as e:
+                time.sleep(1)  # This you get from testing
 
     def set_wavelength_fast(self, wvl):
         """
@@ -67,7 +71,8 @@ class SP2750(VisaInstrument):
         :return:
         """
 
-        self.write("%0.3f GOTO" % wvl)
+        self.write("%0.3f GOTO" % self.calibrate(wvl))
+        # TODO: wait until the spectrometer replies OK
         self._wait()
         return self.read()
 
@@ -80,7 +85,7 @@ class SP2750(VisaInstrument):
         :return:
         """
 
-        self.write("%0.3f NM" % wvl)
+        self.write("%0.3f NM" % self.calibrate(wvl))
 
     def get_wavelength(self):
         """
@@ -88,7 +93,8 @@ class SP2750(VisaInstrument):
         :return:
         """
         string = self.query("?NM")
-        return re.findall(" ([0-9]+\.[0-9]+) ", string)[0]
+        wvl = float(re.findall(" ([0-9]+\.[0-9]+) ", string)[0])
+        return self.calibrate(wvl, False)
 
     def set_speed(self, rate):
         """
@@ -114,7 +120,7 @@ class SP2750(VisaInstrument):
         :return:
         """
 
-        self.query("%d GRATING" %index)
+        self.query("%d GRATING" % index)
 
     def get_grating(self):
         """
@@ -130,17 +136,4 @@ class SP2750(VisaInstrument):
         :return:
         """
         return self.query("?GRATINGS")
-
-
-if __name__ == "__main__":
-    spec = SP2750("COM12")
-
-    print spec.query("?NM")
-    print spec.query("?GRATINGS")
-
-    print spec.set_wavelength_fast(0)
-    print spec.get_wavelength()
-
-    print spec.set_wavelength_fast(200)
-    print spec.get_wavelength()
 
