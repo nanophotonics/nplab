@@ -65,4 +65,4 @@ docs/nplab.*.rst
 *.xml
 *.iml
 .DS_Store
-nplab/ui/open_browser_cmd_ee306.bat
+
