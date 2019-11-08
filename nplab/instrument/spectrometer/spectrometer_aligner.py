@@ -244,6 +244,8 @@ class SpectrometerAligner(Instrument):
         """Take spectra at (relative) z positions dz and return as a 2D array"""
         spectra = []
         here = self.stage.position
+        self.spectrometer.read_spectrum()
+        self.spectrometer.read_spectrum() #reads spectrum trice to clear cached junk before taking measurement
         for z in dz:
             self.stage.move(np.array([0,0,z])+here)
             time.sleep(self.settling_time)
