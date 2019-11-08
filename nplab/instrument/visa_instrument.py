@@ -57,7 +57,7 @@ class VisaInstrument(MessageBusInstrument):
     idn = queried_property('*idn?', dtype='str')
 
 if __name__ == '__main__':
-    instrument = VisaInstrument(address='GPIB0::3::INSTR')
+    instrument = VisaInstrument(address='GPIB0::7::INSTR')
     print instrument.query('*idn?')
     print instrument.idn
     print instrument.float_query
