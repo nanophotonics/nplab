@@ -63,3 +63,4 @@ docs/nplab.*.rst
 *.xml
 *.iml
 .DS_Store
+nplab/instrument/camera/camera_with_location_car72.py
