@@ -330,7 +330,7 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
         if self.terminalWindow is None:
             self.menuTerminal()
 
-        self.terminalWindow.run_script(scriptname)
+        self.terminalWindow.run_script(self.scripts_path, scriptname)
 
     def VerboseChanged(self, action):
         """Automatically change the loggers 
