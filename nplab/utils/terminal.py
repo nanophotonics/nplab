@@ -58,7 +58,7 @@ class ipython:
         self.control.execute(cmd)
 
     def run_script(self, scripts_path, scriptname):
-        return self.control.execute('run -i '+self.scripts_path+ '/%s' %scriptname)
+        return self.control.execute('run -i '+scripts_path+ '/%s' %scriptname)
 
 
 class QIPythonWidget(RichJupyterWidget):
