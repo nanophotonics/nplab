@@ -182,7 +182,7 @@ class LumeneraCamera(Camera):
         try:
             self.latest_raw_frame = self.convert_frame(frame_pointer, frame_size)
         except:
-            dump = 1            
+            pass            
             #print "invalid frame size"
             
     def convert_frame(self, frame_pointer, frame_size):
