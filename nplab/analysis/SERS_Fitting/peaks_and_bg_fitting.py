@@ -789,9 +789,10 @@ class fullfit:
 #           
         
 if __name__ == '__main__':
-   spec_shifts = np.load('example_spectrum_and_shifts.npy')
-   spec = spec_shifts[0]
-   shifts = spec_shifts[1]
+   
+   from nplab.analysis.example_data import SERS_and_shifts
+   spec = SERS_and_shifts[0]
+   shifts = SERS_and_shifts[1]
    spec, shifts = truncate(spec, shifts, 190, np.inf)
    ff = fullfit(spec, shifts, lineshape = 'G')
    ff.Run(verbose = True)
