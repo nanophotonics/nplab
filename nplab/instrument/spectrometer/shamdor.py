@@ -10,12 +10,12 @@ from nplab.instrument.spectrometer.shamrock import Shamrock
 class Shamdor(Andor):
     ''' Wrapper class for the shamrock and the andor
     '''
-    def __init__(self,pixel_number = 1600):
+    def __init__(self, pixel_number = 1600):
         self.shamrock = Shamrock()
-        super(Shamdor, self).__init__()
-        self.shamrock.pixel_number = pixel_number
+        #self.shamrock.pixel_number = pixel_number
+        self.shamrock.SetNumberPixels(1600)
         self.shamrock.pixel_width = 16
-
+        super(Shamdor, self).__init__()
     def get_xaxis(self):
         return self.shamrock.GetCalibration()
     x_axis = property(get_xaxis)
