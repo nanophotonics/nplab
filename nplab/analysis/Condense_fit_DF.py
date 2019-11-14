@@ -7,50 +7,67 @@ Created on Thu May 31 01:11:45 2018
 if __name__ == '__main__':
     print 'Importing modules...'
 
+#import h5py
 import os
+rootDir = os.getcwd()
 import numpy as np
 import time
 import matplotlib.pyplot as plt
-from nplab.analysis import DF_MultipeakfitBeta as mpf
+from nplab.analysis import DF_PL_Multipeakfit as mpf
 from nplab.analysis import Condense_DF_Spectra as cdf
+#charDir = r'C:\Users\car72\Documents\GitHub\charlie\charlie'
+#os.chdir(charDir)
+#import DF_PL_Multipeakfit as mpf
+os.chdir(rootDir) #Important
 
 if __name__ == '__main__':
     absoluteStartTime = time.time()
     print '\tModules imported'
 
-    startSpec = 0
-    finishSpec = 0
-    raiseExceptions = True #If the code keeps returning errors, try setting this to False. This will ignore and discard individual spectra that cause errors
+    '''Set raiseExceptions = True if the anaylsis fails; this will return the traceback'''
+    raiseExceptions = False #Setting this to True will stop the analysis return the traceback if an individual spectrum fails
 
-    summaryFile = 'summary.h5'
+    statsOnly = False #if you have already analysed the spectra and want to re-plot histograms (etc)
+    pl = True #Set to True if your dataset contains PL
+    npSize = 80 #Peak analysis uses different values for different NP sizes. Valid inputs are 50, 60, 70, 80
 
-    if summaryFile not in os.listdir('.'):
-        summaryFile = cdf.extractAllSpectra(os.getcwd(), returnIndividual = True, start = startSpec, finish = finishSpec)
-
-    if raiseExceptions == True:
-        x, yData, summaryAttrs = mpf.retrieveData(os.getcwd())
-        initImg = mpf.plotInitStack(x, yData, imgName = 'Initial Stack', closeFigures = True)
-        outputFileName = mpf.createOutputFile('MultiPeakFitOutput')
-        mpf.fitAllSpectra(x, yData, outputFileName, summaryAttrs = summaryAttrs, stats = True, raiseExceptions = True)
-        #mpf.doStats('MultiPeakFitOutput.h5', closeFigures = True)
-
-        print '\nData fitting complete'
+    if statsOnly == True:
+        outputFileName = mpf.findH5File(os.getcwd(), nameFormat = 'MultiPeakFitOutput', mostRecent = True)#finds the most recent file with given name format
+        mpf.doStats(outputFileName, stacks = False, pl = pl)
 
     else:
-        try:
-            x, yData, summaryAttrs = mpf.retrieveData(os.getcwd())
-            initImg = mpf.plotInitStack(x, yData, imgName = 'Initial Stack', closeFigures = True)
+        startSpec = 0
+        finishSpec = 0
+
+        summaryFile = cdf.extractAllSpectra(os.getcwd(), returnIndividual = True, start = startSpec,
+                                            finish = finishSpec)#condenses Z-stack (inc. background subtraction and referencing) for each particle and makes summary file
+
+        if pl == True:
+            summaryFile = cdf.transferPlSpectra(os.getcwd(), startWl = 505, start = startSpec,
+                                                finish = finishSpec)#background subtracts each PL spectra and transfers them to the existing summary file
+
+        #summaryFile = 'summary.h5' #use this instead of the above functions if you already have a summary file
+
+        if raiseExceptions == True:
             outputFileName = mpf.createOutputFile('MultiPeakFitOutput')
-            mpf.fitAllSpectra(x, yData, outputFileName, summaryAttrs = summaryAttrs, stats = True, raiseExceptions = raiseExceptions)
-            #mpf.doStats('MultiPeakFitOutput.h5', closeFigures = True)
+            mpf.fitAllSpectra(os.getcwd(), outputFileName, npSize = 80, first = startSpec, last = finishSpec, pl = pl, closeFigures = True, stats = True,
+                              raiseExceptions = raiseExceptions, raiseSpecExceptions = raiseExceptions)
+
 
             print '\nData fitting complete'
 
-        except Exception as e:
-            print '\nData fitting failed because %s' % (e)
+        else:
+            try:
+                outputFileName = mpf.createOutputFile('MultiPeakFitOutput')
+                mpf.fitAllSpectra(os.getcwd(), outputFileName, npSize = 80, first = startSpec, last = finishSpec, pl = pl, closeFigures = True, stats = True,
+                                  raiseExceptions = raiseExceptions, raiseSpecExceptions = raiseExceptions)
+
+                print '\nData fitting complete'
+
+            except Exception as e:
+                print '\nData fitting failed because %s' % (e)
 
     plt.close('all')
-
     absoluteEndTime = time.time()
     timeElapsed = absoluteEndTime - absoluteStartTime
 
