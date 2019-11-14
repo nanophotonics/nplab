@@ -1269,7 +1269,7 @@ def analysePlSpectrum(x, y, windowLength = 221, polyorder = 7, cutoff = 1000, fs
 
     plMetadata['Peak Heights'] = [peakMetadata[peak]['Height'] for peak in peaks]
 
-    if True not in np.where(plMetadata['Peak Heights'] > 0, True, False):# If spectrum only has negative peaks, it's probably not from an NPoM
+    if True not in np.where(plMetadata['Peak Heights'] > 0, True, False):# If spectrum only has negative peaks, there is no fluorescence
         plMetadata['NPoM?'] = False
 
     plMetadata['Peak Centers'] = [peakMetadata[peak]['Center'] for peak in peaks]
@@ -1337,16 +1337,25 @@ def histyFit(frequencies, bins, nPeaks = 1, xMaxs = [], yMaxs = []):
         center = xMaxs[0]
         height = yMaxs[0]
 
-        pars['g0_center'].set(center)
+        pars['g0_center'].set(center, min = bins.min(), max = (xMaxs[1] + xMaxs[0])/2)
         pars['g0_height'].set(height, min = 0)
 
         for n in range(nPeaks)[1:]:
+
+            if n == nPeaks - 1:
+                cMax = bins.max()
+
+            else:
+                cMax = (xMaxs[n] + xMaxs[n + 1])/2
+
+            cMin = (xMaxs[n] + xMaxs[n - 1])/2
+
             center = xMaxs[n]
             height = yMaxs[n]
 
             gModN = GaussianModel(prefix = 'g%s_' % n)
             parsN = gModN.guess(frequencies, x = bins)
-            parsN['g%s_center' % n].set(center)
+            parsN['g%s_center' % n].set(center, min = cMin, max = cMax)
             parsN['g%s_height' % n].set(height, min = 0)
 
             gMod += gModN
@@ -1365,9 +1374,16 @@ def histyFit(frequencies, bins, nPeaks = 1, xMaxs = [], yMaxs = []):
             fwhm.append(out.params['g%s_fwhm' % n].value)
             sigma.append(out.params['g%s_sigma' % n].value)
 
-        print '\t\tAverage peak positions: %s' % [float('%.03f' % i) for i in resonance]
-        print '\t\tStdErrs: %s' % [float('%.03f' % i) for i in stderr]
-        print '\t\tFWHMs: %s nm\n' % [float('%.03f' % i) for i in fwhm]
+        try:
+            print '\t\tAverage peak positions: %s' % [float('%.03f' % i) for i in resonance]
+            print '\t\tStdErrs: %s' % [float('%.03f' % i) for i in stderr]
+            print '\t\tFWHMs: %s nm\n' % [float('%.03f' % i) for i in fwhm]
+
+        except:
+            stderr = [0] * len(sterr)
+            print '\t\tAverage peak positions: %s' % resonance
+            print '\t\tStdErrs: %s' % stderr
+            print '\t\tFWHMs: %s nm\n' % fwhm
 
     return resonance, stderr, fwhm, sigma, fit
 
@@ -1522,7 +1538,7 @@ def plotHistogram(outputFileName, npomType = 'All NPoMs', startWl = 450, endWl =
             if not npomType.endswith('.png'):
                 npomType += '.png'
 
-            fig.savefig('Histograms/%s' % (npomType), bbox_inches = 'tight')
+            fig.savefig('Histograms/DF %s' % (npomType), bbox_inches = 'tight')
 
             if closeFigures == True:
                 plt.close('all')
@@ -1672,6 +1688,12 @@ def plotPlHistogram(outputFileName, npomType = 'All NPoMs', startWl = 504, endWl
 
             resonance, stderr, fwhm, sigma, fit = histyFit(freqInterp, x, nPeaks = nPeaks, xMaxs = xMaxs, yMaxs = yMaxs)
 
+            if nPeaks == 1:
+                resonance = [resonance]
+                stderr = [stderr]
+                fwhm = [fwhm]
+                sigma = [sigma]
+
             #for n, res in enumerate(resonance):
             #print '\t\tAverage peakpos: %s' % (resonance)
             #print '\t\tFWHM: %s nm\n' % fwhm
@@ -1820,7 +1842,10 @@ def plotPlHistogram(outputFileName, npomType = 'All NPoMs', startWl = 504, endWl
             else:
                 ax2.set_ylabel('Frequency', fontsize = 18)
                 ax2.plot(x, fit, 'k--')
-                plt.title('%s: %s\n%s peaks at:\n%s' % (date, npomType, nPeaks, str([float('%.02f' % i) for i in resonance])[1:-1]))
+                try:
+                    plt.title('%s: %s\n%s peaks at:\n%s' % (date, npomType, nPeaks, str([float('%.02f' % i) for i in resonance])[1:-1]))
+                except:
+                    plt.title('%s: %s' % (date, npomType))
 
             ax2.tick_params(labelsize = 15)
             fig.tight_layout()
@@ -1873,6 +1898,7 @@ def plotPlHistAndFit(outputFileName, npomType = 'All NPoMs', startWl = 504, endW
 
         gHist.attrs['Average resonance'] = avgResonance
         gHist.attrs['Error'] = stderr
+
         gHist.attrs['FWHM'] = fwhm
         gHist.attrs['Standard deviation'] = sigma
         gHist.attrs['Gaussian Fit'] = fit
@@ -1951,6 +1977,7 @@ def plotHistComb1D(outputFileName, npomType = 'All NPoMs', dfStartWl = 450, dfEn
         plX = gPlHist.attrs['wavelengths'][()]
         plFit = gPlHist.attrs['Gaussian Fit'][()]
         plResonance = gPlHist.attrs['Average resonance'][()]
+        print plResonance
         nPeaks = len(plResonance)
 
         dfFrequencies = np.array([float(i) for i in dfFrequencies])
@@ -2036,7 +2063,7 @@ def plotHistComb1D(outputFileName, npomType = 'All NPoMs', dfStartWl = 450, dfEn
     plBinSize = plBins[1] - plBins[0]
     dfBinSize = dfBins[1] - dfBins[0]
 
-    ax2.bar(plBins[:-1], plFrequencies, color = 'grey', width = 0.8*plBinSize, alpha = 0.8, linewidth = 0.6)
+    ax2.bar(plBins[:-1], plFrequencies, color = 'blue', width = 0.8*plBinSize, alpha = 0.8, linewidth = 0.6)
     ax2.bar(dfBins[:-1], dfFrequencies, color = 'grey', width = 0.8*dfBinSize, alpha = 0.8, linewidth = 0.6)
     ax2.bar(dfBinsPlot, dfFreqsPlot, color = colors, width = 0.8*dfBinSize, alpha = 0.4, linewidth = 1)
     ax2.plot(plX, plFit, 'k--')

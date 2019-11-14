@@ -444,7 +444,7 @@ class CameraWithLocationControlUI(QtWidgets.QWidget):
         """Run an XY calibration, with a progress bar in the foreground"""
         # 
         run_function_modally(self.cwl.calibrate_xy,
-                             progress_maximum=7, step = None if self.calibration_distance<= 0 else float(self.calibration_distance))
+                             progress_maximum=self.cwl.af_steps+1, step = None if self.calibration_distance<= 0 else float(self.calibration_distance))
     def load_calibration_gui(self):
         self.cwl.load_calibration()
 
@@ -482,7 +482,7 @@ class AcquireGridOfImages(ExperimentWithProgressBar):
         self.completion_function = completion_function
 
     def prepare_to_run(self, n_tiles=None, overlap_pixels = 250,
-                       data_group=None,autofocus = False, *args, **kwargs):
+                       data_group=None, autofocus = False, *args, **kwargs):
         self.autofocus = autofocus
         self.progress_maximum = n_tiles[0] * n_tiles[1]
         self.overlap_pixels = overlap_pixels
