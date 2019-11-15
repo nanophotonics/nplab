@@ -1,6 +1,6 @@
 __author__ = 'alansanders'
 
-from nplab.instrument.shutter import Shutter
+from nplab.instrument.shutter import ShutterWithEmulatedRead
 import nplab.instrument.serial_instrument as serial
 
 
