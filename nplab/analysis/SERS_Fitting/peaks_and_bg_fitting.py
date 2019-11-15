@@ -6,7 +6,7 @@ Created on Mon Jul 15 11:50:45 2019
 
 The fullfit class is the main thing here - sample use:
     from nplab.analysis.peaks_and_bg_fitting import fullfit
-    ff = fullfit( 
+>>>ff = fullfit( 
                  spec,
                  shifts, 
                  lineshape = 'L',
@@ -23,15 +23,15 @@ The fullfit class is the main thing here - sample use:
         bg function determines what function to use for the background, default is polynomial. Feel free to add your own functions here!
         set vary_const_bg to False if the spectrum is already (electronic) background subtracted and you're using an exponential fit
     
-    ff.Run() # this does the actual fitting.
+>>>ff.Run() # this does the actual fitting.
                 then the peaks are stored as 
-    ff.peaks # 1d list of parameters: height, x-position, and width. Plot with ff.multi_L(peaks)
-    ff.peaks_stack has them in a 2d array so you can plot the peaks individually like so:
+>>>ff.peaks # 1d list of parameters: height, x-position, and width. Plot with ff.multi_L(peaks)
+>>>ff.peaks_stack has them in a 2d array so you can plot the peaks individually like so:
         for peak in ff.peaks_stack:
             plt.plot(ff.shifts, ff.L(ff.shifts, peak))
-    ff.bg gives the background as a 1d array.
-    ff.signal gives the background-subtracted spectrum, divided by the transmission
-    ff.bg_p gives the polynomial coefficients, or in the case of exponential background Amplitude, Temperature and constant background
+>>>ff.bg gives the background as a 1d array.
+>>>ff.signal gives the background-subtracted spectrum, divided by the transmission
+>>>ff.bg_p gives the polynomial coefficients, or in the case of exponential background Amplitude, Temperature and constant background
 
 The fitting works as follows: 
     Run(self,
