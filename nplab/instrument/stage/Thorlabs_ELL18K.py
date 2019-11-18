@@ -11,7 +11,9 @@ import struct
 from nplab.instrument import serial_instrument as serial
 import numpy as np
 
-class ELL18K(SerialInstrument,Stage):
+
+
+class ELL18K():
 
 	def __init__(self,Port=None,Backlash_Correct=True):
 		"""
