@@ -1,10 +1,10 @@
 __author__ = 'alansanders'
 
-from nplab.instrument.shutter import ShutterWithEmulatedRead
+from nplab.instrument.shutter import Shutter
 import nplab.instrument.serial_instrument as serial
 
 
-class ThorLabsSC10(ShutterWithEmulatedRead, serial.SerialInstrument):
+class ThorLabsSC10(Shutter, serial.SerialInstrument):
     port_settings = dict(baudrate=9600,
                          bytesize=serial.EIGHTBITS,
                          parity=serial.PARITY_NONE,
