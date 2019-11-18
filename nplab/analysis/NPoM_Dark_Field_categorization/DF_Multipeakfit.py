@@ -3,6 +3,10 @@
 Created on Fri Nov 02 14:01:17 2018
 
 @author: car72
+
+Contains all necessary functions for analysis of NPoM darkfield and photoluminescence spectra
+Best used in conjunction with Condense_Fit_DF or Condense_Fit_DF_PL scripts
+
 """
 if __name__ == '__main__':
     print 'Importing modules...'
@@ -26,7 +30,8 @@ if __name__ == '__main__':
 
 def findH5File(rootDir, mostRecent = True, nameFormat = 'date'):
     '''
-    Finds either oldest or most recent .h5 file in a folder whose name contains a specified string
+    Finds either oldest or most recent .h5 file in a folder whose name begins with a specified string
+    Default name format ('date') is yyyy-mm-dd
     '''
 
     os.chdir(rootDir)
@@ -46,8 +51,8 @@ def findH5File(rootDir, mostRecent = True, nameFormat = 'date'):
             print 'Searching for oldest instance of yyyy-mm-dd.h5 or similar...'
 
         h5File = sorted([i for i in os.listdir('.') if re.match('\d\d\d\d-[01]\d-[0123]\d', i[:10])
-                         and (i.endswith('.h5') or i.endswith('.hdf5'))],
-                        key = lambda i: os.path.getmtime(i))[n]
+                         and (i.endswith('.h5') or i.endswith('.hdf5'))],#finds list of filenames with yyyy-mm-dd(...).h(df)5 format
+                        key = lambda i: os.path.getmtime(i))[n]#sorts them by date and picks either oldest or newest depending on value of 'mostRecent'
 
     else:
 
@@ -57,9 +62,9 @@ def findH5File(rootDir, mostRecent = True, nameFormat = 'date'):
         else:
             print 'Searching for oldest instance of %s.h5 or similar...' % nameFormat
 
-        h5File = sorted([i for i in os.listdir('.') if i.startswith(nameFormat)
+        h5File = sorted([i for i in os.listdir('.') if i.startswith(nameFormat)#finds list of filenames with (nameFormat)(...).h(df)5 format
                          and (i.endswith('.h5') or i.endswith('.hdf5'))],
-                        key = lambda i: os.path.getmtime(i))[n]
+                        key = lambda i: os.path.getmtime(i))[n]#sorts them by date and picks either oldest or newest depending on value of 'mostRecent'
 
     print '\tH5 file %s found\n' % h5File
 
@@ -72,86 +77,147 @@ def removeNaNs(array):
     Output = copy of same array/list with no NaNs
     '''
 
-    numNaNs = len([i for i in array if not np.isfinite(i)])
+    numNaNs = len([i for i in array if not np.isfinite(i)])#checks for NaN values
 
     if numNaNs == 0:
-        return array
+        return array#returns original array if no NaNs
 
-    newArray = np.copy(array)
+    newArray = np.copy(array)#so we don't change original array
 
-    for n, i in enumerate(newArray):
+    for n, i in enumerate(newArray):#checks for NaNs at start of array
 
-        if np.isfinite(i):
+        if np.isfinite(i):#finds index of first finite value in array
             break
 
-    newArray[:n] = np.average(newArray[n:n+3])
+    newArray[:n] = np.average(newArray[n:n+3])#turns any initial missing values into a flat line
 
-    for n, i in enumerate(newArray[::-1]):
+    for n, i in enumerate(newArray[::-1]):#checks for NaNs at end of array
 
-        if np.isfinite(i):
+        if np.isfinite(i):#finds index of last finite value in array
             break
 
-    newArray[-n:] = np.average(newArray[-(n+4):-(n + 1)])
+    if n > 0:
+        newArray[-n:] = np.average(newArray[-(n+4):-(n + 1)])#turns any final missing values into a flat line
 
-    nandices = np.array([n for n, i in enumerate(newArray) if not np.isfinite(i)])
+    nandices = np.array([n for n, i in enumerate(newArray) if not np.isfinite(i)])#locates indices of remaining NaN values
 
     for nandex in nandices:
 
-        if np.isfinite(newArray[nandex]):
+        if np.isfinite(newArray[nandex]):#if NaN value has already been fixed on a previous iteration, moves to the next one
             continue
 
-        for n, i in enumerate(newArray[nandex:]):
-            if np.isfinite(i):
+        for n, i in enumerate(newArray[nandex:]):#scans forward to look for consecutive NaNs
+            if np.isfinite(i):#finds length of NaN sequence
                 break
 
-        interpInit = np.average(newArray[nandex - 3:nandex])
-        interpEnd = np.average(newArray[nandex + n :nandex + n + 3])
-        interPlump = np.linspace(interpInit, interpEnd, n + 2)
-        newArray[nandex:nandex+n] = interPlump[1:-1]
+        interpInit = np.average(newArray[nandex - 3:nandex])#start point for linear interpolation; corrects for noise by averaging a few values
+        interpEnd = np.average(newArray[nandex + n :nandex + n + 3])#interpolation end point; also de-noised
+        interPlump = np.linspace(interpInit, interpEnd, n + 2)#linearly interpolates between the finite values either side of the NaN sequence
+        newArray[nandex:nandex+n] = interPlump[1:-1]#replaces NaNs with the new data points
 
     return newArray
 
 def removeCosmicRays(x, y, reference = 1, factor = 15):
+
+    '''
+    Looks for large sharp spikes in spectrum via 1st derivative
+    Threshold of "large" determined by 'factor'
+    If correecting a referenced DF spectrum (or similar), reference = reference spectrum (1D array). Otherwise, reference= 1
+    Erases a small window around each spike and replaces it with a straight line via the removeNaNs function
+    '''
+
     newY = np.copy(y)
-    cosmicRay = True
+    cosmicRay = True#Guilty until proven innocent
     iteration = 0
     rayDex = 0
     nSteps = 1
 
     while cosmicRay == True and iteration < 20:
-        d2 = centDiff(x, newY)
-        d2 *= np.sqrt(reference)
+        d1 = centDiff(x, newY)#takes dy/dx via central difference method
+        d1 *= np.sqrt(reference)#de-references the spectrum to enhance cosmic ray detection in noisy regions
 
-        d2 = abs(d2)
-        d2Med = np.median(d2)
+        d1 = abs(d1)#takes magnitude of first derivative
+        d1Med = np.median(d1)#finds median gradient -> dy/dx should be larger than this for a cosmic ray
 
-        if max(d2)/d2Med > factor:
+        if max(d1)/d1Med > factor:#if the maximum dy/dx value is more than a certain mutliple of the median, a cosmic ray exists
             oldRayDex = rayDex
-            rayDex = d2.argmax() - 1
+            rayDex = d1.argmax() - 1#cosmic ray spike happens just before largest |dy/dx| value
 
-            if abs(rayDex - oldRayDex) < 5:
-                nSteps += 1
+            if abs(rayDex - oldRayDex) < 5:#if a cosmic ray still exists near where the old one was 'removed':
+                nSteps += 1#the erasure window is iteratively widened
 
-            else:
+            else:#otherwise, just clean up to one data point either side
                 nSteps = 1
 
             iteration += 1
 
-            for i in np.linspace(0 - nSteps, nSteps, 2*nSteps + 1):
-                newY[rayDex + int(i)] = np.nan
+            for i in np.linspace(0 - nSteps, nSteps, 2*nSteps + 1):#for a window centred around the spike
+                newY[rayDex + int(i)] = np.nan #erase the data points
 
-            newY = removeNaNs(newY)
+            newY = removeNaNs(newY)#linearly interpolate between data points adjacent to the spike
 
-        else:
-            cosmicRay = False
+        else:#if no 'large' spikes exist in the spectrum
+            cosmicRay = False #no cosmic rays left to fix
 
     return newY
 
+def truncateSpectrum(x, y, startWl = 450, finishWl = 900):
+    '''
+    Truncates xy data spectrum within a specified wavelength range. Useful for removing high and low-end noise or analysing certain spectral regions.
+    x and y must be 1D arrays (or lists) of identical length
+    Default range is 450-900 nm (good for lab 3)
+    '''
+    x = np.array(x)
+    y = np.array(y)
+    reverse = False
+
+    if x[0] > x[-1]:#if x is in descending order, x and y are reversed
+        reverse = True
+        x = x[::-1]
+        y = y[::-1]
+
+    if x[0] > startWl:#if truncation window extends below spectral range:
+        xStart = np.arange(x[0], startWl - 2, x[0] - x[1])[1:][::-1]
+        yStart = np.array([np.average(y[:5])] * len(xStart))
+        x = np.concatenate((xStart, x))
+        y = np.concatenate((yStart, y))#Adds buffer to start of x and y to ensure the truncated length is still defined by startWl and finishWl
+
+    if x[-1] < finishWl:#if truncation window extends above spectral range:
+        xFin = np.arange(x[-1], finishWl + 2, x[1] - x[0])[1:]
+        yFin =  np.array([np.average(y[-5:])] * len(xFin))
+        x = np.concatenate((x, xFin))
+        y = np.concatenate((y, yFin))#Adds buffer to end of x and y to ensure the truncated length is still defined by startWl and finishWl
+
+    startIndex = (abs(x - startWl)).argmin()#finds index corresponding to startWl
+    finishIndex = (abs(x - finishWl)).argmin()#index corresponding to finishWl
+
+    xTrunc = np.array(x[startIndex:finishIndex])#truncates x using these indices
+    yTrunc = np.array(y[startIndex:finishIndex])#truncates y using these indices
+
+    if reverse == True:#if the spectrum had to be reversed earlier, this flips it back.
+        xTrunc = xTrunc[::-1]
+        yTrunc = yTrunc[::-1]
+
+    if xTrunc.size <= 10 and x.size <= 100:#sometimes fails for very short arrays; this extra bit works better in those cases
+
+        if startWl > finishWl:
+            wl1 = finishWl
+            wl2 = startWl
+            startWl = wl1
+            finishWl = wl2
+
+        xTrunc, yTrunc = np.transpose(np.array([[i, y[n]] for n, i in enumerate(x) if startWl < i < finishWl]))
+
+    return np.array([xTrunc, yTrunc])
+
 def retrieveData(directory, summaryNameFormat = 'summary', first = 0, last = 0, attrsOnly = False):
 
-    '''Retrieves data and metadata from summary file'''
+    '''
+    Retrieves darkfield data and metadata from summary file
+    Use 'first' and 'last' to truncate dataset if necessary. Setting last = 0 -> last = (end of dataset). Useful if initial spectra failed or if someone switched the lights on in the morning
+    '''
 
-    summaryFile = findH5File(directory, nameFormat = summaryNameFormat)
+    summaryFile = findH5File(directory, nameFormat = summaryNameFormat)#looks for most recent file titled 'summary(...).h(df)5 in current directory
 
     if attrsOnly == False:
         print 'Retrieving data...'
@@ -159,42 +225,41 @@ def retrieveData(directory, summaryNameFormat = 'summary', first = 0, last = 0, 
     else:
         print 'Retrieving sample attributes...'
 
-    with h5py.File(summaryFile) as f:
+    with h5py.File(summaryFile) as f:#opens summary file
 
         mainDatasetName = sorted([scan for scan in f['particleScanSummaries/'].keys()],
-                           key = lambda scan: len(f['particleScanSummaries/'][scan]['spectra']))[-1]
+                           key = lambda scan: len(f['particleScanSummaries/'][scan]['spectra']))[-1]#finds largest datset. Useful if you had to stop and start your particle tracking before leaving it overnight
 
-        mainDataset = f['particleScanSummaries/'][mainDatasetName]['spectra']
-        summaryAttrs = {key : mainDataset.attrs[key] for key in mainDataset.attrs.keys()}
+        mainDataset = f['particleScanSummaries/'][mainDatasetName]['spectra']#opens dataset object
+        summaryAttrs = {key : mainDataset.attrs[key] for key in mainDataset.attrs.keys()}#creates python dictionary from dataset attributes/metadata
 
-        if attrsOnly == True:
+        if attrsOnly == True:#If you only want the metadata to update your main output file
             print '\tInfo retrieved from %s' % mainDatasetName
             print '\t\t%s spectra in total\n' % len(mainDataset)
             return summaryAttrs
 
         if last == 0:
-            last = len(mainDataset)
+            last = len(mainDataset)#last = 0 -> last = (end of dataset)
 
-        spectra = mainDataset[()][first:last]
-        wavelengths = summaryAttrs['wavelengths'][()]
-        nSpec = len(spectra)
+        spectra = mainDataset[()][first:last]#truncates dataset, if specified
+        wavelengths = summaryAttrs['wavelengths'][()]#x axis
 
-        print '\t%s spectra retrieved from %s\n' % (nSpec, mainDatasetName)
+        print '\t%s spectra retrieved from %s\n' % (len(spectra), mainDatasetName)
 
         print 'Removing cosmic ray events...'
 
         prepStart = time.time()
 
-        wavelengths = removeNaNs(wavelengths)
-        reference = summaryAttrs['reference']
+        wavelengths = removeNaNs(wavelengths)#what it says on the tin
+        reference = summaryAttrs['reference']#for use in cosmic ray removal
 
         for n, spectrum in enumerate(spectra):
 
             try:
-                newSpectrum = removeCosmicRays(wavelengths, spectrum, reference = reference)
+                newSpectrum = removeCosmicRays(wavelengths, spectrum, reference = reference)#attempts to remove cosmic rays from spectrum
 
-                if False in np.where(newSpectrum == newSpectrum[0], True, False):
-                    spectra[n] = newSpectrum
+                if False in np.where(newSpectrum == newSpectrum[0], True, False):#if removeCosmicRays and removeNaNs have worked properly
+                    spectra[n] = newSpectrum#replaces spectrum with cleaned up version
 
                 else:
                     print 'Cosmic ray removal failed for spectrum %s' % n
@@ -212,104 +277,58 @@ def retrieveData(directory, summaryNameFormat = 'summary', first = 0, last = 0, 
 
         prepStart = time.time()
 
-        spectra = np.array([removeNaNs(spectrum) for spectrum in spectra])
+        spectra = np.array([removeNaNs(spectrum) for spectrum in spectra])#Extra NaN removal in case removeCosmicRays failed
 
         prepEnd = time.time()
-        prepTime = prepEnd - prepStart
+        prepTime = prepEnd - prepStart#time elapsed
 
         print '\tAll spectra cleared of NaNs in %.2f seconds\n' % (prepTime)
 
         return wavelengths, spectra, summaryAttrs
 
-def truncateSpectrum(x, y, startWl = 450, finishWl = 900):
-    '''
-    Truncates xy data spectrum within a specified wavelength range. Useful for removing high and low-end noise.
-    Default range is 450-900 nm
-    '''
-    x = np.array(x)
-    y = np.array(y)
-    reverse = False
-
-    if x[0] > x[-1]:
-        reverse = True
-        x = x[::-1]
-        y = y[::-1]
-
-    if x[0] > startWl:#Adds pad to start of y so that output size isn't affected
-        xStart = np.arange(x[0], startWl - 2, x[0] - x[1])[1:][::-1]
-        yStart = np.array([np.average(y[:5])] * len(xStart))
-        x = np.concatenate((xStart, x))
-        y = np.concatenate((yStart, y))
-
-    if x[-1] < finishWl:#adds pad at end
-        xFin = np.arange(x[-1], finishWl + 2, x[1] - x[0])[1:]
-        yFin =  np.array([np.average(y[-5:])] * len(xFin))
-        x = np.concatenate((x, xFin))
-        y = np.concatenate((y, yFin))
-
-    startIndex = (abs(x - startWl)).argmin()
-    finishIndex = (abs(x - finishWl)).argmin()
-
-    xTrunc = np.array(x[startIndex:finishIndex])
-    yTrunc = np.array(y[startIndex:finishIndex])
-
-    if reverse == True:
-        xTrunc = xTrunc[::-1]
-        yTrunc = yTrunc[::-1]
-
-    if xTrunc.size <= 10 and x.size <= 100:
-
-        if startWl > finishWl:
-            wl1 = finishWl
-            wl2 = startWl
-            startWl = wl1
-            finishWl = wl2
-
-        xTrunc, yTrunc = np.transpose(np.array([[i, y[n]] for n, i in enumerate(x) if startWl < i < finishWl]))
-
-    return np.array([xTrunc, yTrunc])
-
 def retrievePlData(directory, summaryNameFormat = 'summary', first = 0, last = 0):
-    summaryFile = findH5File(directory, nameFormat = summaryNameFormat) #Find latest summary file in working directory
+    '''
+    Retrieves photolumineasence data and metadata from summary file
+    Use 'first' and 'last' to truncate dataset if necessary. Setting last = 0 -> last = (end of dataset). Useful if initial spectra failed or if someone switched the lights on in the morning
+    '''
+    summaryFile = findH5File(directory, nameFormat = summaryNameFormat) #looks for most recent file titled 'summary(...).h(df)5 in current directory
 
     print 'Retrieving PL data...'
 
-    with h5py.File(summaryFile) as f:#Open file
+    with h5py.File(summaryFile) as f:#Opens summary file
 
         gPlName = sorted([scan for scan in f['particleScanSummaries/'].keys()],
-                           key = lambda scan: len(f['particleScanSummaries/'][scan]['spectra']))[-1]#Find name of longest dataset, usually 'scan0'
-        reference = f['particleScanSummaries/%s/spectra' % gPlName].attrs['reference'][()]
+                           key = lambda scan: len(f['particleScanSummaries/'][scan]['spectra']))[-1]#finds largest datset. Useful if you had to stop and start your particle tracking before leaving it overnight
+        reference = f['particleScanSummaries/%s/spectra' % gPlName].attrs['reference'][()]#gets reference from DF spectra metadata
 
+        gPl = f['NPoM PL Spectra/%s' % gPlName]#opens dataset object
 
-        gPl = f['NPoM PL Spectra/%s' % gPlName]#use this name to open main PL data group
-
-        if last == 0:#specified if all spectra
-            last = len(gPl.keys())
+        if last == 0:
+            last = len(gPl.keys())#last = 0 -> last = (end of dataset)
 
         dPlNames = sorted(gPl.keys(), key = lambda dPlName: int(dPlName.split(' ')[-1]))[first:last]#creates list of PL spectrum names within specified bounds
-        nSpec = len(dPlNames)
-        print '\t%s PL spectra retrieved from %s\n' % (nSpec, gPlName)
+        print '\t%s PL spectra retrieved from %s\n' % (len(dPlNames), gPlName)
         print 'Removing cosmic ray events...'
         prepStart = time.time()
 
-        xPl = gPl[dPlNames[0]].attrs['wavelengths']
-        xPl = removeNaNs(xPl)
+        xPl = gPl[dPlNames[0]].attrs['wavelengths']#x axis
+        xPl = removeNaNs(xPl)#what it says on the tin
 
         reference = truncateSpectrum(xPl, reference, startWl = xPl[0], finishWl = xPl[-1])[1]
-        reference = np.append(reference, reference[-1])
+        reference = np.append(reference, reference[-1])#for processing post-PL DF
 
-        plData = np.array([gPl[dPlName][()] for dPlName in dPlNames])
-        dfAfter = np.array([gPl[dPlName].attrs['DF After'][()] for dPlName in dPlNames])
-        areas = np.array([gPl[dPlName].attrs['Total Area'] for dPlName in dPlNames])
-        bgScales = np.array([gPl[dPlName].attrs['Background Scale Factor'] for dPlName in dPlNames])
+        plData = np.array([gPl[dPlName][()] for dPlName in dPlNames])#collects all PL spectra of interest
+        dfAfter = np.array([gPl[dPlName].attrs['DF After'][()] for dPlName in dPlNames])#collects corresponding DF spectra
+        areas = np.array([gPl[dPlName].attrs['Total Area'] for dPlName in dPlNames])#corresponding integrated PL intensities
+        bgScales = np.array([gPl[dPlName].attrs['Background Scale Factor'] for dPlName in dPlNames])#corresponding scaling factors for PL background subtraction
 
         for n, plSpectrum in enumerate(plData):
 
             try:
-                plSpectrum = removeCosmicRays(xPl, plSpectrum, reference = plSpectrum)
+                plSpectrum = removeCosmicRays(xPl, plSpectrum, reference = plSpectrum)#attempts to remove cosmic rays from PL spectrum
 
-                if False in np.where(plSpectrum == plSpectrum[0], True, False):
-                    plData[n] = plSpectrum
+                if False in np.where(plSpectrum == plSpectrum[0], True, False):#if removeCosmicRays and removeNaNs have worked properly
+                    plData[n] = plSpectrum#replaces PL spectrum with cleaned up version
 
                 else:
                     print 'Cosmic ray removal failed for PL spectrum spectrum %s' % n
@@ -318,10 +337,10 @@ def retrievePlData(directory, summaryNameFormat = 'summary', first = 0, last = 0
                 pass
 
             try:
-                dfAfterSpec = removeCosmicRays(xPl, dfAfter[n], reference = reference)
+                dfAfterSpec = removeCosmicRays(xPl, dfAfter[n], reference = reference)#attempts to remove cosmic rays from DF spectrum
 
-                if False in np.where(dfAfterSpec == dfAfterSpec[0], True, False):
-                    dfAfter[n] = dfAfterSpec
+                if False in np.where(dfAfterSpec == dfAfterSpec[0], True, False):#if removeCosmicRays and removeNaNs have worked properly
+                    dfAfter[n] = dfAfterSpec#replaces DF spectrum with cleaned up version
 
                 else:
                     print 'Cosmic ray removal failed for post-PL DF spectrum spectrum %s' % n
@@ -330,22 +349,26 @@ def retrievePlData(directory, summaryNameFormat = 'summary', first = 0, last = 0
                 pass
 
         prepEnd = time.time()
-        prepTime = prepEnd - prepStart
+        prepTime = prepEnd - prepStart#time elapsed
 
         print '\tAll cosmic rays removed in %.2f seconds\n' % (prepTime)
         print 'Cleaning up NaN values...'
 
         prepStart = time.time()
-        plData = np.array([removeNaNs(plSpec) for plSpec in plData])
-        dfAfter = np.array([removeNaNs(dfSpectrum) for dfSpectrum in dfAfter])
+        plData = np.array([removeNaNs(plSpec) for plSpec in plData])#Extra NaN removal in case removeCosmicRays failed
+        dfAfter = np.array([removeNaNs(dfSpectrum) for dfSpectrum in dfAfter])#Extra NaN removal in case removeCosmicRays failed
         prepEnd = time.time()
-        prepTime = prepEnd - prepStart
+        prepTime = prepEnd - prepStart#time elapsed
 
         print '\tAll spectra cleared of NaNs in %.2f seconds\n' % (prepTime)
 
         return xPl, plData, dfAfter, areas, bgScales
 
 def determineVLims(zData, threshold = 1e-4):
+    '''
+    Calculates appropriate intensity limits for 2D plot based on frequency distribution of intensities.
+    '''
+
     zFlat = zData.flatten()
 
     frequencies, bins = np.histogram(zFlat, bins = 100, density = False)
@@ -376,6 +399,7 @@ def plotStackedMap(x, yData, imgName = 'Stack', plotTitle = 'Stack', closeFigure
     Stacks will be saved as [imgName].png in 'Stacks'
     If init == False, image will be saved in current directory
     '''
+
     if init == True:
         print 'Plotting %s...' % imgName
         stackStartTime = time.time()
@@ -426,20 +450,20 @@ def plotStackedMap(x, yData, imgName = 'Stack', plotTitle = 'Stack', closeFigure
 
         print '\tInitial stack plotted in %s seconds\n' % timeElapsed
 
-    #except Exception as e:
-    #    print '\tPlotting of %s failed because %s' % (imgName, str(e))
 
 def plotInitStack(x, yData, imgName = 'Initial Stack', closeFigures = True, vThresh = 2e-4):
+    '''Quickly plots stack of all DF spectra before doing the full analysis. Useful for quickly assessing the dataset quality'''
 
-    yDataTrunc = np.array([truncateSpectrum(x, spectrum)[1] for spectrum in yData])# truncate to NPoM range
-    xStack = truncateSpectrum(x, yData[0])[0] # x axis
+    yDataTrunc = np.array([truncateSpectrum(x, spectrum)[1] for spectrum in yData])#truncate to NPoM range
+    xStack = truncateSpectrum(x, yData[0])[0]#x axis
 
     transIndex = abs(xStack - 533).argmin()
-    yDataTrunc = np.array([spectrum / spectrum[transIndex] for spectrum in yDataTrunc])# normalise to ~transverse mode
+    yDataTrunc = np.array([spectrum / spectrum[transIndex] for spectrum in yDataTrunc])#normalise to ~transverse mode
 
     plotStackedMap(xStack, yDataTrunc, imgName = imgName, plotTitle = imgName, closeFigures = closeFigures, init = True, vThresh = vThresh)
 
 def plotInitPlStack(xPl, plData, imgName = 'Initial PL Stack', closeFigures = True, vThresh = 5e-5):
+    '''Same as above, but for PL data'''
 
     yDataTrunc = np.array([truncateSpectrum(xPl, plSpectrum, startWl = 580)[1] for plSpectrum in plData])# truncate to remove laser leak
     xStack = truncateSpectrum(xPl, plData[0], startWl = 580)[0] # x axis
@@ -452,7 +476,8 @@ def createOutputFile(filename):
 
     print 'Creating output file...'
 
-    outputFile = '%s.h5' % filename
+    if not (filename.endswith('.h5') or filename.endswith('.hdf5')):
+        outputFile = '%s.h5' % filename
 
     if outputFile in os.listdir('.'):
         print '\t%s already exists' % outputFile
@@ -468,7 +493,10 @@ def createOutputFile(filename):
     return outputFile
 
 def butterLowpassFiltFilt(data, cutoff = 1500, fs = 60000, order=5):
-    '''Smoothes data without shifting it'''
+    '''
+    Decent smoothing function for DF spectra
+    Increase cutoff/decrease fs for more wibbles
+    '''
     nyq = 0.5 * fs
     normalCutoff = cutoff / nyq
     b, a = butter(order, normalCutoff, btype='low', analog=False)
@@ -476,6 +504,8 @@ def butterLowpassFiltFilt(data, cutoff = 1500, fs = 60000, order=5):
     return yFiltered
 
 def printEnd():
+    '''Some Doge approval for when you finish'''
+
     print '%s%s%sv gud' % ('\t' * randint(0, 12), '\n' * randint(0, 5), ' ' * randint(0, 4))
     print '%s%ssuch python' % ('\n' * randint(0, 5), ' ' * randint(0, 55))
     print '%s%smany spectra' % ('\n' * randint(0, 5), ' ' * randint(10, 55))

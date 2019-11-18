@@ -1,10 +1,10 @@
 __author__ = 'alansanders'
 
-from nplab.instrument.shutter import Shutter
+from nplab.instrument.shutter import ShutterWithEmulatedRead
 import nplab.instrument.serial_instrument as serial
 
 
-class ThorLabsSC10(Shutter, serial.SerialInstrument):
+class ThorLabsSC10(ShutterWithEmulatedRead, serial.SerialInstrument):
     port_settings = dict(baudrate=9600,
                          bytesize=serial.EIGHTBITS,
                          parity=serial.PARITY_NONE,
@@ -22,11 +22,11 @@ class ThorLabsSC10(Shutter, serial.SerialInstrument):
     def toggle(self):
         self.write('ens')
 
-    def get_state(self):
-        if self.query('ens?') == '0':
-            return 'Closed'
-        elif self.query('ens?') == '1':
-            return 'Open'
+    # def get_state(self):
+    #     if self.query('ens?') == '0':
+    #         return 'Closed'
+    #     elif self.query('ens?') == '1':
+    #         return 'Open'
         
     def open_shutter(self):
         if self.get_state() == 'Closed':
