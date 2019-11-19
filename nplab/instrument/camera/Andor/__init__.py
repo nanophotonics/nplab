@@ -14,9 +14,9 @@ from weakref import WeakSet
 
 class Andor(CameraRoiScale, AndorBase):
 
-    def __init__(self, settings_filepath=None, **kwargs):
-        AndorBase.__init__(self)
-        CameraRoiScale.__init__(self)
+    def __init__(self, settings_filepath=None, camera_index=None, **kwargs):
+        super(Andor, self).__init__()
+        self.start(camera_index)
 
         self.CurImage = None
         self.background = None
@@ -30,7 +30,7 @@ class Andor(CameraRoiScale, AndorBase):
 
     def __del__(self):
         # Need to explicitly call this method so that the shutdown procedure is followed correctly
-        AndorBase.__del__(self)
+        self.end()
 
     '''Used functions'''
 
