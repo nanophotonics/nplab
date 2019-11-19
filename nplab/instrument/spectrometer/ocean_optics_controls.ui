@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>387</width>
-    <height>212</height>
+    <height>258</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -20,7 +20,16 @@
    <string>Form</string>
   </property>
   <layout class="QVBoxLayout" name="layout">
-   <property name="margin">
+   <property name="leftMargin">
+    <number>5</number>
+   </property>
+   <property name="topMargin">
+    <number>5</number>
+   </property>
+   <property name="rightMargin">
+    <number>5</number>
+   </property>
+   <property name="bottomMargin">
     <number>5</number>
    </property>
    <item>
@@ -78,11 +87,8 @@
           <property name="fieldGrowthPolicy">
            <enum>QFormLayout::FieldsStayAtSizeHint</enum>
           </property>
-          <property name="horizontalSpacing">
-           <number>6</number>
-          </property>
           <property name="verticalSpacing">
-           <number>6</number>
+           <number>3</number>
           </property>
           <item row="0" column="0">
            <widget class="QLabel" name="integration_time_label">
@@ -107,49 +113,55 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="tec_temperature_label">
+          <item row="1" column="1">
+           <widget class="QPushButton" name="set_tec_temperature_pushButton">
             <property name="text">
-             <string>TEC Temperature</string>
+             <string>Set Cooler temp</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="1">
+          <item row="4" column="0">
+           <widget class="QLCDNumber" name="tec_temperature_lcdNumber">
+            <property name="smallDecimalPoint">
+             <bool>false</bool>
+            </property>
+            <property name="digitCount">
+             <number>3</number>
+            </property>
+            <property name="segmentStyle">
+             <enum>QLCDNumber::Flat</enum>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <widget class="QPushButton" name="read_tec_temperature_pushButton">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="text">
+             <string>Read</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="0">
+           <widget class="QCheckBox" name="enable_tec">
+            <property name="text">
+             <string>Enable</string>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="1">
            <layout class="QHBoxLayout" name="tec_layout">
             <property name="leftMargin">
              <number>0</number>
             </property>
-            <item>
-             <widget class="QLineEdit" name="tec_temperature">
-              <property name="minimumSize">
-               <size>
-                <width>40</width>
-                <height>0</height>
-               </size>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="enable_tec">
-              <property name="text">
-               <string>Enable</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="read_tec">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="text">
-               <string>Read</string>
-              </property>
-             </widget>
-            </item>
            </layout>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLineEdit" name="set_tec_temperature_LineEdit"/>
           </item>
          </layout>
         </item>
