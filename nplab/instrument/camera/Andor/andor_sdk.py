@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from nplab.instrument.camera import CameraParameter
-from nplab.utils.thread_utils import locked_action, background_action
+from nplab.utils.thread_utils import locked_action
 from nplab.utils.log import create_logger
 import nplab.datafile as df
 import os
@@ -9,9 +9,12 @@ import platform
 import time
 from ctypes import *
 import numpy as np
+import tempfile
+import shutil
 
 
 LOGGER = create_logger('Andor SDK')
+TEMPORARY_PREFIX = '_andortemporary'
 
 
 def to_bits(integer):
@@ -71,7 +74,7 @@ class AndorParameter(CameraParameter):
         super(AndorParameter, self).fset(obj, value)
 
 
-class AndorBase:
+class AndorBase(object):
     """Base code handling the Andor SDK
 
     Most of the code for this class is setting up a general way of reading and writing parameters, which are then set up
@@ -88,20 +91,35 @@ class AndorBase:
         Andor.GetParameter('VSSpeed', 0)
     Which does not return the current VSSpeed, but the VSSpeed (in microseconds) of the setting 0.
     """
-
-    def __init__(self):
-        self._logger = LOGGER
+    def start(self, camera_index=None):
+        if not hasattr(self, '_logger'):
+            self._logger = LOGGER
 
         if platform.system() == 'Windows':
-            if platform.architecture()[0] == '32bit':
-                self.dll = windll.LoadLibrary(os.path.dirname(__file__) + "\\atmcd32d")
-            elif platform.architecture()[0] == '64bit':
-                self.dll = CDLL(os.path.dirname(__file__) + "\\atmcd64d")
+            directory = os.path.dirname(__file__)
+            for files in os.listdir(directory):
+                if files.startswith(TEMPORARY_PREFIX):
+                    # Remove temporary files not in use
+                    try:
+                        os.remove(os.path.join(directory, files))
+                    except:
+                        pass
+            self.temp_file_name = tempfile.mktemp(suffix='.dll', dir=directory, prefix=TEMPORARY_PREFIX)
+            bitness = platform.architecture()[0][:2]  # either 32 or 64
+            original_file = "%s/atmcd%sd.dll" % (directory, bitness)
+            shutil.copy(original_file, self.temp_file_name)
+
+            if bitness == '32':
+                self.dll = windll.LoadLibrary(self.temp_file_name)
+            elif bitness == '64':
+                self.dll = CDLL(self.temp_file_name)
             else:
                 raise Exception("Cannot detect Windows architecture")
         elif platform.system() == "Linux":
-            dllname = "usr/local/lib/libandor.so"
-            self.dll = cdll.LoadLibrary(dllname)
+            original_file = "usr/local/lib/libandor.so"
+            self.temp_file_name = tempfile.mktemp(suffix='.dll', dir='usr/local/lib/')
+            shutil.copy(original_file, self.temp_file_name)
+            self.dll = cdll.LoadLibrary(self.temp_file_name)
         else:
             raise Exception("Cannot detect operating system for Andor")
         self.parameters = parameters
@@ -111,13 +129,18 @@ class AndorBase:
                 self._parameters[key] = value['value']
             else:
                 self._parameters[key] = None
+
+        if self.get_andor_parameter('AvailableCameras') > 1:
+            if camera_index is None:
+                self._logger.warn('More than one camera available, but no index provided. Initializing camera 0')
+                camera_index = 0
+            camera_handle = self.get_andor_parameter('CameraHandle', camera_index)
+            self.set_andor_parameter('CurrentCamera', camera_handle)
         self.initialize()
 
-    @background_action
-    def __del__(self):
+    def end(self):
         """ Safe shutdown procedure """
-        # If the camera is a Classic or iCCD, you have to wait for the temperature to be higher than -20 before shutting
-        # down
+        # If the camera is a Classic or iCCD, wait for the temperature to be higher than -20 before shutting down
         if self.Capabilities['CameraType'] in [3, 4]:
             if self.cooler:
                 self.cooler = 0
@@ -126,6 +149,11 @@ class AndorBase:
                 time.sleep(1)
         self._logger.info('Shutting down')
         self._dll_wrapper('ShutDown')
+
+        # Remove the temporary dll file. First you need to unload the library
+        import _ctypes
+        _ctypes.FreeLibrary(self.dll._handle)
+        os.remove(self.temp_file_name)
 
     '''Base functions'''
 
@@ -629,6 +657,9 @@ class AndorBase:
 
 parameters = dict(
     AvailableCameras=dict(Get=dict(cmdName='GetAvailableCameras', Outputs=(c_uint,)), value=None),
+    CurrentCamera=dict(Get=dict(cmdName='GetCurrentCamera', Outputs=(c_uint,)),
+                       Set=dict(cmdName='SetCurrentCamera', Inputs=(c_uint,))),
+    CameraHandle=dict(Get=dict(cmdName='GetCameraHandle', Outputs=(c_uint,), Inputs=(c_uint, ))),
     channel=dict(value=0),
     PixelSize=dict(Get=dict(cmdName='GetPixelSize', Outputs=(c_float, c_float))),
     SoftwareWaitBetweenCaptures=dict(value=0),
