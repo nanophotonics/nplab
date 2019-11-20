@@ -108,7 +108,7 @@ class Trandor(Andor):#Andor
            return Andor_Capture_Function(self)
 
     x_axis=NotifiedProperty(Generate_Wavelength_Axis) #This is grabbed by the Andor code 
-
+    
     def read_spectrum(self):
             return np.array(self.capture()[0])
 

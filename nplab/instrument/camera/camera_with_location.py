@@ -421,6 +421,7 @@ class CameraWithLocationControlUI(QtWidgets.QWidget):
         cc = QuickControlBox("Settings")
         cc.add_doublespinbox("calibration_distance")
         cc.add_button("calibrate_xy_gui", "Calibrate XY")
+        cc.add_button('load_calibration_gui', 'Load Calibration')
         cc.auto_connect_by_name(self)
         self.calibration_controls = cc
 
@@ -444,7 +445,8 @@ class CameraWithLocationControlUI(QtWidgets.QWidget):
         # 
         run_function_modally(self.cwl.calibrate_xy,
                              progress_maximum=7, step = None if self.calibration_distance<= 0 else float(self.calibration_distance))
-
+    def load_calibration_gui(self):
+        self.cwl.load_calibration()
 
 class CameraWithLocationUI(QtWidgets.QWidget):
     """Generic user interface for a camera."""
