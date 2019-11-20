@@ -180,20 +180,20 @@ class fullfit:
             if vary_const_bg != True: self.bg_bounds = ([0, 0, 0,],[np.inf,np.inf, 1e-9])
             else: self.bg_bounds = ([0, 0, 0,],[np.inf,np.inf, np.inf])
         
-    
-    def L(self, x, H, C, W): # height centre width
+    @classmethod
+    def L(cls, x, H, C, W): # height centre width
     	"""
     	Defines a lorentzian
     	"""
 
         return H/(1.+(((x-C)/W)**2))
-    def G(self, x, H, C, W ):
+    @classmethod
+    def G(cls, x, H, C, W ):
         '''
         A Gaussian
         '''
         return H*np.exp(-((x-C)/W)**2)
     
-
     def multi_line(self,x,Params):
     	"""
     	returns a sum of Lorenzians/Gaussians. Params goes Height1,Centre1, Width1,Height2.....
@@ -441,7 +441,7 @@ class fullfit:
         '''
         optimizes the height, centres and widths of all peaks
         '''
-
+        if len(self.peaks)<2: return
         self.peaks = minimize(self.peak_loss, self.peaks, bounds = self.peak_bounds).x
         self.peaks_stack = self.peaks_to_matrix(self.peaks)
 
@@ -451,12 +451,13 @@ class fullfit:
         '''
         optimizes the centres(positions) and widths of the peakss for a given heights.
         '''
+        if len(self.peaks)<2: return
         heights = np.transpose(self.peaks_stack)[0]
         centres_and_widths_stack = np.transpose(self.peaks_stack)[1:]
         centres_and_widths = np.ravel(centres_and_widths_stack)
         width_bound = (self.minwidth,self.maxwidth)
         centre_and_width_bounds = []
-
+        
         for (centre, width) in zip(centres_and_widths_stack[0], centres_and_widths_stack[1]): #
             centre_and_width_bounds+=[(centre-width, centre+width), width_bound]  # height, position, width
         
@@ -658,8 +659,7 @@ class fullfit:
 #            self.peaks_stack = np.reshape(self.peaks, [len(self.peaks)/3, 3])
 #            self.optimize_heights
 #            #self.optimize_centre_and_width()
-            
-       
+
         try: smoothed = sm.Run(self.signal)
         except: smoothed = sm2.convex_smooth(self.spec, 25)[0]
         maxima = argrelextrema(smoothed, np.greater)[0]
@@ -675,7 +675,7 @@ class fullfit:
     
         self.optimize_heights
         self.optimize_centre_and_width()
-        
+        print "I'm a dummy!"        
     def Run(self,
             initial_fit=None, 
             add_peaks = True, 
