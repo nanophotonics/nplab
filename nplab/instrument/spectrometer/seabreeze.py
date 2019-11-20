@@ -332,7 +332,7 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
             print error
             print 'Most likely raised due to the lack of a tec on this device'
 
-    #tec_temperature = property(get_tec_temperature, set_tec_temperature)
+    tec_temperature = property(get_tec_temperature, set_tec_temperature)
 
     def read_wavelengths(self):
         """get an array of the wavelengths in nm"""
@@ -417,17 +417,14 @@ class OceanOpticsControlUI(SpectrometerControlUI):
         super(OceanOpticsControlUI, self).__init__(spectrometer,os.path.join(os.path.dirname(__file__),'ocean_optics_controls.ui'))
 
 
-#        self.tec_temperature.setValidator(QtGui.QDoubleValidator())
-        # self.tec_temperature.textChanged.connect(self.check_state)
-        # self.tec_temperature.textChanged.connect(self.update_param)
-        # self.tec_temperature.setText(str(spectrometer.tec_temperature))
-        self.set_tec_temperature_pushButton.clicked.connect(self.gui_set_tec_temperature)
-        self.read_tec_temperature_pushButton.clicked.connect(self.gui_read_tec_tempeature)
+        self.tec_temperature.setValidator(QtGui.QDoubleValidator())
+        self.tec_temperature.textChanged.connect(self.check_state)
+        self.tec_temperature.textChanged.connect(self.update_param)
+        self.tec_temperature.setText(str(spectrometer.tec_temperature))
+
         self.enable_tec.stateChanged.connect(self.update_enable_tec)
         self.enable_tec.setChecked(self.spectrometer.enable_tec)
-        self.tec_temperature_lcdNumber.display(float(self.spectrometer.get_tec_temperature()))
-        self.set_tec_temperature_LineEdit.setText('0')
-        # self.read_tec.clicked.connect(self.update_tec)
+        self.read_tec.clicked.connect(self.update_tec)
 
     def update_param(self, value):
         sender = self.sender()
@@ -445,12 +442,7 @@ class OceanOpticsControlUI(SpectrometerControlUI):
                 self.spectrometer.tec_temperature = float(value)
             except ValueError:
                 pass
-    
-    def gui_set_tec_temperature(self):
-        self.spectrometer.set_tec_temperature(float(self.set_tec_temperature_LineEdit.text()))
-    
-    def gui_read_tec_tempeature(self):
-        self.tec_temperature_lcdNumber.display(float(self.spectrometer.get_tec_temperature()))
+
     def update_enable_tec(self, state):
         if state == QtCore.Qt.Checked:
             self.spectrometer.enable_tec = True
