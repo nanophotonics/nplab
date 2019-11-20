@@ -115,7 +115,7 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
     spectrometer you want, starting at 0.  It has traits, so you can call up a
     GUI to control the spectrometer with s.configure_traits."""
 
-    metadata_property_names = Spectrometer.metadata_property_names + ("tec_temperature",)
+    metadata_property_names = Spectrometer.metadata_property_names# + ("tec_temperature",)
 
     @staticmethod
     def shutdown_seabreeze():
