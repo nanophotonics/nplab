@@ -97,29 +97,18 @@ class AndorBase(object):
 
         if platform.system() == 'Windows':
             directory = os.path.dirname(__file__)
-            for files in os.listdir(directory):
-                if files.startswith(TEMPORARY_PREFIX):
-                    # Remove temporary files not in use
-                    try:
-                        os.remove(os.path.join(directory, files))
-                    except:
-                        pass
-            self.temp_file_name = tempfile.mktemp(suffix='.dll', dir=directory, prefix=TEMPORARY_PREFIX)
             bitness = platform.architecture()[0][:2]  # either 32 or 64
             original_file = "%s/atmcd%sd.dll" % (directory, bitness)
-            shutil.copy(original_file, self.temp_file_name)
 
             if bitness == '32':
-                self.dll = windll.LoadLibrary(self.temp_file_name)
+                self.dll = windll.LoadLibrary(original_file)
             elif bitness == '64':
-                self.dll = CDLL(self.temp_file_name)
+                self.dll = CDLL(original_file)
             else:
                 raise Exception("Cannot detect Windows architecture")
         elif platform.system() == "Linux":
             original_file = "usr/local/lib/libandor.so"
-            self.temp_file_name = tempfile.mktemp(suffix='.dll', dir='usr/local/lib/')
-            shutil.copy(original_file, self.temp_file_name)
-            self.dll = cdll.LoadLibrary(self.temp_file_name)
+            self.dll = cdll.LoadLibrary(original_file)
         else:
             raise Exception("Cannot detect operating system for Andor")
         self.parameters = parameters
@@ -130,11 +119,13 @@ class AndorBase(object):
             else:
                 self._parameters[key] = None
 
+        self.camera_index = camera_index
+        if camera_index is None:
+            self.camera_index = 0
         if self.get_andor_parameter('AvailableCameras') > 1:
             if camera_index is None:
                 self._logger.warn('More than one camera available, but no index provided. Initializing camera 0')
-                camera_index = 0
-            camera_handle = self.get_andor_parameter('CameraHandle', camera_index)
+            camera_handle = self.get_andor_parameter('CameraHandle', self.camera_index)
             self.set_andor_parameter('CurrentCamera', camera_handle)
         self.initialize()
 
@@ -150,10 +141,14 @@ class AndorBase(object):
         self._logger.info('Shutting down')
         self._dll_wrapper('ShutDown')
 
-        # Remove the temporary dll file. First you need to unload the library
-        import _ctypes
-        _ctypes.FreeLibrary(self.dll._handle)
-        os.remove(self.temp_file_name)
+    def _set_dll_camera(self):
+        """Ensures the DLL library is pointing to the correct instrument for any particular instances of this class"""
+        camera_handle = c_uint()
+        error = getattr(self.dll, 'GetCameraHandle')(c_uint(self.camera_index), byref(camera_handle))
+        self._error_handler(error)
+
+        error = getattr(self.dll, 'SetCurrentCamera')(camera_handle)
+        self._error_handler(error)
 
     '''Base functions'''
 
@@ -167,6 +162,8 @@ class AndorBase(object):
         :param reverse:     bool. whether to have the inputs first or the outputs first when calling the dll
         :return:
         """
+
+        self._set_dll_camera()
 
         dll_input = ()
         if reverse:
