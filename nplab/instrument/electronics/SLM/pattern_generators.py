@@ -13,6 +13,29 @@ def constant(input_phase, offset):
     return input_phase + offset
 
 
+def calibration_responsiveness(input_phase, grey_level, axis=0):
+    """Function for calibrating the phase retardation as a function of addressing voltage
+    Need to image the reflected beam directly onto a camera, creating fringes. The fringe shift as a function of voltage
+    gives the responsiveness. Note it assumes the retardation is the same across the SLM. If this were not the case, see
+    https://doi.org/10.1364/AO.43.006400 for how to measure it.
+
+    :param input_phase:
+    :param grey_level:
+    :param axis:
+    :return:
+    """
+    shape = np.shape(input_phase)
+    centers = [int(x / 2) for x in shape]
+    out_phase = np.zeros(shape)
+    if axis == 0:
+        out_phase[centers[0]:] = grey_level
+    elif axis == 1:
+        out_phase[:, centers[1]:] = grey_level
+    else:
+        raise ValueError('Unrecognised axis: %d' % axis)
+    return out_phase
+
+
 def gratings(input_phase, grating_const_x=0, grating_const_y=0):
     """Linear phase pattern corresponding to a grating/mirror
 
