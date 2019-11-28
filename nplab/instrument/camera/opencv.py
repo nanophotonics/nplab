@@ -28,7 +28,6 @@ We are using Python %d.%d, so get the corresponding package.
     finally:
         raise ImportError(explanation) 
     
-import cv2.cv
 from nplab.instrument.camera import Camera, CameraParameter
     
 class OpenCVCamera(Camera):
@@ -51,7 +50,7 @@ class OpenCVCamera(Camera):
                     ret, frame = self.cap.read()
                     assert ret, "OpenCV's capture.read() returned False :("
                     if len(frame.shape) == 3:
-                        frame = cv2.cvtColor(frame, cv2.cv.CV_BGR2RGB)
+                        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     return ret, frame
                 except Exception as e:
                     print("Attempt number {0} failed to capture a frame from the camera!".format(i))
@@ -64,16 +63,16 @@ class OpenCVCamera(Camera):
         
     def get_camera_parameter(self, parameter_name):
         """Get the value of a camera parameter (though you should really use the property)"""
-        return self.cap.get(getattr(cv2.cv,parameter_name))
+        return self.cap.get(getattr(cv2,parameter_name))
     def set_camera_parameter(self, parameter_name, value):
         """Set the value of a camera parameter (though you should really use the property)"""
-        return self.cap.set(getattr(cv2.cv,parameter_name), value)
+        return self.cap.set(getattr(cv2,parameter_name), value)
 
 # Add properties to change the camera parameters, based on OpenCV's parameters.
 # It may be wise not to do this, and to filter them instead...
-for cvname in dir(cv2.cv):
-    if "CV_CAP_PROP_" in cvname:
-        name = cvname.replace("CV_CAP_PROP_","").lower()
+for cvname in dir(cv2):
+    if cvname.startswith("CAP_PROP_"):
+        name = cvname.replace("CAP_PROP_","").lower()
         setattr(OpenCVCamera, 
                 name, 
                 CameraParameter(cvname, doc="the camera property %s" % name))
