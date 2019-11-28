@@ -367,24 +367,6 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
             seabreeze.seabreeze_get_formatted_spectrum(self.index, byref(e), byref(spectrum_carray), N)
         check_error(e)  # throw an exception if something went wrong
         new_spectrum = np.array(list(spectrum_carray))
-        if(self.spectra_to_save>0):
-            self.spectra_buffer = np.concatenate((self.spectra_buffer,new_spectrum))
-#            if(self.spectra_saved==0):
-#                datafile_group = self.data_file.require_group('OceanOpticsSpectrometer')
-#                self.curr_scan = datafile_group.create_group('continuous_spectra_%d')
-#            self.curr_scan.create_dataset('spectrum_%d', data=new_spectrum, attrs=self.metadata)
-            self.spectra_to_save-=1
-            self.spectra_saved +=1
-            if(self.spectra_to_save==0):
-                self.spectra_buffer = self.spectra_buffer.reshape(self.spectra_saved,self.spectra_buffer.size/self.spectra_saved)
-                datafile_group = self.data_file.require_group('OceanOpticsSpectrometer')
-                attrs = self.metadata
-                if hasattr(self,'_temp_description'):
-                    attrs['description'] = self._temp_description
-                datafile_group.create_dataset('continuous_spectra_%d', data=self.spectra_buffer, attrs=attrs)
-                self.spectra_buffer = np.zeros(0)
-                self.spectra_saved = 0
-                print "continuous acquistion of spectra completed!"
 
         if bundle_metadata:
             return ArrayWithAttrs(new_spectrum, attrs=self.metadata)
