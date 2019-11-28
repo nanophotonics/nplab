@@ -4,6 +4,8 @@ Created on Thu Oct 01 11:52:44 2015
 
 @author: hera
 """
+from __future__ import print_function
+from builtins import str
 import serial
 
 import nplab.instrument.serial_instrument as si
@@ -33,7 +35,7 @@ class Piezoconcept(si.SerialInstrument):
             multiplier=1E3
             
         if (value*multiplier+self.position) > 1E5 or (value*multiplier+self.position) < 0:
-            print "The value is out of range! 0-100 um (0-1E8 nm) (Z)"
+            print("The value is out of range! 0-100 um (0-1E8 nm) (Z)")
         elif (value*multiplier+self.position) < 1E5 and (value*multiplier+self.position) >= 0:
             self.write("MOVRX "+str(value)+unit)
             self.position=(value*multiplier+self.position)
@@ -47,7 +49,7 @@ class Piezoconcept(si.SerialInstrument):
             multiplier=1E3
             
         if value*multiplier >1E5 or value*multiplier <0:
-            print "The value is out of range! 0-100 um (0-1E8 nm) (Z)"
+            print("The value is out of range! 0-100 um (0-1E8 nm) (Z)")
             
         elif value*multiplier < 1E5 and value*multiplier >=0: 
             self.write("MOVEX "+str(value)+unit)
@@ -71,6 +73,6 @@ if __name__ == "__main__":
     '''Basic test, should open the Z stage and print its info before closing. 
     Obvisouly the comport has to be correct!'''
     Z = Piezoconcept(port = "COM9")
-    print Z.INFO()
+    print(Z.INFO())
     Z.close()
         

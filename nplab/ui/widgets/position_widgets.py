@@ -1,3 +1,8 @@
+from __future__ import division
+from __future__ import print_function
+from builtins import map
+from builtins import range
+from past.utils import old_div
 __author__ = 'chrisgrosse'
 
 
@@ -28,7 +33,7 @@ class PositionBarWidget(QWidget):
         self.range = max_value-min_value
         self.margin = margin
         self.initUI()
-        self.setValue(self.range/2)
+        self.setValue(old_div(self.range,2))
 
 
 
@@ -53,7 +58,7 @@ class PositionBarWidget(QWidget):
         lower_threshold = self.margin*self.range
         upper_threshold = (1-self.margin)*self.range
 
-        till = round((h * (self.range-self.value))/self.range)
+        till = round(old_div((h * (self.range-self.value)),self.range))
 
         if self.value <= lower_threshold or self.value >= upper_threshold:
             qp.setBrush(QColor(255, 100, 100))
@@ -121,7 +126,7 @@ class XYPositionWidget(pg.PlotWidget):
         x1 = self.crosshair.pos()[0]
         y1 = self.crosshair.pos()[1]
 #        xu1, yu1 = self.pxl_to_unit((x1, y1))
-        print "cursor moved to pixel: [%i,%i]" % (x1,y1)
+        print("cursor moved to pixel: [%i,%i]" % (x1,y1))
 
 
 
@@ -149,7 +154,7 @@ class CrossHair(pg.GraphicsObject):
         if ev.isStart():
             self.startPos = self.pos()
         elif ev.isFinish():
-            self.setPos(*map(int, self.pos()))
+            self.setPos(*list(map(int, self.pos())))
         else:
             self.setPos(self.startPos + ev.pos() - ev.buttonDownPos())
         self.CrossHairMoved.emit()

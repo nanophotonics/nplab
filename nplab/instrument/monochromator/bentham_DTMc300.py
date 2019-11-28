@@ -1,3 +1,4 @@
+from __future__ import print_function
 import ctypes
 from nplab.instrument import Instrument
 from ctypes import CDLL, c_char_p,byref,c_char, POINTER, ARRAY
@@ -43,14 +44,14 @@ class Bentham_DTMc300(Instrument):
 		self.token_map = read_tokens()
 		error_report = c_char_p("")
 		response = self.dll.BI_build_system_model(c_char_p(CONFIG_PATH),error_report)
-		print "Error report",error_report
-		print "BI_build_system_model:",response
+		print("Error report",error_report)
+		print("BI_build_system_model:",response)
 		response = self.dll.BI_load_setup(c_char_p(ATTRS_PATH)) 
-		print "BI_load_setup:",response
+		print("BI_load_setup:",response)
 		response = self.dll.BI_initialise(None)
-		print "BI_initialise:",response
+		print("BI_initialise:",response)
 		response = self.dll.BI_park(None)
-		print "BI_park:",response
+		print("BI_park:",response)
 
 		self.components = self.get_component_list()
 
@@ -58,15 +59,15 @@ class Bentham_DTMc300(Instrument):
 		mylist = (ctypes.c_char*100)()
 		response = self.dll.BI_get_component_list(ctypes.byref(mylist))
 		components = [k for k in ("".join([c for c in mylist if c != '\x00'])).split(",") if k != '']
-		print "BI_get_component_list:",response, components
+		print("BI_get_component_list:",response, components)
 		return components
 
 
 	def get(self,item_id,token,index):
 		value = ctypes.c_double(0.0)
-		print "id:{0}, token:{1}, index:{2}".format(item_id,token,index)
+		print("id:{0}, token:{1}, index:{2}".format(item_id,token,index))
 		response = self.dll.BI_get(c_char_p(item_id),ctypes.c_int32(self.token_map[token]),ctypes.c_int32(index),ctypes.byref(value))
-		print "BI_get", response
+		print("BI_get", response)
 		return value.value
 
 	def get_wavelength(self,token="mono"):
@@ -86,5 +87,5 @@ if __name__ == "__main__":
 	initial =  m.get_wavelength()
 	m.set_wavelength(0)
 	final = m.get_wavelength()
-	print "Initial, Final:", initial, final
-	print "DONE"
+	print("Initial, Final:", initial, final)
+	print("DONE")

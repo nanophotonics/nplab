@@ -1,3 +1,5 @@
+from __future__ import division
+from past.utils import old_div
 __author__ = 'alansanders,rwb27'
 #__all__ = ['gui','thread_utils']
 
@@ -18,7 +20,7 @@ def monitor_property(instance, property_name, how_long, how_often, warn_limits=N
     :param warn_limits: None or 2-tuple. If the monitored value goes outside these limits, throws out a warning.
     :return:
     """
-    setattr(instance, property_name + '_history', collections.deque(maxlen=how_long / how_often))
+    setattr(instance, property_name + '_history', collections.deque(maxlen=old_div(how_long, how_often)))
     setattr(instance, '_monitoring_' + property_name, True)
 
     def monitor():

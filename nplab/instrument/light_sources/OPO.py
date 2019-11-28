@@ -5,6 +5,7 @@ Created on Fri Feb 02 15:21:59 2018
 @author: wmd22
 """
 
+from builtins import str
 from nplab.instrument.serial_instrument import SerialInstrument
 from nplab.utils.notified_property import NotifiedProperty
 

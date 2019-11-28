@@ -1,3 +1,5 @@
+from __future__ import division
+from past.utils import old_div
 __author__ = 'alansanders'
 
 from nplab.instrument import Instrument
@@ -72,7 +74,7 @@ class CCD(Instrument):
         if self.background is not None:
             if self.reference is not None:
                 old_error_settings = np.seterr(all='ignore')
-                new_image = (image - self.background)/(self.reference - self.background)
+                new_image = old_div((image - self.background),(self.reference - self.background))
                 np.seterr(**old_error_settings)
                 # if the reference is nearly 0, we get infinities - just make them all NaNs.
                 new_image[np.isinf(new_image)] = np.nan

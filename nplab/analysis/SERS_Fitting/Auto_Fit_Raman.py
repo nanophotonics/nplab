@@ -1,3 +1,6 @@
+from __future__ import division
+from builtins import range
+from past.utils import old_div
 import numpy as np 
 import scipy.ndimage.filters as imf
 import scipy.optimize as spo
@@ -40,7 +43,7 @@ def Find_Zeroes(Array):
 		else:
 			if i!=0:
 				if ((int((Array[i]>0))*2)-1)*((int((Array[i-1]>0))*2)-1)==-1:
-					Frac=Array[i-1]/(Array[i-1]-Array[i])
+					Frac=old_div(Array[i-1],(Array[i-1]-Array[i]))
 					Output.append(i+Frac-1)
 	return Output
 
@@ -62,7 +65,7 @@ def L(x,H,C,W):
 	"""
 	Defines a lorentzian
 	"""
-	return H/(1.+(((x-C)/W)**2))
+	return old_div(H,(1.+((old_div((x-C),W))**2)))
 
 def Multi_L_Constant(x,*Params):
 	"""
@@ -84,7 +87,7 @@ def Attempt_To_Fit(Shift,Array,Peak_Shifts,Peak_Heights,Width,Minimum_Height=0):
 
 	def Generate_Peak_Selections(Number,Options):
 		Levels=Options-Number
-		Output=[range(Options)]
+		Output=[list(range(Options))]
 		for i in range(Levels):
 			New_Output=[]
 			for j in Output:

@@ -2,6 +2,7 @@
 The base scanning experiment classes are found in this file, supporting the basic functionality
 of scanning experiments and adding supporting for utilising HDF5 files for data storage.
 """
+from __future__ import print_function
 __author__ = 'alansanders'
 
 from nplab.experiment.experiment import ExperimentWithDataDeque
@@ -27,7 +28,7 @@ class ScanningExperiment(ExperimentWithDataDeque):
         :return:
         """
         if isinstance(self.acquisition_thread, Thread) and self.acquisition_thread.is_alive():
-            print 'scan already running'
+            print('scan already running')
             return
         self.init_scan()
         self.acquisition_thread = Thread(target=self.scan, args=())
@@ -38,7 +39,7 @@ class ScanningExperiment(ExperimentWithDataDeque):
         if not hasattr(self, 'acquisition_thread'):
             return
         if self.acquisition_thread.is_alive():
-            print 'aborting'
+            print('aborting')
             self.abort_requested = True
             self.acquisition_thread.join()
             

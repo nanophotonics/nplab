@@ -86,6 +86,10 @@ Refer to the test() function at the end of the document for more examples.
 
 from __future__ import division, print_function
 
+from builtins import str
+from builtins import hex
+from builtins import range
+from builtins import object
 import sys
 import ctypes
 
@@ -582,7 +586,7 @@ def API():
     else:
         raise NotImplementedError("Only Windows is supported")
 
-    for _name, _value in locals().items():
+    for _name, _value in list(locals().items()):
         if _name.startswith('Lucam'):
             _func = getattr(_api, _name)
             setattr(_func, 'restype', _value[0])
@@ -788,7 +792,7 @@ class Lucam(object):
 
     def set_properties(self, **kwargs):
         """Set value of mutiple camera properties."""
-        for name, value in kwargs.items():
+        for name, value in list(kwargs.items()):
             if name.endswith('_flag'):
                 continue
             prop = Lucam.PROPERTY[name]
@@ -2515,7 +2519,7 @@ def ndarray(frameformat, byteorder='=', out=None, validate=True, numframes=1):
 
 def list_property_flags(flags):
     """Return list of PROPERTY_FLAG strings from flag number."""
-    return [k for k, v in Lucam.PROP_FLAG.items() if (v & flags)]
+    return [k for k, v in list(Lucam.PROP_FLAG.items()) if (v & flags)]
 
 
 def print_property_range(minval, maxval, default, flags):
@@ -2523,7 +2527,7 @@ def print_property_range(minval, maxval, default, flags):
     if flags:
         return "[%s, %s] default=%s flags=%s" % (
             minval, maxval, default,
-            ",".join(k for k, v in Lucam.PROP_FLAG.items() if (v & flags)))
+            ",".join(k for k, v in list(Lucam.PROP_FLAG.items()) if (v & flags)))
     else:
         return "[%s, %s] default=%s" % (minval, maxval, default)
 
@@ -2760,7 +2764,7 @@ def test():
     lucam.RemoveStreamingCallback(callbackid)
 
     # set camera look up table to invers
-    lucam.Setup8bitsLUT(list(reversed(range(256))))
+    lucam.Setup8bitsLUT(list(reversed(list(range(256)))))
 
     # stream to AVI file
     lucam.StreamVideoControlAVI('start_streaming', '_tmp.avi')

@@ -1,7 +1,10 @@
 """
 jpg66 10/2018
 """
+from __future__ import division
+from __future__ import print_function
 
+from past.utils import old_div
 from nplab.instrument.spectrometer.Triax.__init__ import Triax
 import numpy as np
 from nplab.utils.notified_property import NotifiedProperty
@@ -18,7 +21,7 @@ Calibration_Arrays=np.array(Calibration_Arrays)
 CCD_Size=1600 #Size of ccd in pixels
 
 #Make a deepcopy of the andor capture function, to add a white light shutter close command to if reuqired later
-Andor_Capture_Function=types.FunctionType(Andor.capture.func_code, Andor.capture.func_globals, 'Unimportant_Name',Andor.capture.func_defaults, Andor.capture.func_closure)
+Andor_Capture_Function=types.FunctionType(Andor.capture.__code__, Andor.capture.__globals__, 'Unimportant_Name',Andor.capture.__defaults__, Andor.capture.__closure__)
 
 class Trandor(Andor):#Andor
     
@@ -32,11 +35,11 @@ class Trandor(Andor):#Andor
         self.SetParameter('SetTemperature',-90)  #Turn on andor cooler
         self.CoolerON()
         
-        print '---------------------------'
-        print 'Triax Information:'
-        print 'Current Grating:',self.triax.Grating()
-        print 'Current Slit Width:', self.triax.Slit(),'um'
-        print '---------------------------'
+        print('---------------------------')
+        print('Triax Information:')
+        print('Current Grating:',self.triax.Grating())
+        print('Current Slit Width:', self.triax.Slit(),'um')
+        print('---------------------------')
         
 
     def Grating(self, Set_To=None):
@@ -47,7 +50,7 @@ class Trandor(Andor):#Andor
         return np.flipud(self.triax.Convert_Pixels_to_Wavelengths(Pixels))
 
     def Set_Center_Wavelength(self,Wavelength):  
-        Centre_Pixel=int(CCD_Size/2)
+        Centre_Pixel=int(old_div(CCD_Size,2))
         Required_Step=self.triax.Find_Required_Step(Wavelength,Centre_Pixel)
         Current_Step=self.triax.Motor_Steps()
         self.triax.Move_Steps(Required_Step-Current_Step)

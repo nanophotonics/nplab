@@ -1,3 +1,7 @@
+from __future__ import division
+from __future__ import print_function
+from builtins import range
+from past.utils import old_div
 import numpy as np 
 import pywt 
 import scipy.interpolate as scint
@@ -91,7 +95,7 @@ def Wavelet_Estimate_Width(x_axis,Signal,Maximum_Width,Smooth_Loss_Function=2):
 
 	New=scint.splev(np.arange(x_axis[0],x_axis[-1],Step),Int)
 
-	Scales=np.arange(1,np.ceil(Maximum_Width/Step),1)
+	Scales=np.arange(1,np.ceil(old_div(Maximum_Width,Step)),1)
 
 	Score=np.diff(np.sum(pywt.cwt(New,Scales,'gaus1')[0],axis=1))
 
@@ -105,7 +109,7 @@ def L(x,H,C,W):
 	"""
 	Defines a lorentzian
 	"""
-	return H/(1.+(((x-C)/W)**2))
+	return old_div(H,(1.+((old_div((x-C),W))**2)))
 
 def Multi_L(x,*Params):
 	"""
@@ -122,7 +126,7 @@ def G(x,H,C,W):
 	"""
 	Defines a gaussian
 	"""
-	return H*np.exp(-0.5*(((x-C)/W)**2))
+	return H*np.exp(-0.5*((old_div((x-C),W))**2))
 
 def Multi_G(x,*Params):
 	"""
@@ -150,7 +154,7 @@ def Add_New_Peak(x_axis,Signal,Current_Peaks,Width,Maximum_Width,Regions=50,Peak
 	"""
 
 	#-----Calc. size of x_axis regions-------
-	Sections=(np.max(x_axis)-np.min(x_axis))/Regions
+	Sections=old_div((np.max(x_axis)-np.min(x_axis)),Regions)
 	Start=np.min(x_axis)
 
 	Results=[]
@@ -251,8 +255,8 @@ def Run(x_axis,Signal,Maximum_FWHM=40,Regions=50,Minimum_Width_Factor=0.1,Peak_T
 	else:
 		def Loss(Vector):
 			return np.sum(np.abs(Multi_G(x_axis,*Vector)-Signal))
-		Width=Wavelet_Estimate_Width(x_axis,Signal,Maximum_FWHM)/((2.*np.log(2.))**0.5)
-		Max_Width=Maximum_FWHM/((2.*np.log(2.))**0.5)
+		Width=old_div(Wavelet_Estimate_Width(x_axis,Signal,Maximum_FWHM),((2.*np.log(2.))**0.5))
+		Max_Width=old_div(Maximum_FWHM,((2.*np.log(2.))**0.5))
 
 	Minimum_Width=Width*Minimum_Width_Factor
 
@@ -287,7 +291,7 @@ def Run(x_axis,Signal,Maximum_FWHM=40,Regions=50,Minimum_Width_Factor=0.1,Peak_T
 		Loss_Results.append(Loss(Output))
 
 		if Print is True:
-			print 'Iteration ',len(Loss_Results),', Peaks Found: ',len(Results[-1])/3
+			print('Iteration ',len(Loss_Results),', Peaks Found: ',old_div(len(Results[-1]),3))
 
 
 		#---Check to increase region by x5
@@ -366,7 +370,7 @@ def Run(x_axis,Signal,Maximum_FWHM=40,Regions=50,Minimum_Width_Factor=0.1,Peak_T
 
 def Worker_Function(x_axis,Signal,Maximum_FWHM,Regions,Minimum_Width_Factor,Peak_Type,Initial_Fit,Number):
 		Fit=Run(x_axis,Signal,Maximum_FWHM,Regions,Minimum_Width_Factor,Peak_Type,Initial_Fit=Initial_Fit,Print=False)
-		print 'Fit Spectrum:',Number
+		print('Fit Spectrum:',Number)
 		return [Fit,Number]
 
 def Fit_Set_of_Spectra(x_axis,Signals,Maximum_FWHM=40,Regions=50,Minimum_Width_Factor=0.1,Peak_Type='L',Cores=2,Utilise_Persistent=False):

@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 from timetag.capture_pipeline import CapturePipeline
 import time
@@ -36,7 +37,7 @@ class Timetagger(Instrument):
 	    if self._out_file_cat is not None:
 	            self._out_file_cat.terminate()
 	    filename = os.path.normpath(os.path.expanduser(filename))
-	    print "Writing captured data to:", filename
+	    print("Writing captured data to:", filename)
 	    dirname = os.path.dirname(filename)
 	    if not os.path.exists(dirname) and len(dirname) > 0:
 	            os.makedirs(dirname)
@@ -48,10 +49,10 @@ class Timetagger(Instrument):
 if __name__ == "__main__":
 	t = Timetagger()
 	from datetime import datetime
-	print datetime.now()
+	print(datetime.now())
 	path = "~/Desktop/timetagger-test.timetag"
 	# filename = os.path.normpath(os.path.expanduser(path))
 	# print filename
 	t.capture(integration_time=3,output_file=path)
-	print datetime.now()
+	print(datetime.now())
 	

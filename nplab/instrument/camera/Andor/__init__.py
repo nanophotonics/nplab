@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from builtins import str
 from nplab.utils.gui import QtWidgets, QtCore, uic, QtGui
 from nplab.instrument.camera.camera_scaled_roi import CameraRoiScale, DisplayWidgetRoiScale
 from nplab.instrument.camera.Andor.andor_sdk import AndorBase
@@ -86,12 +87,12 @@ class Andor(CameraRoiScale, AndorBase):
 
     @property
     def roi(self):
-        return tuple(map(lambda x: x - 1, self.Image[2:]))
+        return tuple([x - 1 for x in self.Image[2:]])
 
     @roi.setter
     def roi(self, value):
         image = self.Image
-        self.Image = image[:2] + tuple(map(lambda x: x + 1, value))
+        self.Image = image[:2] + tuple([x + 1 for x in value])
 
     @property
     def binning(self):
@@ -367,7 +368,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         if self.group_comboBox.currentText() == 'AndorData':
             if df._use_current_group == True and df._current_group is not None:
                 group = df._current_group
-            elif 'AndorData' in self.data_file.keys():
+            elif 'AndorData' in list(self.data_file.keys()):
                 group = self.data_file['AndorData']
             else:
                 group = self.data_file.create_group('AndorData')
@@ -387,16 +388,16 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         except Exception as e:
             self.Andor._logger.info(e)
         df.attributes_from_dict(data_set, attrs)
-        if self.Andor.backgrounded == False and 'background' in data_set.attrs.keys():
+        if self.Andor.backgrounded == False and 'background' in list(data_set.attrs.keys()):
             del data_set.attrs['background']
 
     def update_groups_box(self):
         if self.data_file is None:
             self.data_file = df.current()
         self.group_comboBox.clear()
-        if 'AndorData' not in self.data_file.values():
+        if 'AndorData' not in list(self.data_file.values()):
             self.group_comboBox.addItem('AndorData')
-        for group in self.data_file.values():
+        for group in list(self.data_file.values()):
             if type(group) == df.Group:
                 self.group_comboBox.addItem(group.name[1:], group)
 

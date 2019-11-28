@@ -8,8 +8,10 @@ to avoid dependencies on Qt, etc. as it's intended to be toolkit-neutral
 
 author: Richard Bowman
 """
+from __future__ import print_function
 
-class ShowGUIMixin:
+from builtins import object
+class ShowGUIMixin(object):
     """A mixin class to provide standard GUI functionality.
 
     This class provides one method, which pops up a GUI window using 
@@ -65,13 +67,13 @@ class ShowGUIMixin:
             ui.show()
             ui.activateWindow() #flash the taskbar entry to make it obvious
             if blocking:
-                print "Running GUI, this will block the command line until the window is closed."
+                print("Running GUI, this will block the command line until the window is closed.")
                 ui.windowModality = QtCore.Qt.ApplicationModal
 
                 try:
                     return app.exec_()
                 except:
-                    print "Could not run the Qt application: perhaps it is already running?"
+                    print("Could not run the Qt application: perhaps it is already running?")
                     return
             else:
                 return ui

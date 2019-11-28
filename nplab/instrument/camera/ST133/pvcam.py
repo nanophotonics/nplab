@@ -19,7 +19,12 @@ Original Odemis was tested on Linux with a PI PIXIS. This was tested on Windows 
 
 
 from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
 
+from builtins import str
+from builtins import range
+from builtins import object
 import ctypes as ct
 from nplab.instrument.camera.ST133 import *  # Dictionary linking metadata names with codes
 import math
@@ -35,7 +40,7 @@ from nplab.utils.log import create_logger
 from nplab.ui.ui_tools import UiTools
 from nplab.utils.notified_property import register_for_property_changes
 import operator
-import pvcam_h as pv  # Dictionary linking variables with values
+from . import pvcam_h as pv  # Dictionary linking variables with values
 from weakref import WeakSet
 
 
@@ -45,7 +50,7 @@ def index_closest(val, l):
     Works also with dict and tuples.
     """
     if isinstance(l, dict):
-        return min(l.items(), key=lambda x: abs(x[1] - val))[0]
+        return min(list(l.items()), key=lambda x: abs(x[1] - val))[0]
     else:
         return min(enumerate(l), key=lambda x: abs(x[1] - val))[0]
 
@@ -165,7 +170,7 @@ STATUS_IN_PROGRESS = (pv.ACQUISITION_IN_PROGRESS, pv.EXPOSURE_IN_PROGRESS, pv.RE
 TEMP_CAM_GONE = -120
 
 
-class PvcamSdk:
+class PvcamSdk(object):
     """
     Represents one PVCam camera and provides all the basic interfaces typical of
     a CCD/CMOS camera.
@@ -243,7 +248,7 @@ class PvcamSdk:
         except PVCamError as e:
             self._logger.info("PI camera seems connected but not responding, "
                               "you might want to try turning it off and on again.")
-            print e
+            print(e)
             raise IOError("Failed to open PVCam camera %s (%s)" % (device, self._devname))
 
         self._logger.info("Opened device %s successfully", device)
@@ -652,7 +657,7 @@ class PvcamSdk:
                     pv.PARAM_CAMERA_TYPE: "camera type",
                     }
         ret = ""
-        for pid, name in versions.items():
+        for pid, name in list(versions.items()):
             try:
                 value = self.get_param(pid)
                 ret += "%s: %s " % (name, value)
@@ -1364,7 +1369,7 @@ class PvcamSdk:
         pvcam = PVCamDLL()
         num_cam = ct.c_short()
         pvcam.pl_cam_get_total(ct.byref(num_cam))
-        print "Found %d devices." % num_cam.value
+        print("Found %d devices." % num_cam.value)
 
         cameras = []
         for i in range(num_cam.value):
@@ -1372,7 +1377,7 @@ class PvcamSdk:
             try:
                 pvcam.pl_cam_get_name(i, cam_name)
             except PVCamError:
-                print "Couldn't access camera %d" % i
+                print("Couldn't access camera %d" % i)
 
             # TODO: append the resolution to the name of the camera?
             cameras.append((cam_name.value, {"device": i}))
@@ -1575,7 +1580,7 @@ class pvcamUI(QtWidgets.QWidget, UiTools):
             dataset_name = self.lineEdit_datasetname.text()
         else:
             idx = 1
-            while "pvcam%d" % idx in group.keys():
+            while "pvcam%d" % idx in list(group.keys()):
                 idx += 1
             dataset_name = "pvcam%d" % idx
 

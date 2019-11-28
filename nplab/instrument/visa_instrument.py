@@ -1,3 +1,4 @@
+from __future__ import print_function
 __author__ = 'alansanders'
 
 from nplab.instrument.message_bus_instrument import MessageBusInstrument, queried_property, queried_channel_property
@@ -24,7 +25,7 @@ class VisaInstrument(MessageBusInstrument):
         try:
             assert address in rm.list_resources(), "The instrument was not found"
         except AssertionError:
-            print 'Available equipment:', rm.list_resources()
+            print('Available equipment:', rm.list_resources())
         self.instr = rm.open_resource(address, **settings)
         self._address = address
         self._settings = settings
@@ -33,7 +34,7 @@ class VisaInstrument(MessageBusInstrument):
         try:
             self.instr.close()
         except Exception as e:
-            print "The serial port didn't close cleanly:", e
+            print("The serial port didn't close cleanly:", e)
 
     def write(self, *args, **kwargs):
         return self.instr.write(*args, **kwargs)
@@ -50,7 +51,7 @@ class VisaInstrument(MessageBusInstrument):
             try:
                 self.instr.read()
             except Exception:
-                print "Buffer emptied"
+                print("Buffer emptied")
                 empty_buffer = True
                 
     #idn = property(fget=partial(query, message='*idn?'))
@@ -58,6 +59,6 @@ class VisaInstrument(MessageBusInstrument):
 
 if __name__ == '__main__':
     instrument = VisaInstrument(address='GPIB0::7::INSTR')
-    print instrument.query('*idn?')
-    print instrument.idn
-    print instrument.float_query
+    print(instrument.query('*idn?'))
+    print(instrument.idn)
+    print(instrument.float_query)

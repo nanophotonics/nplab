@@ -4,7 +4,11 @@ Created on Mon Mar 20 20:43:17 2017
 
 @author: Will
 """
+from __future__ import print_function
 
+from builtins import hex
+from builtins import str
+from builtins import range
 import serial
 import serial.tools.list_ports as list_ports
 import struct
@@ -23,7 +27,7 @@ def detect_APT_VCP_devices():
     device_dict = dict()
     for port_name, _, _ in list_ports.comports():  # loop through serial ports, apparently 256 is the limit?!
 
-        print "Trying port", port_name
+        print("Trying port", port_name)
         try:
             for destination in possible_destinations:
                 try:
@@ -94,7 +98,7 @@ class APT_VCP(serial_instrument.SerialInstrument):
 
     @staticmethod
     def unpack_binary_mask(value, size=13):
-        lst = [bool(value & (1 << size - i - 1)) for i in xrange(size)]
+        lst = [bool(value & (1 << size - i - 1)) for i in range(size)]
         lst.reverse()
         return lst
 
@@ -111,7 +115,7 @@ class APT_VCP(serial_instrument.SerialInstrument):
         header = bytearray(self.ser.read(6))  # read 6 byte header
         msgid, length, dest, source = struct.unpack('<HHBB',
                                                     header)  # unpack the header as described by the format were a second data stream is expected
-        if msgid in self.surprise_message_codes.values():  # Compare the message code to the list of suprise message codes
+        if msgid in list(self.surprise_message_codes.values()):  # Compare the message code to the list of suprise message codes
             if msgid == self.surprise_message_codes['MGMSG_HW_RESPONSE']:
                 msgid, param1, param2, dest, source = struct.unpack('<HBBBB', header)
                 returned_message = {'message': msgid, 'param1': param1,
@@ -163,7 +167,7 @@ class APT_VCP(serial_instrument.SerialInstrument):
             two possible paramters (set to 0 if not given)
             with the source and destinations """
         if destination_id == None:
-            destination = self.destination.values()[0]
+            destination = list(self.destination.values())[0]
         else:
             destination = self.destination[destination_id]
         if data == None:
@@ -269,7 +273,7 @@ class APT_VCP(serial_instrument.SerialInstrument):
     def staying_alive(self,destination_id= None):
         """Keeps the motor controller from thinking the Pc has crashed """
         if destination_id==None:
-            destination_id = self.destination.keys()
+            destination_id = list(self.destination.keys())
         else:
             if not hasattr(destination_id, '__iter__'):
                 destination_id = tuple(destination_id)
@@ -294,4 +298,4 @@ if __name__ == '__main__':
     # microscope_stage = APT_VCP(port = 'COM12',source = 0x01,destination = 0x21)
 
     dicc = detect_APT_VCP_devices()
-    print 'Here', dicc
+    print('Here', dicc)

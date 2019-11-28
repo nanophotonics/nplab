@@ -40,11 +40,16 @@ EXAMPLE:
     >>>> camera = camera_client((IP, port))
     >>>> camera.show_gui()
 """
+from __future__ import division
 
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from past.utils import old_div
 from nplab.utils.log import create_logger
 from nplab.utils.array_with_attrs import ArrayWithAttrs
 import threading
-import SocketServer
+import socketserver
 import socket
 import ast
 import inspect
@@ -80,12 +85,12 @@ def parse_strings(value):
 
 def subselect(string, size=100):
     if len(string) > size:
-        return '%s ... %s' % (string[:size/2], string[-size/2:])
+        return '%s ... %s' % (string[:old_div(size,2)], string[old_div(-size,2):])
     else:
         return string
 
 
-class ServerHandler(SocketServer.BaseRequestHandler):
+class ServerHandler(socketserver.BaseRequestHandler):
     def handle(self):
         try:
             raw_data = self.request.recv(BUFFER_SIZE).strip()
@@ -95,7 +100,7 @@ class ServerHandler(SocketServer.BaseRequestHandler):
             self.server._logger.debug("Server received: %s" % subselect(raw_data))
 
             if raw_data == "list_attributes":
-                instr_reply = self.server.instrument.__dict__.keys()
+                instr_reply = list(self.server.instrument.__dict__.keys())
             else:
                 command_dict = ast.literal_eval(raw_data)
                 if "command" in command_dict:
@@ -145,7 +150,7 @@ def create_server_class(original_class):
     :return: server class
     """
 
-    class Server(SocketServer.TCPServer):
+    class Server(socketserver.TCPServer):
         def __init__(self, server_address, *args, **kwargs):
             """
             To instantiate the server class, the TCP address needs to be given first, and then the arguments that would
@@ -155,7 +160,7 @@ def create_server_class(original_class):
             :param args: arguments to be passed to the nplab instrument
             :param kwargs: named arguments for the nplab instrument
             """
-            SocketServer.TCPServer.__init__(self, server_address, ServerHandler, True)
+            socketserver.TCPServer.__init__(self, server_address, ServerHandler, True)
             self.instrument = original_class(*args, **kwargs)
             self._logger = create_logger('TCP server')
             self.thread = None
@@ -217,7 +222,7 @@ def create_client_class(original_class,
             command_dict = dict(command=method_name)
             if len(args) > 1:
                 command_dict["args"] = args[1:]
-            if len(kwargs.keys()) > 0:
+            if len(list(kwargs.keys())) > 0:
                 command_dict["kwargs"] = kwargs
             reply = obj.send_to_server(repr(command_dict))
             if type(reply) == dict:
@@ -293,7 +298,7 @@ def create_client_class(original_class,
             return ast.literal_eval(received)
 
     if tcp_methods is None:
-        tcp_methods = original_class.__dict__.keys()
+        tcp_methods = list(original_class.__dict__.keys())
     excluded_methods = list(excluded_methods)
     if tcp_attributes is None:
         tcp_attributes = list()

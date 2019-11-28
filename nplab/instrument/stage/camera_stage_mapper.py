@@ -4,6 +4,10 @@ Created on Wed Jun 11 17:20:36 2014
 
 @author: Hera
 """
+from __future__ import division
+from __future__ import print_function
+from builtins import range
+from past.utils import old_div
 import nplab.instrument.camera
 import nplab.instrument.stage
 from nplab.instrument import Instrument
@@ -59,8 +63,8 @@ class CameraStageMapper(Instrument, HasTraits):
     ############ Coordinate Conversion ##################
     def camera_pixel_to_point(self, p):
         """convert pixel coordinates to point coordinates (normalised 0-1)"""
-        return np.array(p,dtype=float)/ \
-                np.array(self.camera.latest_frame.shape[0:2], dtype=float)
+        return old_div(np.array(p,dtype=float), \
+                np.array(self.camera.latest_frame.shape[0:2], dtype=float))
     def camera_point_to_pixel(self, p):
         """convert point coordinates (normalised 0-1) to pixel"""
         return np.array(p)*np.array(self.camera.latest_frame.shape[0:2])
@@ -130,13 +134,13 @@ class CameraStageMapper(Instrument, HasTraits):
                 shift=self.centre_on_feature_iterate(feature_image, 
                                                      search_size=search_size, 
                                                      **kwargs)
-                print "Centring on feature: moving by %.2f, %.2f" % tuple(shift)
+                print("Centring on feature: moving by %.2f, %.2f" % tuple(shift))
             except:
-                print "Something went wrong with auto-centering - trying again." #don't worry, we incremented N so this won't go on forever!
+                print("Something went wrong with auto-centering - trying again.") #don't worry, we incremented N so this won't go on forever!
         if np.sqrt(np.sum(np.array(shift)**2))>tolerance:
-            print "Performed %d iterations but did not converge on the feature to within %.3fum" % (n, tolerance)
+            print("Performed %d iterations but did not converge on the feature to within %.3fum" % (n, tolerance))
         else:
-            print "Centered on feature in %d iterations." % n
+            print("Centered on feature in %d iterations." % n)
         if self.disable_live_view:
             self.camera.live_view = camera_live_view #reenable live view if necessary
     def centre_on_feature_iterate(self, feature_image, search_size=(50,50), image_filter=lambda x: x):
@@ -165,14 +169,14 @@ class CameraStageMapper(Instrument, HasTraits):
             self.move_to_camera_pixel(np.array(peak) - np.array(corr.shape[0:2])/2.+np.array(current_image.shape[0:2])/2.)
             return self.camera_pixel_displacement_to_sample(np.array(peak) - np.array(corr.shape[0:2])/2.)
         except Exception as e:
-            print "Exception: ", e
-            print "Corr: ", corr
-            print "Feature: ", feature_image
-            print "Feature Size: ", feature_image.shape
-            print "Corr size: ", corr.shape
-            print "Peak: ", peak
-            print "sum(corr): ", np.sum(corr)
-            print "max(corr): ", np.max(corr)
+            print("Exception: ", e)
+            print("Corr: ", corr)
+            print("Feature: ", feature_image)
+            print("Feature Size: ", feature_image.shape)
+            print("Corr size: ", corr.shape)
+            print("Peak: ", peak)
+            print("sum(corr): ", np.sum(corr))
+            print("max(corr): ", np.max(corr))
             raise e
 
 ########## Calibration ###############
@@ -189,7 +193,7 @@ class CameraStageMapper(Instrument, HasTraits):
             self.camera.update_latest_frame() # make sure we've got a fresh image
             initial_image = self.camera.gray_image()
             w, h, = initial_image.shape
-            template = initial_image[w/4:3*w/4,h/4:3*h/4] #.astype(np.float)
+            template = initial_image[old_div(w,4):old_div(3*w,4),old_div(h,4):old_div(3*h,4)] #.astype(np.float)
             #template -= cv2.blur(template, (21,21), borderType=cv2.BORDER_REPLICATE)
     #        self.calibration_template = template
     #        self.calibration_images = []
@@ -206,8 +210,8 @@ class CameraStageMapper(Instrument, HasTraits):
                 corr = cv2.threshold(corr, 0, 0, cv2.THRESH_TOZERO)[1]
     #            peak = np.unravel_index(corr.argmin(),corr.shape)
                 peak = ndimage.measurements.center_of_mass(corr)
-                camera_pos.append(peak - (np.array(current_image.shape) - \
-                                                       np.array(template.shape))/2)
+                camera_pos.append(peak - old_div((np.array(current_image.shape) - \
+                                                       np.array(template.shape)),2))
     #            self.calibration_images.append({"image":current_image,"correlation":corr,"pos":p,"peak":peak})
             self.move_to_sample_position(here)
             self.flush_camera_and_wait()#otherwise we get a worrying "jump" when enabling live view...
@@ -215,8 +219,8 @@ class CameraStageMapper(Instrument, HasTraits):
             #camera_pos now contains the displacements in pixels for each move
             sample_displacement = np.array([-p[0:2] for p in pos]) #nb need to convert to 2D, and the stage positioning is flipped from sample coords
             camera_displacement = np.array([self.camera_pixel_to_point(p) for p in camera_pos])
-            print "sample was moved (in um):\n",sample_displacement
-            print "the image shifted (in fractions-of-a-camera):\n",camera_displacement
+            print("sample was moved (in um):\n",sample_displacement)
+            print("the image shifted (in fractions-of-a-camera):\n",camera_displacement)
             A, res, rank, s = np.linalg.lstsq(camera_displacement, sample_displacement)
             self.camera_to_sample = A
 
@@ -301,7 +305,7 @@ class CameraStageMapper(Instrument, HasTraits):
     @on_trait_change("do_autofocus")
     def autofocus_in_background(self):
         def work():
-            self.autofocus_iterate(np.arange(-self.autofocus_range/2, self.autofocus_range/2, self.autofocus_step))
+            self.autofocus_iterate(np.arange(old_div(-self.autofocus_range,2), old_div(self.autofocus_range,2), self.autofocus_step))
         threading.Thread(target=work).start()
     
     def autofocus_iterate(self, dz, method="centre_of_mass", noise_floor=0.3):
@@ -328,10 +332,10 @@ class CameraStageMapper(Instrument, HasTraits):
             if(np.sum(weights)==0): 
                 new_position = positions[powers.argmax(),:]
             else: 
-                new_position = np.dot(weights, positions)/np.sum(weights)
+                new_position = old_div(np.dot(weights, positions),np.sum(weights))
         elif method=="parabola":
             coefficients = np.polyfit(z, powers, deg=2) #fit a parabola
-            root = -coefficients[1]/(2*coefficients[0]) #p = c[0]z**" + c[1]z + c[2] which has max (or min) at 2c[0]z + c[1]=0 i.e. z=-c[1]/2c[0]
+            root = old_div(-coefficients[1],(2*coefficients[0])) #p = c[0]z**" + c[1]z + c[2] which has max (or min) at 2c[0]z + c[1]=0 i.e. z=-c[1]/2c[0]
             if z.min() < root and root < z.max():
                 new_position = [here[0],here[1],root]
             else:
@@ -354,9 +358,9 @@ class CameraStageMapper(Instrument, HasTraits):
         n=0
         for r in ranges:
             pos = self.autofocus_iterate(r)[0]
-            print "moving Z by %.3f" % pos[2]
+            print("moving Z by %.3f" % pos[2])
             n+=1
-        print "Autofocus: performed %d iterations" % n
+        print("Autofocus: performed %d iterations" % n)
 
 #if __name__ == '__main__':
     #WARNING this is old, probably broken, code.

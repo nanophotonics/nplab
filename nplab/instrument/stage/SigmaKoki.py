@@ -3,7 +3,10 @@ This is an interface module for instruments produced by Sigma Koki
 
 __author__: Yago
 """
+from __future__ import division
+from __future__ import print_function
 
+from past.utils import old_div
 from nplab.utils.thread_utils import locked_action
 from nplab.instrument.stage import Stage
 from nplab.instrument.serial_instrument import SerialInstrument
@@ -37,7 +40,7 @@ class GSC01(SerialInstrument, Stage):
         if 'offsetOrigin' in kwargs:
             self.offsetOrigin(kwargs['offsetOrigin'])  # 20000)
 
-        if 'home_on_start' in kwargs.keys():
+        if 'home_on_start' in list(kwargs.keys()):
             if kwargs['home_on_start']:
                 self.MechanicalHome()
 
@@ -131,7 +134,7 @@ class GSC01(SerialInstrument, Stage):
     def get_position(self, axis=None):
         status = self.getStatus()
         counts = status.split(',')[0]
-        position = int(counts)/self.counts_per_degree
+        position = old_div(int(counts),self.counts_per_degree)
         self._logger.debug('Status: %s. Counts: %s. Position returned %g' %(status, counts, position))
         return [position]
 
@@ -239,10 +242,10 @@ if __name__ == '__main__':
     # print 'Line: ', gsc01.readline()
     # gsc01.move(0)
     # print 'Line: ', gsc01.readline()
-    print 'Status: ', gsc01.getStatus()
+    print('Status: ', gsc01.getStatus())
     # print 'Line: ', gsc01.readline()
     gsc01.move(10)   # 265140
-    print 'Status: ', gsc01.getStatus()
+    print('Status: ', gsc01.getStatus())
     # gsc01.getStatus()
     # gsc01.move(10)
     # gsc01.getStatus()

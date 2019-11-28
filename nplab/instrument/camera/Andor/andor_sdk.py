@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import division
+from __future__ import print_function
+from builtins import zip
+from builtins import str
+from builtins import range
+from builtins import object
+from past.utils import old_div
 from nplab.utils.gui import QtCore
 from nplab.instrument.camera import CameraParameter
 from nplab.utils.thread_utils import locked_action, background_action
@@ -72,7 +79,7 @@ class AndorParameter(CameraParameter):
         super(AndorParameter, self).fset(obj, value)
 
 
-class AndorBase:
+class AndorBase(object):
     """Base code handling the Andor SDK
 
     Most of the code for this class is setting up a general way of reading and writing parameters, which are then set up
@@ -107,7 +114,7 @@ class AndorBase:
             raise Exception("Cannot detect operating system for Andor")
         self.parameters = parameters
         self._parameters = dict()
-        for key, value in parameters.items():
+        for key, value in list(parameters.items()):
             if 'value' in value:
                 self._parameters[key] = value['value']
             else:
@@ -123,7 +130,7 @@ class AndorBase:
             if self.cooler:
                 self.cooler = 0
             while self.CurrentTemperature < -20:
-                print 'Waiting'
+                print('Waiting')
                 time.sleep(1)
         self._logger.info('Shutting down')
         self._dll_wrapper('ShutDown')
@@ -223,7 +230,7 @@ class AndorBase:
                     if not isinstance(inputs, tuple):
                         inputs = (inputs, )
 
-        if 'Get' not in self.parameters[param_loc].keys():
+        if 'Get' not in list(self.parameters[param_loc].keys()):
             if len(inputs) == 1:
                 setattr(self, '_' + param_loc, inputs[0])
             else:
@@ -246,7 +253,7 @@ class AndorBase:
             self.parameters[param_loc]['value'] = getattr(self, '_' + param_loc)
             self._parameters[param_loc] = getattr(self, '_' + param_loc)
             return getattr(self, '_' + param_loc)
-        if 'Get' in self.parameters[param_loc].keys():
+        if 'Get' in list(self.parameters[param_loc].keys()):
             func = self.parameters[param_loc]['Get']
 
             form_out = ()
@@ -261,7 +268,7 @@ class AndorBase:
                     form_in += ({'value': getattr(self, input_param[0]), 'type': input_param[1]},)
             for ii in range(len(inputs)):
                 form_in += ({'value': inputs[ii], 'type': func['Inputs'][ii]},)
-            if 'Iterator' not in func.keys():
+            if 'Iterator' not in list(func.keys()):
                 vals = self._dll_wrapper(func['cmdName'], inputs=form_in, outputs=form_out)
             else:
                 vals = ()
@@ -271,12 +278,12 @@ class AndorBase:
             self.parameters[param_loc]['value'] = vals
             self._parameters[param_loc] = vals
             return vals
-        elif 'Get_from_prop' in self.parameters[param_loc].keys() and hasattr(self, '_' + param_loc):
+        elif 'Get_from_prop' in list(self.parameters[param_loc].keys()) and hasattr(self, '_' + param_loc):
             vals = getattr(self, self.parameters[param_loc]['Get_from_prop'])[getattr(self, '_' + param_loc)]
             self.parameters[param_loc]['value'] = vals
             self._parameters[param_loc] = vals
             return vals
-        elif 'Get_from_fixed_prop' in self.parameters[param_loc].keys():
+        elif 'Get_from_fixed_prop' in list(self.parameters[param_loc].keys()):
             vals = getattr(self, self.parameters[param_loc]['Get_from_fixed_prop'])[0]
             self.parameters[param_loc]['value'] = vals
             self._parameters[param_loc] = vals
@@ -308,7 +315,7 @@ class AndorBase:
         """
 
         assert isinstance(parameter_dictionary, dict)
-        for name, value in parameter_dictionary.items():
+        for name, value in list(parameter_dictionary.items()):
             if not hasattr(self, name):
                 self._logger.warn('The parameter ' + name + 'does not exist and therefore cannot be set')
                 continue
@@ -466,25 +473,25 @@ class AndorBase:
             if self._parameters['ReadMode'] == 0:
                 if self._parameters['IsolatedCropMode'][0]:
                     image_shape = (
-                        self._parameters['IsolatedCropMode'][2] / self._parameters['IsolatedCropMode'][
-                            4],)
+                        old_div(self._parameters['IsolatedCropMode'][2], self._parameters['IsolatedCropMode'][
+                            4]),)
                 else:
-                    image_shape = (self._parameters['DetectorShape'][0] / self._parameters['FVBHBin'],)
+                    image_shape = (old_div(self._parameters['DetectorShape'][0], self._parameters['FVBHBin']),)
             elif self._parameters['ReadMode'] == 3:
                 image_shape = (self._parameters['DetectorShape'][0],)
             elif self._parameters['ReadMode'] == 4:
                 if self._parameters['IsolatedCropMode'][0]:
                     image_shape = (
-                        self._parameters['IsolatedCropMode'][1] / self._parameters['IsolatedCropMode'][
-                            3],
-                        self._parameters['IsolatedCropMode'][2] / self._parameters['IsolatedCropMode'][
-                            4])
+                        old_div(self._parameters['IsolatedCropMode'][1], self._parameters['IsolatedCropMode'][
+                            3]),
+                        old_div(self._parameters['IsolatedCropMode'][2], self._parameters['IsolatedCropMode'][
+                            4]))
                 else:
                     image_shape = (
-                        (self._parameters['Image'][5] - self._parameters['Image'][4] + 1) /
-                        self._parameters['Image'][1],
-                        (self._parameters['Image'][3] - self._parameters['Image'][2] + 1) /
-                        self._parameters['Image'][0],)
+                        old_div((self._parameters['Image'][5] - self._parameters['Image'][4] + 1),
+                        self._parameters['Image'][1]),
+                        old_div((self._parameters['Image'][3] - self._parameters['Image'][2] + 1),
+                        self._parameters['Image'][0]),)
             else:
                 raise NotImplementedError('Read Mode %g' % self._parameters['ReadMode'])
 
@@ -550,7 +557,7 @@ class AndorBase:
         if n_rows is None:
             n_rows = self._parameters['FastKinetics'][0]
 
-        series_Length = int(self._parameters['DetectorShape'][1] / n_rows) - 1
+        series_Length = int(old_div(self._parameters['DetectorShape'][1], n_rows)) - 1
         expT = self._parameters['AcquisitionTimings'][0]
         mode = self._parameters['ReadMode']
         hbin = self._parameters['Image'][0]
@@ -615,7 +622,7 @@ class AndorBase:
             data_file = df.open_file(set_current=False, mode='r')
         else:
             data_file = df.DataFile(filepath)
-        if 'AndorSettings' in data_file.keys():
+        if 'AndorSettings' in list(data_file.keys()):
             self.set_andor_parameters(dict(data_file['AndorSettings'].attrs))
         else:
             self._logger.error('Load settings failed as "AndorSettings" does not exist')

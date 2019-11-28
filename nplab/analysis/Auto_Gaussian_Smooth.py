@@ -1,3 +1,6 @@
+from __future__ import division
+from builtins import range
+from past.utils import old_div
 import scipy.ndimage.filters as ndimf
 import numpy as np 
 import scipy.interpolate as scint
@@ -40,7 +43,7 @@ def Sigmoid(x,O,S):
 	"""
 	Sigmoid function defiend by offset O and scale S
 	"""
-	return 1./(1.+np.exp(-(x-O)/S))
+	return 1./(1.+np.exp(old_div(-(x-O),S)))
 
 def Grad(x,y):
 	"""
@@ -75,7 +78,7 @@ def Run(Signal):
 
 	Max=np.argmax(np.abs(GG))
 	Poly=np.polyfit(x[Max-1:Max+2],np.abs(GG)[Max-1:Max+2],2)
-	Max=-Poly[1]/(2*Poly[0])
+	Max=old_div(-Poly[1],(2*Poly[0]))
 
 	#--Repeat porces on smaller, more accurate region--
 
@@ -90,7 +93,7 @@ def Run(Signal):
 
 	Max=np.argmax(np.abs(GG))
 	Poly=np.polyfit(x[Max-1:Max+2],np.abs(GG)[Max-1:Max+2],2)
-	Max=-Poly[1]/(2*Poly[0])
+	Max=old_div(-Poly[1],(2*Poly[0]))
 
 	#---Perform smooth---
 

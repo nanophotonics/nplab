@@ -11,6 +11,7 @@ There's also some support mechanisms for metadata creation, and the bundling
 of metadata in ArrayWithAttrs objects that include both data and metadata.
 """
 
+from builtins import str
 from nplab.utils.thread_utils import locked_action_decorator, background_action_decorator
 import nplab
 from weakref import WeakSet

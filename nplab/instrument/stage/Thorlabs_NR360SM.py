@@ -1,3 +1,5 @@
+from __future__ import print_function
+from builtins import str
 import sys, numpy as np
 from nplab.instrument.stage import Stage, StageUI
 from nplab.instrument.stage.apt_vcp_motor import APT_VCP_motor
@@ -19,7 +21,7 @@ class Thorlabs_NR360SM(APT_VCP_motor):
 		self.set_channel_state(1,1)
 		self.zero_pos = 0.0
 		self.ui = None
-		print "initialized NR360SM"
+		print("initialized NR360SM")
 		self.set_motion_params()
 		# self.get_home_parameters()
 		self.set_home_parameters()
@@ -55,7 +57,7 @@ class Thorlabs_NR360SM(APT_VCP_motor):
 
 		bs = [chanIdent,homeDirection["reverse"],limitSwitch["hardwareReverse"],homeVel,offsetDistance]
 		if debug > 0 or DEBUG == True:
-			print "set homing parameters:", bs
+			print("set homing parameters:", bs)
 		ds = bytearray(struct.pack("<HHHLl",*bs))
 		self.write(0x0440,param1=0x0E,param2=0x00,data=ds)
 		return 
@@ -69,7 +71,7 @@ class Thorlabs_NR360SM(APT_VCP_motor):
 		data = resp["data"]
 
 		chanIdent, homeDir, limSwitch, homeVel, offsetDistance = struct.unpack("<HHHLl",data)
-		print "homing parameters:",chanIdent, homeDir, limSwitch, homeVel, offsetDistance
+		print("homing parameters:",chanIdent, homeDir, limSwitch, homeVel, offsetDistance)
 		return 
 		
 	def set_limit_switch_parameters(self):
@@ -83,7 +85,7 @@ class Thorlabs_NR360SM(APT_VCP_motor):
 		chanIdent, cwHardLimit, ccwHardLimit, cwSoftLimit, ccwSoftLimit, limitMode = struct.unpack("<HHHLLH",data)
 		outp = [chanIdent, cwHardLimit, ccwHardLimit, cwSoftLimit, ccwSoftLimit, limitMode]
 		if debug > 0 or DEBUG == True:
-			print "get_limit_switch_paraters:", outp
+			print("get_limit_switch_paraters:", outp)
 		return outp
 	def get_motion_params(self):
 		pass
@@ -128,7 +130,7 @@ class Thorlabs_NR360SM(APT_VCP_motor):
 			val = int(np.round(value*acc_to_count,decimals=0))
 		
 		if debug > 0 or DEBUG == True:
-				print "from_({}):".format(from_),value, "to_({}):".format(to_),val
+				print("from_({}):".format(from_),value, "to_({}):".format(to_),val)
 		return val
 
 class Thorlabs_NR360SM_UI(QtWidgets.QWidget, UiTools):
@@ -177,10 +179,10 @@ class Thorlabs_NR360SM_UI(QtWidgets.QWidget, UiTools):
 
 	#What to do on close
 	def closeEvent(self,event):
-		if self.debug > 0 or DEBUG == True: print "Widget closed - cleaning up threads"
+		if self.debug > 0 or DEBUG == True: print("Widget closed - cleaning up threads")
 		self.stop_threads_flag.set()
 		self.angle_update_thread.join()
-		if self.debug > 0 or DEBUG == True: print "Widget closed - clean up DONE!"
+		if self.debug > 0 or DEBUG == True: print("Widget closed - clean up DONE!")
 		event.accept()
 		return
 
@@ -202,27 +204,27 @@ class Thorlabs_NR360SM_UI(QtWidgets.QWidget, UiTools):
 	def set_move_type(self):
 		self.move_type = self.move_combo_box.currentText()
 		assert(self.move_type in ["absolute", "relative"])
-		if self.debug > 0 or DEBUG == True: print "Type changed!", self.move_type
+		if self.debug > 0 or DEBUG == True: print("Type changed!", self.move_type)
 
 
 	def set_new_angle(self):
 		try:
 			self.new_angle = float(self.new_angle_textbox.text())
 		except:
-			print "Unable to set new angle"
+			print("Unable to set new angle")
 		return 
 
 	def set_rotation_speed(self):
 		try:
 			self.rotation_speed = float(self.rotation_speed_textbox.text())
 			if self.rotation_speed > 20.0:
-				print "Thorlabs_NR360SM_UI.set_rotation_speed says: Rotating speed too high - wouldn't want to break the stage? - Not changing velocity"
+				print("Thorlabs_NR360SM_UI.set_rotation_speed says: Rotating speed too high - wouldn't want to break the stage? - Not changing velocity")
 				return
 			else:
 				# self.stage.setVel(self.rotation_speed)
 				return
 		except:
-			print "Thorlabs_NR360SM_UI.set_rotation_speed: Unable to set new rotation speed"
+			print("Thorlabs_NR360SM_UI.set_rotation_speed: Unable to set new rotation speed")
 		return 
 
 	def set_zero(self):
@@ -234,7 +236,7 @@ class Thorlabs_NR360SM_UI(QtWidgets.QWidget, UiTools):
 	def move_stage(self,blocking = False):
 		
 		#get whether turn is relative
-		print "Moving-1",self.new_angle
+		print("Moving-1",self.new_angle)
 		relative = (self.move_type == "relative")
 		self.stage.move(pos=self.new_angle, axis="x", relative=relative,block = blocking)	
 		return
@@ -269,7 +271,7 @@ class Thorlabs_NR360SM_UI(QtWidgets.QWidget, UiTools):
 	def set_current_angle(self):
 		while True:
 			if self.stop_threads_flag.isSet(): 
-				print "self.angle_update_thread : Stopping - self.stop_threads_flag is set!"
+				print("self.angle_update_thread : Stopping - self.stop_threads_flag is set!")
 				return
 			else:
 				try:

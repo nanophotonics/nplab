@@ -1,3 +1,5 @@
+from __future__ import print_function
+from builtins import str
 import time, os
 import numpy as np
 from datetime import datetime
@@ -22,7 +24,7 @@ def list_datafile_content(filepath, folderpath):
     
     """
     f = df.DataFile(os.path.normpath(filepath), 'r')
-    return f[folderpath].keys()
+    return list(f[folderpath].keys())
 
 def extractor(filepath, folderpath):
     """

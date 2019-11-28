@@ -3,7 +3,11 @@
 Modified from https://github.com/plasmon360/python_newport_1918_powermeter
 
 """
+from __future__ import division
+from __future__ import print_function
 
+from builtins import str
+from past.utils import old_div
 from nplab.instrument import Instrument
 from ctypes import *
 import time
@@ -163,7 +167,7 @@ class NewportPowermeter(Instrument):
             interval_ms * 10))  # to set 1 ms rate we have to give int value of 10. This is strange as manual says the INT should be in ms
         self.write('PM:DS:ENable 1')
         while int(self.query('PM:DS:COUNT?')) < buff_size:  # Waits for the buffer is full or not.
-            time.sleep(0.001 * interval_ms * buff_size / 10)
+            time.sleep(old_div(0.001 * interval_ms * buff_size, 10))
         actualwavelength = self.query('PM:Lambda?')
         mean_power = self.query('PM:STAT:MEAN?')
         std_power = self.query('PM:STAT:SDEV?')
@@ -184,8 +188,8 @@ if __name__ == '__main__':
     nd = NewportPowermeter(0xCEC7)
     nd._logger.setLevel("DEBUG")
 
-    print nd.get_instrument_list()
-    print nd.wavelength
-    print nd.power
-    print nd.wavelength
-    print nd.power
+    print(nd.get_instrument_list())
+    print(nd.wavelength)
+    print(nd.power)
+    print(nd.wavelength)
+    print(nd.power)

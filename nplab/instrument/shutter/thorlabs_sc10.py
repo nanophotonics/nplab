@@ -1,3 +1,5 @@
+from __future__ import print_function
+from builtins import str
 __author__ = 'alansanders'
 
 from nplab.instrument.shutter import Shutter
@@ -32,12 +34,12 @@ class ThorLabsSC10(Shutter, serial.SerialInstrument):
         if self.get_state() == 'Closed':
             self.toggle()
         else:
-            print 'Shutter is already open!'
+            print('Shutter is already open!')
     def close_shutter(self):
         if self.get_state() == 'Open':
             self.toggle()
         else:
-            print 'Shutter is already closed!'
+            print('Shutter is already closed!')
             
     def set_mode(self,n):
         """ Where n equals an associated mode

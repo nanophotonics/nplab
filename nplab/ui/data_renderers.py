@@ -1,3 +1,9 @@
+from __future__ import division
+from __future__ import print_function
+from builtins import str
+from builtins import range
+from past.utils import old_div
+from builtins import object
 __author__ = 'alansanders, Will Deacon'
 
 import h5py
@@ -66,7 +72,7 @@ def suitable_renderers(h5object, return_scores=False):
     group_renderers and not the rest, which are very time consuming.
     """
     renderers_and_scores = []
-    if isinstance(h5object, h5py.Group) and len(h5object.values())>100:
+    if isinstance(h5object, h5py.Group) and len(list(h5object.values()))>100:
         for r in group_renders:
             try:
                 renderers_and_scores.append((r.is_suitable(h5object), r))
@@ -81,7 +87,7 @@ def suitable_renderers(h5object, return_scores=False):
             except:
       #          print "renderer {0} failed when checking suitability for {1}".format(r, h5object)
                 pass # renderers that cause exceptions shouldn't be used!
-    renderers_and_scores.sort(key=lambda (score, r): score, reverse=True)
+    renderers_and_scores.sort(key=lambda score_r: score_r[0], reverse=True)
     if return_scores:
         return [(score, r) for score, r in renderers_and_scores if score >= 0]
     else:
@@ -187,7 +193,7 @@ class AttrsRenderer(DataRenderer, QtWidgets.QWidget):
         else:
             self.tableWidget.setRowCount(len(self.h5object.attrs))
             row = 0
-            for key, value in sorted(h5object.attrs.iteritems()):
+            for key, value in sorted(h5object.attrs.items()):
                 item_key = QtWidgets.QTableWidgetItem(key)
                 item_value = QtWidgets.QTableWidgetItem(str(value))
                 self.tableWidget.setItem(row,0,item_key)
@@ -208,7 +214,7 @@ class AttrsRenderer(DataRenderer, QtWidgets.QWidget):
     @classmethod
     def is_suitable(cls, h5object):
         if isinstance(h5object,h5py.Group):
-            if len(h5object.keys()) > 10:
+            if len(list(h5object.keys())) > 10:
                 return 5000
         return 1
 add_renderer(AttrsRenderer)
@@ -262,7 +268,7 @@ class DataRenderer1DPG(FigureRendererPG):
             self.h5object = {self.h5object.name: self.h5object}
         icolour = 0    
         self.figureWidget.addLegend(offset = (-1,1))
-        for h5object in self.h5object.values():
+        for h5object in list(self.h5object.values()):
             try:
                 if np.shape(h5object)[0] == 2 or np.shape(h5object)[1] == 2:
                     Xdata = np.array(h5object)[0]
@@ -293,7 +299,7 @@ class DataRenderer1DPG(FigureRendererPG):
             # If we have only one item, treat it as a group containing that item.
             h5object = {h5object.name: h5object}
 
-        for dataset in h5object.values():
+        for dataset in list(h5object.values()):
             # Check that all datasets selected are either 1D or Nx2 or 2xN
             assert isinstance(dataset, h5py.Dataset) #we can only render datasets
             try:
@@ -317,7 +323,7 @@ class Scatter_plot1DPG(FigureRendererPG):
             self.h5object = {self.h5object.name: self.h5object}
         icolour = 0    
         self.figureWidget.addLegend(offset = (-1,1))
-        for h5object in self.h5object.values(): 
+        for h5object in list(self.h5object.values()): 
             try: 
                 if np.shape(h5object)[0] == 2 or np.shape(h5object)[1] == 2:
                     Xdata = np.array(h5object)[0]
@@ -361,21 +367,21 @@ class Normalised_Parameter_renderer(FigureRendererPG):
        
         self.figureWidget.addLegend(offset = (-1,1))
         icolor = 0
-        for h5object in self.h5object.values(): 
+        for h5object in list(self.h5object.values()): 
             icolor+=1
             try: x_axis = h5object.attrs['x_axis']
-            except: print 'x-axis not found'
+            except: print('x-axis not found')
             for index, Ydata in enumerate(h5object):
                 try:    
                     Max = float(np.max(Ydata))
                     
                     self.figureWidget.plot(x = x_axis,
-                                           y = Ydata/Max,
+                                           y = old_div(Ydata,Max),
                                            pen = (icolor,len(self.h5object)),
                                            name = h5object.name)
                     icolor+=1
                 
-                except: print 'failed'
+                except: print('failed')
             
             
         labelStyle = {'font-size': '24pt'}
@@ -407,10 +413,10 @@ class Parameter_renderer(FigureRendererPG):
        
         self.figureWidget.addLegend(offset = (-1,1))
         icolor = 0
-        for h5object in self.h5object.values(): 
+        for h5object in list(self.h5object.values()): 
             icolor+=1
             try: x_axis = h5object.attrs['x_axis']
-            except: print 'x-axis not found'
+            except: print('x-axis not found')
             for index, Ydata in enumerate(h5object):
                 try:    
                 
@@ -421,7 +427,7 @@ class Parameter_renderer(FigureRendererPG):
                                            name = h5object.name)
                     icolor+=1
                 
-                except: print 'failed'
+                except: print('failed')
             
             
         labelStyle = {'font-size': '24pt'}
@@ -483,11 +489,11 @@ class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
 #                else:
 #                    data = np.append(data,np.array(self.h5object.values()[i]),axis = 0)
  #           sorted_values = 
-            data = np.array(self.h5object.values())
+            data = np.array(list(self.h5object.values()))
             dict_of_times = {}
-            for h5object in self.h5object.values():
+            for h5object in list(self.h5object.values()):
                 dict_of_times[h5object.attrs['creation_timestamp']]=h5object
-            data = np.array(dict_of_times.values())
+            data = np.array(list(dict_of_times.values()))
             for i,h5object_time in enumerate(sorted(dict_of_times.keys())):
                 if i == 0:    
                     data = np.array([dict_of_times[h5object_time]])
@@ -496,11 +502,11 @@ class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
 
                 
             ListData = True
-            print np.shape(data),np.shape(self.h5object.values())
+            print(np.shape(data),np.shape(list(self.h5object.values())))
         elif len(self.h5object.shape) == 1 and len(self.h5object.attrs['wavelengths'])<len(self.h5object) and len(self.h5object)%len(self.h5object.attrs['wavelengths']) == 0:
             RawData = np.array(self.h5object,dtype = float)
             Xlen = len(np.array(self.h5object.attrs['wavelengths']))
-            Ylen = len(RawData)/Xlen
+            Ylen = old_div(len(RawData),Xlen)
             data = [RawData.reshape((Ylen,Xlen))]
             self.h5object = {self.h5object.name : self.h5object}
             ListData = False
@@ -517,46 +523,46 @@ class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
         for h5object in data:
             Title = "A"
             variable_int = False
-            if 'variable_int_enabled' in self.h5object.values()[i].attrs.keys():
-                variable_int = self.h5object.values()[i].attrs['variable_int_enabled']
+            if 'variable_int_enabled' in list(self.h5object.values())[i].attrs.keys():
+                variable_int = list(self.h5object.values())[i].attrs['variable_int_enabled']
             if ((variable_int == True) and #Check for variable integration time and that the background_int and reference_int are not none
-                        ((self.h5object.values()[i].attrs['background_int'] != self.h5object.values()[i].attrs['integration_time'] 
-                            and (self.h5object.values()[i].attrs['background_int'] != None))
-                        or (self.h5object.values()[i].attrs['reference_int'] != self.h5object.values()[i].attrs['integration_time'] 
-                            and (self.h5object.values()[i].attrs['reference_int'] != None)))):
-                if self.h5object.values()[i].attrs['background_int'] != None:
-                    if self.h5object.values()[i].attrs['reference_int'] != None:
-                        data[i] = ((data[i]-(self.h5object.values()[i].attrs['background_constant']+self.h5object.values()[i].attrs['background_gradient']*self.h5object.values()[i].attrs['integration_time']))/ 
-                                        ((self.h5object.values()[i].attrs['reference']-(self.h5object.values()[i].attrs['background_constant']+self.h5object.values()[i].attrs['background_gradient']*self.h5object.values()[i].attrs['reference_int']))
-                                        *self.h5object.values()[i].attrs['integration_time']/self.h5object.values()[i].attrs['reference_int']))
+                        ((list(self.h5object.values())[i].attrs['background_int'] != list(self.h5object.values())[i].attrs['integration_time'] 
+                            and (list(self.h5object.values())[i].attrs['background_int'] != None))
+                        or (list(self.h5object.values())[i].attrs['reference_int'] != list(self.h5object.values())[i].attrs['integration_time'] 
+                            and (list(self.h5object.values())[i].attrs['reference_int'] != None)))):
+                if list(self.h5object.values())[i].attrs['background_int'] != None:
+                    if list(self.h5object.values())[i].attrs['reference_int'] != None:
+                        data[i] = (old_div((data[i]-(list(self.h5object.values())[i].attrs['background_constant']+list(self.h5object.values())[i].attrs['background_gradient']*list(self.h5object.values())[i].attrs['integration_time'])), 
+                                        (old_div((list(self.h5object.values())[i].attrs['reference']-(list(self.h5object.values())[i].attrs['background_constant']+list(self.h5object.values())[i].attrs['background_gradient']*list(self.h5object.values())[i].attrs['reference_int']))
+                                        *list(self.h5object.values())[i].attrs['integration_time'],list(self.h5object.values())[i].attrs['reference_int']))))
                     else:
-                        data[i] = data[i]-(self.h5object.values()[i].attrs['background_constant']+self.h5object.values()[i].attrs['background_gradient']*self.h5object.values()[i].attrs['integration_time'])
+                        data[i] = data[i]-(list(self.h5object.values())[i].attrs['background_constant']+list(self.h5object.values())[i].attrs['background_gradient']*list(self.h5object.values())[i].attrs['integration_time'])
                         reference_counter = reference_counter +1
                 
             else:
-                if 'background' in self.h5object.values()[i].attrs.keys():
+                if 'background' in list(self.h5object.values())[i].attrs.keys():
                     if ListData == True:
-                        if len(np.array(data[i])) == len(np.array(self.h5object.values()[i].attrs['reference'])):
-                            data[i] = data[i] - np.array(self.h5object.values()[i].attrs['background'])     
+                        if len(np.array(data[i])) == len(np.array(list(self.h5object.values())[i].attrs['reference'])):
+                            data[i] = data[i] - np.array(list(self.h5object.values())[i].attrs['background'])     
                     else:
-                        if len(np.array(data)) == len(np.array(self.h5object.values()[i].attrs['background'])):
-                                data = data - np.array(self.h5object.values()[i].attrs['background'])[:,np.newaxis]       
+                        if len(np.array(data)) == len(np.array(list(self.h5object.values())[i].attrs['background'])):
+                                data = data - np.array(list(self.h5object.values())[i].attrs['background'])[:,np.newaxis]       
                         Title = Title + " background subtracted"
                 else:
                     background_counter = background_counter+1
-                if 'reference' in self.h5object.values()[i].attrs.keys():
+                if 'reference' in list(self.h5object.values())[i].attrs.keys():
                     if ListData == True:
-                        if len(np.array(data[i])) == len(np.array(self.h5object.values()[i].attrs['reference'])):
-                            data[i] = data[i]/(np.array(self.h5object.values()[i].attrs['reference'])- np.array(self.h5object.values()[i].attrs['background']))   
+                        if len(np.array(data[i])) == len(np.array(list(self.h5object.values())[i].attrs['reference'])):
+                            data[i] = old_div(data[i],(np.array(list(self.h5object.values())[i].attrs['reference'])- np.array(list(self.h5object.values())[i].attrs['background'])))   
                     else:
-                        if len(np.array(data)) == len(np.array(self.h5object.values()[i].attrs['reference'])):
-                            data = data/(np.array(self.h5object.values()[i].attrs['reference'])[:,np.newaxis]- np.array(self.h5object.values()[i].attrs['background'])[:,np.newaxis])
+                        if len(np.array(data)) == len(np.array(list(self.h5object.values())[i].attrs['reference'])):
+                            data = old_div(data,(np.array(list(self.h5object.values())[i].attrs['reference'])[:,np.newaxis]- np.array(list(self.h5object.values())[i].attrs['background'])[:,np.newaxis]))
                     Title = Title + " referenced"
                 else:
                     reference_counter = reference_counter +1
    #         print i,j,np.max(data) ,self.h5object.values()[i].attrs.keys()
-            if len(self.h5object.values()) != len(data):
-                i = int((float(len(self.h5object.values()))/len(data))*j)
+            if len(list(self.h5object.values())) != len(data):
+                i = int((float(len(list(self.h5object.values())))/len(data))*j)
                 j=j+1
             else:
                 i = i +1
@@ -567,10 +573,10 @@ class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
         
             
         if reference_counter == 0 and background_counter == 0:
-            print "All spectrum are referenced and background subtracted"
+            print("All spectrum are referenced and background subtracted")
         else:
-            print "Number of spectrum not referenced "+str(reference_counter)
-            print "Number of spectrum not background subtracted "+str(background_counter)
+            print("Number of spectrum not referenced "+str(reference_counter))
+            print("Number of spectrum not background subtracted "+str(background_counter))
         Title = Title + " spectrum"
          
         data[np.where(np.isnan(data))] = 0
@@ -588,8 +594,8 @@ class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
 
         img = pg.ImageItem(data)
 
-        ConvertionC= self.h5object.values()[0].attrs['wavelengths'][0]
-        ConvertionM = (self.h5object.values()[0].attrs['wavelengths'][-1] - self.h5object.values()[0].attrs['wavelengths'][0])/len(self.h5object.values()[0].attrs['wavelengths'])
+        ConvertionC= list(self.h5object.values())[0].attrs['wavelengths'][0]
+        ConvertionM = old_div((list(self.h5object.values())[0].attrs['wavelengths'][-1] - list(self.h5object.values())[0].attrs['wavelengths'][0]),len(list(self.h5object.values())[0].attrs['wavelengths']))
 
 
 
@@ -608,13 +614,13 @@ class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
         suitability = 0
         if isinstance(h5object,dict) == False and isinstance(h5object,h5py.Group) == False:
             try:
-                if len(h5object.shape) == 1 and len(h5object)/len(h5object.attrs['wavelengths']) == 1:
+                if len(h5object.shape) == 1 and old_div(len(h5object),len(h5object.attrs['wavelengths'])) == 1:
                     return -1
             except:
                 return -1
             h5object = {h5object.name : h5object}
         
-        for dataset in h5object.values():
+        for dataset in list(h5object.values()):
             if not isinstance(dataset, h5py.Dataset):
                 return -1
             if len(dataset.shape) == 1:
@@ -623,24 +629,24 @@ class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
             if len(dataset.shape) > 2:
                 return -1
       
-            if 'wavelengths' in dataset.attrs.keys():
+            if 'wavelengths' in list(dataset.attrs.keys()):
                 if len(dataset.shape) == 2:
                     if len(np.array(dataset)[:,0])<100:
                         suitability = suitability + len(h5object)-20
                     else:
                         return 1
-                elif (len(np.array(dataset))/len(dataset.attrs['wavelengths']))>1 and (len(np.array(dataset))%len(dataset.attrs['wavelengths'])) == 0 :           
+                elif (old_div(len(np.array(dataset)),len(dataset.attrs['wavelengths'])))>1 and (len(np.array(dataset))%len(dataset.attrs['wavelengths'])) == 0 :           
                     suitability = suitability + 50
                 elif len(dataset.attrs['wavelengths']) != len(np.array(dataset)):
-                    print "the number of bins does not equal the number of wavelengths!"
+                    print("the number of bins does not equal the number of wavelengths!")
                     return -1
                 suitability = suitability + 11
             else:
                 return -1
              
-            if 'background' in dataset.attrs.keys():
+            if 'background' in list(dataset.attrs.keys()):
                 suitability = suitability + 10
-            if 'reference' in dataset.attrs.keys():
+            if 'reference' in list(dataset.attrs.keys()):
                 suitability = suitability + 10
              
         return suitability    
@@ -810,8 +816,8 @@ class SpectrumRenderer(FigureRendererPG):
             self.h5object = {self.h5object.name : self.h5object}
         #Perform averaging
         h5list = {}
-        for h5object in self.h5object.values():  
-            if 'averaging_enabled' in h5object.attrs.keys():
+        for h5object in list(self.h5object.values()):  
+            if 'averaging_enabled' in list(h5object.attrs.keys()):
                 if h5object.attrs['averaging_enabled']==True:
                     ldata = np.average(np.array(h5object)[...],axis = 0)
                     linedata = ArrayWithAttrs(ldata,attrs = h5object.attrs)
@@ -828,7 +834,7 @@ class SpectrumRenderer(FigureRendererPG):
    #         pass
         #take 2D or one datasets and combine them
         h5list = {}
-        for h5object in self.h5object.values():
+        for h5object in list(self.h5object.values()):
             if len(h5object.shape)==2:
                 for line in range(len(h5object[:,0])):
                     ldata = np.array(h5object)[line]
@@ -845,11 +851,11 @@ class SpectrumRenderer(FigureRendererPG):
         plot = self.figureWidget
         plot.addLegend(offset = (-1,1))
         icolour = 0
-        for h5object in self.h5object.values():
+        for h5object in list(self.h5object.values()):
             icolour = icolour+1
             Data = np.array(h5object)
             Title = "A"
-            if 'variable_int_enabled' in h5object.attrs.keys():
+            if 'variable_int_enabled' in list(h5object.attrs.keys()):
                 variable_int = h5object.attrs['variable_int_enabled']
             else:
                 variable_int =False
@@ -861,25 +867,25 @@ class SpectrumRenderer(FigureRendererPG):
                 Title = Title + " variable"
                 if h5object.attrs['background_int'] != None:
                     if h5object.attrs['reference_int'] != None:
-                        Data = ((Data-(h5object.attrs['background_constant']+h5object.attrs['background_gradient']*h5object.attrs['integration_time']))/ 
-                                        ((h5object.attrs['reference']-(h5object.attrs['background_constant']+h5object.attrs['background_gradient']*h5object.attrs['reference_int']))
-                                        *h5object.attrs['integration_time']/h5object.attrs['reference_int']))
+                        Data = (old_div((Data-(h5object.attrs['background_constant']+h5object.attrs['background_gradient']*h5object.attrs['integration_time'])), 
+                                        (old_div((h5object.attrs['reference']-(h5object.attrs['background_constant']+h5object.attrs['background_gradient']*h5object.attrs['reference_int']))
+                                        *h5object.attrs['integration_time'],h5object.attrs['reference_int']))))
                         Title = Title + " referenced and background subtracted"
                     else:
                         Data = Data-(h5object.attrs['background_constant']+h5object.attrs['background_gradient']*h5object.attrs['integration_time'])
                         Title = Title + " background subtracted"
             else:
-                if 'background' in h5object.attrs.keys():
+                if 'background' in list(h5object.attrs.keys()):
                     if len(np.array(h5object)) == len(np.array(h5object.attrs['background'])):
                         Data = Data - np.array(h5object.attrs['background'])
                         Title = Title + " background subtracted"
-                    if 'reference' in h5object.attrs.keys():
+                    if 'reference' in list(h5object.attrs.keys()):
                         if len(np.array(h5object)) == len(np.array(h5object.attrs['reference'])):
-                            Data = Data/(np.array(h5object.attrs['reference'])- np.array(h5object.attrs['background']))
+                            Data = old_div(Data,(np.array(h5object.attrs['reference'])- np.array(h5object.attrs['background'])))
                             Title = Title + " referenced"
-            if 'absorption_enabled' in h5object.attrs.keys():
+            if 'absorption_enabled' in list(h5object.attrs.keys()):
                 if h5object.attrs['absorption_enabled']:
-                    Data = np.log10(1/np.array(Data))
+                    Data = np.log10(old_div(1,np.array(Data)))
             plot.plot(x = np.array(h5object.attrs['wavelengths']), y = np.array(Data),name = h5object.name, pen =(icolour,len(self.h5object)) )
             Title = Title + " spectrum"
                 
@@ -895,7 +901,7 @@ class SpectrumRenderer(FigureRendererPG):
         suitability = 0
         if isinstance(h5object,dict) == False and isinstance(h5object,h5py.Group) == False:
             h5object = {h5object.name : h5object}
-        for dataset in h5object.values():
+        for dataset in list(h5object.values()):
             if not isinstance(dataset, h5py.Dataset):
                 return -1
             if len(dataset.shape) == 1:
@@ -904,22 +910,22 @@ class SpectrumRenderer(FigureRendererPG):
             if len(dataset.shape) > 2:
                 return -1
       
-            if 'wavelengths' in dataset.attrs.keys():
+            if 'wavelengths' in list(dataset.attrs.keys()):
                 if len(dataset.shape) == 2:
                     if len(np.array(dataset)[:,0])<20:
                         suitability = suitability + len(h5object)-20
                     else:
                         return 1
                 elif len(dataset.attrs['wavelengths']) != len(np.array(dataset)):
-                    print "the number of bins does not equal the number of wavelengths!"
+                    print("the number of bins does not equal the number of wavelengths!")
                     return -1
                 suitability = suitability + 10
             else:
                 return -1
              
-            if 'background' in dataset.attrs.keys():
+            if 'background' in list(dataset.attrs.keys()):
                 suitability = suitability + 10
-            if 'reference' in dataset.attrs.keys():
+            if 'reference' in list(dataset.attrs.keys()):
                 suitability = suitability + 10 
         suitability = suitability + 10
         return suitability    
@@ -956,7 +962,7 @@ class HyperSpec(DataRenderer, QtWidgets.QWidget):
         
         for dim in range(dims-1):
             Images.append(pg.ImageView(view=pg.PlotItem()))
-            midpoints.append(int(np.shape(data)[dim]/2))
+            midpoints.append(int(old_div(np.shape(data)[dim],2)))
 
      
         Imagedata = []
@@ -1037,7 +1043,7 @@ class HyperSpec(DataRenderer, QtWidgets.QWidget):
     def is_suitable(cls, h5object):
         if not isinstance(h5object, h5py.Dataset):
             return -1
-        if len(h5object.shape) == 4 and 'z' in h5object.attrs.keys() and 'y' in h5object.attrs.keys() and 'x' in h5object.attrs.keys():
+        if len(h5object.shape) == 4 and 'z' in list(h5object.attrs.keys()) and 'y' in list(h5object.attrs.keys()) and 'x' in list(h5object.attrs.keys()):
             return 30
         elif len(h5object.shape) > 4:
             return -1
@@ -1077,8 +1083,8 @@ class HyperSpec_Alan(DataRenderer, QtWidgets.QWidget):
         #Creating a list of hyperspec images to put into a the layout
         Images = []
         #Calculate the X,Y scales for the images
-        XConvertionM = (self.h5object['x'][-1] - self.h5object['x'][0])/len(self.h5object['x'])
-        YConvertionM = (self.h5object['y'][-1] - self.h5object['y'][0])/len(self.h5object['y'])
+        XConvertionM = old_div((self.h5object['x'][-1] - self.h5object['x'][0]),len(self.h5object['x']))
+        YConvertionM = old_div((self.h5object['y'][-1] - self.h5object['y'][0]),len(self.h5object['y']))
         #creating an iterator for the number of hyperspectral images
         for hyperspec_nom in range(1,num_hyperspec):
             if hyperspec_nom == 1:
@@ -1160,7 +1166,7 @@ class ScannedParticle(FigureRenderer):
             spectrum -= background #we'll fail here if there was no background recorded
             reference = zscan.attrs.get("reference")
             spectrum /= (reference - background) #if there's a reference, apply it
-            spectrum_range = reference > np.max(reference)/10
+            spectrum_range = reference > old_div(np.max(reference),10)
         except:
             pass # if reference/background are missing, ignore them.
         import matplotlib.gridspec as gridspec
@@ -1191,7 +1197,7 @@ class ScannedParticle(FigureRenderer):
 
         # First, make sure we've got the right datasets (NB this also raises an exception if it's not a group)
         g = h5object
-        keys = g.keys()
+        keys = list(g.keys())
         for k in ['camera_image', 'z_scan']:
             assert k in keys, "missing dataset {}, can't be a particle...".format(k)
         assert g['camera_image'].shape[0] > 10
@@ -1230,8 +1236,8 @@ class PumpProbeShifted(DataRenderer, QtWidgets.QWidget):
         
         stepperoffset = -5.0
         
-        for h5object in self.h5object.values():
-            for axis in axes.keys():
+        for h5object in list(self.h5object.values()):
+            for axis in list(axes.keys()):
                 data = np.array(h5object)
                 data[np.where(data[:,7]%2 != 0),5] +=  stepperoffset
                 data[:,5] = -1*(data[:,5]-(864.0))
@@ -1249,7 +1255,7 @@ class PumpProbeShifted(DataRenderer, QtWidgets.QWidget):
 
         
     def change_in_stepperoffset(self):
-        print "HI"
+        print("HI")
         
         
     @classmethod
@@ -1258,7 +1264,7 @@ class PumpProbeShifted(DataRenderer, QtWidgets.QWidget):
         if isinstance(h5object,dict) == False and isinstance(h5object,h5py.Group) == False:
             h5object = {h5object.name : h5object}
             
-        for dataset in h5object.values():
+        for dataset in list(h5object.values()):
             if not isinstance(dataset, h5py.Dataset):
                 return -1
             if len(dataset.shape) == 2:
@@ -1268,21 +1274,21 @@ class PumpProbeShifted(DataRenderer, QtWidgets.QWidget):
                     return -1
             else:
                 return -1
-            if 'repeats' in dataset.attrs.keys():
+            if 'repeats' in list(dataset.attrs.keys()):
                 suitability = suitability + 50
-            if 'start' in dataset.attrs.keys():
+            if 'start' in list(dataset.attrs.keys()):
                 suitability = suitability + 50
-            if 'finish' in dataset.attrs.keys():
+            if 'finish' in list(dataset.attrs.keys()):
                 suitability = suitability + 50
-            if 'stepsize' in dataset.attrs.keys():
+            if 'stepsize' in list(dataset.attrs.keys()):
                 suitability = suitability + 20
-            if 'velocity' in dataset.attrs.keys():
+            if 'velocity' in list(dataset.attrs.keys()):
                 suitability = suitability + 20      
-            if 'acceleration' in dataset.attrs.keys():
+            if 'acceleration' in list(dataset.attrs.keys()):
                 suitability = suitability + 20    
-            if 'filter' in dataset.attrs.keys():
+            if 'filter' in list(dataset.attrs.keys()):
                 suitability = suitability + 20      
-            if 'sensitivity' in dataset.attrs.keys():
+            if 'sensitivity' in list(dataset.attrs.keys()):
                 suitability = suitability + 20    
         return suitability
             
@@ -1318,8 +1324,8 @@ class PumpProbeRaw(DataRenderer, QtWidgets.QWidget):
         
    #     stepperoffset = -5.0
         
-        for h5object in self.h5object.values():
-            for axis in axes.keys():
+        for h5object in list(self.h5object.values()):
+            for axis in list(axes.keys()):
                 data = np.array(h5object)
           #      data[np.where(data[:,7]%2 != 0),5] +=  stepperoffset
         #        data[:,5] = -1*(data[:,5]-(864.0))
@@ -1342,7 +1348,7 @@ class PumpProbeRaw(DataRenderer, QtWidgets.QWidget):
         if isinstance(h5object,dict) == False and isinstance(h5object,h5py.Group) == False:
             h5object = {h5object.name : h5object}
            
-        for dataset in h5object.values():
+        for dataset in list(h5object.values()):
             if not isinstance(dataset, h5py.Dataset):
                 return -1
             if len(dataset.shape) == 2:
@@ -1352,21 +1358,21 @@ class PumpProbeRaw(DataRenderer, QtWidgets.QWidget):
                     return -1
             else:
                 return -1
-            if 'repeats' in dataset.attrs.keys():
+            if 'repeats' in list(dataset.attrs.keys()):
                 suitability = suitability + 50
-            if 'start' in dataset.attrs.keys():
+            if 'start' in list(dataset.attrs.keys()):
                 suitability = suitability + 50
-            if 'finish' in dataset.attrs.keys():
+            if 'finish' in list(dataset.attrs.keys()):
                 suitability = suitability + 50
-            if 'stepsize' in dataset.attrs.keys():
+            if 'stepsize' in list(dataset.attrs.keys()):
                 suitability = suitability + 20
-            if 'velocity' in dataset.attrs.keys():
+            if 'velocity' in list(dataset.attrs.keys()):
                 suitability = suitability + 20      
-            if 'acceleration' in dataset.attrs.keys():
+            if 'acceleration' in list(dataset.attrs.keys()):
                 suitability = suitability + 20    
-            if 'filter' in dataset.attrs.keys():
+            if 'filter' in list(dataset.attrs.keys()):
                 suitability = suitability + 20      
-            if 'sensitivity' in dataset.attrs.keys():
+            if 'sensitivity' in list(dataset.attrs.keys()):
                 suitability = suitability + 20    
         return suitability
 add_renderer(PumpProbeRaw)
@@ -1402,8 +1408,8 @@ class PumpProbeRawXOnly(DataRenderer, QtWidgets.QWidget):
         
         stepperoffset = -5.0
         
-        for h5object in self.h5object.values():
-            for axis in axes.keys():
+        for h5object in list(self.h5object.values()):
+            for axis in list(axes.keys()):
                 data = np.array(h5object)
                 data[np.where(data[:,7]%2 != 0),5] +=  stepperoffset
                 data[:,5] = -1*(data[:,5]-(864.0))
@@ -1426,7 +1432,7 @@ class PumpProbeRawXOnly(DataRenderer, QtWidgets.QWidget):
         if isinstance(h5object,dict) == False and isinstance(h5object,h5py.Group) == False:
             h5object = {h5object.name : h5object}       
             
-        for dataset in h5object.values():
+        for dataset in list(h5object.values()):
             if not isinstance(dataset, h5py.Dataset):
                 return -1
             if len(dataset.shape) == 2:
@@ -1436,21 +1442,21 @@ class PumpProbeRawXOnly(DataRenderer, QtWidgets.QWidget):
                     return -1
             else:
                 return -1
-            if 'repeats' in dataset.attrs.keys():
+            if 'repeats' in list(dataset.attrs.keys()):
                 suitability = suitability + 50
-            if 'start' in dataset.attrs.keys():
+            if 'start' in list(dataset.attrs.keys()):
                 suitability = suitability + 50
-            if 'finish' in dataset.attrs.keys():
+            if 'finish' in list(dataset.attrs.keys()):
                 suitability = suitability + 50
-            if 'stepsize' in dataset.attrs.keys():
+            if 'stepsize' in list(dataset.attrs.keys()):
                 suitability = suitability + 20
-            if 'velocity' in dataset.attrs.keys():
+            if 'velocity' in list(dataset.attrs.keys()):
                 suitability = suitability + 20      
-            if 'acceleration' in dataset.attrs.keys():
+            if 'acceleration' in list(dataset.attrs.keys()):
                 suitability = suitability + 20    
-            if 'filter' in dataset.attrs.keys():
+            if 'filter' in list(dataset.attrs.keys()):
                 suitability = suitability + 20      
-            if 'sensitivity' in dataset.attrs.keys():
+            if 'sensitivity' in list(dataset.attrs.keys()):
                 suitability = suitability + 20    
         return suitability
 
@@ -1486,8 +1492,8 @@ class PumpProbeX_loops(DataRenderer, QtWidgets.QWidget):
         
         stepperoffset = -5.0
         
-        for h5object in self.h5object.values():
-            for axis in axes.keys():
+        for h5object in list(self.h5object.values()):
+            for axis in list(axes.keys()):
                 data = np.array(h5object)
                 data[np.where(data[:,7]%2 != 0),5] +=  stepperoffset
                 data[:,5] = -1*(data[:,5]-(864.0))
@@ -1509,7 +1515,7 @@ class PumpProbeX_loops(DataRenderer, QtWidgets.QWidget):
         if isinstance(h5object,dict) == False and isinstance(h5object,h5py.Group) == False:
             h5object = {h5object.name : h5object}
             
-        for dataset in h5object.values():
+        for dataset in list(h5object.values()):
             if not isinstance(dataset, h5py.Dataset):
                 return -1
             if len(dataset.shape) == 2:
@@ -1519,21 +1525,21 @@ class PumpProbeX_loops(DataRenderer, QtWidgets.QWidget):
                     return -1
             else:
                 return -1
-            if 'repeats' in dataset.attrs.keys():
+            if 'repeats' in list(dataset.attrs.keys()):
                 suitability = suitability + 50
-            if 'start' in dataset.attrs.keys():
+            if 'start' in list(dataset.attrs.keys()):
                 suitability = suitability + 50
-            if 'finish' in dataset.attrs.keys():
+            if 'finish' in list(dataset.attrs.keys()):
                 suitability = suitability + 50
-            if 'stepsize' in dataset.attrs.keys():
+            if 'stepsize' in list(dataset.attrs.keys()):
                 suitability = suitability + 20
-            if 'velocity' in dataset.attrs.keys():
+            if 'velocity' in list(dataset.attrs.keys()):
                 suitability = suitability + 20      
-            if 'acceleration' in dataset.attrs.keys():
+            if 'acceleration' in list(dataset.attrs.keys()):
                 suitability = suitability + 20    
-            if 'filter' in dataset.attrs.keys():
+            if 'filter' in list(dataset.attrs.keys()):
                 suitability = suitability + 20      
-            if 'sensitivity' in dataset.attrs.keys():
+            if 'sensitivity' in list(dataset.attrs.keys()):
                 suitability = suitability + 20    
         return suitability
             
@@ -1573,7 +1579,7 @@ class AutocorrelationRenderer(FigureRendererPG):
         Xdata = np.arange(N)
         keys = ["dt", "frequency"]
         for k in keys:
-            if k in dataset.attrs.keys():
+            if k in list(dataset.attrs.keys()):
                 if k == "dt":
                     try:
                         dt = float(dataset.attrs[k])
@@ -1597,7 +1603,7 @@ class AutocorrelationRenderer(FigureRendererPG):
         #Default X and Y labels
         Xlabel = 'Log10(X axis)'
         Ylabel = 'ACF(Y axis)'
-        for dataset in self.h5object.values():
+        for dataset in list(self.h5object.values()):
 
             #Try to pull out axes label annotations from metadata + reformat them
             try:
@@ -1641,7 +1647,7 @@ class AutocorrelationRenderer(FigureRendererPG):
             # If we have only one item, treat it as a group containing that item.
             h5object = {h5object.name: h5object}
 
-        for dataset in h5object.values():
+        for dataset in list(h5object.values()):
             # Check that all datasets selected are either 1D or Nx2 or 2xN
             assert isinstance(dataset, h5py.Dataset)
             #autocorrelation functions are only for the adlink9812 card
@@ -1659,7 +1665,7 @@ add_renderer(AutocorrelationRenderer)
 if __name__ == '__main__':
     import sys, h5py, os, numpy as np
 
-    print os.getcwd()
+    print(os.getcwd())
     app = get_qt_app()
     f = h5py.File('test.h5', 'w')
     dset = f.create_dataset('dset1', data=np.linspace(-1, 1, 100))

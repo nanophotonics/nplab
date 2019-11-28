@@ -5,9 +5,11 @@ Created on Thu Nov 19 18:00:32 2015
 @author: Felix Benz (fb400)
 """
 
+from builtins import str
+from builtins import object
 import visa
 
-class FW212C():
+class FW212C(object):
     def __init__(self):
         self.visa_address = str('ASRL4::INSTR')
         self.baud_rate=115200

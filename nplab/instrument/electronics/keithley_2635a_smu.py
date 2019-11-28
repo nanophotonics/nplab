@@ -1,7 +1,9 @@
 """
 Classes related to the Keithley 2635A SMU.
 """
+from __future__ import print_function
 
+from builtins import str
 __author__ = 'alansanders'
 
 from nplab.instrument.visa_instrument import VisaInstrument, queried_property
@@ -271,8 +273,8 @@ if __name__ == '__main__':
     smu = Keithley2635A()
     smu.output = 1
     smu.src_voltage = 10e-3
-    print smu.read_iv()
-    print smu.read_resistance()
+    print(smu.read_iv())
+    print(smu.read_resistance())
     smu.output = 0
 
     smu.show_gui()

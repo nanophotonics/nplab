@@ -3,7 +3,10 @@ Created on Tue Apr 14 18:45:32 2015
 
 @author: jpg66. Based on code by Hamid Ohadi (hamid.ohadi@gmail.com)
 """
+from __future__ import division
+from __future__ import print_function
 
+from past.utils import old_div
 from nplab.instrument.visa_instrument import VisaInstrument
 import numpy as np
 import time
@@ -93,9 +96,9 @@ class Triax(VisaInstrument):
         Coefficents=np.sum(Coefficents,axis=1)
 
         if len(Coefficents)==3:
-            return (-Coefficents[1]+np.sqrt((Coefficents[1]**2)-(4*Coefficents[0]*(Coefficents[2]-Pixel_Array))))/(2*Coefficents[0])
+            return old_div((-Coefficents[1]+np.sqrt((Coefficents[1]**2)-(4*Coefficents[0]*(Coefficents[2]-Pixel_Array)))),(2*Coefficents[0]))
         if len(Coefficents)==2:
-            return (Pixel_Array-Coefficents[1])/Coefficents[0]
+            return old_div((Pixel_Array-Coefficents[1]),Coefficents[0])
             
     def Find_Required_Step(self,Wavelength,Pixel):
         """
@@ -111,7 +114,7 @@ class Triax(VisaInstrument):
             Coefficents=np.sum(self.Calibration_Arrays[self.Grating_Number]*np.array([Wavelength**2,Wavelength,1.]),axis=1)
         elif len(self.Calibration_Arrays[self.Grating_Number][0])==2:
             Coefficents=np.sum(self.Calibration_Arrays[self.Grating_Number]*np.array([Wavelength,1.]),axis=1)
-        return int((-Coefficents[1]-np.sqrt((Coefficents[1]**2)-(4*Coefficents[0]*(Coefficents[2]-Pixel))))/(2*Coefficents[0]))
+        return int(old_div((-Coefficents[1]-np.sqrt((Coefficents[1]**2)-(4*Coefficents[0]*(Coefficents[2]-Pixel)))),(2*Coefficents[0])))
 
     def Move_Steps(self, Steps):
         """
@@ -174,7 +177,7 @@ class Triax(VisaInstrument):
             time.sleep(1)
             if (time.time() - Start_Time) > Timeout:
                 self._logger.warn('Timed out')
-                print 'Timed out'
+                print('Timed out')
                 break
 
     #-------------------------------------------------------------------------------------------------

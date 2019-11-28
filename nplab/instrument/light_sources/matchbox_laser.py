@@ -4,6 +4,7 @@ Created on Tue Oct 21 15:58:04 2014
 
 @author: Hera
 """
+from __future__ import print_function
 
 
 from nplab.instrument.serial_instrument import SerialInstrument
@@ -65,7 +66,7 @@ class MatchboxLaser(SerialInstrument, LightSource):
         readings=self.query("r r")
         readout=np.fromstring(readings[11:], dtype=np.float,sep=' ' ,count=4)
         DAC=readout[3]
-        print "DAC current:  %.2f mA" % DAC
+        print("DAC current:  %.2f mA" % DAC)
         return readout
         
     def set_power(self, power):
@@ -74,7 +75,7 @@ class MatchboxLaser(SerialInstrument, LightSource):
         Note: this does not turn off the laser
         '''
         power = abs(int(power))
-        print "Setting power:{} (min:0, max: 8191)".format(power)
+        print("Setting power:{} (min:0, max: 8191)".format(power))
         self.query("c 6 {}".format(power))
         return self.readpower()
         

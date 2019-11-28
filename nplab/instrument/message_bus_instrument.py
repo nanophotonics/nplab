@@ -7,8 +7,13 @@ This base class
 
 @author: Richard Bowman
 """
+from __future__ import print_function
 #from traits.api import HasTraits, Bool, Int, Str, Button, Array, Enum, List
 #import nplab
+from builtins import str
+from builtins import zip
+from builtins import map
+from builtins import object
 import re
 import nplab.instrument
 from functools import partial
@@ -115,7 +120,7 @@ class MessageBusInstrument(nplab.instrument.Instrument):
                 if first_line == queryString:
                     return self.readline(timeout).strip()
                 else:
-                    print 'This command did not echo!!!'
+                    print('This command did not echo!!!')
                     return first_line
     
             if termination_line is not None:
@@ -143,7 +148,7 @@ class MessageBusInstrument(nplab.instrument.Instrument):
             if len(res.groups()) == 1:
                 return parse_function(res.groups()[0])
             else:
-                return map(parse_function,res.groups())
+                return list(map(parse_function,res.groups()))
         except ValueError:
             raise ValueError("Stage response to %s ('%s') couldn't be parsed by the supplied function" % (query_string, reply))
     def parsed_query(self, query_string, response_string=r"%d", re_flags=0, parse_function=None, **kwargs):
@@ -197,9 +202,9 @@ class MessageBusInstrument(nplab.instrument.Instrument):
             else:
                 return parsed_result
         except ValueError:
-            print "Parsing Error"
-            print "Matched Groups:", res.groups()
-            print "Parsing Functions:", parse_function
+            print("Parsing Error")
+            print("Matched Groups:", res.groups())
+            print("Parsing Functions:", parse_function)
             raise ValueError("Stage response to %s ('%s') couldn't be parsed by the supplied function" % (query_string, reply))
     def int_query(self, query_string, **kwargs):
         """Perform a query and return the result(s) as integer(s) (see parsedQuery)"""
@@ -342,13 +347,13 @@ def wrap_with_echo_to_console(obj):
     obj._original_readline = obj.readline
 
     def write(self, q, *args, **kwargs):
-        print "Sent: "+str(q)
+        print("Sent: "+str(q))
         return self._original_write(q, *args, **kwargs)
     obj.write = functools.partial(write, obj)
 
     def readline(self, *args, **kwargs):
         ret = self._original_readline(*args, **kwargs)
-        print "Recv: "+str(ret)
+        print("Recv: "+str(ret))
         return ret
     obj.readline = functools.partial(readline, obj)
 
@@ -358,8 +363,8 @@ if __name__ == '__main__':
         x = queried_property('gx', 'sx {0}', dtype='str')
 
     instr = DummyInstrument()
-    print instr.x
+    print(instr.x)
     instr.x = 'y'
-    print instr.x
+    print(instr.x)
     instr.x = 'x'
-    print instr.x
+    print(instr.x)

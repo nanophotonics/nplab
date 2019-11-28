@@ -5,7 +5,11 @@ This uses a tree view to show the file's contents, and has a plugin-based "rende
 system to display the datasets.  See `nplab.ui.data_renderers` for that.
 
 """
+from __future__ import division
+from __future__ import print_function
 
+from builtins import object
+from past.utils import old_div
 __author__ = 'Alan Sanders, Will Deacon, Richard Bowman'
 
 import nplab
@@ -162,7 +166,7 @@ class HDF5ItemViewer(QtWidgets.QWidget, UiTools):
                 try:
                     self.renderer_selected(index)
                 except Exception as e:
-                    print 'The selected renderer failed becasue',e
+                    print('The selected renderer failed becasue',e)
 
         except ValueError:
             combobox.setCurrentIndex(0)
@@ -209,7 +213,7 @@ class HDF5ItemViewer(QtWidgets.QWidget, UiTools):
     def CopyActivated(self):
         """Copy an image of the currently-displayed figure."""
         ## TO DO: move this to the HDF5 viewer
-        print 'yes'
+        print('yes')
 #        try:
 #            Pixelmap = QtGui.QPixmap.grabWidget(self.figure_widget)
 #        except Exception as e:
@@ -232,9 +236,9 @@ def igorOpen(dataset):
     igorpath = '"C:\\Program Files (x86)\\WaveMetrics\\Igor Pro Folder\\Igor.exe"'
     igortmpfile = os.path.dirname(os.path.realpath(__file__))+'\Igor'
     igortmpfile=igortmpfile.replace("\\","\\\\")
-    print igortmpfile
+    print(igortmpfile)
     open(igortmpfile, 'w').close()
-    print "attempting to open {} in Igor".format(dataset)
+    print("attempting to open {} in Igor".format(dataset))
     if isinstance(dataset,h5py.Dataset):
         dset = dataset
         data = np.asarray(dset[...])
@@ -242,7 +246,7 @@ def igorOpen(dataset):
         if data.ndim == 2:
             # RWB: why do we do this?  Why not just use a 2D text file and skip rescaling??
             from PIL import Image
-            rescaled = (2**16 / data.max() * (data - data.min())).astype(np.uint8)
+            rescaled = (old_div(2**16, data.max()) * (data - data.min())).astype(np.uint8)
 
             im = Image.fromarray(rescaled.transpose())
             im.save(igortmpfile+'.tif')
@@ -250,7 +254,7 @@ def igorOpen(dataset):
             command='/X "ImageLoad/T=tiff/N= h5Data'+' \"'+ igortmpfile+'.tif\""'
             subprocess.Popen(igorpath+' '+command)
         else:
-            print dataset
+            print(dataset)
             np.savetxt(igortmpfile+'.txt', data, header=dataset.name)
             subprocess.Popen( igorpath+' '+ igortmpfile+'.txt')
 
@@ -297,10 +301,10 @@ class HDF5TreeItem(object):
         if self.has_children is False:
             return []
         if self._children is None:
-            keys = self.data_file[self.name].keys()
+            keys = list(self.data_file[self.name].keys())
             try:
                 time_stamps = []
-                for value in self.data_file[self.name].values():
+                for value in list(self.data_file[self.name].values()):
                     time_stamp_str = value.attrs['creation_timestamp']
                     try:
                         time_stamp_float = datetime.datetime.strptime(time_stamp_str,"%Y-%m-%dT%H:%M:%S.%f")
@@ -327,7 +331,7 @@ class HDF5TreeItem(object):
                 self._children = None
             self._has_children = None
         except:
-            print "{} failed to purge its children".format(self.name)
+            print("{} failed to purge its children".format(self.name))
 
     @property
     def h5item(self):
@@ -342,7 +346,7 @@ def print_tree(item, prefix=""):
     """Recursively print the HDF5 tree for debug purposes"""
     if len(prefix) > 16:
         return # recursion guard
-    print prefix + item.basename
+    print(prefix + item.basename)
     if item.has_children:
         for child in item.children:
             print_tree(child, prefix + "  ")
@@ -563,7 +567,7 @@ class HDF5Browser(QtWidgets.QWidget, UiTools):
             if self.data_file.update_current_group == True:
                 df.set_current_group(self.treeWidget.selected_h5item())
         except Exception as e:
-            print e, 'That could be corrupted'
+            print(e, 'That could be corrupted')
             
 
     def __del__(self):

@@ -4,7 +4,13 @@ This is an interface module for instruments produced by Sigma Koki
 
 __author__: Yago
 """
+from __future__ import division
 
+from builtins import zip
+from builtins import str
+from builtins import map
+from builtins import range
+from past.utils import old_div
 from nplab.utils.gui import QtWidgets, QtCore, uic, QtGui
 from nplab.utils.thread_utils import locked_action
 from nplab.instrument.stage import Stage, StageUI
@@ -45,7 +51,7 @@ class GSC01(SerialInstrument, Stage):
         if 'offsetOrigin' in kwargs:
             self.offsetOrigin(kwargs['offsetOrigin'])  # 20000)
 
-        if 'home_on_start' in kwargs.keys():
+        if 'home_on_start' in list(kwargs.keys()):
             if kwargs['home_on_start']:
                 self.MechanicalHome()
 
@@ -139,7 +145,7 @@ class GSC01(SerialInstrument, Stage):
     def get_position(self, axis=None):
         status = self.getStatus()
         counts = status.split(',')[0]
-        position = int(counts)/self.counts_per_degree
+        position = old_div(int(counts),self.counts_per_degree)
         self._logger.debug('Status: %s. Counts: %s. Position returned %g' %(status, counts, position))
         return [position]
 
@@ -347,7 +353,7 @@ class SHOT(VisaInstrument, Stage):
 
     def get_position(self, axis=None):
         status = self.status()
-        counts = map(int, status.split(',')[:2])
+        counts = list(map(int, status.split(',')[:2]))
         if axis is None:
             return counts
         elif hasattr(axis, '__iter__'):
@@ -472,8 +478,8 @@ class HIT(SerialInstrument, Stage):
     # TODO: interpolation commands. They set a position in the plane of two axes and jog in a curved or straight path
     # TODO: add units
 
-    axis_names = map(str, range(8))
-    axis_LUT = dict(zip(map(str, range(8)), range(8)))
+    axis_names = list(map(str, list(range(8))))
+    axis_LUT = dict(list(zip(list(map(str, list(range(8)))), list(range(8)))))
 
     def __init__(self, address, **kwargs):
 
@@ -505,7 +511,7 @@ class HIT(SerialInstrument, Stage):
             axes = (axes, )
         axes_iter = []
         for ax in axes:
-            if ax in self.axis_LUT.keys():
+            if ax in list(self.axis_LUT.keys()):
                 axes_iter += [self.axis_LUT[ax]]
             elif type(ax) == int:
                 axes_iter += [ax]
@@ -530,7 +536,7 @@ class HIT(SerialInstrument, Stage):
             counts = [counts] * len(axes)
         for count in counts:
             assert -134217728 < count < +134217727
-        counts = map(int, counts)
+        counts = list(map(int, counts))
 
         if relative:
             command = 'M'
@@ -752,7 +758,7 @@ class HITUI(QtWidgets.QWidget, UiTools):
         self.set_positions = []
         self.set_position_buttons = []
         for i, ax in enumerate(self.stage.axis_names):
-            col = 4 * (i / 3)
+            col = 4 * (old_div(i, 3))
             position = QtWidgets.QLineEdit('', self)
             position.setReadOnly(True)
             self.positions.append(position)

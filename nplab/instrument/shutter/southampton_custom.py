@@ -4,6 +4,7 @@ Created on Tue Jun 14 11:51:46 2016
 
 @author: rwb27
 """
+from __future__ import print_function
 
 from nplab.instrument.shutter import ShutterWithEmulatedRead
 from nplab.instrument.serial_instrument import SerialInstrument
@@ -38,4 +39,4 @@ if __name__ == "__main__":
     shutter.show_gui()
     time.sleep(1)
     shutter.expose(1)
-    print ILShutter.get_instances() #Check there's not two here...
+    print(ILShutter.get_instances()) #Check there's not two here...

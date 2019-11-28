@@ -1,3 +1,7 @@
+from __future__ import division
+from __future__ import print_function
+from builtins import range
+from past.utils import old_div
 import numpy as np 
 import scipy.ndimage.filters as ndimf
 import scipy.interpolate as scintp
@@ -46,21 +50,21 @@ The second is a dictionary containing the centres, widths and heights of the fou
 """
 
 def Sigmoid(x,O,S):
-	return 1./(1.+np.exp(-((x-O)/S)))
+	return 1./(1.+np.exp(-(old_div((x-O),S))))
 
 def Polynomial(x,Anchors,Anchor_Values):
 	return  np.polyval(np.polyfit(Anchors,Anchor_Values,len(Anchors)-1),x)
 
 def L(x,H,C,W):
-	return H/(1.+(((x-C)/W)**2))
+	return old_div(H,(1.+((old_div((x-C),W))**2)))
 
 def Fit(Shift,Signal,Poly_Order_AS=4,Poly_Order_S=4,Smoothing_Width=30,Noise_Smoothing=2,Peak_Threshold_Window=5,Default_Peak_Width=10.,Minimum_Peak_Width=5.,Maximum_Peak_Width=30.,Iterations=2,Allowed_Peak_Fraction_In_Notch=0.1):
 	
-	Smooth=ndimf.gaussian_filter(Signal,Smoothing_Width/np.median(np.abs(np.diff(Shift))))
+	Smooth=ndimf.gaussian_filter(Signal,old_div(Smoothing_Width,np.median(np.abs(np.diff(Shift)))))
 
 	#--Gradient: Find notch filter--
 
-	x=np.linspace(np.min(Shift),np.max(Shift),int(np.round((np.max(Shift)-np.min(Shift))/np.min(np.abs(np.diff(Shift)))))+1)
+	x=np.linspace(np.min(Shift),np.max(Shift),int(np.round(old_div((np.max(Shift)-np.min(Shift)),np.min(np.abs(np.diff(Shift))))))+1)
 	y=scintp.interp1d(Shift,Smooth,kind='cubic')(x)
 
 	A=np.array(np.array(y).tolist()+[y[-1],y[-2]])
@@ -68,7 +72,7 @@ def Fit(Shift,Signal,Poly_Order_AS=4,Poly_Order_S=4,Smoothing_Width=30,Noise_Smo
 
 	Grad=(A-B)[1:-1]
 
-	x2=np.linspace(0,np.min([np.max(Shift),-np.min(Shift)]),int(np.round((np.max(Shift)-np.min(Shift))/np.min(np.abs(np.diff(Shift)))))+1)
+	x2=np.linspace(0,np.min([np.max(Shift),-np.min(Shift)]),int(np.round(old_div((np.max(Shift)-np.min(Shift)),np.min(np.abs(np.diff(Shift))))))+1)
 	y2=scintp.interp1d(x,Grad,kind='cubic')(x2)-scintp.interp1d(x,Grad,kind='cubic')(-x2)
 
 	Notch_Filter_Edge=x2[np.argmax(y2)]
@@ -180,7 +184,7 @@ def Fit(Shift,Signal,Poly_Order_AS=4,Poly_Order_S=4,Smoothing_Width=30,Noise_Smo
 		Above_Std=(Sub>=Std)
 		if Peak_Threshold_Window%2==0:
 			Peak_Threshold_Window+=1
-		Skip=(Peak_Threshold_Window-1)/2
+		Skip=old_div((Peak_Threshold_Window-1),2)
 		Possible_Peak=[]
 		for i in range(Skip):
 			Possible_Peak.append(False)
@@ -213,10 +217,10 @@ def Fit(Shift,Signal,Poly_Order_AS=4,Poly_Order_S=4,Smoothing_Width=30,Noise_Smo
 
 	Peaks_Vector=[]
 	for Iteration in range(Iterations):
-		print 'Iteration:',Iteration+1
+		print('Iteration:',Iteration+1)
 
 		Bounds=[]
-		for i in range(len(Peaks_Vector)/3):
+		for i in range(old_div(len(Peaks_Vector),3)):
 			Bounds+=[(0,np.inf),(-np.inf,np.inf),(Minimum_Peak_Width,Maximum_Peak_Width)]
 
 		End=False
@@ -233,7 +237,7 @@ def Fit(Shift,Signal,Poly_Order_AS=4,Poly_Order_S=4,Smoothing_Width=30,Noise_Smo
 
 			if Peak_Threshold_Window%2==0:
 				Peak_Threshold_Window+=1
-			Skip=(Peak_Threshold_Window-1)/2
+			Skip=old_div((Peak_Threshold_Window-1),2)
 			Possible_Peak=[]
 			for i in range(Skip):
 				Possible_Peak.append(False)
@@ -251,7 +255,7 @@ def Fit(Shift,Signal,Poly_Order_AS=4,Poly_Order_S=4,Smoothing_Width=30,Noise_Smo
 				Sub=Signal-Generate(Vector)
 				Loss=[]
 				Checked=[]
-				for i in np.array(range(len(Shift)))[Possible_Peak]:
+				for i in np.array(list(range(len(Shift))))[Possible_Peak]:
 					Loss.append(np.sum(np.abs(L(Shift,np.max([Sub[i],0]),Shift[i],Default_Peak_Width)-Sub)))
 					Checked.append(i)
 				
@@ -313,7 +317,7 @@ def Fit(Shift,Signal,Poly_Order_AS=4,Poly_Order_S=4,Smoothing_Width=30,Noise_Smo
 		Full_Bounds=[]
 		for i in Vector:
 			Full_Bounds.append((-np.inf,np.inf))	
-		for i in range(len(Peaks_Vector)/3):
+		for i in range(old_div(len(Peaks_Vector),3)):
 			Full_Bounds+=[(0,np.inf),(-np.inf,np.inf),(Minimum_Peak_Width,Maximum_Peak_Width)]
 			
 
@@ -338,10 +342,10 @@ def Fit(Shift,Signal,Poly_Order_AS=4,Poly_Order_S=4,Smoothing_Width=30,Noise_Smo
 		def To_Fit(x,*Input):
 			return Generate_Peaks(Input)
 		while End is False:
-			print len(Peaks_Vector)/3
+			print(old_div(len(Peaks_Vector),3))
 			Options=[]
 			Loss=[]
-			for i in range(len(Peaks_Vector)/3):
+			for i in range(old_div(len(Peaks_Vector),3)):
 				try:
 					Options.append(spo.curve_fit(To_Fit,Shift,Sub,Peaks_Vector[:i*3]+Peaks_Vector[i*3+3:],bounds=Bounds)[0].tolist())
 					Loss.append(Sub_Loss(Options[-1]))
@@ -357,7 +361,7 @@ def Fit(Shift,Signal,Poly_Order_AS=4,Poly_Order_S=4,Smoothing_Width=30,Noise_Smo
 				Full_Bounds=[]
 				for i in Vector:
 					Full_Bounds.append((-np.inf,np.inf))	
-				for i in range(len(Peaks_Vector)/3):
+				for i in range(old_div(len(Peaks_Vector),3)):
 					Full_Bounds+=[(0,np.inf),(-np.inf,np.inf),(Minimum_Peak_Width,Maximum_Peak_Width)]
 				Output=spo.minimize(Full_Loss,Vector+Peaks_Vector,bounds=Full_Bounds).x.tolist()
 				Vector=Output[:len(Vector)]
@@ -373,9 +377,9 @@ def Fit(Shift,Signal,Poly_Order_AS=4,Poly_Order_S=4,Smoothing_Width=30,Noise_Smo
 		Mask=Sigmoid(Shift,*Vector[1:3])+Sigmoid(Shift,*Vector[3:5])
 
 		Temp=[]
-		for i in range(len(Peaks_Vector)/3):
+		for i in range(old_div(len(Peaks_Vector),3)):
 			Peak=L(Shift,*Peaks_Vector[i*3:i*3+3])
-			Fraction=scint.simps(Peak*Mask,Shift)/scint.simps(Peak,Shift)
+			Fraction=old_div(scint.simps(Peak*Mask,Shift),scint.simps(Peak,Shift))
 			if 1.-Fraction<Allowed_Peak_Fraction_In_Notch:
 				Temp+=Peaks_Vector[i*3:i*3+3]
 
@@ -388,7 +392,7 @@ def Fit(Shift,Signal,Poly_Order_AS=4,Poly_Order_S=4,Smoothing_Width=30,Noise_Smo
 	Peak_Dictionary={'Centres':[],'Widths':[],'Heights':[]}
 
 	Centres=[]
-	for i in range(len(Peaks_Vector)/3):
+	for i in range(old_div(len(Peaks_Vector),3)):
 		Centres.append(Peaks_Vector[i*3+1])
 	while np.sum(np.isinf(Centres))!=len(Centres):
 		Arg=np.argmin(Centres)

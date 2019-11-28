@@ -3,9 +3,15 @@
 @author: Ana Andres-Arroyo
 GUI which controls a uc480 camera
 """
+from __future__ import division
+from __future__ import print_function
 # documentation:
 # http://instrumental-lib.readthedocs.io/en/latest/uc480-cameras.html
 
+from builtins import str
+from builtins import range
+from builtins import object
+from past.utils import old_div
 import os
 import datetime
 import time
@@ -119,18 +125,18 @@ class uc480(QtWidgets.QMainWindow, UiTools):
     
     def open_camera(self, serial=False):
         """Connect to a uc480 camera.""" 
-        print 'Attempting to connect to the camera...'
+        print('Attempting to connect to the camera...')
         if serial: 
-            print "Serial number: %s" %serial
+            print("Serial number: %s" %serial)
             self.camera = instrument(serial=serial) # specified camera
         else: 
-            print "Available instruments:"
-            print list_instruments()
+            print("Available instruments:")
+            print(list_instruments())
             self.camera = instrument('uc480') # default camera
         
         # set the camera gui buttons
         self.reset_gui_with_camera()
-        print 'Camera connection successful.\n'  
+        print('Camera connection successful.\n')  
         self.find_cameras()
         
         # set camera window title
@@ -145,13 +151,13 @@ class uc480(QtWidgets.QMainWindow, UiTools):
             self.camera.gamma = int(self.GammaNumberBox.value())
             self.set_gamma = True
         except: 
-            print "WARNING: Can't set gamma.\n"
+            print("WARNING: Can't set gamma.\n")
             self.set_gamma = False              
         try: 
             self.camera.auto_whitebalance = self.AutoWhitebalanceCheckBox.checkState() 
             self.set_whitebalance = True
         except: 
-            print "WARNING: Can't set auto_whitebalance.\n"
+            print("WARNING: Can't set auto_whitebalance.\n")
             self.set_whitebalance = False    
         
         # initialise the attributes dictionary
@@ -164,7 +170,7 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         """Close the uc480 camera connection.""" 
         self.camera.close()
         self.reset_gui_without_camera()
-        print 'Camera connection closed.\n'  
+        print('Camera connection closed.\n')  
         del self.camera
         self.camera = False
         
@@ -193,7 +199,7 @@ class uc480(QtWidgets.QMainWindow, UiTools):
             index = self.SerialComboBox.findText(serial)
             self.SerialComboBox.setCurrentIndex(index)
         except:
-            print "No camera is currently open.\n"
+            print("No camera is currently open.\n")
     
     def take_image(self):
         """Grab an image and display it."""
@@ -238,11 +244,11 @@ class uc480(QtWidgets.QMainWindow, UiTools):
             
             # adjust the exposure time
             if brightest_pixel > max_gray:
-                print "REDUCE exposure time...\n"
-                new_exposure = current_exposure/2
+                print("REDUCE exposure time...\n")
+                new_exposure = old_div(current_exposure,2)
             elif brightest_pixel < min_gray:
-                print "INCREASE exposure time...\n"
-                new_exposure = current_exposure/brightest_pixel*max_gray*0.99
+                print("INCREASE exposure time...\n")
+                new_exposure = old_div(current_exposure,brightest_pixel)*max_gray*0.99
             
             # try the new exposure time
             self.ExposureTimeNumberBox.setValue(new_exposure)
@@ -286,12 +292,12 @@ class uc480(QtWidgets.QMainWindow, UiTools):
             c = ['r','g','b']            
             for i in range(image.shape[2]):
                 pen = pg.mkPen(color=c[i], width=5)
-                self.horizontal_profile.plot(x=range(image.shape[1]), y=image[horizontal_line_position,:,i], pen=pen)
-                self.vertical_profile.plot(x=image[:,vertical_line_position,i], y=range(image.shape[0]), pen=pen)
+                self.horizontal_profile.plot(x=list(range(image.shape[1])), y=image[horizontal_line_position,:,i], pen=pen)
+                self.vertical_profile.plot(x=image[:,vertical_line_position,i], y=list(range(image.shape[0])), pen=pen)
         else: # monochrome camera
             pen = pg.mkPen(color='w', width=5)
-            self.horizontal_profile.plot(x=range(image.shape[1]), y=image[horizontal_line_position,:], pen=pen)
-            self.vertical_profile.plot(x=image[:,vertical_line_position], y=range(image.shape[0]), pen=pen)
+            self.horizontal_profile.plot(x=list(range(image.shape[1])), y=image[horizontal_line_position,:], pen=pen)
+            self.vertical_profile.plot(x=image[:,vertical_line_position], y=list(range(image.shape[0])), pen=pen)
         self.horizontal_profile.setYRange(0,255)
         self.vertical_profile.setXRange(0,255)
 
@@ -373,8 +379,8 @@ class uc480(QtWidgets.QMainWindow, UiTools):
                     }
         
         # clear all of the old ROI parameters
-        for item in ROI_dict.keys():
-            if item in parameters_dict.keys():
+        for item in list(ROI_dict.keys()):
+            if item in list(parameters_dict.keys()):
                 del parameters_dict[item]
         
         # use maximum width and height available
@@ -383,7 +389,7 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         
         # repopulate ROI parameters with the selected ones
         if self.ROICheckBox.checkState():            
-            for item in ROI_dict.keys():
+            for item in list(ROI_dict.keys()):
                 if ROI_dict[item][0].checkState():
                     parameters_dict[item] = int(ROI_dict[item][1].value())
         
@@ -403,7 +409,7 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         # grab the image
         image = self.camera.grab_image(**capture_parameters)
         self.get_brightest_pixel(image)
-        print 'Image grabbed.\n'
+        print('Image grabbed.\n')
 
         # get and display the camera parameters and update the attributes
         camera_parameters = self.get_camera_parameters()
@@ -434,7 +440,7 @@ class uc480(QtWidgets.QMainWindow, UiTools):
             # write data to the file
             dg.create_dataset("image_%d", data=image, attrs=self.attributes)
             dg.file.flush()
-            print "Image saved to the hdf5 file.\n"
+            print("Image saved to the hdf5 file.\n")
             
         else:
             # user input to choose file name
@@ -444,9 +450,9 @@ class uc480(QtWidgets.QMainWindow, UiTools):
             if len(self.file_path):        
                 # save image            
                 imsave(self.file_path, np.flip(image, axis=0))
-                print "Image saved: " + self.file_path + "\n"
+                print("Image saved: " + self.file_path + "\n")
             else:
-                print "WARNING: Image wasn't saved.\n" 
+                print("WARNING: Image wasn't saved.\n") 
 
     def new_hdf5_file(self):     
         """Open a new HDF5 file and its databrowser GUI."""
@@ -460,7 +466,7 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         self.df_gui = self.df.show_gui(blocking=False)                    
         # update the file name on the camera gui
         self.FilePathLineEdit.setText(self.df.filename)
-        print       
+        print()       
         
     def live_view(self):
         """Continous image acquisition."""
@@ -473,7 +479,7 @@ class uc480(QtWidgets.QMainWindow, UiTools):
             self.LiveViewCheckBox.stateChanged.connect(self.LiveView.terminate)
             self.LiveView.finished.connect(self.terminate_live_view)
             # live view
-            print "Live view..."
+            print("Live view...")
             max_frames=float('inf')
             self.start_live_view(save=False, max_frames=max_frames)                      
             
@@ -535,12 +541,12 @@ class uc480(QtWidgets.QMainWindow, UiTools):
     
     def terminate_live_view(self):
         """This will run when the live view thread is terminated."""
-        print "Finished live view.\n"
+        print("Finished live view.\n")
         self.delete_thread()
         
     def terminate_video_acquisition(self):
         """This will run when the video acquisition thread is terminated."""
-        print "Finished acquiring video.\n"
+        print("Finished acquiring video.\n")
         self.save_video()        
         self.delete_thread()
         
@@ -553,14 +559,14 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         # remove some attribute keys so they don't get recorded in still images
         attributes_keys_del = ['capture_time_sec', 'max_frames', 'timeout']
         for key in attributes_keys_del:
-            if attributes_keys_del in self.attributes.keys():
+            if attributes_keys_del in list(self.attributes.keys()):
                 del self.attributes[key]
         # reset the gui buttons
         self.reset_gui_with_camera()    
     
     def save_video(self):
         """Save the acquired video into a file."""
-        print "Saving video to file, please wait for a while..."            
+        print("Saving video to file, please wait for a while...")            
         # TODO: allow saving as different file formats other than hdf5
         # TODO: write hdf5 data renderer for saved video from the colour camera
         
@@ -576,12 +582,12 @@ class uc480(QtWidgets.QMainWindow, UiTools):
         # save video to the datafile
         datagroup.create_dataset("video_%d", 
                                  # save only the captured frames even if frame_number < max_frames
-                                 data=self.LiveView.image_array[range(self.LiveView.frame_number)],
+                                 data=self.LiveView.image_array[list(range(self.LiveView.frame_number))],
                                  attrs=self.LiveView.attributes)
         
         # flushing at the end
         datagroup.file.flush() 
-        print "Finished saving video.\n"
+        print("Finished saving video.\n")
             
     def reset_gui_with_camera(self):
         """Enable/disable GUI elements when a camera connection exists."""
@@ -655,19 +661,19 @@ class LiveViewThread(QtCore.QThread):
         
         # calculate when we need to emit the image to the gui        
         capture_framerate = self.camera.framerate.magnitude
-        self.frame_multiple = int(capture_framerate / display_framerate)
+        self.frame_multiple = int(old_div(capture_framerate, display_framerate))
         # if display_framerate > capture_framerate then frame_multiple < 1
         # since we cannot emit each image more than once, frame_multiple must be >= 1
         if self.frame_multiple < 1: self.frame_multiple = 1
         
         # initialise data arrays
         if save:
-            print "Recording video..."  
+            print("Recording video...")  
             
             image = self.camera.latest_frame()
             # image_array size is the max_frames by the size of the image taken (works for monochrome and colour)
             self.array_dim = [self.max_frames] + list(image.shape)
-            print "Array dimensions: " + str(self.array_dim)
+            print("Array dimensions: " + str(self.array_dim))
             
             self.image_array = np.empty(self.array_dim, dtype='uint8') # unit8 for minimum file size
             self.capture_timestamp_array = np.empty(self.max_frames, dtype='float')
@@ -701,7 +707,7 @@ class LiveViewThread(QtCore.QThread):
         self.attributes['capture_time_sec'] = self.capture_timestamp_array                
         
 
-class HighPrecisionWallTime():
+class HighPrecisionWallTime(object):
     def __init__(self,):
         self._wall_time_0 = time.time()
         self._clock_0 = time.clock()
@@ -713,14 +719,14 @@ class HighPrecisionWallTime():
 if __name__ == '__main__':
     drivers = list_instruments()
     if not len(drivers):
-        print "No instruments found"
+        print("No instruments found")
     
     app = QtWidgets.QApplication([])
     cameras = list()
     for driver in drivers:
-        print "Instrument driver:"
-        print driver
-        print
+        print("Instrument driver:")
+        print(driver)
+        print()
         if driver['classname'] == 'UC480_Camera':
             cameras.append(uc480(serial=driver['serial']))
             cameras[-1].show()
