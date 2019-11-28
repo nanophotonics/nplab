@@ -112,8 +112,6 @@ class BenchtopPiezo(Stage):
     def connect(self):
         """Initialise communications, populate channel list, etc."""
         self.device.Connect(self._serial_number)
-        self.device.WaitForSettingsInitialized(5000)
-        self.device.EnableDevice()
         self.connected = True
         assert len(self.channels) == 0, "Error connecting: we've already initialised channels!"
         for i in range(self.device.ChannelCount):
@@ -134,19 +132,19 @@ class BenchtopPiezo(Stage):
     def close(self):
         """Shut down communications"""
         if not self.connected:
-            print(f"Not closing piezo device {self._ser}, it's not open!")
+            print(f"Not closing piezo device {self._serial_number}, it's not open!")
             return
         for chan in self.channels:
             chan.StopPolling()
         self.channels = []
-        self._piezo.Disconnect(True)
+        self.device.Disconnect(True)
 
     def __del__(self):
         try:
             if self.connected:
                 self.close()
         except:
-            print(f"Error closing communications on deletion of device {self._ser}")
+            print(f"Error closing communications on deletion of device {self._serial_number}")
 
     def set_output_voltages(self, voltages):
         """Set the output voltage"""
