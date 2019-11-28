@@ -57,8 +57,6 @@ class Spectrometer(Instrument):
         self.stored_references = {}
         self.stored_backgrounds = {}
         self.reference_ID = 0
-        self.spectra_to_save = 0
-        self.spectra_saved = 0
         self.spectra_buffer = np.zeros(0)
         self.data_file = df.current()
         self.curr_scan=None
@@ -606,9 +604,6 @@ class SpectrometerDisplayUI(QtWidgets.QWidget,UiTools):
         self.save_button.clicked.connect(self.button_pressed)
         self.threshold.setValidator(QtGui.QDoubleValidator())
         self.threshold.textChanged.connect(self.check_state)
-
-        self.startContAcq.clicked.connect(self.start_continuous_acquisition)
-
         self._display_thread = DisplayThread(self)
         self._display_thread.spectrum_ready.connect(self.update_display)
         self._display_thread.spectra_ready.connect(self.update_display)
@@ -682,22 +677,6 @@ class SpectrometerDisplayUI(QtWidgets.QWidget,UiTools):
                     self.plotdata[spectrometer_nom].setData(x = self.spectrometer.wavelengths[spectrometer_nom],y= spectrum[spectrometer_nom])
             else:
                 self.plotdata[0].setData(x = self.spectrometer.wavelengths,y= spectrum)
-        # update LineEdit that contains number of spectra that need to be saved
-
-        if self.spectrometer.spectra_to_save==0:
-            self.spectraToSave.setEnabled(True)
-            self.startContAcq.setChecked(True)
-        if self.spectrometer.spectra_saved!=0:
-            self.spectraToSave.setText(str(self.spectrometer.spectra_to_save))
-
-
-    def start_continuous_acquisition(self):
-        self.spectraToSave.setEnabled(False)
-        self.startContAcq.setChecked(False)
-        self.spectrometer.spectra_to_save = int(self.spectraToSave.text())
-        self.spectrometer.save_continuous_spectra = True
-        self.spectrometer._temp_description = self.description.text() #creating a tempory desciption str for the continous save
-
 
     def filename_changed_ui(self):
         self.spectrometer.filename = self.filename_lineEdit.text()
