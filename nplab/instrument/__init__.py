@@ -27,7 +27,7 @@ import datetime
 LOGGER = create_logger('Instrument')
 LOGGER.setLevel('INFO')
 
-class Instrument(object, ShowGUIMixin):
+class Instrument(ShowGUIMixin):
     """Base class for all instrument-control classes.
 
     This class takes care of management of instruments, saving data, etc.
