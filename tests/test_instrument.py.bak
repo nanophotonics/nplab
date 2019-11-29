@@ -5,6 +5,9 @@ Instrument Tests
 This uses some trivial dummy classes to test the auto-finding features of
 the instrument class.
 """
+from __future__ import print_function
+from builtins import str
+from builtins import range
 import pytest
 import os
 
@@ -23,14 +26,14 @@ class InstrumentA(Instrument):
     bad_property = object()
     metadata_property_names = ('integration_time','gain','description','empty_property')
     def __init__(self):
-        print "An instance of instrument A is being created"
+        print("An instance of instrument A is being created")
         super(InstrumentA, self).__init__()
     def save_reading(self):
         self.create_data_group("reading", attrs={'creator':'InstrumentA'})
 
 class InstrumentB(Instrument):
     def __init__(self):
-        print "An instance of instrument B is being created"
+        print("An instance of instrument B is being created")
         super(InstrumentB, self).__init__()
 
 ##################### Test the instance-tracking code #########################
@@ -66,7 +69,7 @@ def test_get_instances():
 def test_instance_deletion():
     class InstrumentC(Instrument):
         def __del__(self):
-            print "deleted"
+            print("deleted")
     assert len(InstrumentC.get_instances()) == 0, "An instance of a not-yet-created instrument existed"
     c = InstrumentC()
     assert len(InstrumentC.get_instances()) == 1, "The created instrument wasn't in the list"
@@ -107,9 +110,9 @@ def test_metadata_bundling(capsys):
     a = InstrumentA()
     d = a.bundle_metadata(np.zeros(100))
     assert hasattr(d, "attrs"), "Dataset was missing attrs dictionary!"
-    for k, v in instrumentA_default_metadata.iteritems():
+    for k, v in instrumentA_default_metadata.items():
         assert d.attrs[k] == v
-    assert d.attrs.keys() == instrumentA_default_metadata.keys(), "Extraneous metadata bundled? {0}".format(d.attrs.keys())
+    assert list(d.attrs.keys()) == list(instrumentA_default_metadata.keys()), "Extraneous metadata bundled? {0}".format(list(d.attrs.keys()))
 
 
 def test_saving(capsys, tmpdir):
@@ -124,7 +127,7 @@ def test_saving(capsys, tmpdir):
     # test the bundled metadata is correctly saved
     data = a.bundle_metadata(np.zeros(100))
     d = a.create_dataset("test_bundled_metadata", data=a.bundle_metadata(np.zeros(100)))    
-    for k, v in instrumentA_default_metadata.iteritems():
+    for k, v in instrumentA_default_metadata.items():
         assert v is None or d.attrs[k] == v
 
     out, err = capsys.readouterr() #make sure this is clear

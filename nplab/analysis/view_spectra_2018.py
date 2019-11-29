@@ -277,14 +277,14 @@ def extract_all_spectra(datafile, outputfile):
     for n, group_name in enumerate(group_names):
         data_group = datafile[group_name]
         save_group = outputfile.require_group('particleScanSummaries/scan%s' % n)
-        Particle_groups = [group for key, group in data_group.items() if "Particle_" in key] #filter out scan groups from overview images, etc.
+        Particle_groups = [group for key, group in list(data_group.items()) if "Particle_" in key] #filter out scan groups from overview images, etc.
                       
         if len(Particle_groups) > 0:
             shape = (len(Particle_groups), Particle_groups[0]['alinger.z_scan_0'].attrs.get('wavelengths').shape[0])
             #these datasets will save the fit parameters to each spectrum in the current scan
             spectra = save_group.create_dataset("spectra", shape)
             
-            for name, value in Particle_groups[0]['alinger.z_scan_0'].attrs.items():
+            for name, value in list(Particle_groups[0]['alinger.z_scan_0'].attrs.items()):
                 spectra.attrs.create(name, value)
             
             peak_z = save_group.create_dataset("peak_z", shape)

@@ -66,7 +66,7 @@ class Trandor(Andor):#Andor
     def Test_Notch_Alignment(self):
         	Accepted=False
         	while Accepted is False:
-        		Input=input('WARNING! A slight misalignment of the narrow band notch filters could be catastrophic! Has the laser thoughput been tested? [Yes/No]')
+        		Input=eval(input('WARNING! A slight misalignment of the narrow band notch filters could be catastrophic! Has the laser thoughput been tested? [Yes/No]'))
         		if Input.upper() in ['Y','N','YES','NO']:
         			Accepted=True
         			if len(Input)>1:

@@ -110,7 +110,7 @@ def test_metadata_bundling(capsys):
     a = InstrumentA()
     d = a.bundle_metadata(np.zeros(100))
     assert hasattr(d, "attrs"), "Dataset was missing attrs dictionary!"
-    for k, v in instrumentA_default_metadata.items():
+    for k, v in list(instrumentA_default_metadata.items()):
         assert d.attrs[k] == v
     assert list(d.attrs.keys()) == list(instrumentA_default_metadata.keys()), "Extraneous metadata bundled? {0}".format(list(d.attrs.keys()))
 
@@ -127,7 +127,7 @@ def test_saving(capsys, tmpdir):
     # test the bundled metadata is correctly saved
     data = a.bundle_metadata(np.zeros(100))
     d = a.create_dataset("test_bundled_metadata", data=a.bundle_metadata(np.zeros(100)))    
-    for k, v in instrumentA_default_metadata.items():
+    for k, v in list(instrumentA_default_metadata.items()):
         assert v is None or d.attrs[k] == v
 
     out, err = capsys.readouterr() #make sure this is clear

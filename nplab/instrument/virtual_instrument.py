@@ -176,7 +176,7 @@ def function_builder(command_name):
         if len(args) > 1:
             for input_value in args[1:]:
                 input_str += str(input_value) + ','
-        for input_name, input_value in kwargs.items():
+        for input_name, input_value in list(kwargs.items()):
             input_str = input_str + input_name + '=' + input_value + ','
         input_str = input_str[:-1]
         obj.memory_map_in.seek(0)

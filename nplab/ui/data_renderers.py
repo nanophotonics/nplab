@@ -523,7 +523,7 @@ class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
         for h5object in data:
             Title = "A"
             variable_int = False
-            if 'variable_int_enabled' in list(self.h5object.values())[i].attrs.keys():
+            if 'variable_int_enabled' in list(list(self.h5object.values())[i].attrs.keys()):
                 variable_int = list(self.h5object.values())[i].attrs['variable_int_enabled']
             if ((variable_int == True) and #Check for variable integration time and that the background_int and reference_int are not none
                         ((list(self.h5object.values())[i].attrs['background_int'] != list(self.h5object.values())[i].attrs['integration_time'] 
@@ -540,7 +540,7 @@ class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
                         reference_counter = reference_counter +1
                 
             else:
-                if 'background' in list(self.h5object.values())[i].attrs.keys():
+                if 'background' in list(list(self.h5object.values())[i].attrs.keys()):
                     if ListData == True:
                         if len(np.array(data[i])) == len(np.array(list(self.h5object.values())[i].attrs['reference'])):
                             data[i] = data[i] - np.array(list(self.h5object.values())[i].attrs['background'])     
@@ -550,7 +550,7 @@ class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
                         Title = Title + " background subtracted"
                 else:
                     background_counter = background_counter+1
-                if 'reference' in list(self.h5object.values())[i].attrs.keys():
+                if 'reference' in list(list(self.h5object.values())[i].attrs.keys()):
                     if ListData == True:
                         if len(np.array(data[i])) == len(np.array(list(self.h5object.values())[i].attrs['reference'])):
                             data[i] = old_div(data[i],(np.array(list(self.h5object.values())[i].attrs['reference'])- np.array(list(self.h5object.values())[i].attrs['background'])))   

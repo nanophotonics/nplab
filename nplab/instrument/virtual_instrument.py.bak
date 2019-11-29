@@ -9,6 +9,9 @@ A control mechanism for running a 32-bit instrument from a 64-bit python console
 
 @author: Will
 """
+from __future__ import print_function
+from builtins import str
+from builtins import object
 import numpy as np
 import mmap
 import time
@@ -65,7 +68,7 @@ class VirtualInstrument_listener(object):
                             try:
                                 self.memory_map_out.write('data.append(np.array(' + data_i_str + '));')
                             except ValueError:
-                                print 'Memory map size error, Increase the output map size'
+                                print('Memory map size error, Increase the output map size')
 
                         except AttributeError:
                             # If the data is not a numpy array it will be passed at its str representation...This should work for most dtypes?
@@ -89,7 +92,7 @@ class VirtualInstrument_listener(object):
                     if len(input_param_split) == 2:
                         input_dict[input_param.split('=')[0]] = input_param.split('=')[1]
                     else:
-                        print 'Arguments must be named for use through VirtualInstrument'
+                        print('Arguments must be named for use through VirtualInstrument')
                 #           print 'input_dict', input_dict
                 return function(**input_dict)
             else:
@@ -98,7 +101,7 @@ class VirtualInstrument_listener(object):
             #            return_vals = exec('self.'+input_str)
 
         else:
-            print command, 'does not exist'
+            print(command, 'does not exist')
 
 
 class VirtualInstrument_speaker(MessageBusInstrument):
@@ -173,12 +176,12 @@ def function_builder(command_name):
         if len(args) > 1:
             for input_value in args[1:]:
                 input_str += str(input_value) + ','
-        for input_name, input_value in kwargs.iteritems():
+        for input_name, input_value in kwargs.items():
             input_str = input_str + input_name + '=' + input_value + ','
         input_str = input_str[:-1]
         obj.memory_map_in.seek(0)
         obj.memory_map_in.write(command_name + '(' + input_str + ')\n')
-        print command_name + '(' + input_str + ')\n'
+        print(command_name + '(' + input_str + ')\n')
         time.sleep(1)
         return obj.read()
 
@@ -195,7 +198,7 @@ def create_speaker_class(original_class):
         def __init__(self):
             original_class.__init__(self)
 
-    for command_name in original_class.__dict__.keys():  # replaces any method
+    for command_name in list(original_class.__dict__.keys()):  # replaces any method
         command = getattr(original_class_Stripped, command_name)
         if inspect.ismethod(command):
             setattr(original_class_Stripped, command_name, function_builder(command_name))

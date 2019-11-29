@@ -44,7 +44,7 @@ def Select_Time_Range(Min,Max):
 
 		Lower=None
 		while Lower is None:
-			Input=input('Please Enter a Lower Spectrum Number (Type \'Cancel\' to cancel): ')
+			Input=eval(input('Please Enter a Lower Spectrum Number (Type \'Cancel\' to cancel): '))
 			if Input.upper()=='CANCEL':
 				return None,None
 			else:
@@ -59,7 +59,7 @@ def Select_Time_Range(Min,Max):
 
 		Upper=None
 		while Upper is None:
-			Input=input('Please Enter a Upper Spectrum Number (Type \'Cancel\' to cancel): ')
+			Input=eval(input('Please Enter a Upper Spectrum Number (Type \'Cancel\' to cancel): '))
 			if Input.upper()=='CANCEL':
 				return None,None
 			else:
@@ -73,7 +73,7 @@ def Select_Time_Range(Min,Max):
 					print('Invalid')
 
 
-		Input=input('Continue with range '+str(Lower)+' to '+str(Upper)+'? (Y/N): ')
+		Input=eval(input('Continue with range '+str(Lower)+' to '+str(Upper)+'? (Y/N): '))
 		if Input.upper()=='Y':
 			Continue=True
 
@@ -146,7 +146,7 @@ def Select_Peaks(Array,Threshold,Color='r',Extra_Lines=None,colormap='inferno'):
 def Input_Width():
 	Output=None
 	while Output is None:
-		Input=input('Please Enter an Approximate Peak Width in Given X-Axis Units (Type \'Cancel\' to cancel): ')
+		Input=eval(input('Please Enter an Approximate Peak Width in Given X-Axis Units (Type \'Cancel\' to cancel): '))
 		if Input.upper()=='CANCEL':
 				return None
 		else:
@@ -167,7 +167,7 @@ def Input_Core_Number():
 	Maximum=mp.cpu_count()
 	Output=None
 	while Output is None:
-		Input=input('Please Enter the Number of CPU Cores to Utilise: ')
+		Input=eval(input('Please Enter the Number of CPU Cores to Utilise: '))
 		try:
 			Input=int(Input)
 			if Input<=0:
@@ -374,7 +374,7 @@ def Run(Array,x_axis,Threshold=None,colormap='inferno'):
 
 	#----Hold------
 
-	Hold=input('Press Enter to Begin')
+	Hold=eval(input('Press Enter to Begin'))
 
 	#---------Fit Array Sections----------------
 
