@@ -19,9 +19,9 @@ import sys
 import time
 
 import ctypes
-asVoidPtr = ctypes.pythonapi.PyCObject_AsVoidPtr #this function converts PyCObject to void *, why is it not in ctypes natively...?
-asVoidPtr.restype = ctypes.c_void_p #we need to set the result and argument types of the imported function
-asVoidPtr.argtypes = [ctypes.py_object]
+# asVoidPtr = ctypes.pythonapi.PyCObject_AsVoidPtr #this function converts PyCObject to void *, why is it not in ctypes natively...?
+# asVoidPtr.restype = ctypes.c_void_p #we need to set the result and argument types of the imported function
+# asVoidPtr.argtypes = [ctypes.py_object]
 
 try:
     from . import lucam
