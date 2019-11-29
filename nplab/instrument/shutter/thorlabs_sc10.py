@@ -29,16 +29,20 @@ class ThorLabsSC10(Shutter, serial.SerialInstrument):
             return 'Open'
         
     def open_shutter(self):
-        if self.get_state() == 'Closed':
+        state = self.get_state()        
+        if state == 'Closed':
             self.toggle()
-        else:
+        elif state == 'Open':
             print 'Shutter is already open!'
+        else: print 'Unkown if shutter is open or closed'
     def close_shutter(self):
-        if self.get_state() == 'Open':
+        state = self.get_state()  
+        if state == 'Open':
             self.toggle()
-        else:
+        elif state == 'Closed':
             print 'Shutter is already closed!'
-            
+        else:
+            print 'Unknown if shutter is open or closed'
     def set_mode(self,n):
         """ Where n equals an associated mode
             mode=1: Sets the unit to Manual Mode
@@ -54,8 +58,8 @@ if __name__ == '__main__':
     import sys
 #    from nplab.utils.gui import *
 #    app = get_qt_app()
-    shutter = ThorLabsSC10('COM5')
+    shutter = ThorLabsSC10('COM30')
 #    ui = shutter.get_qt_ui()
 #    ui.show()
 #    sys.exit(app.exec_())
-    shutter.show_gui()
+#    shutter.show_gui()
