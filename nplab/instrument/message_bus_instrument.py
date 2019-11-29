@@ -18,6 +18,7 @@ import re
 import nplab.instrument
 from functools import partial
 import threading
+import numpy as np
 
 
 class MessageBusInstrument(nplab.instrument.Instrument):

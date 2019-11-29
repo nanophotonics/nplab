@@ -16,6 +16,7 @@ from serial import PARITY_NONE, PARITY_EVEN, PARITY_ODD, PARITY_MARK, PARITY_SPA
 from serial import STOPBITS_ONE, STOPBITS_ONE_POINT_FIVE, STOPBITS_TWO
 import io
 import re
+import numpy as np
 
 class SerialInstrument(MessageBusInstrument):
     """
@@ -100,7 +101,7 @@ class SerialInstrument(MessageBusInstrument):
                 if self.ser.outWaiting()>0: self.ser.flushOutput() #ensure there's nothing waiting
             except AttributeError:
                 if self.ser.out_waiting>0: self.ser.flushOutput() #ensure there's nothing waiting
-            self.ser.write(self.initial_character+query_string+self.termination_character)
+            self.ser.write(np.char.encode(np.array([self.initial_character+query_string+self.termination_character]), 'utf8'))
 
     def flush_input_buffer(self):
         """Make sure there's nothing waiting to be read, and clear the buffer if there is."""
