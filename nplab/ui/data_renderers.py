@@ -12,7 +12,7 @@ from nplab.utils.array_with_attrs import ArrayWithAttrs
 import os
 import matplotlib
 
-matplotlib.use('Qt4Agg')
+matplotlib.use('Qt5Agg')
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import pyqtgraph as pg

@@ -1511,10 +1511,9 @@ class Lucam(object):
 
         """
         
-        asVoidPtr = ctypes.pythonapi.PyCObject_AsVoidPtr #this function converts PyCObject to void *, why is it not in ctypes natively...?
-        asVoidPtr.restype = ctypes.c_void_p #we need to set the result and argument types of the imported function
-        asVoidPtr.argtypes = [ctypes.py_object]        
-        
+        # asVoidPtr = ctypes.pythonapi.PyCObject_AsVoidPtr #this function converts PyCObject to void *, why is it not in ctypes natively...?
+        # asVoidPtr.restype = ctypes.c_void_p #we need to set the result and argument types of the imported function
+        # asVoidPtr.argtypes = [ctypes.py_object]        
         callback = API.VideoFilterCallback(callback)
         if context is not None:
             context = ctypes.py_object(context)
@@ -1524,6 +1523,15 @@ class Lucam(object):
             raise LucamError(self)
         self._callbacks[(API.VideoFilterCallback, callbackid)] = callback
         return callbackid
+        # callback = API.VideoFilterCallback(callback)
+        # if context is not None:
+        #     context = ctypes.py_object(context)
+        # callbackid = API.LucamAddStreamingCallback(self._handle,
+        #                                            callback, context)
+        # if callbackid == -1:
+        #     raise LucamError(self)
+        # self._callbacks[(API.VideoFilterCallback, callbackid)] = callback
+        # return callbackid
 
     def RemoveStreamingCallback(self, callbackid):
         """Remove previously registered video filter callback function.

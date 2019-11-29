@@ -174,14 +174,14 @@ class MessageBusInstrument(nplab.instrument.Instrument):
         noop = lambda x: x #placeholder null parse function
         placeholders = [ #tuples of (regex matching placeholder, regex to replace it with, parse function)
             (r"%c",r".", noop),
-            (r"%(\d+)c",r".{\1}", noop), #TODO support %cn where n is a number of chars
-            (r"%d",r"[-+]?\d+", int),
-            (r"%[eEfg]",r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?", float),
-            (r"%i",r"[-+]?(?:0[xX][\dA-Fa-f]+|0[0-7]*|\d+)", lambda x: int(x, 0)), #0=autodetect base
+            (r"%(\\d+)c",r".{\\1}", noop), #TODO support %cn where n is a number of chars
+            (r"%d",r"[-+]?\\d+", int),
+            (r"%[eEfg]",r"[-+]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?", float),
+            (r"%i",r"[-+]?(?:0[xX][\\dA-Fa-f]+|0[0-7]*|\\d+)", lambda x: int(x, 0)), #0=autodetect base
             (r"%o",r"[-+]?[0-7]+", lambda x: int(x, 8)), #8 means octal
-            (r"%s",r"\S+",noop),
-            (r"%u",r"\d+",int),
-            (r"%[xX]",r"[-+]?(?:0[xX])?[\dA-Fa-f]+",lambda x: int(x, 16)), #16 forces hexadecimal
+            (r"%s",r"\\S+",noop),
+            (r"%u",r"\\d+",int),
+            (r"%[xX]",r"[-+]?(?:0[xX])?[\\dA-Fa-f]+",lambda x: int(x, 16)), #16 forces hexadecimal
         ]
         matched_placeholders = []
         for placeholder, regex, parse_fun in placeholders:
