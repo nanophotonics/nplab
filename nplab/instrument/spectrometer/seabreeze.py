@@ -412,8 +412,9 @@ class OceanOpticsControlUI(SpectrometerControlUI):
         self.read_tec_temperature_pushButton.clicked.connect(self.gui_read_tec_tempeature)
         self.enable_tec.stateChanged.connect(self.update_enable_tec)
         self.enable_tec.setChecked(self.spectrometer.enable_tec)
-        self.tec_temperature_lcdNumber.display(float(self.spectrometer.get_tec_temperature()))
-        self.set_tec_temperature_LineEdit.setText('0')
+        initial_temperature = self.spectrometer.get_tec_temperature()
+        self.tec_temperature_lcdNumber.display(float(initial_temperature))
+        self.set_tec_temperature_LineEdit.setText(str(initial_temperature))
         # self.read_tec.clicked.connect(self.update_tec)
 
     def update_param(self, value):
