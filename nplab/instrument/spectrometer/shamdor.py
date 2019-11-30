@@ -17,5 +17,5 @@ class Shamdor(Andor):
         self.shamrock.pixel_width = 16
         super(Shamdor, self).__init__()
     def get_xaxis(self):
-        return self.shamrock.GetCalibration()
+        return self.shamrock.GetCalibration()[::-1]
     x_axis = property(get_xaxis)
