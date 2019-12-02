@@ -34,7 +34,7 @@ class ThorLabsSC10(Shutter, serial.SerialInstrument):
             self.toggle()
         elif state == 'Open':
             print 'Shutter is already open!'
-        else: print 'Unkown if shutter is open or closed'
+        else: print 'Unknown if shutter is open or closed - plug in and out USB'
     def close_shutter(self):
         state = self.get_state()  
         if state == 'Open':
@@ -42,7 +42,7 @@ class ThorLabsSC10(Shutter, serial.SerialInstrument):
         elif state == 'Closed':
             print 'Shutter is already closed!'
         else:
-            print 'Unknown if shutter is open or closed'
+            print 'Unknown if shutter is open or closed - plug in and out USB'
     def set_mode(self,n):
         """ Where n equals an associated mode
             mode=1: Sets the unit to Manual Mode
