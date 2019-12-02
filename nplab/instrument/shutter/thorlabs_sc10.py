@@ -19,27 +19,27 @@ class ThorLabsSC10(Shutter, serial.SerialInstrument):
         serial.SerialInstrument.__init__(self, port=port)
         Shutter.__init__(self)
         self.ignore_echo = True
+        self._state = False # closed
     def toggle(self):
         self.write('ens')
-
-    def get_state(self):
-        if self.query('ens?') == '0':
-            return 'Closed'
-        elif self.query('ens?') == '1':
-            return 'Open'
+        self._state = not self._state
         
+#    def get_state(self):
+#        if self.query('ens?') == '0':
+#            return 'Closed'
+#        elif self.query('ens?') == '1':
+#            return 'Open'
+#        
     def open_shutter(self):
-        state = self.get_state()        
-        if state == 'Closed':
+        if not self._state:
             self.toggle()
-        elif state == 'Open':
+        elif self._state:
             print 'Shutter is already open!'
         else: print 'Unknown if shutter is open or closed - plug in and out USB'
-    def close_shutter(self):
-        state = self.get_state()  
-        if state == 'Open':
+    def close_shutter(self):  
+        if self._state:
             self.toggle()
-        elif state == 'Closed':
+        elif not self._state:
             print 'Shutter is already closed!'
         else:
             print 'Unknown if shutter is open or closed - plug in and out USB'
@@ -55,7 +55,7 @@ class ThorLabsSC10(Shutter, serial.SerialInstrument):
         self.query('mode?')
     
 if __name__ == '__main__':
-    import sys
+#    import sys
 #    from nplab.utils.gui import *
 #    app = get_qt_app()
     shutter = ThorLabsSC10('COM30')
