@@ -2,6 +2,9 @@
 
 import numpy as np
 # import pyfftw
+from scipy import misc
+import matplotlib.pyplot as plt
+from matplotlib import gridspec
 
 
 # TODO: performance quantifiers for IFT algorithms (smoothness, efficiency)
@@ -135,10 +138,10 @@ def linear_lut(input_phase, contrast, offset):
 """Iterative Fourier Transform algorithms"""
 
 
-def mraf(input_phase, target_intensity, input_field=None, mixing_ratio=0.4, signal_region_size=0.5, iterations=30):
+def mraf(original_phase, target_intensity, input_field=None, mixing_ratio=0.4, signal_region_size=0.5, iterations=30):
     """Mixed-Region Amplitude Freedom algorithm for continuous patterns https://doi.org/10.1364/OE.16.002176
 
-    :param input_phase:
+    :param original_phase:
     :param target_intensity:
     :param input_field:
     :param mixing_ratio:
@@ -146,17 +149,21 @@ def mraf(input_phase, target_intensity, input_field=None, mixing_ratio=0.4, sign
     :param iterations:
     :return:
     """
-    shp = input_phase.shape
+    shp = target_intensity.shape
+    x, y = np.ogrid[-shp[1] / 2:shp[1] / 2, -shp[0] / 2:shp[0] / 2]
+    x, y = np.meshgrid(x, y)
+
     target_intensity = np.asarray(target_intensity, np.float)
     if input_field is None:
-        input_field = np.ones(shp) + 1j * np.zeros(shp)
+        # By default, the initial phase focuses a uniform SLM illumination onto the signal region
+        input_phase = ((x ** 2 / (shp[1] / (signal_region_size * 2 * np.sqrt(2)))) +
+                       (y ** 2 / (shp[0] / (signal_region_size * 2 * np.sqrt(2)))))
+        input_field = np.exp(1j * input_phase)
     # Normalising the input field and target intensity to 1 (doesn't have to be 1, but they have to be equal)
     input_field /= np.sqrt(np.sum(np.abs(input_field)**2))
     target_intensity /= np.sum(target_intensity)
 
     # This can leave the center of the SLM one or two pixels
-    x, y = np.ogrid[-shp[1] / 2:shp[1] / 2, -shp[0] / 2:shp[0] / 2]
-    x, y = np.meshgrid(x, y)
     mask = (x**2 + y**2) < (signal_region_size * np.min(shp))**2
     signal_region = np.ones(shp) * mixing_ratio
     signal_region[~mask] = 0
@@ -177,61 +184,146 @@ def mraf(input_phase, target_intensity, input_field=None, mixing_ratio=0.4, sign
         input_field = np.fft.ifft2(mixed_field)
         input_phase = np.angle(input_field)
         input_field = np.sqrt(input_intensity) * np.exp(1j*input_phase)
+        # print(np.sum(np.abs(input_field)**2), np.sum(target_intensity), np.sum(np.abs(output_field)**2))
+    return original_phase + input_phase
 
-    return input_phase
 
-
-def gerchberg_saxton(input_phase, target_intensity, iterations=30):
+def gerchberg_saxton(original_phase, target_intensity, input_field=None, iterations=30):
     """Gerchberg Saxton algorithm for continuous patterns
 
     Easiest version, where you don't need to keep track of FFT factors, normalising intensities, or FFT shifts since it
     all gets discarded anyway.
 
-    :param input_phase:
+    :param original_phase:
     :param target_intensity:
+    :param input_field:
     :param iterations:
     :return:
     """
-    kinoform = np.copy(input_phase)
-
     shp = target_intensity.shape
-    input_intensity = np.ones(shp)
     target_intensity = np.fft.fftshift(target_intensity)  # this matrix is only used in the Fourier plane
-
-    input_field = input_intensity * np.exp(1j * np.ones(shp))
-    for iter in range(iterations):
-        output_field = np.fft.fft2(input_field)
+    if input_field is None:
+        input_field = np.ones(shp) * np.exp(1j * np.zeros(shp))
+    input_intensity = np.abs(input_field) ** 2
+    for _ in range(iterations):
+        output_field = np.fft.fft2(input_field)  # don't have to normalise since the intensities are replaced
         output_phase = np.angle(output_field)
-        output_field = target_intensity * np.exp(1j * output_phase)
+        output_field = np.sqrt(target_intensity) * np.exp(1j * output_phase)
 
         input_field = np.fft.ifft2(output_field)
         input_phase = np.angle(input_field)
-        input_field = input_intensity * np.exp(1j * input_phase)
+        input_field = np.sqrt(input_intensity) * np.exp(1j * input_phase)
+        # print(np.sum(np.abs(input_field)**2), np.sum(target_intensity), np.sum(np.abs(output_field)**2))
+    return original_phase + input_phase
 
-    return kinoform + input_phase
 
+def test_ifft_smoothness(alg_func, *args, **kwargs):
+    """Evaluates smoothness of calculated vs target pattern as a function of iteration in an IFFT algorithm
 
-def test_ifft_alg(alg_func, *args, **kwargs):
-    target = np.copy(misc.face()[:, :, 0])
+    Smoothness is defined as the sum of absolute difference over the area of interest. For most algorithms the area of
+    interest is the whole plane, while for MRAF the area of interest is only the signal region
+
+    :param alg_func:
+    :param args:
+    :param kwargs:
+    :return:
+    """
+    target = np.asarray(misc.face()[:, :, 0], np.float)
     shp = target.shape
     x, y = np.ogrid[-shp[1] / 2:shp[1] / 2, -shp[0] / 2:shp[0] / 2]
     x, y = np.meshgrid(x, y)
     mask = (x**2 + y**2) > (0.2 * np.min(shp))**2
     target[mask] = 0
+    target /= np.sum(target)
+
+    iterations = 60
+    if 'iterations' in kwargs:
+        iterations = kwargs['iterations']
+    # The algorithms only return the final phase, so to evaluate the smoothness at each iteration, need to set the
+    # algorithm to only run one step at a time
+    kwargs['iterations'] = 1
+
+    # Defining a mask and a mixing_ratio for calculating the smoothness later
+    if alg_func == gerchberg_saxton:
+        mask = np.ones(shp, dtype=np.bool)
+        mixing_ratio = 1
+    elif alg_func == mraf:
+        x, y = np.ogrid[-shp[1] / 2:shp[1] / 2, -shp[0] / 2:shp[0] / 2]
+        x, y = np.meshgrid(x, y)
+        signal_region_size = 0.5
+        if 'signal_region_size' in kwargs:
+            signal_region_size = kwargs['signal_region_size']
+        mask = (x**2 + y**2) < (signal_region_size * np.min(shp))**2
+        mixing_ratio = 0.4
+        if 'mixing_ratio' in kwargs:
+            mixing_ratio = kwargs['mixing_ratio']
+    else:
+        raise ValueError('Unrecognised algorithm')
+
+    smth = []
+    outputs = []
+    for indx in range(iterations):
+        init_phase = alg_func(0, target, *args, **kwargs)
+        input_field = np.exp(1j * init_phase)
+        kwargs['input_field'] = input_field
+        output = np.fft.fftshift(np.fft.fft2(np.exp(1j * init_phase))) / (np.prod(shp))
+        output_int = np.abs(output) ** 2
+        # print(np.sum(np.abs(output_int)), np.sum(np.abs(output_int)[mask]))
+        smth += [np.sum(np.abs(output_int - mixing_ratio*target)[mask]) / np.sum(mask)]
+        outputs += [output]
+
+    fig = plt.figure(figsize=(8*shp[1]/shp[0]*2, 8))
+    gs = gridspec.GridSpec(1, 2)
+    gs2 = gridspec.GridSpecFromSubplotSpec(5, 6, gs[0], 0.001, 0.001)
+    reindex = np.linspace(0, iterations-1, 30)
+    ax = None
+    for indx, _gs in zip(reindex, gs2):
+        indx = int(indx)
+        ax = plt.subplot(_gs, sharex=ax, sharey=ax)
+        ax.imshow(np.abs(outputs[indx]))
+        ax.text(shp[1]/2., 0, '%d=%.3g' % (indx, smth[indx]), ha='center', va='top', color='w')
+        ax.set_xticklabels([])
+        ax.set_yticklabels([])
+    ax2 = plt.subplot(gs[1])
+    ax2.semilogy(smth)
+    return np.array(smth)
+
+
+def test_ifft_basic(alg_func, *args, **kwargs):
+    """Basic testing for IFFT algorithms to see if the final phase truly reproduces an initial target
+
+    Creates an image target (the center of the scipy.misc.face() image), runs the alg_func on it, and plots the results
+    for comparison by eye
+
+    :param alg_func:
+    :param args:
+    :param kwargs:
+    :return:
+    """
+    target = np.asarray(misc.face()[:, :, 0], np.float)
+    shp = target.shape
+    x, y = np.ogrid[-shp[1] / 2:shp[1] / 2, -shp[0] / 2:shp[0] / 2]
+    x, y = np.meshgrid(x, y)
+    mask = (x**2 + y**2) > (0.2 * np.min(shp))**2
+    target[mask] = 0
+    target /= np.sum(target)  # the target intensity is normalised to 1
+
     init_phase = np.zeros(target.shape)
     phase = alg_func(init_phase, target, *args, **kwargs)
+    output = np.fft.fftshift(np.fft.fft2(np.exp(1j * phase))) / (np.prod(shp))
 
-    fig, axs = plt.subplots(2, 2, sharey=True, sharex=True)
-    axs[0, 0].imshow(target)
+    fig, axs = plt.subplots(2, 2, sharey=True, sharex=True, gridspec_kw=dict(wspace=0.01))
+    vmin, vmax = (np.min(target), np.max(target))
+    axs[0, 0].imshow(target, vmin=vmin, vmax=vmax)
+    axs[0, 0].set_title('Target')
     axs[1, 0].imshow(phase)
-    axs[0, 1].imshow(np.abs(np.fft.fftshift(np.fft.fft2(np.exp(1j * phase)))))
-    axs[1, 1].imshow(np.angle(np.fft.fftshift(np.fft.fft2(np.exp(1j * phase)))))
+    axs[1, 0].set_title('Input Phase')
+    axs[0, 1].imshow(np.abs(output)**2, vmin=vmin, vmax=vmax)
+    axs[0, 1].set_title('Output')
+    axs[1, 1].imshow(np.angle(output))
+    axs[1, 1].set_title('Output Phase')
     plt.show()
 
 
 if __name__ == "__main__":
-    from scipy import misc
-    import matplotlib.pyplot as plt
-    test_ifft_alg(gerchberg_saxton)
-
-    # test_ifft_alg(mraf, mixing_ratio=0.4, signal_region_size=0.5, iterations=30)
+    test_ifft_basic(gerchberg_saxton)
