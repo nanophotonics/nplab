@@ -29,7 +29,10 @@ class ThorLabsSC10(Shutter, serial.SerialInstrument):
 #            return 'Closed'
 #        elif self.query('ens?') == '1':
 #            return 'Open'
-#        
+    def get_state(self):
+        return self._state
+    def set_state(self):
+        pass
     def open_shutter(self):
         if not self._state:
             self.toggle()
