@@ -19,15 +19,6 @@
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>
-     <widget class="QWidget" name="widget_replace" native="true">
-      <property name="minimumSize">
-       <size>
-        <width>10</width>
-        <height>10</height>
-       </size>
-      </property>
-      <layout class="QGridLayout" name="gridLayout_3"/>
-     </widget>
      <widget class="QFrame" name="Display_frame">
       <property name="frameShape">
        <enum>QFrame::StyledPanel</enum>
