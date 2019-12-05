@@ -37,7 +37,7 @@ Created on Thu Oct 29 10:36:07 2015
 
 
 
-class DataRenderer(object):
+class DataRenderer():
     def __init__(self, h5object, parent=None):
     #    assert self.is_suitable(h5object) >= 0, "Can't render that object: {0}".format(h5object)
         super(DataRenderer, self).__init__()
