@@ -80,12 +80,14 @@ class ProScan(serial.SerialInstrument, stage.Stage):
         for i in range(len(x)): querystring += " %d" % int(x[i]/self.resolution)
         self.query(querystring)
         time_0 = time.time()
+        #position_0 = self.position
+        #print position_0
         try:
             if(block):
                 while(self.is_moving()):
                     time.sleep(0.02)
-                    if (time.time()-time_0>10):
-                        print(x, end=' ')
+                    if (time.time()-time_0>20):  # Set move timelimit in case stage gets stuck
+                        print(x)
                         print(self.position)
                         self.emergency_stop()
                         self.move(x, relative, axis, block)
@@ -126,3 +128,7 @@ class ProScan(serial.SerialInstrument, stage.Stage):
             return True
         else:
             return False
+    def disable_joy(self):
+        self.query('H')
+    def enable_joy(self):
+        self.query('J')
