@@ -7,8 +7,8 @@ import pyqtgraph.dockarea as dockarea
 import numpy as np
 import os
 import math
-import gui
-import pattern_generators
+from . import gui
+from . import pattern_generators
 
 
 def zernike_polynomial(array_size, n, m, beam_size=1):
