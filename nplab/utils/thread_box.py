@@ -4,6 +4,9 @@ Created on Wed Feb 28 16:00:07 2018
 
 @author: wmd22
 """
+from __future__ import print_function
+from builtins import zip
+from builtins import str
 from nplab.ui.ui_tools import QuickControlBox
 from nplab.utils.notified_property import NotifiedProperty
 from nplab.utils.gui import QtWidgets

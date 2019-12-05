@@ -3,7 +3,10 @@ This is an interface module for instruments produced by Sigma Koki
 
 __author__: Yago
 """
+from __future__ import division
+from __future__ import print_function
 
+from past.utils import old_div
 from nplab.utils.thread_utils import locked_action
 from nplab.instrument.stage import Stage
 from nplab.instrument.serial_instrument import SerialInstrument
@@ -131,7 +134,7 @@ class GSC01(SerialInstrument, Stage):
     def get_position(self, axis=None):
         status = self.getStatus()
         counts = status.split(',')[0]
-        position = int(counts)/self.counts_per_degree
+        position = old_div(int(counts),self.counts_per_degree)
         self._logger.debug('Status: %s. Counts: %s. Position returned %g' %(status, counts, position))
         return [position]
 

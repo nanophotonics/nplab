@@ -1,3 +1,8 @@
+from __future__ import division
+from __future__ import print_function
+from builtins import zip
+from builtins import range
+from past.utils import old_div
 import matplotlib.pyplot as plt 
 import numpy as np
 from nplab import datafile
@@ -246,11 +251,11 @@ def process_image(image,figname):
 		print(d)
 	DoG = [d + np.min(d) for d in DoG]
 	DoG = [d-np.min(d) for d in DoG]
-	DoG = [d/np.max(d) for d in DoG]
+	DoG = [old_div(d,np.max(d)) for d in DoG]
 
 	prod = DoG[1]*DoG[2]*DoG[3]
 	prod = prod - np.min(prod)
-	prod = prod/np.max(prod)
+	prod = old_div(prod,np.max(prod))
 
 	level_set = get_lowest_level_set(prod)
 	particle_contour = get_ellipse_contour(level_set)
@@ -370,8 +375,8 @@ def CoM_image(image):
 				num = num + 1
 	# num = float(image.shape[0]*image.shape[1])
 	num = float(num)
-	cx = int(round(it/num))
-	cy = int(round(jt/num))
+	cx = int(round(old_div(it,num)))
+	cy = int(round(old_div(jt,num)))
 
 	# M = cv2.moments(image)
 	# print M

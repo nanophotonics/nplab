@@ -19,6 +19,7 @@ A function running in the background returns a thread object; to find the return
 """
 from __future__ import print_function
 
+from builtins import object
 import time
 import threading
 import functools

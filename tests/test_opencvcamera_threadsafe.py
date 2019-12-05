@@ -5,6 +5,8 @@ Created on Mon Jul 18 17:59:26 2016
 @author: richa
 """
 
+from builtins import input
+from builtins import range
 import nplab
 import nplab.instrument.camera.opencv
 import threading

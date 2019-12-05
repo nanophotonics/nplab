@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from builtins import str
 from nplab.instrument.visa_instrument import VisaInstrument
 import re
 import time

@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 """
 Lumenera camera wrapper for NPLab
 =================================
@@ -9,9 +11,19 @@ software from Lumenera's website).
 
 @author: Richard Bowman (rwb27@cam.ac.uk)
 """
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
 
+
+from builtins import range
+from past.utils import old_div
+import sys
 import time
 import ctypes
+# asVoidPtr = ctypes.pythonapi.PyCObject_AsVoidPtr #this function converts PyCObject to void *, why is it not in ctypes natively...?
+# asVoidPtr.restype = ctypes.c_void_p #we need to set the result and argument types of the imported function
+# asVoidPtr.argtypes = [ctypes.py_object]
 
 try:
     from . import lucam
@@ -145,10 +157,10 @@ class LumeneraCamera(Camera):
                                         ctypes.POINTER(ctypes.c_byte))
                     image = self.convert_frame(frame_pointer,np.product(frame.shape))
                     if crop_fraction is not None:
-                        x_size = int(image.shape[0]*crop_fraction)/2
-                        x_mid = int(image.shape[0])/2
-                        y_size = int(image.shape[1]*crop_fraction)/2
-                        y_mid = int(image.shape[1])/2
+                        x_size = old_div(int(image.shape[0]*crop_fraction),2)
+                        x_mid = old_div(int(image.shape[0]),2)
+                        y_size = old_div(int(image.shape[1]*crop_fraction),2)
+                        y_mid = old_div(int(image.shape[1]),2)
                         image = image[x_mid-x_size:x_mid+x_size,y_mid-y_size:y_mid+y_size]
                     return True, image
                 except Exception as e:
@@ -172,7 +184,7 @@ class LumeneraCamera(Camera):
         can store it in latest_image and thus update the GUI.
         """
         now = time.clock()
-        self.fps = 1/(now - self.last_frame_time)
+        self.fps = old_div(1,(now - self.last_frame_time))
         self.last_frame_time = now
         try:
             self.latest_raw_frame = self.convert_frame(frame_pointer, frame_size)

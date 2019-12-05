@@ -7,7 +7,12 @@ Created on Tue Jul 03 13:04:50 2018
 Gathers Raman data and attributes from directory full of .spc files and turns it into an h5 file'''
 Put this script in the same folder as a list of .spc files (must be exported directly from WiRE at time of measurement), set cwd and run
 """
+from __future__ import division
+from __future__ import print_function
 
+from builtins import range
+from past.utils import old_div
+from builtins import object
 import os
 import spc
 import h5py
@@ -122,7 +127,7 @@ def extractRamanSpc(path, bg_path = False, combine_statics = False):
         metadata = f.__dict__ #Pulls metadata dictionary from spc file for easy access
 
         if absLaserPower != 'Undefined':
-            absRamanIntensities = [(spectrum * 1000) / (absLaserPower * integrationTime * float(accumulations)) for spectrum in ramanIntensities]
+            absRamanIntensities = [old_div((spectrum * 1000), (absLaserPower * integrationTime * float(accumulations))) for spectrum in ramanIntensities]
 
         else:
             absRamanIntensities = ['N/A'] * nScans
@@ -173,10 +178,10 @@ def populateH5(spectra, h5File):
             yAbs = spectrum.absRamanIntensities
 
             if spectrum.nScans == 1:
-                yNorm = spectrum.ramanIntensities / spectrum.ramanIntensities.max()
+                yNorm = old_div(spectrum.ramanIntensities, spectrum.ramanIntensities.max())
 
             else:
-                yNorm = np.array([yData/yData.max() for yData in spectrum.ramanIntensities])
+                yNorm = np.array([old_div(yData,yData.max()) for yData in spectrum.ramanIntensities])
 
             dRaw = gSpectrum.create_dataset('Raman (cts)', data = yRaw)
             dRaw.attrs['wavelengths'] = x

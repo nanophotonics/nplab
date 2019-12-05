@@ -4,7 +4,13 @@ This is an interface module for instruments produced by Sigma Koki
 
 __author__: Yago
 """
+from __future__ import division
 
+from builtins import zip
+from builtins import str
+from builtins import map
+from builtins import range
+from past.utils import old_div
 from nplab.utils.gui import QtWidgets, QtCore, uic, QtGui
 from nplab.utils.thread_utils import locked_action
 from nplab.instrument.stage import Stage, StageUI
@@ -139,7 +145,7 @@ class GSC01(SerialInstrument, Stage):
     def get_position(self, axis=None):
         status = self.getStatus()
         counts = status.split(',')[0]
-        position = int(counts)/self.counts_per_degree
+        position = old_div(int(counts),self.counts_per_degree)
         self._logger.debug('Status: %s. Counts: %s. Position returned %g' %(status, counts, position))
         return [position]
 
@@ -749,7 +755,7 @@ class HITUI(QtWidgets.QWidget, UiTools):
         self.set_positions = []
         self.set_position_buttons = []
         for i, ax in enumerate(self.stage.axis_names):
-            col = 4 * (i / 3)
+            col = 4 * (old_div(i, 3))
             position = QtWidgets.QLineEdit('', self)
             position.setReadOnly(True)
             self.positions.append(position)

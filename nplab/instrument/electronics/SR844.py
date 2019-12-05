@@ -4,7 +4,10 @@ Created on Tue Jul 14 18:50:08 2015
 
 @author: wmd22
 """
+from __future__ import print_function
 
+from builtins import str
+from builtins import range
 from time import sleep
 
 import numpy as np

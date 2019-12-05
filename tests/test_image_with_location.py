@@ -1,3 +1,6 @@
+from __future__ import print_function
+from builtins import str
+from builtins import range
 import numpy as np
 from nplab.instrument.camera.camera_with_location import ImageWithLocation
 

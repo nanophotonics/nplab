@@ -14,6 +14,8 @@ V1.1
 Michael Leung
 mcleung@stanford.edu
 """
+from __future__ import print_function
+from builtins import object
 DEBUG = False
 
 
@@ -53,7 +55,7 @@ if DEBUG:
     print("Word length of OS [32/64bit]", OS_TYPE)
     print("APT DLL path:", DLL_PATH)
 
-class APTMotor():
+class APTMotor(object):
     def __init__(self, SerialNum=None, HWTYPE=31,blacklash_correction=0.10,minimum_velocity=0.0,acceleration=5.0,max_velocity=10.0):
         '''
         HWTYPE_BSC001		11	// 1 Ch benchtop stepper driver

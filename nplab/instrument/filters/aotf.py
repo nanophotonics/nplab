@@ -1,3 +1,5 @@
+from __future__ import print_function
+from builtins import range
 import numpy as np 
 import nplab.instrument.serial_instrument as serial 
 from nplab.ui.ui_tools import *

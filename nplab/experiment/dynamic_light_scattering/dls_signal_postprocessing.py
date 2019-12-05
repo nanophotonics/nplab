@@ -1,3 +1,6 @@
+from __future__ import division
+from builtins import range
+from past.utils import old_div
 import numpy as np
 import matplotlib.pyplot as plt
 import math
@@ -13,7 +16,7 @@ def signal_diff(voltages):
 	vmin = np.min(voltages)
 	rounded_voltages = (voltages-vmin) #subtract min
 	vmax = np.max(rounded_voltages)
-	rounded_voltages = rounded_voltages/vmax #divide by max
+	rounded_voltages = old_div(rounded_voltages,vmax) #divide by max
 
 	#NOW: voltages are on scale: [0,1]
 	#Round to nearest integer - lift/lower intermediate values

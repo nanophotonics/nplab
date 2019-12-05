@@ -1,3 +1,7 @@
+from __future__ import division
+from __future__ import print_function
+from builtins import range
+from past.utils import old_div
 import numpy as np 
 import matplotlib.pyplot as plt 
 import scipy.signal
@@ -89,10 +93,10 @@ class Pacton(Instrument):
 			calibration_wavelengths =CALIBRATION_WAVELENGTHS[indices]
 
 			calibration_intensity = calibration_intensity - np.min(calibration_intensity)
-			calibration_intensity = calibration_intensity/np.max(calibration_intensity)
+			calibration_intensity = old_div(calibration_intensity,np.max(calibration_intensity))
 
 			intensity = intensity - np.min(intensity)
-			intensity = intensity/np.max(intensity)
+			intensity = old_div(intensity,np.max(intensity))
 
 			upsampled_calibration_intensity = scipy.signal.resample(calibration_intensity, len(wavelengths), t=None, axis=0, window=None)
 			upsampled_calibration_wavelengths= scipy.signal.resample(calibration_wavelengths, len(wavelengths), t=None, axis=0, window=None)
@@ -102,7 +106,7 @@ class Pacton(Instrument):
 			max_xcs, xcs = spectrum_pixel_offset(upsampled_calibration_intensity,intensity)
 			xcs = np.fft.fftshift(xcs)
 			max_xcs = np.argmax(xcs)
-			offset = max_xcs - len(wavelengths)/2
+			offset = max_xcs - old_div(len(wavelengths),2)
 			# if self.debug > 0:
 			# 	print "Calibration wavelength range:", np.min(upsampled_calibration_wavelengths),np.max(upsampled_calibration_wavelengths)
 			# 	print "Measured wavelength range:", np.min(wavelengths),np.max(wavelengths)

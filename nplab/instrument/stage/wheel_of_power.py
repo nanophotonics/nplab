@@ -4,6 +4,7 @@ Created on Sun Oct 07 12:43:44 2018
 
 @author: wmd22, ydb20
 """
+from builtins import object
 from nplab.experiment.gui import run_function_modally
 import numpy as np
 from scipy.interpolate import interp1d

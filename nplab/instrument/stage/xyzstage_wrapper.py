@@ -4,6 +4,7 @@ Created on Mon Jul 31 11:10:09 2017
 
 @author: Hera
 """
+from __future__ import print_function
 from nplab.instrument.stage import Stage
 from UltrafastRig.Equipment.Piezoconcept_micro import Piezoconcept
 from nplab.instrument.stage.apt_vcp_motor import DC_APT

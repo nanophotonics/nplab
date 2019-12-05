@@ -5,7 +5,12 @@ Issues:
     - The waitStop property for moving doesn't really work, and if you send two move commands quickly after each other,
     the system doesn't react fast enough and doesn't reach the final destination.
 """
+from __future__ import print_function
 
+from builtins import map
+from builtins import hex
+from builtins import str
+from builtins import range
 import time
 
 from nplab.instrument.serial_instrument import SerialInstrument

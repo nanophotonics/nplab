@@ -1,3 +1,5 @@
+from __future__ import print_function
+from builtins import object
 __author__ = 'alansanders'
 
 from nplab.instrument.visa_instrument import VisaInstrument, queried_property, queried_channel_property

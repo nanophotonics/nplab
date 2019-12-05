@@ -82,6 +82,7 @@ Movement commands:
 
 
 '''
+from __future__ import print_function
 import time
 from nplab.instrument.serial_instrument import SerialInstrument
 import serial

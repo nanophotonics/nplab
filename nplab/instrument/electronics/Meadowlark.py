@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import division
+from builtins import map
+from past.utils import old_div
 from nplab.instrument.serial_instrument import SerialInstrument
 from serial import EIGHTBITS, PARITY_NONE, STOPBITS_ONE
 import time
@@ -102,7 +105,7 @@ class VariableRetarder(SerialInstrument):
         :return:
         """
         integer = int(self.query('tmp:?'))
-        return (integer * 500 / 65535) - 273.15
+        return (old_div(integer * 500, 65535)) - 273.15
 
     @property
     def temperature_setpoint(self):
@@ -111,7 +114,7 @@ class VariableRetarder(SerialInstrument):
         :return:
         """
         integer = int(self.query('tsp:?'))
-        return (integer * 500 / 16384) - 273.15
+        return (old_div(integer * 500, 16384)) - 273.15
 
     @temperature_setpoint.setter
     def temperature_setpoint(self, value):
@@ -120,7 +123,7 @@ class VariableRetarder(SerialInstrument):
         :param value:
         :return:
         """
-        integer = (value + 273.15) * 16384 / 500
+        integer = old_div((value + 273.15) * 16384, 500)
         self.write('tsp:%d' % integer)
 
     def sync(self):

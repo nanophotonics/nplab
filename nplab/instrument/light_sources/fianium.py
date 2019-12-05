@@ -1,3 +1,4 @@
+from __future__ import print_function
 __author__ = 'alansanders'
 
 import nplab.instrument.serial_instrument as serial

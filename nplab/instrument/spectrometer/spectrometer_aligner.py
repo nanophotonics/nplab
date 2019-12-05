@@ -2,6 +2,8 @@
 """
 Auto-aligning spectrometer: centres in on a nanoparticle after a short scan
 """
+from __future__ import division
+from __future__ import print_function
 #import traits
 #from traits.api import HasTraits, Property, Instance, Float, Range, Array, Int, String, Button, Bool, on_trait_change
 ##import traitsui
@@ -10,6 +12,8 @@ Auto-aligning spectrometer: centres in on a nanoparticle after a short scan
 #import chaco
 #from chaco.api import ArrayPlotData, Plot
 #from enable.component_editor import ComponentEditor
+from builtins import range
+from past.utils import old_div
 import threading
 import numpy as np
 import nplab.instrument.spectrometer
@@ -141,11 +145,11 @@ class SpectrometerAligner(Instrument):
                         mean_position[a] = np.Inf * p[i+1] #if the parabola is happy/flat, assume we are moving the maximum step
                         print("warning: there is no maximum on axis %d" % a)
                     else:
-                        mean_position[a] = -p[i+1]/(2*p[i+N+1]) #if there's a maximum in the fitted curve, assume that's where we should be
+                        mean_position[a] = old_div(-p[i+1],(2*p[i+N+1])) #if there's a maximum in the fitted curve, assume that's where we should be
                         print("axis %d has a maximum at %.2f" % (a, mean_position[a]))
                 for i in range(mean_position.shape[0]):
-                    if mean_position[i] > np.max(pos[:,i])/2: mean_position[i] = np.max(pos[:,i])/2 #constrain to lie within the positions supplied
-                    if mean_position[i] < np.min(pos[:,i])/2: mean_position[i] = np.min(pos[:,i])/2 #so we don't move too far
+                    if mean_position[i] > old_div(np.max(pos[:,i]),2): mean_position[i] = old_div(np.max(pos[:,i]),2) #constrain to lie within the positions supplied
+                    if mean_position[i] < old_div(np.min(pos[:,i]),2): mean_position[i] = old_div(np.min(pos[:,i]),2) #so we don't move too far
                 mean_position += np.mean(positions,axis=0)
             except:
                 print("Quadratic fit failed, falling back to centroid.")
@@ -158,7 +162,7 @@ class SpectrometerAligner(Instrument):
                 axes_with_motion = np.where(np.std(np.array(points),axis=0)>0)[0] #don't try to fit axes where there's no motion (nb the [0] is necessary because the return value from np.where is a tuple)
                 N = len(axes_with_motion)
                 def error_from_gaussian(p):
-                    gaussian = p[0] + p[1] * np.exp(-np.sum((pos-p[2:2+N])**2/(2*p[2+N:2+2*N]**2),axis=1))
+                    gaussian = p[0] + p[1] * np.exp(-np.sum(old_div((pos-p[2:2+N])**2,(2*p[2+N:2+2*N]**2)),axis=1))
                     return np.mean((powers-gaussian)**2)
                 ret = scipy.optimize.minimize(error_from_gaussian, [0,np.max(powers)]+list(mean_position)+list(np.ones(N)*0.3))
                 print(ret)
@@ -170,7 +174,7 @@ class SpectrometerAligner(Instrument):
                 fit_method="centroid"
         if fit_method=="centroid":
             powers = np.array(powers) - np.min(powers)*1.1+np.max(powers)*0.1 #make sure no powers are <0
-            mean_position = np.dot(powers, positions)/np.sum(powers)
+            mean_position = old_div(np.dot(powers, positions),np.sum(powers))
         if fit_method=="maximum":           #go to the brightest point
             powers = np.array(powers)
             mean_position = np.array(positions)[powers.argmax(),:]
@@ -207,7 +211,7 @@ class SpectrometerAligner(Instrument):
             pos = self.iterate_z(dz, print_move=verbose)[2]
             positions.append(pos)
             powers.append(self.merit_function())
-            if np.sum((positions[-1] - positions[-2])**2 / tolerance**2) <= 1.0:
+            if np.sum(old_div((positions[-1] - positions[-2])**2, tolerance**2)) <= 1.0:
                 break
             else:
                 time.sleep(self.settling_time)
@@ -288,7 +292,7 @@ def fit_parabola(positions, powers, *args):
         if p[i+1+N] > 0:
             mean_position[a] = np.Inf * p[i+1] #if the parabola is happy/flat, assume we are moving the maximum step
         else:
-            mean_position[a] = -p[i+1]/(2*p[i+N+1]) #if there's a maximum in the fitted curve, assume that's where we should be
+            mean_position[a] = old_div(-p[i+1],(2*p[i+N+1])) #if there's a maximum in the fitted curve, assume that's where we should be
     for i in range(mean_position.shape[0]):
         if mean_position[i] > np.max(positions[:,i]): mean_position[i] = np.max(positions[:,i]) #constrain to lie within the positions supplied
         if mean_position[i] < np.min(positions[:,i]): mean_position[i] = np.min(positions[:,i]) #so we don't move too far
@@ -298,7 +302,7 @@ def plot_alignment(positions, powers, mean_position):
     x = [p[0] for p in positions]
     y = [p[1] for p in positions]
     powers = np.array(powers)
-    s = powers/powers.max() * 20
+    s = old_div(powers,powers.max()) * 20
     plt.scatter(x,y,s=s)
     plt.plot([mean_position[0]],[mean_position[1]], 'r+')
     plt.show(block=False)

@@ -7,7 +7,10 @@ This module provides the DataFile class, a subclass of h5py's File class with a 
 
 :author: Richard Bowman
 """
+from __future__ import print_function
 
+from builtins import str
+from past.builtins import basestring
 __author__ = "rwb27"
 
 import h5py
@@ -26,7 +29,7 @@ from nplab.utils.array_with_attrs import DummyHDF5Group
 def attributes_from_dict(group_or_dataset, dict_of_attributes):
     """Update the metadata of an HDF5 object with a dictionary."""
     attrs = group_or_dataset.attrs
-    for key, value in dict_of_attributes.items():
+    for key, value in list(dict_of_attributes.items()):
         if value is not None:
             try:
                 attrs[key] = value
@@ -169,7 +172,7 @@ class Group(h5py.Group, ShowGUIMixin):
         come in alphabetical order, so 10 comes before 2).  `name` is the
         name passed in without the _0 suffix.
         """
-        items = [wrap_h5py_item(v) for k, v in self.items()
+        items = [wrap_h5py_item(v) for k, v in list(self.items())
                  if k.startswith(name)  # only items that start with `name`
                  and re.match(r"_*(\d+)$", k[len(name):])]  # and end with numbers
         return sorted(items, key=h5_item_number)
@@ -315,7 +318,7 @@ class DataFile(Group):
     change in the future...
     """
 
-    def __init__(self, name, mode=None, save_version_info=True,
+    def __init__(self, name, mode=None, save_version_info=False,
                  update_current_group = True, *args, **kwargs):
         """Open or create an HDF5 file.
 

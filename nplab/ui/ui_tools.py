@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+from __future__ import print_function
+from builtins import object
 __author__ = 'alansanders'
 
 
@@ -128,7 +131,7 @@ class UiTools(object):
         # auto_connectable_controls
         
         # Connect controls to properties with the same name
-        for control_type, c in auto_connectable_controls.items():
+        for control_type, c in list(auto_connectable_controls.items()):
             for control in self.findChildren(c['qt_type']):
                 name = strip_suffices(control.objectName(), c['suffices'])
                 try:

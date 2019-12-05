@@ -1,3 +1,8 @@
+# -*- coding: utf-8 -*-
+
+from __future__ import division
+from __future__ import print_function
+from past.utils import old_div
 __author__ = 'alansanders'
 
 import numpy as np
@@ -32,7 +37,7 @@ def software_lockin(t, signal, reference, harmonic=1, trigger=None, smoothing=No
     n = np.arange(zero_crossings.size)  # number of rising triggers
     p = np.polyfit(n, zero_crossings, 1)  # result is p[0]*t + p[1]
     # extract the frequency and phase of the reference wave
-    omega_r = 2*np.pi/p[0]
+    omega_r = old_div(2*np.pi,p[0])
     phi_r = -omega_r*p[1]  # if the phase is not between 0 and 2pi its ok since its put into an exp
     ref = np.exp(-1j*harmonic*(omega_r*t + phi_r))  # construct the reference waveform
     cmplx = 2j*np.mean(signal*ref)  # multiply signal with reference
@@ -59,12 +64,12 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
     t = np.linspace(0, 1, 1000)
-    phi = np.pi/2
+    phi = old_div(np.pi,2)
     ref = np.sin(2*np.pi*10*t + phi)
-    signal = np.sin(2*np.pi*10*t + phi + np.pi/2)
+    signal = np.sin(2*np.pi*10*t + phi + old_div(np.pi,2))
 
     x, y = software_lockin(t, signal, ref, harmonic=1)
     r, theta = cart2pol(x, y)
-    print(r, theta/np.pi)
+    print(r, old_div(theta,np.pi))
 
     plt.show()

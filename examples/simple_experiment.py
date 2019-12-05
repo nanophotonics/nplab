@@ -4,7 +4,10 @@ The basic experiment updates the data plot in the same thread as the data is acq
 the experiment. By multithreading an experiment to separate data acquisition from its view, an experiment
 can run more efficiently.
 """
+from __future__ import print_function
 
+from future import standard_library
+standard_library.install_aliases()
 __author__ = 'alansanders'
 
 import numpy as np, matplotlib.pyplot as plt, threading, timeit

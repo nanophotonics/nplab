@@ -4,11 +4,16 @@ Created on Fri Jun 13 09:01:53 2014
 
 @author: alansanders
 """
+from __future__ import print_function
 
+from future import standard_library
+standard_library.install_aliases()
+from builtins import range
+from builtins import object
 import numpy as np
 from io import StringIO
 
-class IviumDataFile:
+class IviumDataFile(object):
     def __init__(self, data_file):
         self.params = {}
         self.parse_data(data_file)
@@ -31,7 +36,7 @@ class IviumDataFile:
                                            autostrip=True, unpack=True,
                                            )
 
-class IviumDataFileStr:
+class IviumDataFileStr(object):
     def __init__(self, data_file_str):
         self.params = {}
         self.parse_data(data_file_str)
@@ -57,7 +62,7 @@ class IviumDataFileStr:
                                        autostrip=True, unpack=True,
                                        )
 
-class IviumDataSet:
+class IviumDataSet(object):
     def __init__(self, data_set):
         self.sets = []
         self.parse_set2(data_set)

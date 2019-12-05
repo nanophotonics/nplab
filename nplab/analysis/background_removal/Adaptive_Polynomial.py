@@ -13,6 +13,7 @@ the observed counts or higher would be seen in this case are calculated. This wi
 the fit. These are used as weights for the next round of fitting. This continues until the fit converges.
 """
 
+from builtins import range
 import numpy as np
 import scipy.stats as stat
 

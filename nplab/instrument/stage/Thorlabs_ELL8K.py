@@ -1,7 +1,12 @@
 '''
 author: im354
 '''
+from __future__ import division
+from __future__ import print_function
 
+from builtins import str
+from builtins import range
+from past.utils import old_div
 import struct,sys,math
 from bitarray import bitarray
 import numpy as np 
@@ -169,7 +174,7 @@ class Thorlabs_ELL8K(SerialInstrument,Stage):
 
         Method used when reading data received from stage
         '''
-        return (float(self.TRAVEL)*pulse_count)/self.PULSES_PER_REVOLUTION
+        return old_div((float(self.TRAVEL)*pulse_count),self.PULSES_PER_REVOLUTION)
 
     def __angle_to_hex_pulses(self,angle):
         '''

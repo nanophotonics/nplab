@@ -1,3 +1,8 @@
+from __future__ import division
+from __future__ import print_function
+from builtins import map
+from builtins import range
+from past.utils import old_div
 __author__ = 'chrisgrosse'
 
 
@@ -28,7 +33,7 @@ class PositionBarWidget(QWidget):
         self.range = max_value-min_value
         self.margin = margin
         self.initUI()
-        self.setValue(self.range/2)
+        self.setValue(old_div(self.range,2))
 
 
 
@@ -53,7 +58,7 @@ class PositionBarWidget(QWidget):
         lower_threshold = self.margin*self.range
         upper_threshold = (1-self.margin)*self.range
 
-        till = round((h * (self.range-self.value))/self.range)
+        till = round(old_div((h * (self.range-self.value)),self.range))
 
         if self.value <= lower_threshold or self.value >= upper_threshold:
             qp.setBrush(QColor(255, 100, 100))

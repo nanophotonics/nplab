@@ -1,3 +1,5 @@
+from __future__ import print_function
+from builtins import str
 __author__ = 'alansanders'
 
 from nplab.experiment.scanning_experiment import ScanningExperiment, TimedScan

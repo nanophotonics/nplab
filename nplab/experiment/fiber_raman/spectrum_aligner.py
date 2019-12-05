@@ -1,3 +1,7 @@
+from __future__ import division
+from __future__ import print_function
+from builtins import range
+from past.utils import old_div
 import numpy as np 
 import matplotlib.pyplot as plt 
 import sys
@@ -194,7 +198,7 @@ def plot_layers(center_wavelengths, data,mapper,show_plot=True):
 		xs = list(range(len(ys))) 
 		
 		ys = ys - np.nanmin(ys)
-		ys = i + (ys/(1.1*np.nanmax(ys))) 
+		ys = i + (old_div(ys,(1.1*np.nanmax(ys)))) 
 		wls = [mapper(center_wl,x) for x in range(len(ys))]
 		plt.plot(wls,ys,color="blue")
 	if show_plot == True:
@@ -223,7 +227,7 @@ def median_spectrum(data,debug=0):
 		for i in range(data_matrix.shape[0]):
 			ys = data_matrix[i,:]
 			ys = ys - np.nanmin(ys)
-			ys = i + (ys/(1.1*np.nanmax(ys)))
+			ys = i + (old_div(ys,(1.1*np.nanmax(ys))))
 			axarr2[0].plot(ys,"blue")
 		axarr2[0].set_xlim(0,14000)
 		axarr2[1].set_xlim(0,14000)

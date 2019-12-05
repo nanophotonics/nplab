@@ -7,12 +7,18 @@ This base class
 
 @author: Richard Bowman
 """
+from __future__ import print_function
 #from traits.api import HasTraits, Bool, Int, Str, Button, Array, Enum, List
 #import nplab
+from builtins import str
+from builtins import zip
+from builtins import map
+from builtins import object
 import re
 import nplab.instrument
 from functools import partial
 import threading
+import numpy as np
 
 
 class MessageBusInstrument(nplab.instrument.Instrument):
@@ -172,6 +178,9 @@ class MessageBusInstrument(nplab.instrument.Instrument):
             (r"%(\\d+)c",r".{\1}", noop), #TODO support %cn where n is a number of chars
             (r"%d",r"[-+]?\\d+", int),
             (r"%[eEfg]",r"[-+]?(?:\\d+(?:\.\\d*)?|\.\\d+)(?:[eE][-+]?\\d+)?", float),
+            # (r"%(\\d+)c",r".{\\1}", noop), #TODO support %cn where n is a number of chars
+            # (r"%d",r"[-+]?\\d+", int),
+            # (r"%[eEfg]",r"[-+]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?", float),
             (r"%i",r"[-+]?(?:0[xX][\\dA-Fa-f]+|0[0-7]*|\\d+)", lambda x: int(x, 0)), #0=autodetect base
             (r"%o",r"[-+]?[0-7]+", lambda x: int(x, 8)), #8 means octal
             (r"%s",r"\\S+",noop),

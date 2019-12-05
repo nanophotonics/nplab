@@ -1,4 +1,5 @@
-''' 
+# -*- coding: utf-8 -*-
+"""
 # Ralf Mouthaan, Ilya Manyakin, Ermanno Miele
 # University of Cambridge
 # October 2018
@@ -20,20 +21,29 @@
 Development notes:
     * API for DLL: Picam 5.x Programmers Manual, 4411-0161, Issue 5, August 2018
     
-'''
+"""
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
 
+from builtins import range
+from past.utils import old_div
 import ctypes as ct
 import numpy as np
 from matplotlib import pyplot as plt
 from nplab.instrument.camera import Camera
 import sys,os, time
-from picam_constants import PicamSensorTemperatureStatus,PicamParameter,PicamValueType,PicamError,transpose_dictionary,PI_V,PicamConstraintType
+
+from .picam_constants import PicamSensorTemperatureStatus,PicamParameter,PicamValueType,PicamError,transpose_dictionary,PI_V,PicamConstraintType
+
 import logging
 PARENT_DIR = os.path.dirname(os.path.realpath(__file__))
+
 
 class clsPicamReadoutStruct(ct.Structure):
     _fields_ = [("ptr", ct.c_void_p),
                 ("intCount", ct.c_int64)]
+
 
 class Pixis(Camera):
     def __init__(self,with_start_up = False,debug=0):
@@ -90,10 +100,10 @@ class Pixis(Camera):
             return raw_spectrum,pixel_offsets
 
     def get_parameter(self,parameter_name, label="unknown"):
-        '''
+        """
         Perform GetParameterIntegerValue calls to DLL
         parameter_name : name of parameter as specified in the picam_constants.py file
-        '''
+        """
 
         if self.debug > 0:
             print("pixis.get_parameter::parameter_name:{}".format(parameter_name))

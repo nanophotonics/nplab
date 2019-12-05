@@ -4,6 +4,7 @@ Created on Tue Oct 21 15:58:04 2014
 
 @author: Hera
 """
+from __future__ import print_function
 
 
 from nplab.instrument.serial_instrument import SerialInstrument

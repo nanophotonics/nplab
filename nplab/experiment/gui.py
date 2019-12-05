@@ -3,7 +3,9 @@
 Basic GUI methods for the Experiment class.
 
 """
+from __future__ import print_function
 
+from builtins import object
 from nplab.experiment import Experiment, ExperimentStopped
 from nplab.utils.gui import QtCore, QtGui, QtWidgets
 from nplab.ui.ui_tools import UiTools, QuickControlBox

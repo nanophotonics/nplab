@@ -1,7 +1,13 @@
 """
 Base class and interface for Stages.
 """
+from __future__ import division
+from __future__ import print_function
 
+from builtins import str
+from builtins import zip
+from builtins import range
+from past.utils import old_div
 __author__ = 'alansanders, richardbowman'
 
 import numpy as np
@@ -206,7 +212,7 @@ class StageUI(QtWidgets.QWidget, UiTools):
         self.set_positions = []
         self.set_position_buttons = []
         for i, ax in enumerate(self.stage.axis_names):
-            col = 4 * (i / 3)
+            col = 4 * (old_div(i, 3))
             position = QtWidgets.QLineEdit('', self)
             position.setReadOnly(True)
             self.positions.append(position)
@@ -227,11 +233,11 @@ class StageUI(QtWidgets.QWidget, UiTools):
             self.info_layout.addWidget(set_position_button, i % 3, col + 3)
 
             if i % 3 == 0:
-                group = QtWidgets.QGroupBox('axes {0}'.format(1 + (i / 3)), self)
+                group = QtWidgets.QGroupBox('axes {0}'.format(1 + (old_div(i, 3))), self)
                 layout = QtWidgets.QGridLayout()
                 layout.setSpacing(3)
                 group.setLayout(layout)
-                self.axes_layout.addWidget(group, 0, i / 3)
+                self.axes_layout.addWidget(group, 0, old_div(i, 3))
                 zero_button = QtWidgets.QPushButton('', self)
                 zero_button.setIcon(QtGui.QIcon(os.path.join(path, 'zero.png')))
                 zero_button.setIconSize(icon_size)
@@ -333,12 +339,12 @@ class PiezoStageUI(StageUI):
         self.set_positions = []
         self.set_position_buttons = []
         for i, ax in enumerate(self.stage.axis_names):
-            col = 4 * (i / 3)
+            col = 4 * (old_div(i, 3))
             if i % 3 == 0:
                 # absolute position for different stages consisting of 3 axes
-                position_widget = XYZPositionWidget(self.stage.max_voltage_levels[i/3],
-                                                    self.stage.max_voltage_levels[i/3+1],
-                                                    self.stage.max_voltage_levels[i/3+2],
+                position_widget = XYZPositionWidget(self.stage.max_voltage_levels[old_div(i,3)],
+                                                    self.stage.max_voltage_levels[old_div(i,3)+1],
+                                                    self.stage.max_voltage_levels[old_div(i,3)+2],
                                                     show_xy_pos=self.show_xy_pos,
                                                     show_z_pos=self.show_z_pos)
                 if self.show_xy_pos:
@@ -351,11 +357,11 @@ class PiezoStageUI(StageUI):
                 self.info_layout.addWidget(position_widget, 0, col,3,1)
 
                 # position control elements for different stages consisting of 3 axes, arranged in a grid layout
-                group = QtWidgets.QGroupBox('stage {0}'.format(1 + (i / 3)), self)
+                group = QtWidgets.QGroupBox('stage {0}'.format(1 + (old_div(i, 3))), self)
                 layout = QtWidgets.QGridLayout()
                 layout.setSpacing(3)
                 group.setLayout(layout)
-                self.axes_layout.addWidget(group, 0, i / 3)
+                self.axes_layout.addWidget(group, 0, old_div(i, 3))
                 zero_button = QtWidgets.QPushButton('', self)
                 zero_button.setIcon(QtGui.QIcon(os.path.join(path, 'zero.png')))
                 zero_button.setIconSize(icon_size)
@@ -439,11 +445,11 @@ class PiezoStageUI(StageUI):
         else:
             if self.show_xy_pos:
                 if axis % 3 == 0:
-                    self.position_widgets[axis/3].xy_widget.setValue(piezo_levels[axis],piezo_levels[axis+1])
+                    self.position_widgets[old_div(axis,3)].xy_widget.setValue(piezo_levels[axis],piezo_levels[axis+1])
                 elif axis % 3 == 1:
-                    self.position_widgets[axis/3].xy_widget.setValue(piezo_levels[axis-1],piezo_levels[axis])
+                    self.position_widgets[old_div(axis,3)].xy_widget.setValue(piezo_levels[axis-1],piezo_levels[axis])
             if self.show_z_pos and axis % 3 == 2:
-                self.position_widgets[axis/3].z_bar.setValue(piezo_levels[axis])
+                self.position_widgets[old_div(axis,3)].z_bar.setValue(piezo_levels[axis])
 
 
 

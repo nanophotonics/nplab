@@ -1,3 +1,5 @@
+from __future__ import print_function
+from builtins import range
 __author__ = 'alansanders'
 
 from nplab.instrument.visa_instrument import VisaInstrument

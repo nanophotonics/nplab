@@ -1,3 +1,4 @@
+from __future__ import print_function
 from nplab.utils.gui import QtWidgets, uic, QtCore
 from nplab.ui.ui_tools import UiTools
 import nplab.datafile as df

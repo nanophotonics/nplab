@@ -1,3 +1,6 @@
+from __future__ import division
+from __future__ import absolute_import
+from past.utils import old_div
 __author__ = 'alansanders'
 
 import matplotlib as mpl
@@ -17,7 +20,7 @@ def plot_wavelength_images(hsimg, axslice, roi, fig, ax, subplot_spec, amp=5):
     #gs1 = gridspec.GridSpecFromSubplotSpec(int(np.ceil(n_axes/3)), 3, subplot_spec,
     #                                       hspace=0.05, wspace=0.05)
     grid = ImageGrid(fig, subplot_spec, # similar to subplot(111)
-                nrows_ncols = (int(np.ceil(n_axes/3)), 3), # creates 2x3 grid of axes
+                nrows_ncols = (int(np.ceil(old_div(n_axes,3))), 3), # creates 2x3 grid of axes
                 axes_pad=0.05, # pad between axes in inch.
                 )
 
@@ -57,7 +60,7 @@ def plot_scan(hsimg, axslice, roi, amp=5):
 
     fig = setup_figure(width='column', aspect=aspect, tex=False)
     gs0 = gridspec.GridSpec(2, 1, height_ratios=[0.75,0.6], hspace=0.34)
-    gs1 = gridspec.GridSpecFromSubplotSpec(int(np.ceil(n_axes/3)), 3, gs0[0], hspace=0.05, wspace=0.05)
+    gs1 = gridspec.GridSpecFromSubplotSpec(int(np.ceil(old_div(n_axes,3))), 3, gs0[0], hspace=0.05, wspace=0.05)
 
     # make dummy axes from gridspec gs0[0]
     ax = fig.add_subplot(gs0[0])

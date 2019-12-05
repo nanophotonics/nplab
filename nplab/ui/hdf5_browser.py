@@ -5,7 +5,11 @@ This uses a tree view to show the file's contents, and has a plugin-based "rende
 system to display the datasets.  See `nplab.ui.data_renderers` for that.
 
 """
+from __future__ import division
+from __future__ import print_function
 
+from builtins import object
+from past.utils import old_div
 __author__ = 'Alan Sanders, Will Deacon, Richard Bowman'
 
 import nplab
@@ -13,8 +17,7 @@ from nplab.utils.gui import QtCore, QtGui, QtWidgets, uic
 import matplotlib
 import numpy as np
 import h5py
-
-#matplotlib.use('Qt4Agg')
+matplotlib.use('Qt5Agg')
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from nplab.ui.data_renderers import suitable_renderers
@@ -242,7 +245,7 @@ def igorOpen(dataset):
         if data.ndim == 2:
             # RWB: why do we do this?  Why not just use a 2D text file and skip rescaling??
             from PIL import Image
-            rescaled = (2**16 / data.max() * (data - data.min())).astype(np.uint8)
+            rescaled = (old_div(2**16, data.max()) * (data - data.min())).astype(np.uint8)
 
             im = Image.fromarray(rescaled.transpose())
             im.save(igortmpfile+'.tif')

@@ -1,3 +1,7 @@
+from __future__ import division
+from __future__ import print_function
+from builtins import range
+from past.utils import old_div
 import cvxpy as cvx
 import numpy as np
 
@@ -25,7 +29,7 @@ def convex_smooth(signal,weight, objective_type="quadratic",normalise = True):
 	signal = np.array(signal,dtype=float)
 	assert(weight >= 0)
 	signal_max = np.max(signal)
-	if normalise==True: signal=signal/signal_max
+	if normalise==True: signal=old_div(signal,signal_max)
 
 	#initialize the problem)
 	dims = signal.shape[0]

@@ -4,6 +4,8 @@ Created on Thu Oct 01 11:52:44 2015
 
 @author: hera
 """
+from __future__ import print_function
+from builtins import str
 import serial
 
 import nplab.instrument.serial_instrument as si

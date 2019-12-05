@@ -1,3 +1,5 @@
+from __future__ import print_function
+from builtins import range
 from nplab.instrument.stage.Thorlabs_NR360SM import Thorlabs_NR360SM
 from nplab.instrument.electronics.gamari_fpga import Timetagger
 from nplab.instrument.shutter.thorlabs_sc10 import ThorLabsSC10

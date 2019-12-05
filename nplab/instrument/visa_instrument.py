@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+
+from __future__ import print_function
 __author__ = 'alansanders'
 
 from nplab.instrument.message_bus_instrument import MessageBusInstrument, queried_property, queried_channel_property
@@ -59,6 +62,6 @@ class VisaInstrument(MessageBusInstrument):
 
 if __name__ == '__main__':
     instrument = VisaInstrument(address='GPIB0::7::INSTR')
-    print instrument.query('*idn?')
-    print instrument.idn
-    print instrument.float_query
+    print(instrument.query('*idn?'))
+    print(instrument.idn)
+    print(instrument.float_query)

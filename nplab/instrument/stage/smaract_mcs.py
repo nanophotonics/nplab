@@ -1,3 +1,9 @@
+from __future__ import division
+from __future__ import print_function
+from builtins import zip
+from builtins import str
+from builtins import range
+from past.utils import old_div
 __author__ = 'alansanders, chrisgrosse'
 
 import ctypes, time
@@ -1255,11 +1261,11 @@ class SmaractScanStageUI(PiezoStageUI):
 #                self.positions[i].setText(p)
         else:
             if axis % 3 == 0:
-                self.position_widgets[axis/3].xy_widget.setValue(piezo_levels[axis],self.stage.max_voltage_levels[axis+1]-piezo_levels[axis+1])
+                self.position_widgets[old_div(axis,3)].xy_widget.setValue(piezo_levels[axis],self.stage.max_voltage_levels[axis+1]-piezo_levels[axis+1])
             elif axis % 3 == 1:
-                self.position_widgets[axis/3].xy_widget.setValue(piezo_levels[axis-1],self.stage.max_voltage_levels[axis]-piezo_levels[axis])
+                self.position_widgets[old_div(axis,3)].xy_widget.setValue(piezo_levels[axis-1],self.stage.max_voltage_levels[axis]-piezo_levels[axis])
             else:
-                self.position_widgets[axis/3].z_bar.setValue(self.stage.max_voltage_levels[axis]-piezo_levels[axis])
+                self.position_widgets[old_div(axis,3)].z_bar.setValue(self.stage.max_voltage_levels[axis]-piezo_levels[axis])
 #            i = self.stage.axis_names.index(axis)
 #            p = engineering_format(self.stage.scan_position[i], base_unit='m', digits_of_precision=3)
 #            self.positions[i].setText(p)
