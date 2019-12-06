@@ -8,7 +8,7 @@ def bool_to_state(Bool):
         return 'Open'
     if not Bool:
         return 'Closed'
-def state_to_bool(state):
+def state_to_bool(state): 
     if state == 'Open':
         return True
     if state == 'Closed':
@@ -32,7 +32,8 @@ class ThorLabsSC10(Shutter, serial.SerialInstrument):
     >>> shutter._state = 'Open' # for example
     
     The self._state attribute is overwritten if communication with the shutter succeeds at any time, so this should maximise the state being right. 
-    using the buttons on the shutter will of course mess this all up. 
+    using the physical buttons on the shutter will of course mess this all up. 
+    -ee306
     '''
     def __init__(self, port=None):
         serial.SerialInstrument.__init__(self, port=port)
@@ -44,7 +45,7 @@ class ThorLabsSC10(Shutter, serial.SerialInstrument):
     def toggle(self):
         self.write('ens')
         self._state = bool_to_state(not state_to_bool(self._state))#toggles self._state
-#        
+      
 #    def get_state(self):
 #        if self.query('ens?') == '0':
 #            return 'Closed'
@@ -60,9 +61,7 @@ class ThorLabsSC10(Shutter, serial.SerialInstrument):
             return self._state
         else:
             if report_success: 
-                print '''Communication with shutter failed;  
-                Assuming shutter is closed! 
-                Change shutter._state if not!'''           
+                print 'Communication with shutter failed; Assuming shutter is closed! ' + self._state + ' Change shutter._state if not!'          
             return self._state
     def set_state(self, state):
         if state_to_bool(self.get_state()) != state_to_bool(state):
@@ -99,4 +98,4 @@ if __name__ == '__main__':
 #    ui = shutter.get_qt_ui()
 #    ui.show()
 #    sys.exit(app.exec_())
-#    shutter.show_gui()
+    shutter.show_gui()
