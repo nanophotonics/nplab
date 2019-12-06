@@ -304,9 +304,9 @@ class HDF5TreeItem(object):
             try:
                 time_stamps = []
                 for value in list(self.data_file[self.name].values()):
-                    time_stamp_str = value.attrs['creation_timestamp']
+                    time_stamp_str = value.attrs['creation_timestamp'].decode('UTF-8')
                     try:
-                        time_stamp_float = datetime.datetime.strptime(time_stamp_str,"%Y-%m-%dT%H:%M:%S.%f")
+                        time_stamp_float = datetime.datetime.strptime(time_stamp_str, "%Y-%m-%dT%H:%M:%S.%f")
                     except ValueError:
                         time_stamp_str =  time_stamp_str+'.0'
                         time_stamp_float = datetime.datetime.strptime(time_stamp_str,"%Y-%m-%dT%H:%M:%S.%f")
@@ -565,6 +565,7 @@ class HDF5Browser(QtWidgets.QWidget, UiTools):
             self.viewer.data = self.treeWidget.selected_h5item()
             if self.data_file.update_current_group == True:
                 df.set_current_group(self.treeWidget.selected_h5item())
+
         except Exception as e:
             print(e, 'That could be corrupted')
             
