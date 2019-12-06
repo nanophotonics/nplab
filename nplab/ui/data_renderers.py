@@ -1,40 +1,36 @@
 # -*- coding: utf-8 -*-
-
 from __future__ import division
 from __future__ import print_function
 from builtins import str
 from builtins import range
 from past.utils import old_div
 from builtins import object
-__author__ = 'alansanders, Will Deacon'
 
-import h5py
 from nplab.utils.gui import QtGui, QtWidgets, get_qt_app, uic
 from nplab.utils.array_with_attrs import ArrayWithAttrs
-import os
 import matplotlib
-matplotlib.use('Qt5Agg')
-from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
+
+from matplotlib.backends.qt_compat import is_pyqt5
+if is_pyqt5():
+    matplotlib.use('Qt5Agg')
+    from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+else:
+    matplotlib.use('Qt4Agg')
+    from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import pyqtgraph as pg
 import numpy as np
 import nplab.datafile as df
 import operator
 
-#from nplab.utils.gui import QtWidgets
-#from PyQt4.QtCore import * 
 
-
-
-
-# -*- coding: utf-8 -*-
 """
 Created on Thu Oct 29 10:36:07 2015
 
 @author: wmd22
+
 """
-
-
+__author__ = 'alansanders, Will Deacon'
 
 
 class DataRenderer(object):
