@@ -19,6 +19,7 @@ import nplab.instrument
 from functools import partial
 import threading
 import numpy as np
+import types
 
 
 class MessageBusInstrument(nplab.instrument.Instrument):
@@ -99,7 +100,9 @@ class MessageBusInstrument(nplab.instrument.Instrument):
         with self.communications_lock:
             if termination_line is None:
                 termination_line = self.termination_line
-            assert isinstance(termination_line, str), "If you perform a multiline query, you must specify a termination line either through the termination_line keyword argument or the termination_line property of the NPSerialInstrument."
+           # assert isinstance(termination_line, str), "If you perform a multiline query, you must specify a termination line either through the termination_line keyword argument or the termination_line property of the NPSerialInstrument."
+           
+            assert type(termination_line) == types.StringType , "If you perform a multiline query, you must specify a termination line either through the termination_line keyword argument or the termination_line property of the NPSerialInstrument."        
             response = ""
             last_line = "dummy"
             while termination_line not in last_line and len(last_line) > 0: #read until we get the termination line.

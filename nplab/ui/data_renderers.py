@@ -10,10 +10,9 @@ from nplab.utils.gui import QtGui, QtWidgets, get_qt_app, uic
 from nplab.utils.array_with_attrs import ArrayWithAttrs
 import matplotlib
 
-from matplotlib.backends.qt_compat import is_pyqt5
-if is_pyqt5():
+is_qt5 = (matplotlib.backends.qt_compat.QT_API[:5] == 'PyQt5')
+if is_qt5:
     matplotlib.use('Qt5Agg')
-    from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 else:
     matplotlib.use('Qt4Agg')
     from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas

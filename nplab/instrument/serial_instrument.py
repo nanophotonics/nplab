@@ -12,9 +12,9 @@ from nplab.instrument.message_bus_instrument import MessageBusInstrument
 import threading
 import serial
 import serial.tools.list_ports
-# from serial import FIVEBITS, SIXBITS, SEVENBITS, EIGHTBITS
-# from serial import PARITY_NONE, PARITY_EVEN, PARITY_ODD, PARITY_MARK, PARITY_SPACE
-# from serial import STOPBITS_ONE, STOPBITS_ONE_POINT_FIVE, STOPBITS_TWO
+from serial import FIVEBITS, SIXBITS, SEVENBITS, EIGHTBITS
+from serial import PARITY_NONE, PARITY_EVEN, PARITY_ODD, PARITY_MARK, PARITY_SPACE
+from serial import STOPBITS_ONE, STOPBITS_ONE_POINT_FIVE, STOPBITS_TWO
 import io
 import re
 import numpy as np
@@ -61,10 +61,10 @@ class SerialInstrument(MessageBusInstrument):
         Set up the serial port and so on.
         """
         MessageBusInstrument.__init__(self) # Using super() here can cause issues with multiple inheritance.
-        self.open(port, False) # Eventually this shouldn't rely on init...
+         # Eventually this shouldn't rely on init...
         if self.termination_read is None:
             self.termination_read = self.termination_character
-
+        self.open(port, False)
     def open(self, port=None, quiet=True):
         """Open communications with the serial port.
 
@@ -105,7 +105,7 @@ class SerialInstrument(MessageBusInstrument):
                 if self.ser.outWaiting()>0: self.ser.flushOutput() #ensure there's nothing waiting
             except AttributeError:
                 if self.ser.out_waiting>0: self.ser.flushOutput() #ensure there's nothing waiting
-            self.ser.write(str.encode(self.initial_character+query_string+self.termination_character))
+            self.ser.write(str.encode(self.initial_character+str(query_string)+self.termination_character))
             # self.ser.write(np.char.encode(np.array([self.initial_character+query_string+self.termination_character]), 'utf8'))
 
     def flush_input_buffer(self):
