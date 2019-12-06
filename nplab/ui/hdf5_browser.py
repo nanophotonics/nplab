@@ -13,7 +13,7 @@ from past.utils import old_div
 __author__ = 'Alan Sanders, Will Deacon, Richard Bowman'
 
 import nplab
-from nplab.utils.gui import QtCore, QtGui, QtWidgets, uic
+from nplab.utils.gui import QtCore, QtWidgets
 import matplotlib
 import numpy as np
 import h5py
@@ -22,8 +22,6 @@ if is_pyqt5():
     matplotlib.use('Qt5Agg')
 else:
     matplotlib.use('Qt4Agg')
-from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.figure import Figure
 from nplab.ui.data_renderers import suitable_renderers
 from nplab.ui.ui_tools import UiTools
 import functools

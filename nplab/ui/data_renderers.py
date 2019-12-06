@@ -33,7 +33,7 @@ Created on Thu Oct 29 10:36:07 2015
 __author__ = 'alansanders, Will Deacon'
 
 
-class DataRenderer(object):
+class DataRenderer:
     def __init__(self, h5object, parent=None):
     #    assert self.is_suitable(h5object) >= 0, "Can't render that object: {0}".format(h5object)
         super(DataRenderer, self).__init__()
@@ -394,7 +394,10 @@ class Normalised_Parameter_renderer(FigureRendererPG):
           
     @classmethod
     def is_suitable(cls, h5object):
-       return 2
+        if len(h5object)>1:
+            return 2
+        else:
+            return -1
 
 add_renderer(Normalised_Parameter_renderer)
 
@@ -440,7 +443,11 @@ class Parameter_renderer(FigureRendererPG):
           
     @classmethod
     def is_suitable(cls, h5object):
-       return 2
+        if len(h5object)>1:
+            return 2
+        else:
+            return -1
+
 
 add_renderer(Parameter_renderer)
 
@@ -1670,7 +1677,7 @@ class AutocorrelationRenderer(FigureRendererPG):
 add_renderer(AutocorrelationRenderer)
 
 if __name__ == '__main__':
-    import sys, h5py, os, numpy as np
+    import sys
 
     print(os.getcwd())
     app = get_qt_app()
