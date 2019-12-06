@@ -86,7 +86,7 @@ def suitable_renderers(h5object, return_scores=False):
             try:
                 renderers_and_scores.append((r.is_suitable(h5object), r))
             except:
-      #          print "renderer {0} failed when checking suitability for {1}".format(r, h5object)
+                # print("renderer {0} failed when checking suitability for {1}".format(r, h5object))
                 pass # renderers that cause exceptions shouldn't be used!
     renderers_and_scores.sort(key=lambda score_r: score_r[0], reverse=True)
     if return_scores:
@@ -693,13 +693,15 @@ class DataRenderer2or3DPG(DataRenderer, QtWidgets.QWidget):
     def is_suitable(cls, h5object):
         if not isinstance(h5object, h5py.Dataset):
             return -1
-        if len(h5object.shape) == 3:
+        elif len(h5object.shape) == 3:
             return 31
-        if len(h5object.shape) == 4 and h5object.shape[3]==3:
+        elif len(h5object.shape) == 4 and h5object.shape[3] == 3:
             return 31
         elif len(h5object.shape) == 2:
             return 21
         elif len(h5object.shape) > 3:
+            return -1
+        else:
             return -1
 
 add_renderer(DataRenderer2or3DPG)
@@ -773,6 +775,8 @@ class DataRenderer2D(FigureRenderer):
             return 10
         elif len(h5object.shape) < 2:
             return -1
+        else:
+            return -1
             
 add_renderer(DataRenderer2D)
 
@@ -794,6 +798,8 @@ class DataRendererRGB(FigureRenderer):
         if len(h5object.shape) == 3 and h5object.shape[2]==3:
             return 15
         elif len(h5object.shape) != 3:
+            return -1
+        else:
             return -1
             
 add_renderer(DataRendererRGB)
@@ -1045,10 +1051,13 @@ class HyperSpec(DataRenderer, QtWidgets.QWidget):
     def is_suitable(cls, h5object):
         if not isinstance(h5object, h5py.Dataset):
             return -1
-        if len(h5object.shape) == 4 and 'z' in list(h5object.attrs.keys()) and 'y' in list(h5object.attrs.keys()) and 'x' in list(h5object.attrs.keys()):
+        elif len(h5object.shape) == 4 and 'z' in list(h5object.attrs.keys()) and 'y' in list(h5object.attrs.keys()) and 'x' in list(h5object.attrs.keys()):
             return 30
         elif len(h5object.shape) > 4:
             return -1
+        else:
+            return -1
+
 
 add_renderer(HyperSpec)
 
