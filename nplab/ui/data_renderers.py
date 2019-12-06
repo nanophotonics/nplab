@@ -396,7 +396,8 @@ class Normalised_Parameter_renderer(FigureRendererPG):
     @classmethod
     def is_suitable(cls, h5object):
         if len(h5object)>1:
-            return 2
+            if h5object.hasattr('parameter_renderer'):
+                return 5
         else:
             return -1
 
@@ -445,9 +446,11 @@ class Parameter_renderer(FigureRendererPG):
     @classmethod
     def is_suitable(cls, h5object):
         if len(h5object)>1:
-            return 2
+            if h5object.hasattr('parameter_renderer'):
+                return 5
         else:
             return -1
+
 
 
 add_renderer(Parameter_renderer)
