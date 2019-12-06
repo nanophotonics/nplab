@@ -13,7 +13,6 @@ import numpy as np
 import pytest
 
 
-
 def test_array_with_attrs_init():
     a = nplab.ArrayWithAttrs(np.array([1,2,3,4,5]))
     a.attrs.create('foo',142)
@@ -77,6 +76,3 @@ def test_ensure_unit():
     assert ensure_unit('um/s')==units.ureg('micrometer/second')
     assert isinstance(ensure_unit('um/s'), units.ureg.Quantity)
     assert isinstance(ensure_unit(units.ureg('um/s').units), units.ureg.Quantity)
-
-
-    

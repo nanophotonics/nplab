@@ -7,8 +7,8 @@ Created on Tue Oct 27 13:09:09 2015
 from __future__ import print_function
 
 import nplab
-import numpy as np
-import matplotlib.pyplot as plt
+# import numpy as np
+# import matplotlib.pyplot as plt
 from numpy.random import random
 from nplab.ui.data_renderers import suitable_renderers
 
