@@ -17,9 +17,15 @@ from nplab.utils.gui import QtCore, QtWidgets
 import matplotlib
 import numpy as np
 import h5py
-#from matplotlib.backends.qt_compat import is_pyqt5
-is_qt5 = (matplotlib.backends.qt_compat.QT_API[:5] == 'PyQt5')
-if is_qt5:
+
+try:
+    from matplotlib.backends.qt_compat import is_pyqt5
+except AttributeError: 
+    from matplotlib.backends.qt_compat import QT_API
+    def is_pyqt5():
+        return (QT_API[:5] == 'PyQt5')
+
+if is_pyqt5():
     matplotlib.use('Qt5Agg')
 else:
     matplotlib.use('Qt4Agg')
