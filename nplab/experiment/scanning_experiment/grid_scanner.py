@@ -4,7 +4,14 @@ AcquisitionThread and GridScanController. The AcquisitionThread takes the GridSc
 which defines the scan, and runs its methods in a thread as called by the GridScanController,
 which controls the overall experiment.
 """
+from __future__ import division
+from __future__ import print_function
 
+from builtins import zip
+from builtins import str
+from builtins import range
+from past.utils import old_div
+from functools import reduce
 __author__ = 'alansanders'
 
 import numpy as np
@@ -86,7 +93,7 @@ class GridScan(ScanningExperiment, TimedScan):
         old_value = getattr(self, unit_param) if hasattr(self, unit_param) else value
         setattr(self, unit_param, value)
         a = getattr(self, param)
-        a *= self._unit_conversion[old_value] / self._unit_conversion[value]
+        a *= old_div(self._unit_conversion[old_value], self._unit_conversion[value])
 
     num_axes = property(fget=lambda self: self._num_axes, fset=_update_axes)
     size_unit = property(fget=lambda self: self._size_unit,
@@ -155,7 +162,7 @@ class GridScan(ScanningExperiment, TimedScan):
 
     def move(self, position, axis):
         """Move to a position along a given axis."""
-        self.stage.move(position/self.stage_units, axis=axis)
+        self.stage.move(old_div(position,self.stage_units), axis=axis)
 
     def get_position(self, axis):
         return self.stage.get_position(axis=axis) * self.stage_units
@@ -246,7 +253,7 @@ class GridScan(ScanningExperiment, TimedScan):
 
     def set_init_to_current_position(self):
         for i, ax in enumerate(self.axes):
-            self.init[i] = self.get_position(ax) / self._unit_conversion[self.init_unit]
+            self.init[i] = old_div(self.get_position(ax), self._unit_conversion[self.init_unit])
 
 
 @inherit_docstring(GridScan)
@@ -538,7 +545,7 @@ if __name__ == '__main__':
         def onclick(self, event):
             print('button=%d, x=%d, y=%d, xdata=%f, ydata=%f'%(
             event.button, event.x, event.y, event.xdata, event.ydata))
-            init_scale = self._unit_conversion[self.size_unit] / self._unit_conversion[self.init_unit]
+            init_scale = old_div(self._unit_conversion[self.size_unit], self._unit_conversion[self.init_unit])
             self.init[:2] = (event.xdata * init_scale, event.ydata * init_scale)
             self.init_updated.emit(self.init)
         def onpick4(self, event):

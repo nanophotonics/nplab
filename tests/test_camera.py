@@ -1,3 +1,4 @@
+from builtins import input
 import nplab
 import nplab.instrument.camera.opencv
 

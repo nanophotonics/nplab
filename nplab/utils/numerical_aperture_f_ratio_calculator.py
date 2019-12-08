@@ -1,3 +1,6 @@
+from __future__ import division
+from __future__ import print_function
+from past.utils import old_div
 import numpy as np 
 import cmath
 
@@ -30,12 +33,11 @@ def x_from_diameter(f,d):
 
 def alpha_from_radius(f,r):
 	x = x_from_radius(f,r)
-	return cmath.asin(np.float(r)/x)%(2*np.pi)
+	return cmath.asin(old_div(np.float(r),x))%(2*np.pi)
 
 def alpha_from_diameter(f,d):
 	r = d/2.0
 	return alpha_from_radius(f,r)
-
 
 
 if __name__ == "__main__":
@@ -43,6 +45,7 @@ if __name__ == "__main__":
 	f = 75e-3
 	d = 13.14e-3
 	fratio = f/d
+
 	print(fratio)
 	# telescope_lens_1 = 50e-3 
 	# telescope_lens_2 = 250e-3 

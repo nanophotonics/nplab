@@ -4,9 +4,11 @@ Created on Wed Sept 20 2017
 
 @author: Femi Ojambati (fo263)
 """
+from __future__ import print_function
 
 
 
+from builtins import str
 from ctypes import *
 import sys
 from nplab.instrument import Instrument

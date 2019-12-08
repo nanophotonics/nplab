@@ -4,8 +4,11 @@ Created on Thu May 31 01:11:45 2018
 
 @author: car72
 """
+from __future__ import division
+from __future__ import print_function
+from past.utils import old_div
 if __name__ == '__main__':
-    print 'Importing modules...'
+    print('Importing modules...')
 
 #import h5py
 import os
@@ -22,7 +25,7 @@ os.chdir(rootDir) #Important
 
 if __name__ == '__main__':
     absoluteStartTime = time.time()
-    print '\tModules imported'
+    print('\tModules imported')
 
     '''Set raiseExceptions = True if the anaylsis fails; this will return the traceback'''
     raiseExceptions = False #Setting this to True will stop the analysis return the traceback if an individual spectrum fails
@@ -54,7 +57,7 @@ if __name__ == '__main__':
                               raiseExceptions = raiseExceptions, raiseSpecExceptions = raiseExceptions)
 
 
-            print '\nData fitting complete'
+            print('\nData fitting complete')
 
         else:
             try:
@@ -62,21 +65,21 @@ if __name__ == '__main__':
                 mpf.fitAllSpectra(os.getcwd(), outputFileName, npSize = 80, first = startSpec, last = finishSpec, pl = pl, closeFigures = True, stats = True,
                                   raiseExceptions = raiseExceptions, raiseSpecExceptions = raiseExceptions)
 
-                print '\nData fitting complete'
+                print('\nData fitting complete')
 
             except Exception as e:
-                print '\nData fitting failed because %s' % (e)
+                print('\nData fitting failed because %s' % (e))
 
     plt.close('all')
     absoluteEndTime = time.time()
     timeElapsed = absoluteEndTime - absoluteStartTime
 
-    hours = int(timeElapsed / 3600)
-    mins = int(np.round((timeElapsed % 3600)/60))
+    hours = int(old_div(timeElapsed, 3600))
+    mins = int(np.round(old_div((timeElapsed % 3600),60)))
     secs = int(np.round(timeElapsed % 60))
 
     if hours > 0:
-        print '\nM8 that took ages. %s hours %s min %s sec' % (hours, mins, secs)
+        print('\nM8 that took ages. %s hours %s min %s sec' % (hours, mins, secs))
 
     else:
-        print '\nFinished in %s min %s sec' % (mins, secs)
+        print('\nFinished in %s min %s sec' % (mins, secs))

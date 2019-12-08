@@ -492,26 +492,22 @@ class AndorBase(object):
 
             if self._parameters['ReadMode'] == 0:
                 if self._parameters['IsolatedCropMode'][0]:
-                    image_shape = (
-                        self._parameters['IsolatedCropMode'][2] / self._parameters['IsolatedCropMode'][
-                            4],)
+                    image_shape = (self._parameters['IsolatedCropMode'][2] / self._parameters['IsolatedCropMode'][4], )
                 else:
-                    image_shape = (self._parameters['DetectorShape'][0] / self._parameters['FVBHBin'],)
+                    image_shape = (self._parameters['DetectorShape'][0] / self._parameters['FVBHBin'], )
             elif self._parameters['ReadMode'] == 3:
                 image_shape = (self._parameters['DetectorShape'][0],)
             elif self._parameters['ReadMode'] == 4:
                 if self._parameters['IsolatedCropMode'][0]:
                     image_shape = (
-                        self._parameters['IsolatedCropMode'][1] / self._parameters['IsolatedCropMode'][
-                            3],
-                        self._parameters['IsolatedCropMode'][2] / self._parameters['IsolatedCropMode'][
-                            4])
+                        self._parameters['IsolatedCropMode'][1] / self._parameters['IsolatedCropMode'][3],
+                        self._parameters['IsolatedCropMode'][2] / self._parameters['IsolatedCropMode'][4])
                 else:
                     image_shape = (
-                        (self._parameters['Image'][5] - self._parameters['Image'][4] + 1) /
-                        self._parameters['Image'][1],
-                        (self._parameters['Image'][3] - self._parameters['Image'][2] + 1) /
-                        self._parameters['Image'][0],)
+                        (self._parameters['Image'][5] - self._parameters['Image'][4] + 1) / self._parameters['Image'][
+                            1],
+                        (self._parameters['Image'][3] - self._parameters['Image'][2] + 1) / self._parameters['Image'][
+                            0],)
             else:
                 raise NotImplementedError('Read Mode %g' % self._parameters['ReadMode'])
 

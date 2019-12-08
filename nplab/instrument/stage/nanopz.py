@@ -4,6 +4,7 @@ Created on Tue Jul 21 10:22:28 2015
 
 @author: WMD
 """
+from __future__ import print_function
 
 import nplab.instrument.serial_instrument as si
 from nplab.instrument.stage import Stage

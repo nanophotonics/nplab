@@ -65,6 +65,8 @@ object to be passed in.
         
 """
 
+from builtins import str
+from builtins import object
 import functools
 from weakref import WeakSet, WeakKeyDictionary
 import numpy as np
@@ -232,7 +234,7 @@ def register_for_property_changes(obj, property_name, callback):
     # the property knows which object we're talking about.
     prop.register_callback(obj, callback)
 
-class NotifiedPropertiesMixin():
+class NotifiedPropertiesMixin(object):
     """A mixin class that adds support for notified properties.
     
     Notified proprties are a very, very lightweight alternative to Traits.

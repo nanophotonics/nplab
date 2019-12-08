@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 from timetag.capture_pipeline import CapturePipeline
 import time

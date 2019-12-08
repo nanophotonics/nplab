@@ -29,7 +29,12 @@ Contents:
 
 @author: Richard Bowman (rwb27)
 """
+from __future__ import division
+from __future__ import print_function
 
+from builtins import str
+from builtins import range
+from past.utils import old_div
 import ctypes
 from ctypes import byref, c_int, c_ulong, c_double
 import numpy as np
@@ -115,7 +120,7 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
     spectrometer you want, starting at 0.  It has traits, so you can call up a
     GUI to control the spectrometer with s.configure_traits."""
 
-    metadata_property_names = Spectrometer.metadata_property_names + ("tec_temperature",)
+    metadata_property_names = Spectrometer.metadata_property_names# + ("tec_temperature",)
 
     @staticmethod
     def shutdown_seabreeze():
@@ -330,7 +335,7 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
             print(error)
             print('Most likely raised due to the lack of a tec on this device')
 
-    tec_temperature = property(get_tec_temperature, set_tec_temperature)
+    #tec_temperature = property(get_tec_temperature, set_tec_temperature)
 
     def read_wavelengths(self):
         """get an array of the wavelengths in nm"""
@@ -365,24 +370,6 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
             seabreeze.seabreeze_get_formatted_spectrum(self.index, byref(e), byref(spectrum_carray), N)
         check_error(e)  # throw an exception if something went wrong
         new_spectrum = np.array(list(spectrum_carray))
-        if(self.spectra_to_save>0):
-            self.spectra_buffer = np.concatenate((self.spectra_buffer,new_spectrum))
-#            if(self.spectra_saved==0):
-#                datafile_group = self.data_file.require_group('OceanOpticsSpectrometer')
-#                self.curr_scan = datafile_group.create_group('continuous_spectra_%d')
-#            self.curr_scan.create_dataset('spectrum_%d', data=new_spectrum, attrs=self.metadata)
-            self.spectra_to_save-=1
-            self.spectra_saved +=1
-            if(self.spectra_to_save==0):
-                self.spectra_buffer = self.spectra_buffer.reshape(self.spectra_saved,self.spectra_buffer.size/self.spectra_saved)
-                datafile_group = self.data_file.require_group('OceanOpticsSpectrometer')
-                attrs = self.metadata
-                if hasattr(self,'_temp_description'):
-                    attrs['description'] = self._temp_description
-                datafile_group.create_dataset('continuous_spectra_%d', data=self.spectra_buffer, attrs=attrs)
-                self.spectra_buffer = np.zeros(0)
-                self.spectra_saved = 0
-                print("continuous acquistion of spectra completed!")
 
         if bundle_metadata:
             return ArrayWithAttrs(new_spectrum, attrs=self.metadata)
@@ -415,14 +402,18 @@ class OceanOpticsControlUI(SpectrometerControlUI):
         super(OceanOpticsControlUI, self).__init__(spectrometer,os.path.join(os.path.dirname(__file__),'ocean_optics_controls.ui'))
 
 
-        self.tec_temperature.setValidator(QtGui.QDoubleValidator())
-        self.tec_temperature.textChanged.connect(self.check_state)
-        self.tec_temperature.textChanged.connect(self.update_param)
-        self.tec_temperature.setText(str(spectrometer.tec_temperature))
-
+#        self.tec_temperature.setValidator(QtGui.QDoubleValidator())
+        # self.tec_temperature.textChanged.connect(self.check_state)
+        # self.tec_temperature.textChanged.connect(self.update_param)
+        # self.tec_temperature.setText(str(spectrometer.tec_temperature))
+        self.set_tec_temperature_pushButton.clicked.connect(self.gui_set_tec_temperature)
+        self.read_tec_temperature_pushButton.clicked.connect(self.gui_read_tec_tempeature)
         self.enable_tec.stateChanged.connect(self.update_enable_tec)
         self.enable_tec.setChecked(self.spectrometer.enable_tec)
-        self.read_tec.clicked.connect(self.update_tec)
+        initial_temperature = np.round(self.spectrometer.get_tec_temperature(), decimals = 1)
+        self.tec_temperature_lcdNumber.display(float(initial_temperature))
+        self.set_tec_temperature_LineEdit.setText(str(initial_temperature))
+        # self.read_tec.clicked.connect(self.update_tec)
 
     def update_param(self, value):
         sender = self.sender()
@@ -440,7 +431,12 @@ class OceanOpticsControlUI(SpectrometerControlUI):
                 self.spectrometer.tec_temperature = float(value)
             except ValueError:
                 pass
-
+    
+    def gui_set_tec_temperature(self):
+        self.spectrometer.set_tec_temperature(float(self.set_tec_temperature_LineEdit.text()))
+    
+    def gui_read_tec_tempeature(self):
+        self.tec_temperature_lcdNumber.display(float(self.spectrometer.get_tec_temperature()))
     def update_enable_tec(self, state):
         if state == QtCore.Qt.Checked:
             self.spectrometer.enable_tec = True

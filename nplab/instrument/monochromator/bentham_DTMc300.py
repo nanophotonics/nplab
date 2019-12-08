@@ -1,3 +1,4 @@
+from __future__ import print_function
 import ctypes
 from nplab.instrument import Instrument
 from ctypes import CDLL, c_char_p,byref,c_char, POINTER, ARRAY

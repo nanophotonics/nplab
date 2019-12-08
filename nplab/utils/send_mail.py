@@ -25,6 +25,7 @@ def _status_check(self):
     self.SendMessage(email,message,subject)
 
 """
+from __future__ import print_function
 
 import smtplib
 import imp

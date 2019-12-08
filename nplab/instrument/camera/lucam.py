@@ -86,6 +86,10 @@ Refer to the test() function at the end of the document for more examples.
 
 
 
+from builtins import str
+from builtins import hex
+from builtins import range
+from builtins import object
 import sys
 import ctypes
 
@@ -1506,7 +1510,9 @@ class Lucam(object):
             Context data to be passed to callback function.
 
         """
-        
+        # asVoidPtr = ctypes.pythonapi.PyCObject_AsVoidPtr #this function converts PyCObject to void *, why is it not in ctypes natively...?
+        # asVoidPtr.restype = ctypes.c_void_p #we need to set the result and argument types of the imported function
+        # asVoidPtr.argtypes = [ctypes.py_object]        
         callback = API.VideoFilterCallback(callback)
         if context is not None:
             context = ctypes.py_object(context)
@@ -1516,6 +1522,15 @@ class Lucam(object):
             raise LucamError(self)
         self._callbacks[(API.VideoFilterCallback, callbackid)] = callback
         return callbackid
+        # callback = API.VideoFilterCallback(callback)
+        # if context is not None:
+        #     context = ctypes.py_object(context)
+        # callbackid = API.LucamAddStreamingCallback(self._handle,
+        #                                            callback, context)
+        # if callbackid == -1:
+        #     raise LucamError(self)
+        # self._callbacks[(API.VideoFilterCallback, callbackid)] = callback
+        # return callbackid
 
     def RemoveStreamingCallback(self, callbackid):
         """Remove previously registered video filter callback function.

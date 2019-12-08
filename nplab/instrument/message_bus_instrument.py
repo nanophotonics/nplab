@@ -7,12 +7,19 @@ This base class
 
 @author: Richard Bowman
 """
+from __future__ import print_function
 #from traits.api import HasTraits, Bool, Int, Str, Button, Array, Enum, List
 #import nplab
+from builtins import str
+from builtins import zip
+from builtins import map
+from builtins import object
 import re
 import nplab.instrument
 from functools import partial
 import threading
+import numpy as np
+import types
 
 
 class MessageBusInstrument(nplab.instrument.Instrument):
@@ -93,7 +100,16 @@ class MessageBusInstrument(nplab.instrument.Instrument):
         with self.communications_lock:
             if termination_line is None:
                 termination_line = self.termination_line
-            assert isinstance(termination_line, str), "If you perform a multiline query, you must specify a termination line either through the termination_line keyword argument or the termination_line property of the NPSerialInstrument."
+            
+            # assert isinstance(termination_line, basestring), "If you perform a multiline query, you must specify a termination line either through the termination_line keyword argument or the termination_line property of the NPSerialInstrument."
+           
+            # assert type(termination_line) == types.StringType , "If you perform a multiline query, you must specify a termination line either through the termination_line keyword argument or the termination_line property of the NPSerialInstrument."        
+            try:
+                assert isinstance(termination_line, basestring), "If you perform a multiline query, you must specify a termination line either through the termination_line keyword argument or the termination_line property of the NPSerialInstrument."
+            except NameError:
+                assert isinstance(termination_line, str), "If you perform a multiline query, you must specify a termination line either through the termination_line keyword argument or the termination_line property of the NPSerialInstrument."
+            
+            
             response = ""
             last_line = "dummy"
             while termination_line not in last_line and len(last_line) > 0: #read until we get the termination line.
@@ -172,6 +188,9 @@ class MessageBusInstrument(nplab.instrument.Instrument):
             (r"%(\\d+)c",r".{\1}", noop), #TODO support %cn where n is a number of chars
             (r"%d",r"[-+]?\\d+", int),
             (r"%[eEfg]",r"[-+]?(?:\\d+(?:\.\\d*)?|\.\\d+)(?:[eE][-+]?\\d+)?", float),
+            # (r"%(\\d+)c",r".{\\1}", noop), #TODO support %cn where n is a number of chars
+            # (r"%d",r"[-+]?\\d+", int),
+            # (r"%[eEfg]",r"[-+]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?", float),
             (r"%i",r"[-+]?(?:0[xX][\\dA-Fa-f]+|0[0-7]*|\\d+)", lambda x: int(x, 0)), #0=autodetect base
             (r"%o",r"[-+]?[0-7]+", lambda x: int(x, 8)), #8 means octal
             (r"%s",r"\\S+",noop),

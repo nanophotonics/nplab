@@ -2,6 +2,7 @@
 """
 This is a very simple script that pops up a data browser for one file.
 """
+from __future__ import print_function
 
 import nplab.datafile
 import argparse

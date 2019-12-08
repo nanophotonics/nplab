@@ -1,3 +1,8 @@
+from __future__ import division
+from __future__ import print_function
+from builtins import str
+from builtins import range
+from past.utils import old_div
 __author__ = 'alansanders'
 
 from nplab.instrument import Instrument
@@ -221,8 +226,8 @@ if __name__ == '__main__':
         while j<2:
             time, data = d.read_multi_ai()
             ref = data[0]
-            x = data[1]/data[2]
-            y = data[3]/data[4]
+            x = old_div(data[1],data[2])
+            y = old_div(data[3],data[4])
             new_data = [ref, x, y]
             for i in range(len(new_data)):
                 plot(time, new_data[i])

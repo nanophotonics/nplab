@@ -1,3 +1,9 @@
+from __future__ import division
+from __future__ import print_function
+from builtins import str
+from builtins import zip
+from builtins import range
+from past.utils import old_div
 __author__ = 'alansanders'
 
 import numpy as np
@@ -57,8 +63,6 @@ class Spectrometer(Instrument):
         self.stored_references = {}
         self.stored_backgrounds = {}
         self.reference_ID = 0
-        self.spectra_to_save = 0
-        self.spectra_saved = 0
         self.spectra_buffer = np.zeros(0)
         self.data_file = df.current()
         self.curr_scan=None
@@ -154,7 +158,7 @@ class Spectrometer(Instrument):
         else:
             background_2 = self.read_spectrum()
         self.integration_time = self.integration_time/2.0
-        self.background_gradient = (background_2-background_1)/self.integration_time
+        self.background_gradient = old_div((background_2-background_1),self.integration_time)
         self.background_constant = background_1-(self.integration_time*self.background_gradient)
         self.background = background_1
         self.background_int = self.integration_time
@@ -217,10 +221,9 @@ class Spectrometer(Instrument):
                 old_error_settings = np.seterr(all='ignore')
            #     new_spectrum = (spectrum - (self.background-np.min(self.background))*self.integration_time/self.background_int+np.min(self.background))/(((self.reference-np.min(self.background))*self.integration_time/self.reference_int - (self.background-np.min(self.background))*self.integration_time/self.background_int)+np.min(self.background))
                 if self.variable_int_enabled == True:
-                    new_spectrum = ((spectrum-(self.background_constant+self.background_gradient*self.integration_time))
-                                    /((self.reference-(self.background_constant+self.background_gradient*self.reference_int))*self.integration_time/self.reference_int))
+                    new_spectrum = (old_div((spectrum-(self.background_constant+self.background_gradient*self.integration_time)),(old_div((self.reference-(self.background_constant+self.background_gradient*self.reference_int))*self.integration_time,self.reference_int))))
                 else:
-                    new_spectrum = (spectrum-self.background)/(self.reference-self.background)
+                    new_spectrum = old_div((spectrum-self.background),(self.reference-self.background))
                 np.seterr(**old_error_settings)
                 new_spectrum[np.isinf(new_spectrum)] = np.NaN #if the reference is nearly 0, we get infinities - just make them all NaNs.
             else:
@@ -232,7 +235,7 @@ class Spectrometer(Instrument):
         else:
             new_spectrum = spectrum
         if self.absorption_enabled == True:
-            return np.log10(1/new_spectrum)
+            return np.log10(old_div(1,new_spectrum))
         return new_spectrum
 
     def read_processed_spectrum(self):
@@ -606,9 +609,6 @@ class SpectrometerDisplayUI(QtWidgets.QWidget,UiTools):
         self.save_button.clicked.connect(self.button_pressed)
         self.threshold.setValidator(QtGui.QDoubleValidator())
         self.threshold.textChanged.connect(self.check_state)
-
-        self.startContAcq.clicked.connect(self.start_continuous_acquisition)
-
         self._display_thread = DisplayThread(self)
         self._display_thread.spectrum_ready.connect(self.update_display)
         self._display_thread.spectra_ready.connect(self.update_display)
@@ -682,22 +682,6 @@ class SpectrometerDisplayUI(QtWidgets.QWidget,UiTools):
                     self.plotdata[spectrometer_nom].setData(x = self.spectrometer.wavelengths[spectrometer_nom],y= spectrum[spectrometer_nom])
             else:
                 self.plotdata[0].setData(x = self.spectrometer.wavelengths,y= spectrum)
-        # update LineEdit that contains number of spectra that need to be saved
-
-        if self.spectrometer.spectra_to_save==0:
-            self.spectraToSave.setEnabled(True)
-            self.startContAcq.setChecked(True)
-        if self.spectrometer.spectra_saved!=0:
-            self.spectraToSave.setText(str(self.spectrometer.spectra_to_save))
-
-
-    def start_continuous_acquisition(self):
-        self.spectraToSave.setEnabled(False)
-        self.startContAcq.setChecked(False)
-        self.spectrometer.spectra_to_save = int(self.spectraToSave.text())
-        self.spectrometer.save_continuous_spectra = True
-        self.spectrometer._temp_description = self.description.text() #creating a tempory desciption str for the continous save
-
 
     def filename_changed_ui(self):
         self.spectrometer.filename = self.filename_lineEdit.text()

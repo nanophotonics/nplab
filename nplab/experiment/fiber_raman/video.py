@@ -1,3 +1,5 @@
+from __future__ import print_function
+from __future__ import absolute_import
 from nplab.instrument.spectrometer.acton_2300i import Acton
 import pyqtgraph as pg
 from PyQt4 import QtGui

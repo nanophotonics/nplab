@@ -5,18 +5,31 @@ This uses a tree view to show the file's contents, and has a plugin-based "rende
 system to display the datasets.  See `nplab.ui.data_renderers` for that.
 
 """
+from __future__ import division
+from __future__ import print_function
 
+from builtins import object
+from past.utils import old_div
 __author__ = 'Alan Sanders, Will Deacon, Richard Bowman'
 
 import nplab
-from nplab.utils.gui import QtCore, QtGui, QtWidgets, uic
+from nplab.utils.gui import QtCore, QtWidgets
 import matplotlib
 import numpy as np
 import h5py
 
-#matplotlib.use('Qt4Agg')
-from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.figure import Figure
+try:
+    from matplotlib.backends.qt_compat import is_pyqt5
+except (AttributeError, ImportError): 
+    from matplotlib.backends.qt_compat import QT_API
+    def is_pyqt5():
+        return (QT_API[:5] == 'PyQt5')
+
+if is_pyqt5():
+    matplotlib.use('Qt5Agg')
+else:
+    matplotlib.use('Qt4Agg')
+
 from nplab.ui.data_renderers import suitable_renderers
 from nplab.ui.ui_tools import UiTools
 import functools
@@ -242,7 +255,7 @@ def igorOpen(dataset):
         if data.ndim == 2:
             # RWB: why do we do this?  Why not just use a 2D text file and skip rescaling??
             from PIL import Image
-            rescaled = (2**16 / data.max() * (data - data.min())).astype(np.uint8)
+            rescaled = (old_div(2**16, data.max()) * (data - data.min())).astype(np.uint8)
 
             im = Image.fromarray(rescaled.transpose())
             im.save(igortmpfile+'.tif')
@@ -301,9 +314,9 @@ class HDF5TreeItem(object):
             try:
                 time_stamps = []
                 for value in list(self.data_file[self.name].values()):
-                    time_stamp_str = value.attrs['creation_timestamp']
+                    time_stamp_str = value.attrs['creation_timestamp'].decode('UTF-8')
                     try:
-                        time_stamp_float = datetime.datetime.strptime(time_stamp_str,"%Y-%m-%dT%H:%M:%S.%f")
+                        time_stamp_float = datetime.datetime.strptime(time_stamp_str, "%Y-%m-%dT%H:%M:%S.%f")
                     except ValueError:
                         time_stamp_str =  time_stamp_str+'.0'
                         time_stamp_float = datetime.datetime.strptime(time_stamp_str,"%Y-%m-%dT%H:%M:%S.%f")
@@ -562,6 +575,7 @@ class HDF5Browser(QtWidgets.QWidget, UiTools):
             self.viewer.data = self.treeWidget.selected_h5item()
             if self.data_file.update_current_group == True:
                 df.set_current_group(self.treeWidget.selected_h5item())
+
         except Exception as e:
             print(e, 'That could be corrupted')
             

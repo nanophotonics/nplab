@@ -1,3 +1,9 @@
+from __future__ import division
+from __future__ import print_function
+from builtins import zip
+from builtins import str
+from builtins import range
+from past.utils import old_div
 __author__ = 'alansanders'
 
 from nplab.experiment.scanning_experiment import ScanningExperimentHDF5, GridScanQt
@@ -273,7 +279,7 @@ class HyperspectralScan(GridScanQt, ScanningExperimentHDF5):
         return HyperspectralScanUI(self)
 
     def on_mouse_click(self, event):
-        init_scale = self._unit_conversion[self.step_unit] / self._unit_conversion[self.init_unit]
+        init_scale = old_div(self._unit_conversion[self.step_unit], self._unit_conversion[self.init_unit])
         self.init[:2] = (event.xdata * init_scale, event.ydata * init_scale)
         self.init_updated.emit(self.init)
     #     pos = event.scenePos()

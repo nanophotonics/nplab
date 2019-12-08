@@ -6,7 +6,9 @@ Created on Wed May 23 16:51:45 2018
 
 A few functions for quick calculation ofs MPE's
 """
+from __future__ import division
 
+from past.utils import old_div
 import matplotlib
 #%matplotlib inline
 import matplotlib.pyplot as plt
@@ -75,7 +77,7 @@ def single_pulse_MPE(wavelength,pulse_width = 100E-15,divergence = 1.1):
 def power_at_dist(power,distance):
     '''power at a distance from a scattering point '''
     surface_area = 2.0*np.pi*distance**2
-    return power/surface_area
+    return old_div(power,surface_area)
 
 def calculate_MPEs(wavelength,pulse_width = 100E-15,divergence = 1.1,frequency = 80E6):
     '''Calculate the Three different MPE's required for pulsed lasers'''
@@ -83,11 +85,11 @@ def calculate_MPEs(wavelength,pulse_width = 100E-15,divergence = 1.1,frequency =
     if wavelength>=400 and wavelength<=700:
         mpe_average = single_pulse_MPE(wavelength,0.25,divergence)
         num_pulses = (0.25*frequency)
-        mpe_average=mpe_average/num_pulses
+        mpe_average=old_div(mpe_average,num_pulses)
     else:
         mpe_average = single_pulse_MPE(wavelength,10.0,divergence)
         num_pulses= (10*frequency)
-        mpe_average = mpe_average/num_pulses
+        mpe_average = old_div(mpe_average,num_pulses)
     mpe_train = mpe_single*num_pulses**(-0.25)
     return np.array((mpe_single, mpe_average, mpe_train))*frequency
            

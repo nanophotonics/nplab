@@ -1,3 +1,8 @@
+from __future__ import division
+from __future__ import print_function
+from builtins import range
+from builtins import object
+from past.utils import old_div
 __author__ = 'alansanders'
 
 import os
@@ -134,7 +139,7 @@ class HyperspectralImage(object):
     @property
     def wavelength(self): return self.scan['wavelength'][self._wavelength_roi]
     @property
-    def energy(self): return 1e9*(h*c/self.wavelength)/e
+    def energy(self): return old_div(1e9*(old_div(h*c,self.wavelength)),e)
     @property
     def wavelength2(self):
         if 'wavelength2' in self.scan:
@@ -144,7 +149,7 @@ class HyperspectralImage(object):
     @property
     def energy2(self):
         if 'wavelength2' in self.scan:
-            return 1e9*(h*c/self.wavelength2)/e
+            return old_div(1e9*(old_div(h*c,self.wavelength2)),e)
         else:
             print('There is no wavelength2 dataset so cannot return energy2')
     # Data properties
@@ -345,9 +350,9 @@ class HyperspectralImage(object):
         xo, yo = self._get_offset(wavelength, unit='pixel')
         s = spectra.shape
         #print 'starting data shape:', s
-        s11 = s[0]/2
+        s11 = old_div(s[0],2)
         s12 = s11 + s[0]
-        s21 = s[1]/2
+        s21 = old_div(s[1],2)
         s22 = s21 + s[1]
         # a 1.6 factor is used to go just beyond the physical maximum shift of
         # 50% of the current view
@@ -358,10 +363,10 @@ class HyperspectralImage(object):
         big_img[:] = np.nan
         x_step = self.x[1] - self.x[0]
         x = x_step * np.arange(big_img.shape[0])
-        x -= x[x.size/2]
+        x -= x[old_div(x.size,2)]
         y_step = self.y[1] - self.y[0]
         y = y_step * np.arange(big_img.shape[1])
-        y -= y[y.size/2]
+        y -= y[old_div(y.size,2)]
         for i in range(s[-1]): # for each wavelength (last dimension)
             dx = int(round(xo[i]))
             dy = int(round(yo[i]))

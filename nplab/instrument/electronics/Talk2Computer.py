@@ -4,9 +4,11 @@ Created on Fri Oct 12 13:17:20 2018
 
 @author: fo263
 """
+from __future__ import print_function
 
 # Save as server.py 
 # Message Receiver
+from builtins import str
 import socket 
 
 from nplab.instrument import Instrument

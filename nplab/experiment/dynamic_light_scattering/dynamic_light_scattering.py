@@ -1,3 +1,5 @@
+from __future__ import print_function
+from builtins import str
 from nplab.utils import gui_generator
 import matplotlib 
 matplotlib.use('Qt4Agg')

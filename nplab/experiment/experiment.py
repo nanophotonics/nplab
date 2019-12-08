@@ -7,6 +7,7 @@ mechanisms for running things in the background without the need to write a
 lot of threading code.
 
 """
+from __future__ import print_function
 
 __author__ = 'alansanders, richard bowman'
 

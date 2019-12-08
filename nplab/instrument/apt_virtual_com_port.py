@@ -4,7 +4,11 @@ Created on Mon Mar 20 20:43:17 2017
 
 @author: Will
 """
+from __future__ import print_function
 
+from builtins import hex
+from builtins import str
+from builtins import range
 import serial
 import serial.tools.list_ports as list_ports
 import struct

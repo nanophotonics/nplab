@@ -1,3 +1,4 @@
+from __future__ import print_function
 def transpose_dictionary(dictionary):
 	keys = list(dictionary.keys())
 	values = list(dictionary.values())

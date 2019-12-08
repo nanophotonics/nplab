@@ -1,3 +1,4 @@
+from __future__ import print_function
 from nplab.instrument.light_sources.SolsTiS import SolsTiS
 import time
 import numpy as np 

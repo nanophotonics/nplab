@@ -7,11 +7,8 @@ import pyqtgraph.dockarea as dockarea
 import numpy as np
 import os
 import math
-import nplab.instrument.electronics.SLM.gui as gui
-import nplab.instrument.electronics.SLM.pattern_generators as pattern_generators
-
-
-# TODO: make calibration class https://doi.org/10.1364/AO.43.006400
+from . import gui
+from . import pattern_generators
 
 
 def zernike_polynomial(array_size, n, m, beam_size=1):
@@ -227,7 +224,7 @@ class SlmUi(QtWidgets.QWidget, UiTools):
         """
         uic.loadUi(os.path.join(os.path.dirname(__file__), 'ui_base.ui'), self)
         self.dockarea = dockarea.DockArea()
-        self.splitter.replaceWidget(0, self.dockarea)
+        self.splitter.insertWidget(0, self.dockarea)
         self.dockarea.show()  # Absolutely no idea why this is needed
 
         self.all_widgets = dict()
@@ -271,7 +268,8 @@ class SlmUi(QtWidgets.QWidget, UiTools):
 
 
 if __name__ == "__main__":
-    settings = ['gratings', 'vortexbeam', 'focus', 'astigmatism', 'linear_lut', 'constant']
+    settings = ['gratings', 'vortexbeam', 'focus', 'astigmatism', 'linear_lut', 'constant',
+                'calibration_responsiveness']
     SLM = Slm(settings, 1)
     SLM._logger.setLevel('DEBUG')
     SLM.show_gui()

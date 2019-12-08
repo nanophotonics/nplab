@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 __author__ = 'jm806'
 
 
@@ -27,8 +29,7 @@ class Uniblitz(ShutterWithEmulatedRead, SerialInstrument):
             self.ser.write(str.encode('@'))
         elif state == 'Closed': 
             self.ser.write(str.encode('A'))
-        time.sleep(2)
-
+        # time.sleep(0.1)
 #
 #    def toggle(self):
 #        if self.shutter_state == 'Open':
@@ -50,5 +51,5 @@ class Uniblitz(ShutterWithEmulatedRead, SerialInstrument):
 if __name__ == '__main__':
 
     shutter = Uniblitz('COM7')
-    shutter.show_gui()
-    shutter.close()
+    # shutter.show_gui()
+    # shutter.close()

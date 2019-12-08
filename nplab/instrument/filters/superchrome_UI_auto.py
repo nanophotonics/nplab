@@ -4,12 +4,16 @@ Created on Thu Aug  8 08:53:24 2019
 
 @author: fo263
 """
+from __future__ import division
 
+from builtins import str
+from builtins import object
+from past.utils import old_div
 from pywinauto.application import Application
 import numpy as np
 
 
-class SuperChromeUIAuto():
+class SuperChromeUIAuto(object):
     """ A class for controlling the fianium superchrome filter using UI automation
     """
     def __init__(self):
@@ -59,7 +63,7 @@ class SuperChromeUIAuto():
             display('Filter1 is not yet calibrated. Sorry!')
             return
         
-        filter_pos = np.abs(self.lookup_table - cut_off).argmin()/2
+        filter_pos = old_div(np.abs(self.lookup_table - cut_off).argmin(),2)
         self.move_filter_pos(filter_str, self.lookup_table[int(filter_pos)][0])
         
         

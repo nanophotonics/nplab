@@ -1,3 +1,8 @@
+from __future__ import division
+from __future__ import print_function
+from builtins import str
+from builtins import range
+from past.utils import old_div
 import os,sys,math, numpy as np, matplotlib.pyplot as plt 
 import ctypes
 from ctypes import *
@@ -178,7 +183,7 @@ class Adlink9812(Instrument):
 		cardBuffer = (c_ushort*card_buffer_size)()
 
 		#user buffers
-		user_buffer_size = card_buffer_size/2 #half due to being full when buffer is read
+		user_buffer_size = old_div(card_buffer_size,2) #half due to being full when buffer is read
 		nbuff = int(math.ceil(sample_count/float(user_buffer_size)))
 		
 		# uBs = [(c_double*user_buffer_size)()]*nbuff
@@ -438,7 +443,7 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 		#convert rounded difference to integers
 		thresholded = np.absolute(dls_signal_postprocessing.signal_diff(voltages)).astype(int)
 		total_counts = np.sum(thresholded)
-		count_rate = total_counts/sample_time
+		count_rate = old_div(total_counts,sample_time)
 		self.log("Total Counts: {0} [counts], Rate: {1} [counts/s]".format(int(total_counts), count_rate))
 		return total_counts, count_rate 
 

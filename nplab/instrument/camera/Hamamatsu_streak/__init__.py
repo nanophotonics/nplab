@@ -124,4 +124,3 @@ class StreakUI(QtWidgets.QWidget):
             self.Streak.set_parameter('Devices', 'TD', 'Time Range', str(next_number) + ' ' + unit)
         except StreakError:
             self.Streak.set_parameter('Devices', 'TD', 'Time Range', str(next_number))
-

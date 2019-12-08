@@ -40,7 +40,12 @@ EXAMPLE:
     >>>> camera = camera_client((IP, port))
     >>>> camera.show_gui()
 """
+from __future__ import division
 
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from past.utils import old_div
 from nplab.utils.log import create_logger
 from nplab.utils.array_with_attrs import ArrayWithAttrs
 import threading

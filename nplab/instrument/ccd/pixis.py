@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+
+from __future__ import print_function
+from builtins import range
 __author__ = 'alansanders'
 import ctypes as ct
 import os
@@ -379,7 +383,15 @@ if __name__ == '__main__':
         print('done')
         plt.show()
 
-    p.read_image(p.exposure, timing='timed', mode='kinetics', new=True, end= False, k_size=1)
-    img = p.read_image(p.exposure, timing='timed', mode='kinetics', new=False, end= True, k_size=1)
-    print(img)
+    print("one")
+#    app = get_qt_app()
+#    ui = Pixis256EUI(pixis=p)
+#    print "two"
 
+#    ui.show()
+ #   sys.exit(app.exec_())
+
+    # p.read_image(p.exposure, timing='timed', mode='kinetics', new=True, end= False, k_size=1)
+    # img = p.read_image(p.exposure, timing='timed', mode='kinetics', new=False, end= True, k_size=1)
+    # plt.imshow(img)
+    # plt.show()

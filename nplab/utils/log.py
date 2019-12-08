@@ -6,7 +6,9 @@ happening.  This module provides some support functions to help with that.
 Note that these usually won't be called directly - anything inheriting from
 Instrument (or possibly Experiment) should call self.log instead.
 """
+from __future__ import print_function
 
+from builtins import range
 import nplab
 import numpy as np
 import sys

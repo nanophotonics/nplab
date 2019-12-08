@@ -4,6 +4,8 @@ Created on Fri Sep 22 15:27:17 2017
 
 @author: William Deacon (fo263)
 """
+from __future__ import print_function
+from builtins import str
 from nplab.instrument.serial_instrument import SerialInstrument
 from nplab.ui.ui_tools import QuickControlBox
 import pyqtgraph as pg

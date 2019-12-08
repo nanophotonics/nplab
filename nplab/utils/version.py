@@ -1,7 +1,9 @@
+from __future__ import print_function
 # Quick-and-dirty way to extract the Git commit hash
 # Note this doesn't rely on any git packages being installed
 # but it does need us to be in a git repository
 
+from builtins import str
 import nplab
 import os, sys, platform
 

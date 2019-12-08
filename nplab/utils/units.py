@@ -9,7 +9,11 @@ you only wanted to move 1um...)
 
 @author: rwb27
 """
+from __future__ import division
+from __future__ import print_function
 
+from builtins import str
+from past.utils import old_div
 from nplab import ArrayWithAttrs
 from nplab.utils.array_with_attrs import ensure_attrs
 import pint
@@ -97,9 +101,9 @@ def convert_quantity(obj, dest_units, default=None, warn=True, return_quantity=F
     else:
         #convert the object to a Quantity
         fu = get_units(obj, default=default, warn=warn)
-        q = ureg.Quantity(obj, fu.units)/fu.magnitude
+        q = old_div(ureg.Quantity(obj, fu.units),fu.magnitude)
     du = ensure_unit(dest_units)
-    rq = q.to(du.units) / du.magnitude
+    rq = old_div(q.to(du.units), du.magnitude)
     if return_quantity:
         return rq
     else:

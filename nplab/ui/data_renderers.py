@@ -1,36 +1,40 @@
-__author__ = 'alansanders, Will Deacon'
+# -*- coding: utf-8 -*-
+from __future__ import division
+from __future__ import print_function
+from builtins import str
+from builtins import range
+from past.utils import old_div
+from builtins import object
 
-import h5py
 from nplab.utils.gui import QtGui, QtWidgets, get_qt_app, uic
 from nplab.utils.array_with_attrs import ArrayWithAttrs
-import os
 import matplotlib
 
-#matplotlib.use('Qt4Agg')
-from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
+is_qt5 = (matplotlib.backends.qt_compat.QT_API[:5] == 'PyQt5')
+if is_qt5:
+    matplotlib.use('Qt5Agg')
+else:
+    matplotlib.use('Qt4Agg')
+    from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import pyqtgraph as pg
 import numpy as np
 import nplab.datafile as df
 import operator
-
-#from nplab.utils.gui import QtWidgets
-#from PyQt4.QtCore import * 
-
+import h5py
+import os
 
 
-
-# -*- coding: utf-8 -*-
 """
 Created on Thu Oct 29 10:36:07 2015
 
 @author: wmd22
+
 """
+__author__ = 'alansanders, Will Deacon'
 
 
-
-
-class DataRenderer(object):
+class DataRenderer:
     def __init__(self, h5object, parent=None):
     #    assert self.is_suitable(h5object) >= 0, "Can't render that object: {0}".format(h5object)
         super(DataRenderer, self).__init__()
@@ -79,7 +83,7 @@ def suitable_renderers(h5object, return_scores=False):
             try:
                 renderers_and_scores.append((r.is_suitable(h5object), r))
             except:
-      #          print "renderer {0} failed when checking suitability for {1}".format(r, h5object)
+                # print("renderer {0} failed when checking suitability for {1}".format(r, h5object))
                 pass # renderers that cause exceptions shouldn't be used!
     renderers_and_scores.sort(key=lambda score_r: score_r[0], reverse=True)
     if return_scores:
@@ -361,7 +365,7 @@ class Normalised_Parameter_renderer(FigureRendererPG):
        
         self.figureWidget.addLegend(offset = (-1,1))
         icolor = 0
-        for h5object in self.h5object.values(): 
+        for h5object in list(self.h5object.values()): 
             icolor+=1
             try: x_axis = h5object.attrs['x_axis']
             except: print('x-axis not found')
@@ -370,7 +374,7 @@ class Normalised_Parameter_renderer(FigureRendererPG):
                     Max = float(np.max(Ydata))
                     
                     self.figureWidget.plot(x = x_axis,
-                                           y = Ydata/Max,
+                                           y = old_div(Ydata,Max),
                                            pen = (icolor,len(self.h5object)),
                                            name = h5object.name)
                     icolor+=1
@@ -391,16 +395,64 @@ class Normalised_Parameter_renderer(FigureRendererPG):
           
     @classmethod
     def is_suitable(cls, h5object):
-        if 10>len(h5object)>1:
-            if 'x_axis' in h5object.attrs():
-                return 10
+        if len(h5object)>1:
+            if h5object.hasattr('parameter_renderer') and h5object.hasattr('x-axis'):
+                return 5
         else:
             return -1
-        
 
 add_renderer(Normalised_Parameter_renderer)
 
+class Parameter_renderer(FigureRendererPG):
+    """ A renderer for multiple parameters plotted agains the same x-axis
+        author: ee306
+    """
 
+    def display_data(self):
+        if not hasattr(self.h5object, "values"):
+            # If we have only one item, treat it as a group containing that item.
+            self.h5object = {self.h5object.name: self.h5object}
+       
+        self.figureWidget.addLegend(offset = (-1,1))
+        icolor = 0
+        for h5object in list(self.h5object.values()): 
+            icolor+=1
+            try: x_axis = h5object.attrs['x_axis']
+            except: print('x-axis not found')
+            for index, Ydata in enumerate(h5object):
+                try:    
+                
+                    
+                    self.figureWidget.plot(x = x_axis,
+                                           y = Ydata,
+                                           pen = (icolor,len(self.h5object)),
+                                           name = h5object.name)
+                    icolor+=1
+                
+                except: print('failed')
+            
+            
+        labelStyle = {'font-size': '24pt'}
+        try:
+            self.figureWidget.setLabel('bottom', h5object.attrs['x-axis'], **labelStyle)
+        except:
+            self.figureWidget.setLabel('bottom', 'An X axis', **labelStyle)
+            
+        try:
+            self.figureWidget.setLabel('left', h5object.attrs['Y label'], **labelStyle)
+        except:
+            self.figureWidget.setLabel('left', 'Normalised y-axis', **labelStyle)
+          
+    @classmethod
+    def is_suitable(cls, h5object):
+        if len(h5object)>1:
+            if h5object.hasattr('parameter_renderer') and h5object.hasattr('x-axis'):
+                return 5
+        else:
+            return -1
+
+
+add_renderer(Parameter_renderer)
 
 class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
     """ A renderer for large spectral datasets experessing them in a colour map using
@@ -461,7 +513,7 @@ class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
         elif len(self.h5object.shape) == 1 and len(self.h5object.attrs['wavelengths'])<len(self.h5object) and len(self.h5object)%len(self.h5object.attrs['wavelengths']) == 0:
             RawData = np.array(self.h5object,dtype = float)
             Xlen = len(np.array(self.h5object.attrs['wavelengths']))
-            Ylen = len(RawData)/Xlen
+            Ylen = old_div(len(RawData),Xlen)
             data = [RawData.reshape((Ylen,Xlen))]
             self.h5object = {self.h5object.name : self.h5object}
             ListData = False
@@ -478,7 +530,8 @@ class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
         for h5object in data:
             Title = "A"
             variable_int = False
-            if 'variable_int_enabled' in list(self.h5object.values())[i].attrs.keys():
+
+            if 'variable_int_enabled' in list(list(self.h5object.values())[i].attrs.keys()):
                 variable_int = list(self.h5object.values())[i].attrs['variable_int_enabled']
             if ((variable_int == True) and #Check for variable integration time and that the background_int and reference_int are not none
                         ((list(self.h5object.values())[i].attrs['background_int'] != list(self.h5object.values())[i].attrs['integration_time'] 
@@ -487,15 +540,15 @@ class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
                             and (list(self.h5object.values())[i].attrs['reference_int'] != None)))):
                 if list(self.h5object.values())[i].attrs['background_int'] != None:
                     if list(self.h5object.values())[i].attrs['reference_int'] != None:
-                        data[i] = ((data[i]-(list(self.h5object.values())[i].attrs['background_constant']+list(self.h5object.values())[i].attrs['background_gradient']*list(self.h5object.values())[i].attrs['integration_time']))/ 
-                                        ((list(self.h5object.values())[i].attrs['reference']-(list(self.h5object.values())[i].attrs['background_constant']+list(self.h5object.values())[i].attrs['background_gradient']*list(self.h5object.values())[i].attrs['reference_int']))
-                                        *list(self.h5object.values())[i].attrs['integration_time']/list(self.h5object.values())[i].attrs['reference_int']))
+                        data[i] = (old_div((data[i]-(list(self.h5object.values())[i].attrs['background_constant']+list(self.h5object.values())[i].attrs['background_gradient']*list(self.h5object.values())[i].attrs['integration_time'])),
+                                        (old_div((list(self.h5object.values())[i].attrs['reference']-(list(self.h5object.values())[i].attrs['background_constant']+list(self.h5object.values())[i].attrs['background_gradient']*list(self.h5object.values())[i].attrs['reference_int']))
+                                        *list(self.h5object.values())[i].attrs['integration_time'],list(self.h5object.values())[i].attrs['reference_int']))))
                     else:
                         data[i] = data[i]-(list(self.h5object.values())[i].attrs['background_constant']+list(self.h5object.values())[i].attrs['background_gradient']*list(self.h5object.values())[i].attrs['integration_time'])
                         reference_counter = reference_counter +1
                 
             else:
-                if 'background' in list(self.h5object.values())[i].attrs.keys():
+                if 'background' in list(list(self.h5object.values())[i].attrs.keys()):
                     if ListData == True:
                         if len(np.array(data[i])) == len(np.array(list(self.h5object.values())[i].attrs['reference'])):
                             data[i] = data[i] - np.array(list(self.h5object.values())[i].attrs['background'])     
@@ -505,13 +558,13 @@ class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
                         Title = Title + " background subtracted"
                 else:
                     background_counter = background_counter+1
-                if 'reference' in list(self.h5object.values())[i].attrs.keys():
+                if 'reference' in list(list(self.h5object.values())[i].attrs.keys()):
                     if ListData == True:
                         if len(np.array(data[i])) == len(np.array(list(self.h5object.values())[i].attrs['reference'])):
-                            data[i] = data[i]/(np.array(list(self.h5object.values())[i].attrs['reference'])- np.array(list(self.h5object.values())[i].attrs['background']))   
+                            data[i] = old_div(data[i],(np.array(list(self.h5object.values())[i].attrs['reference'])- np.array(list(self.h5object.values())[i].attrs['background'])))   
                     else:
                         if len(np.array(data)) == len(np.array(list(self.h5object.values())[i].attrs['reference'])):
-                            data = data/(np.array(list(self.h5object.values())[i].attrs['reference'])[:,np.newaxis]- np.array(list(self.h5object.values())[i].attrs['background'])[:,np.newaxis])
+                            data = old_div(data,(np.array(list(self.h5object.values())[i].attrs['reference'])[:,np.newaxis]- np.array(list(self.h5object.values())[i].attrs['background'])[:,np.newaxis]))
                     Title = Title + " referenced"
                 else:
                     reference_counter = reference_counter +1
@@ -550,7 +603,7 @@ class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
         img = pg.ImageItem(data)
 
         ConvertionC= list(self.h5object.values())[0].attrs['wavelengths'][0]
-        ConvertionM = (list(self.h5object.values())[0].attrs['wavelengths'][-1] - list(self.h5object.values())[0].attrs['wavelengths'][0])/len(list(self.h5object.values())[0].attrs['wavelengths'])
+        ConvertionM = old_div((list(self.h5object.values())[0].attrs['wavelengths'][-1] - list(self.h5object.values())[0].attrs['wavelengths'][0]),len(list(self.h5object.values())[0].attrs['wavelengths']))
 
 
 
@@ -569,7 +622,7 @@ class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
         suitability = 0
         if isinstance(h5object,dict) == False and isinstance(h5object,h5py.Group) == False:
             try:
-                if len(h5object.shape) == 1 and len(h5object)/len(h5object.attrs['wavelengths']) == 1:
+                if len(h5object.shape) == 1 and old_div(len(h5object),len(h5object.attrs['wavelengths'])) == 1:
                     return -1
             except:
                 return -1
@@ -590,7 +643,7 @@ class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
                         suitability = suitability + len(h5object)-20
                     else:
                         return 1
-                elif (len(np.array(dataset))/len(dataset.attrs['wavelengths']))>1 and (len(np.array(dataset))%len(dataset.attrs['wavelengths'])) == 0 :           
+                elif (old_div(len(np.array(dataset)),len(dataset.attrs['wavelengths'])))>1 and (len(np.array(dataset))%len(dataset.attrs['wavelengths'])) == 0 :           
                     suitability = suitability + 50
                 elif len(dataset.attrs['wavelengths']) != len(np.array(dataset)):
                     print("the number of bins does not equal the number of wavelengths!")
@@ -646,13 +699,15 @@ class DataRenderer2or3DPG(DataRenderer, QtWidgets.QWidget):
     def is_suitable(cls, h5object):
         if not isinstance(h5object, h5py.Dataset):
             return -1
-        if len(h5object.shape) == 3:
+        elif len(h5object.shape) == 3:
             return 31
-        if len(h5object.shape) == 4 and h5object.shape[3]==3:
+        elif len(h5object.shape) == 4 and h5object.shape[3] == 3:
             return 31
         elif len(h5object.shape) == 2:
             return 21
         elif len(h5object.shape) > 3:
+            return -1
+        else:
             return -1
 
 add_renderer(DataRenderer2or3DPG)
@@ -726,6 +781,8 @@ class DataRenderer2D(FigureRenderer):
             return 10
         elif len(h5object.shape) < 2:
             return -1
+        else:
+            return -1
             
 add_renderer(DataRenderer2D)
 
@@ -747,6 +804,8 @@ class DataRendererRGB(FigureRenderer):
         if len(h5object.shape) == 3 and h5object.shape[2]==3:
             return 15
         elif len(h5object.shape) != 3:
+            return -1
+        else:
             return -1
             
 add_renderer(DataRendererRGB)
@@ -822,9 +881,9 @@ class SpectrumRenderer(FigureRendererPG):
                 Title = Title + " variable"
                 if h5object.attrs['background_int'] != None:
                     if h5object.attrs['reference_int'] != None:
-                        Data = ((Data-(h5object.attrs['background_constant']+h5object.attrs['background_gradient']*h5object.attrs['integration_time']))/ 
-                                        ((h5object.attrs['reference']-(h5object.attrs['background_constant']+h5object.attrs['background_gradient']*h5object.attrs['reference_int']))
-                                        *h5object.attrs['integration_time']/h5object.attrs['reference_int']))
+                        Data = (old_div((Data-(h5object.attrs['background_constant']+h5object.attrs['background_gradient']*h5object.attrs['integration_time'])), 
+                                        (old_div((h5object.attrs['reference']-(h5object.attrs['background_constant']+h5object.attrs['background_gradient']*h5object.attrs['reference_int']))
+                                        *h5object.attrs['integration_time'],h5object.attrs['reference_int']))))
                         Title = Title + " referenced and background subtracted"
                     else:
                         Data = Data-(h5object.attrs['background_constant']+h5object.attrs['background_gradient']*h5object.attrs['integration_time'])
@@ -836,11 +895,11 @@ class SpectrumRenderer(FigureRendererPG):
                         Title = Title + " background subtracted"
                     if 'reference' in list(h5object.attrs.keys()):
                         if len(np.array(h5object)) == len(np.array(h5object.attrs['reference'])):
-                            Data = Data/(np.array(h5object.attrs['reference'])- np.array(h5object.attrs['background']))
+                            Data = old_div(Data,(np.array(h5object.attrs['reference'])- np.array(h5object.attrs['background'])))
                             Title = Title + " referenced"
             if 'absorption_enabled' in list(h5object.attrs.keys()):
                 if h5object.attrs['absorption_enabled']:
-                    Data = np.log10(1/np.array(Data))
+                    Data = np.log10(old_div(1,np.array(Data)))
             plot.plot(x = np.array(h5object.attrs['wavelengths']), y = np.array(Data),name = h5object.name, pen =(icolour,len(self.h5object)) )
             Title = Title + " spectrum"
                 
@@ -917,7 +976,7 @@ class HyperSpec(DataRenderer, QtWidgets.QWidget):
         
         for dim in range(dims-1):
             Images.append(pg.ImageView(view=pg.PlotItem()))
-            midpoints.append(int(np.shape(data)[dim]/2))
+            midpoints.append(int(old_div(np.shape(data)[dim],2)))
 
      
         Imagedata = []
@@ -998,10 +1057,13 @@ class HyperSpec(DataRenderer, QtWidgets.QWidget):
     def is_suitable(cls, h5object):
         if not isinstance(h5object, h5py.Dataset):
             return -1
-        if len(h5object.shape) == 4 and 'z' in list(h5object.attrs.keys()) and 'y' in list(h5object.attrs.keys()) and 'x' in list(h5object.attrs.keys()):
+        elif len(h5object.shape) == 4 and 'z' in list(h5object.attrs.keys()) and 'y' in list(h5object.attrs.keys()) and 'x' in list(h5object.attrs.keys()):
             return 30
         elif len(h5object.shape) > 4:
             return -1
+        else:
+            return -1
+
 
 add_renderer(HyperSpec)
 
@@ -1038,8 +1100,8 @@ class HyperSpec_Alan(DataRenderer, QtWidgets.QWidget):
         #Creating a list of hyperspec images to put into a the layout
         Images = []
         #Calculate the X,Y scales for the images
-        XConvertionM = (self.h5object['x'][-1] - self.h5object['x'][0])/len(self.h5object['x'])
-        YConvertionM = (self.h5object['y'][-1] - self.h5object['y'][0])/len(self.h5object['y'])
+        XConvertionM = old_div((self.h5object['x'][-1] - self.h5object['x'][0]),len(self.h5object['x']))
+        YConvertionM = old_div((self.h5object['y'][-1] - self.h5object['y'][0]),len(self.h5object['y']))
         #creating an iterator for the number of hyperspectral images
         for hyperspec_nom in range(1,num_hyperspec):
             if hyperspec_nom == 1:
@@ -1121,7 +1183,7 @@ class ScannedParticle(FigureRenderer):
             spectrum -= background #we'll fail here if there was no background recorded
             reference = zscan.attrs.get("reference")
             spectrum /= (reference - background) #if there's a reference, apply it
-            spectrum_range = reference > np.max(reference)/10
+            spectrum_range = reference > old_div(np.max(reference),10)
         except:
             pass # if reference/background are missing, ignore them.
         import matplotlib.gridspec as gridspec
@@ -1618,7 +1680,7 @@ class AutocorrelationRenderer(FigureRendererPG):
 add_renderer(AutocorrelationRenderer)
 
 if __name__ == '__main__':
-    import sys, h5py, os, numpy as np
+    import sys
 
     print(os.getcwd())
     app = get_qt_app()

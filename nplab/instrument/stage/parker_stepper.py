@@ -4,8 +4,12 @@ Created on Fri Aug  3 16:53:34 2018
 
 @author: ep558,wmd22
 """
+from __future__ import division
+from __future__ import print_function
 
 
+from builtins import str
+from past.utils import old_div
 import nplab.instrument.serial_instrument as si
 
 class ParkerStepper(si.SerialInstrument):
@@ -86,8 +90,8 @@ class ParkerStepper(si.SerialInstrument):
         Success = False
         while Success ==False:
             try:
-                loc = [self.int_query("8PR")/(self.calibration),self.int_query("8PR")]
-                if loc != [self.int_query("8PR")/(self.calibration),self.int_query("8PR")]:
+                loc = [old_div(self.int_query("8PR"),(self.calibration)),self.int_query("8PR")]
+                if loc != [old_div(self.int_query("8PR"),(self.calibration)),self.int_query("8PR")]:
                     raise ValueError
                 Success = True
             except ValueError:
@@ -152,11 +156,11 @@ class Stepper_Ui(QtWidgets.QWidget, UiTools):
     def update_positions(self):
         current_pos = float(self.stepper.location()[1])
         self.current_number.setText(str(current_pos))
-        self.current_percent.setText(str(100.0*current_pos/self.stepper.max_steps)[:4]+'%')
+        self.current_percent.setText(str(old_div(100.0*current_pos,self.stepper.max_steps))[:4]+'%')
     
     def move_to_percent(self):
         percent=self.move_percent_doubleSpinBox.value()
-        steps=int((percent*self.stepper.max_steps)/100)
+        steps=int(old_div((percent*self.stepper.max_steps),100))
         self.stepper.moveto(steps,blocking = False)
         
     def move_to(self):

@@ -2,9 +2,12 @@
 """
 Subclass of Camera that has units for its axis. The GUI also provides crosshairs for defining ROIs
 """
+from __future__ import print_function
 
 from nplab.utils.gui import QtCore, QtGui, QtWidgets
 from nplab.ui.widgets.imageview import ExtendedImageView
+from builtins import zip
+from builtins import range
 from nplab.instrument.camera import Camera
 import pyqtgraph
 import numpy as np

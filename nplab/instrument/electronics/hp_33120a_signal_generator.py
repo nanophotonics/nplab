@@ -1,3 +1,4 @@
+from __future__ import print_function
 __author__ = 'alansanders'
 
 from nplab.instrument.visa_instrument import VisaInstrument, queried_property

@@ -6,6 +6,8 @@ Created on Fri Oct 05 15:13:50 2018
 
 A nplab wrapper to the ThorlabsPM100 reppo
 """
+from builtins import str
+from builtins import range
 from nplab.instrument import Instrument
 from ThorlabsPM100 import ThorlabsPM100
 import visa

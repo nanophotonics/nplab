@@ -5,8 +5,8 @@ Created on Thu Apr 09 22:37:15 2015
 @author: rwb27
 """
 
-
 from nplab.instrument.message_bus_instrument import EchoInstrument
+
 
 def test_parsing():
     e = EchoInstrument()
@@ -17,4 +17,3 @@ def test_parsing():
     assert e.parsed_query("tell me 0x17","tell me %x") == 23
     assert e.parsed_query("tell me 010","%i") == 8
     assert e.parsed_query("tell me 010","%o") == 8
-    

@@ -4,7 +4,10 @@ Created on Fri Oct 02 20:13:01 2015
 
 @author: rwb27
 """
+from __future__ import division
+from __future__ import print_function
 
+from past.utils import old_div
 import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib
@@ -38,7 +41,7 @@ def plot_skewed_image(image, corners, axes=None, *args, **kwargs):
     #now, we "zoom" this array using bilinear interpolation (order=1) so that
     #it has the correct dimensions - one greater than the size of the image.
     coordinate_array = ndimage.zoom(corner_coordinate_array,
-                                    ((shape[0]+1)/2,(shape[1]+1)/2,1),
+                                    (old_div((shape[0]+1),2),old_div((shape[1]+1),2),1),
                                     order=1)
     if len(shape)==2: #grayscale image
         mesh = ax.pcolormesh(coordinate_array[:,:,0],
@@ -65,7 +68,7 @@ def plot_skewed_image(image, corners, axes=None, *args, **kwargs):
         else:
             divisor = image.max()
             
-        mesh.set_color(image.reshape((shape[0]*shape[1],shape[2]))/divisor) 
+        mesh.set_color(old_div(image.reshape((shape[0]*shape[1],shape[2])),divisor)) 
         
 if __name__ == '__main__':
     image = np.random.random((100,100,3))

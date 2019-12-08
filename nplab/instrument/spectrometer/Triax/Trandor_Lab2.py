@@ -1,7 +1,14 @@
+# -*- coding: utf-8 -*-
+
 """
 jpg66 10/2018
 """
+from __future__ import division
+from __future__ import print_function
 
+from builtins import input
+from builtins import range
+from past.utils import old_div
 from nplab.instrument.spectrometer.Triax.__init__ import Triax
 import numpy as np
 from nplab.utils.notified_property import NotifiedProperty
@@ -53,27 +60,26 @@ class Trandor(Andor):#Andor
         return self.triax.Convert_Pixels_to_Wavelengths(Pixels)
 
     def Set_Center_Wavelength(self,Wavelength):  
-        Centre_Pixel=int(CCD_Size/2)
+        Centre_Pixel=int(old_div(CCD_Size,2))
         Required_Step=self.triax.Find_Required_Step(Wavelength,Centre_Pixel)
         Current_Step=self.triax.Motor_Steps()
         self.triax.Move_Steps(Required_Step-Current_Step)
 
     def Test_Notch_Alignment(self):
-        	Accepted=False
-        	while Accepted is False:
-        		Input=input('WARNING! A slight misalignment of the narrow band notch filters could be catastrophic! Has the laser thoughput been tested? [Yes/No]')
-        		if Input.upper() in ['Y','N','YES','NO']:
-        			Accepted=True
-        			if len(Input)>1:
-        				Input=Input.upper()[0]
-        	if Input.upper()=='Y':
-        		print('You are now free to capture spectra')
-        		self.Notch_Filters_Tested=True
-        	else:
-        		print('The next spectrum capture will be allowed for you to test this. Please LOWER the laser power and REDUCE the integration time.')
-        		self.Notch_Filters_Tested=None
+            Accepted=False
+            while Accepted is False:
+                Input=eval(input('WARNING! A slight misalignment of the narrow band notch filters could be catastrophic! Has the laser thoughput been tested? [Yes/No]'))
+                if Input.upper() in ['Y','N','YES','NO']:
+                    Accepted=True
+                    if len(Input)>1:
+                        Input=Input.upper()[0]
+            if Input.upper()=='Y':
+                print('You are now free to capture spectra')
+                self.Notch_Filters_Tested=True
+            else:
+                print('The next spectrum capture will be allowed for you to test this. Please LOWER the laser power and REDUCE the integration time.')
+                self.Notch_Filters_Tested=None
 
-         
     def capture(self,Close_White_Shutter=True):
         """
         Edits the capture function is a white light shutter object is supplied, to ensure it is closed while the image is taken.
@@ -83,25 +89,22 @@ class Trandor(Andor):#Andor
         if self.Notch_Filters_Tested is False:
             self.Test_Notch_Alignment()
             return (np.array(list(range(CCD_Size)))*0,1,(CCD_Size,))
-        	
+
         else:
-	        if self.Notch_Filters_Tested is None:
-	            self.Notch_Filters_Tested=False
-	        if self.White_Shutter is not None and Close_White_Shutter is True:
-	            try:
-	                self.White_Shutter.close_shutter()
-	            except:
-	                 Dump=1
-	                    
-	            Output=Andor_Capture_Function(self)
-	                
-	            try:
-	                self.White_Shutter.open_shutter()
-	            except:
-	                Dump=1
-	            return Output
-	        else:
-	           return Andor_Capture_Function(self)
+            if self.Notch_Filters_Tested is None:
+                self.Notch_Filters_Tested=False
+            if self.White_Shutter is not None and Close_White_Shutter is True:
+                try:
+                    self.White_Shutter.close_shutter()
+                except:
+                    Dump=1
+                Output=Andor_Capture_Function(self)
+                try:
+                    self.White_Shutter.open_shutter()
+                except:
+                    Dump=1
+                return Output
+            else:
+                return Andor_Capture_Function(self)
 
     x_axis=NotifiedProperty(Generate_Wavelength_Axis) #This is grabbed by the Andor code 
-
