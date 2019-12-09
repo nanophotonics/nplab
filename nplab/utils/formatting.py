@@ -23,7 +23,7 @@ def engineering_format(number, base_unit='', significant_figures=None, digits_of
         return "0 "+base_unit
     else:
         exponent = int(np.floor(old_div(np.log10(np.abs(number)),3)))*3 #first power-of-three exponent smaller than number
-        mantissa = old_div(number, 10**exponent)
+        mantissa = float(number) / 10**exponent
         try:
             if exponent >= 0:
                 prefix = incPrefixes[old_div(exponent,3)]
