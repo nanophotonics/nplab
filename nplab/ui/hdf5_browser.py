@@ -20,7 +20,7 @@ import h5py
 
 try:
     from matplotlib.backends.qt_compat import is_pyqt5
-except AttributeError: 
+except (AttributeError, ImportError): 
     from matplotlib.backends.qt_compat import QT_API
     def is_pyqt5():
         return (QT_API[:5] == 'PyQt5')

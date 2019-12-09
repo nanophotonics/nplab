@@ -217,7 +217,7 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
             N = 32  # make a buffer for the DLL to return a string into
             s = ctypes.create_string_buffer(N)
             e = ctypes.c_int()
-            seabreeze.seabreeze_get_spectrometer_type(self.index, byref(e), byref(s), N)
+            seabreeze.seabreeze_get_model(self.index, byref(e), byref(s), N)
             check_error(e)
             self._model_name = str(s.value)
         return self._model_name
@@ -262,7 +262,7 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
         e = ctypes.c_int()
         if milliseconds < self.minimum_integration_time:
             raise ValueError("Cannot set integration time below %d microseconds" % self.minimum_integration_time)
-        seabreeze.seabreeze_set_integration_time(self.index, byref(e), c_ulong(int(milliseconds * 1000)))
+        seabreeze.seabreeze_set_integration_time_microsec(self.index, byref(e), c_ulong(int(milliseconds * 1000)))
         check_error(e)
         self._latest_integration_time = milliseconds
 
@@ -272,7 +272,7 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
         """Minimum allowable value for integration time"""
         if self._minimum_integration_time is None:
             e = ctypes.c_int()
-            min_time = seabreeze.seabreeze_get_minimum_integration_time_micros(self.index, byref(e))
+            min_time = seabreeze.seabreeze_get_min_integration_time_microsec(self.index, byref(e))
             check_error(e)
             self._minimum_integration_time = min_time / 1000.
         return self._minimum_integration_time
@@ -410,7 +410,7 @@ class OceanOpticsControlUI(SpectrometerControlUI):
         self.read_tec_temperature_pushButton.clicked.connect(self.gui_read_tec_tempeature)
         self.enable_tec.stateChanged.connect(self.update_enable_tec)
         self.enable_tec.setChecked(self.spectrometer.enable_tec)
-        initial_temperature = self.spectrometer.get_tec_temperature()
+        initial_temperature = np.round(self.spectrometer.get_tec_temperature(), decimals = 1)
         self.tec_temperature_lcdNumber.display(float(initial_temperature))
         self.set_tec_temperature_LineEdit.setText(str(initial_temperature))
         # self.read_tec.clicked.connect(self.update_tec)

@@ -29,7 +29,7 @@ class Uniblitz(ShutterWithEmulatedRead, SerialInstrument):
             self.ser.write(str.encode('@'))
         elif state == 'Closed': 
             self.ser.write(str.encode('A'))
-        time.sleep(2)
+        # time.sleep(0.1)
 #
 #    def toggle(self):
 #        if self.shutter_state == 'Open':
