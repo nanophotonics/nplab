@@ -217,7 +217,7 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
             N = 32  # make a buffer for the DLL to return a string into
             s = ctypes.create_string_buffer(N)
             e = ctypes.c_int()
-            seabreeze.seabreeze_get_spectrometer_type(self.index, byref(e), byref(s), N)
+            seabreeze.seabreeze_get_model(self.index, byref(e), byref(s), N)
             check_error(e)
             self._model_name = str(s.value)
         return self._model_name
@@ -262,7 +262,7 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
         e = ctypes.c_int()
         if milliseconds < self.minimum_integration_time:
             raise ValueError("Cannot set integration time below %d microseconds" % self.minimum_integration_time)
-        seabreeze.seabreeze_set_integration_time(self.index, byref(e), c_ulong(int(milliseconds * 1000)))
+        seabreeze.seabreeze_set_integration_time_microsec(self.index, byref(e), c_ulong(int(milliseconds * 1000)))
         check_error(e)
         self._latest_integration_time = milliseconds
 
@@ -272,7 +272,7 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
         """Minimum allowable value for integration time"""
         if self._minimum_integration_time is None:
             e = ctypes.c_int()
-            min_time = seabreeze.seabreeze_get_minimum_integration_time_micros(self.index, byref(e))
+            min_time = seabreeze.seabreeze_get_min_integration_time_microsec(self.index, byref(e))
             check_error(e)
             self._minimum_integration_time = min_time / 1000.
         return self._minimum_integration_time
