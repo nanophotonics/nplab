@@ -128,19 +128,29 @@ class MessageBusInstrument(nplab.instrument.Instrument):
             self.flush_input_buffer()
             self.write(queryString)
             if self.ignore_echo == True: # Needs Implementing for a multiline read!
+                # first_line = self.readline(timeout).strip()
+                # if first_line == queryString:
+                #     return self.readline(timeout).strip()
+                # else:first_
+                #     print('This command did not echo!!!')
+                #     return first_line
                 first_line = self.readline(timeout).strip()
+                print(first_line, '<1st line, query string>', queryString, first_line==queryString)
+                print(type(queryString))
                 if first_line == queryString:
                     return self.readline(timeout).strip()
                 else:
                     print('This command did not echo!!!')
                     return first_line
-    
+
             if termination_line is not None:
                 multiline = True
+                print('multiline')
             if multiline:
                 return self.read_multiline(termination_line)
             else:
                 return self.readline(timeout).strip() #question: should we strip the final newline?
+    
     def parsed_query_old(self, query_string, response_string=r"(\d+)", re_flags=0, parse_function=int, **kwargs):
         """
         Perform a query, then parse the result.
