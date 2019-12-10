@@ -162,16 +162,18 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
 
     def __init__(self, index):
         """Initialise the spectrometer"""
+        
         self.index = index  # the spectrometer's ID, used by all seabreeze functions
         self._comms_lock = threading.RLock()
         self._isOpen = False
         self._open()
+              
         super(OceanOpticsSpectrometer, self).__init__()
-        self._minimum_integration_time = None
+        self._minimum_integration_time = None        
         self.integration_time = self.minimum_integration_time
         self._tec_enabled = True
         self.enable_tec = True
-
+        self.get_API_version() 
     def __del__(self):
         self._close()
         super(OceanOpticsSpectrometer, self).__del__()
@@ -206,13 +208,28 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
         return self._config_file
 
     config_file = property(open_config_file)
-
+    def get_API_version(self):
+        N = 32  # make a buffer for the DLL to return a string into
+        s = ctypes.create_string_buffer(N)
+        e = ctypes.c_int()
+        try:
+            seabreeze.seabreeze_get_model(self.index, byref(e), byref(s), N)
+            self.API_ver = 2
+        except:#self.API_ver == 2:
+            seabreeze.seabreeze_get_spectrometer_type(self.index, byref(e), byref(s), N)
+            self.API_ver = 1
+        check_error(e)        
+        
+    
     def get_model_name(self):
         if self._model_name is None:
             N = 32  # make a buffer for the DLL to return a string into
             s = ctypes.create_string_buffer(N)
             e = ctypes.c_int()
-            seabreeze.seabreeze_get_spectrometer_type(self.index, byref(e), byref(s), N)
+            if self.API_ver == 2:
+                seabreeze.seabreeze_get_model(self.index, byref(e), byref(s), N)
+            if self.API_ver == 1:
+                seabreeze.seabreeze_get_spectrometer_type(self.index, byref(e), byref(s), N)
             check_error(e)
             self._model_name = s.value
         return self._model_name
@@ -257,7 +274,10 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
         e = ctypes.c_int()
         if milliseconds < self.minimum_integration_time:
             raise ValueError("Cannot set integration time below %d microseconds" % self.minimum_integration_time)
-        seabreeze.seabreeze_set_integration_time(self.index, byref(e), c_ulong(int(milliseconds * 1000)))
+        if self.API_ver == 1:
+            seabreeze.seabreeze_set_integration_time(self.index, byref(e), c_ulong(int(milliseconds * 1000)))
+        if self.API_ver == 2:
+            seabreeze.seabreeze_set_integration_time_microsec(self.index, byref(e), c_ulong(int(milliseconds * 1000)))
         check_error(e)
         self._latest_integration_time = milliseconds
 
@@ -267,7 +287,10 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
         """Minimum allowable value for integration time"""
         if self._minimum_integration_time is None:
             e = ctypes.c_int()
-            min_time = seabreeze.seabreeze_get_minimum_integration_time_micros(self.index, byref(e))
+            if self.API_ver == 1:
+                min_time = seabreeze.seabreeze_get_minimum_integration_time_micros(self.index, byref(e))
+            if self.API_ver == 2:
+                min_time = seabreeze.seabreeze_get_min_integration_time_microsec(self.index, byref(e))            
             check_error(e)
             self._minimum_integration_time = min_time / 1000.
         return self._minimum_integration_time
@@ -466,7 +489,7 @@ def main():
  #       ui = spectrometers.get_qt_ui()
  #       ui.show()
  #       sys.exit(app.exec_()) #this is the "long way" of running a GUI
-        spectrometers.show_gui()  # the "short way" of running a GUI
+        spectrometers.show_gui(blocking = False)  # the "short way" of running a GUI
     except OceanOpticsError as error:
         print "An error occurred with the spectrometer: %s" % error
     finally:
@@ -480,4 +503,6 @@ def main():
 
 # example code:
 if __name__ == "__main__":
-    main()
+#    main()
+    spec = OceanOpticsSpectrometer(0)
+    spec.show_gui(blocking = False)
