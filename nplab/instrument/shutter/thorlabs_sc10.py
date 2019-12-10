@@ -39,7 +39,7 @@ class ThorLabsSC10(Shutter, serial.SerialInstrument):
     def __init__(self, port=None):
         serial.SerialInstrument.__init__(self, port=port)
         Shutter.__init__(self)
-        self.ignore_echo = True     
+        self.ignore_echo = False     
         self._state = 'Closed'  # usually the case      
         self.get_state(report_success = True) # overwrites self._state if communication succeeds     
             
@@ -105,7 +105,7 @@ if __name__ == '__main__':
 #    from nplab.utils.gui import *
 #    app = get_qt_app()
     
-    shutter = ThorLabsSC10('COM5')
+    shutter = ThorLabsSC10('COM1')
     shutter.query('ens?', termination_line = "r")
 #     ui = shutter.get_qt_ui()
 #    ui.show()
