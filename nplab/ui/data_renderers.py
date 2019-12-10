@@ -19,10 +19,8 @@ except (AttributeError, ImportError):
     
 if is_pyqt5():
     matplotlib.use('Qt5Agg')
-    print('using pyqt5')
 else:
     matplotlib.use('Qt4Agg')
-    print('using pyqt4')
     from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import pyqtgraph as pg
