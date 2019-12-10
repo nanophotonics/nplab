@@ -169,11 +169,12 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
         self._open()
               
         super(OceanOpticsSpectrometer, self).__init__()
+        self.get_API_version() 
         self._minimum_integration_time = None        
         self.integration_time = self.minimum_integration_time
         self._tec_enabled = True
         self.enable_tec = True
-        self.get_API_version() 
+        
     def __del__(self):
         self._close()
         super(OceanOpticsSpectrometer, self).__del__()
@@ -215,8 +216,7 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
         try:
             seabreeze.seabreeze_get_model(self.index, byref(e), byref(s), N)
             self.API_ver = 2
-        except:#self.API_ver == 2:
-            seabreeze.seabreeze_get_spectrometer_type(self.index, byref(e), byref(s), N)
+        except:
             self.API_ver = 1
         check_error(e)        
         
@@ -505,4 +505,4 @@ def main():
 if __name__ == "__main__":
 #    main()
     spec = OceanOpticsSpectrometer(0)
-    spec.show_gui(blocking = False)
+    spec.show_gui()
