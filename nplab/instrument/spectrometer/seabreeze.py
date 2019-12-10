@@ -172,11 +172,12 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
         self._isOpen = False
         self._open()
         super(OceanOpticsSpectrometer, self).__init__()
-        self._minimum_integration_time = None
+        self.get_API_version() 
+        self._minimum_integration_time = None        
         self.integration_time = self.minimum_integration_time
         self._tec_enabled = True
         self.enable_tec = True
-
+        
     def __del__(self):
         self._close()
         super(OceanOpticsSpectrometer, self).__del__()
@@ -211,7 +212,18 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
         return self._config_file
 
     config_file = property(open_config_file)
-
+    def get_API_version(self):
+        N = 32  # make a buffer for the DLL to return a string into
+        s = ctypes.create_string_buffer(N)
+        e = ctypes.c_int()
+        try:
+            seabreeze.seabreeze_get_model(self.index, byref(e), byref(s), N)
+            self.API_ver = 2
+        except:
+            self.API_ver = 1
+        check_error(e)        
+        
+    
     def get_model_name(self):
         if self._model_name is None:
             N = 32  # make a buffer for the DLL to return a string into
