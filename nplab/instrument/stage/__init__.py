@@ -97,10 +97,16 @@ class Stage(Instrument):
             time.sleep(0.01)
 
     def get_qt_ui(self):
-        if self.unit =='m':
+        if self.unit == 'm':
             return StageUI(self)
-        if self.unit == 'u':
-            return StageUI(self,stage_step_min = 1E-3,stage_step_max = 1000.0,default_step = 1.0)
+        elif self.unit == 'u':
+            return StageUI(self, stage_step_min=1E-3, stage_step_max=1000.0, default_step=1.0)
+        elif self.unit == 'step':
+            return StageUI(self, stage_step_min=1, stage_step_max=1000.0, default_step=1.0)
+        elif self.unit == 'deg':
+            return StageUI(self, stage_step_min=0.1, stage_step_max=360, default_step=1.0)
+        else:
+            self._logger.warn('Tried displaying a GUI for an unrecognised unit: %s' % self.unit)
 
     def get_axis_param(self, get_func, axis=None):
         if axis is None:
