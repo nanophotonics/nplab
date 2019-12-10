@@ -23,7 +23,6 @@ from functools import partial
 from nplab.ui.ui_tools import UiTools
 
 
-
 class GSC01(SerialInstrument, Stage):
     """
     Stage controller GSC-01
@@ -250,7 +249,7 @@ class SHOT(VisaInstrument, Stage):
     """
     https://www.global-optosigma.com/en_jp/software/motorize/manual_en/SHOT-102.zip
     """
-    axis_names = (1, 2)
+    axis_names = ('1', '2')
 
     def __init__(self, address, **kwargs):
 
@@ -329,7 +328,6 @@ class SHOT(VisaInstrument, Stage):
         :param wait:
         :return:
         """
-
         if not hasattr(counts, '__iter__'):
             counts = (counts, )
         for count in counts:
@@ -341,7 +339,10 @@ class SHOT(VisaInstrument, Stage):
         else:
             command = "A:"
 
-        command += str(axis)
+        if not hasattr(axis, '__iter__'):
+            command += str(axis)
+        else:
+            command += 'W'
         for count in counts:
             if count >= 0:
                 command += '+P%d' % count
@@ -355,11 +356,10 @@ class SHOT(VisaInstrument, Stage):
         status = self.status()
         counts = list(map(int, status.split(',')[:2]))
         if axis is None:
-            return counts
-        elif isinstance(axis, list) or isinstance(axis, tuple):
-            return [counts[int(ax)-1] for ax in axis]
-        else:
-            return counts[int(axis)-1]
+            axis = self.axis_names
+        elif not isinstance(axis, list) and not isinstance(axis, tuple):
+            axis = [axis]
+        return [self.select_axis(counts, ax) for ax in axis]
 
     def jog(self, axis="W", direction="+", timeout=2):
         """
@@ -463,9 +463,6 @@ class SHOT(VisaInstrument, Stage):
             return True
         else:
             return False
-
-    def get_qt_ui(self):
-        return HITUI(self)
 
 
 class HIT(SerialInstrument, Stage):
@@ -729,139 +726,6 @@ class HIT(SerialInstrument, Stage):
             on_off = 1
 
         self.multi_axis_cmd('C', axes, on_off)
-
-    def get_qt_ui(self):
-        return HITUI(self)
-
-
-class HITUI(QtWidgets.QWidget, UiTools):
-    def __init__(self, stage):
-        super(HITUI, self).__init__()
-        self.stage = stage
-        self.create_axes_layout()
-        self.relative_step = 100
-
-    def update_positions(self):
-        positions = self.stage.get_position()
-        for idx, position in enumerate(positions):
-            self.positions[idx].setText(str(position))
-
-    def create_axes_layout(self):
-        uic.loadUi(os.path.join(os.path.dirname(__file__), 'stage.ui'), self)
-        self.update_pos_button.clicked.connect(self.update_positions)
-        path = os.path.dirname(os.path.realpath(nplab.ui.__file__))
-        icon_size = QtCore.QSize(12, 12)
-        self.positions = []
-        self.set_positions = []
-        self.set_position_buttons = []
-        for i, ax in enumerate(self.stage.axis_names):
-            col = 4 * (old_div(i, 3))
-            position = QtWidgets.QLineEdit('', self)
-            position.setReadOnly(True)
-            self.positions.append(position)
-            set_position = QtWidgets.QLineEdit('0', self)
-            set_position.setMinimumWidth(40)
-            self.set_positions.append(set_position)
-            set_position_button = QtWidgets.QPushButton('', self)
-            set_position_button.setIcon(QtGui.QIcon(os.path.join(path, 'go.png')))
-            set_position_button.setIconSize(icon_size)
-            set_position_button.resize(icon_size)
-            set_position_button.clicked.connect(partial(self.button_pressed, i))
-            self.set_position_buttons.append(set_position_button)
-            # for each stage axis add a label, a field for the current position,
-            # a field to set a new position and a button to set a new position ..
-            self.info_layout.addWidget(QtWidgets.QLabel(str(ax), self), i % 3, col)
-            self.info_layout.addWidget(position, i % 3, col + 1)
-            self.info_layout.addWidget(set_position, i % 3, col + 2)
-            self.info_layout.addWidget(set_position_button, i % 3, col + 3)
-
-            # if i % 3 == 0:
-            #     group = QtWidgets.QGroupBox('axes {0}'.format(1 + (i / 3)), self)
-            #     layout = QtWidgets.QGridLayout()
-            #     layout.setSpacing(3)
-            #     group.setLayout(layout)
-            #     self.axes_layout.addWidget(group, 0, i / 3)
-            #     zero_button = QtWidgets.QPushButton('', self)
-            #     zero_button.setIcon(QtGui.QIcon(os.path.join(path, 'zero.png')))
-            #     zero_button.setIconSize(icon_size)
-            #     zero_button.resize(icon_size)
-            #     n = len(self.stage.axis_names) - i if len(self.stage.axis_names) - i < 3 else 3
-            #     axes_set = self.stage.axis_names[i:i + n]
-            #     #                zero_button.clicked.connect(partial(self.zero_all_axes, axes_set))
-            #     layout.addWidget(zero_button, 1, 1)
-
-            # step_size_select = QtWidgets.QComboBox(self)
-            # step_size_select.addItems(self.step_size_values.keys())
-            # step_size_select.activated[str].connect(partial(self.on_activated, i))
-            # step_str = engineering_format(default_step, self.stage.unit)
-            # step_index = self.step_size_values.keys().index(step_str)
-            # step_size_select.setCurrentIndex(step_index)
-            # layout.addWidget(QtWidgets.QLabel(str(ax), self), i % 3, 5)
-            # layout.addWidget(step_size_select, i % 3, 6)
-            # if i % 3 == 0:
-            #     layout.addItem(QtWidgets.QSpacerItem(12, 0), 0, 4)
-
-            plus_button = QtWidgets.QPushButton('', self)
-            plus_button.clicked.connect(partial(self.move_axis_relative, i, 1))
-            minus_button = QtWidgets.QPushButton('', self)
-            minus_button.clicked.connect(partial(self.move_axis_relative, i, -1))
-            plus_button.setIcon(QtGui.QIcon(os.path.join(path, 'up.png')))
-            minus_button.setIcon(QtGui.QIcon(os.path.join(path, 'down.png')))
-            self.axes_layout.addWidget(QtWidgets.QLabel(str(ax), self), 0, i)
-            self.axes_layout.addWidget(plus_button, 1, i)
-            self.axes_layout.addWidget(minus_button, 2, i)
-
-            # if i % 3 == 0:
-            #     plus_button.setIcon(QtGui.QIcon(os.path.join(path, 'right.png')))
-            #     minus_button.setIcon(QtGui.QIcon(os.path.join(path, 'left.png')))
-            #     layout.addWidget(minus_button, 1, 0)
-            #     layout.addWidget(plus_button, 1, 2)
-            # elif i % 3 == 1:
-            #     plus_button.setIcon(QtGui.QIcon(os.path.join(path, 'up.png')))
-            #     minus_button.setIcon(QtGui.QIcon(os.path.join(path, 'down.png')))
-            #     layout.addWidget(plus_button, 0, 1)
-            #     layout.addWidget(minus_button, 2, 1)
-            # elif i % 3 == 2:
-            #     plus_button.setIcon(QtGui.QIcon(os.path.join(path, 'up.png')))
-            #     minus_button.setIcon(QtGui.QIcon(os.path.join(path, 'down.png')))
-            #     layout.addWidget(plus_button, 0, 3)
-            #     layout.addWidget(minus_button, 2, 3)
-            plus_button.setIconSize(icon_size)
-            plus_button.resize(icon_size)
-            minus_button.setIconSize(icon_size)
-            minus_button.resize(icon_size)
-
-    def button_pressed(self, ax_idx, *args, **kwargs):
-        position = int(self.set_positions[ax_idx].text())
-        self.stage.move(position, ax_idx)
-        self.update_positions()
-
-    def move_axis_relative(self, ax_idx, direction):
-        self.stage.move(direction * self.relative_step, ax_idx, relative=True)
-        self.update_positions()
-
-
-class Acton(VisaInstrument):
-
-    def __init__(self, address, **kwargs):
-
-        self.port_settings = dict(baudrate=9600,
-                                  bytesize=8,
-                                  stopbits=1,
-                                  parity='N',
-                                  xonxoff=True,
-                                  timeout=0.5,
-                                  writeTimeout=0.5,
-                                  rtscts=True
-                                  )
-        VisaInstrument.__init__(self, address)
-        self.termination_character = '\r\n'
-        # if 'offsetOrigin' in kwargs:
-        #     self.offsetOrigin(kwargs['offsetOrigin'])  # 20000)
-
-        # if 'home_on_start' in kwargs.keys():
-        #     if kwargs['home_on_start']:
-        #         self.MechanicalHome()
 
 
 if __name__ == '__main__':
