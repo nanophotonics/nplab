@@ -38,8 +38,8 @@ def accept_reject(group, cutoff = np.inf):
     except:
         previously_accepted = []
         previosly_rejected = []
-    accepted.append(previously_accepted)
-    rejected.append(previosly_rejected)
+    accepted.extend(previously_accepted)
+    rejected.extend(previosly_rejected)
     prar = np.append(previously_accepted, previosly_rejected).tolist()
     
     Progress = [10, 25, 50, 75, 90]
