@@ -145,7 +145,6 @@ class MessageBusInstrument(nplab.instrument.Instrument):
 
             if termination_line is not None:
                 multiline = True
-                print('multiline')
             if multiline:
                 return self.read_multiline(termination_line)
             else:
