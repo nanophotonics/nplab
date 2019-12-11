@@ -5,22 +5,11 @@ This is an interface module for instruments produced by Sigma Koki
 __author__: Yago
 """
 from __future__ import division
-
-from builtins import zip
-from builtins import str
-from builtins import map
-from builtins import range
-from past.utils import old_div
-from nplab.utils.gui import QtWidgets, QtCore, uic, QtGui
 from nplab.utils.thread_utils import locked_action
-from nplab.instrument.stage import Stage, StageUI
+from nplab.instrument.stage import Stage
 from nplab.instrument.serial_instrument import SerialInstrument
 from nplab.instrument.visa_instrument import VisaInstrument
-import time, sys, re, os
-import nplab.ui
-from nplab.utils.formatting import engineering_format
-from functools import partial
-from nplab.ui.ui_tools import UiTools
+import time
 
 
 class GSC01(SerialInstrument, Stage):
@@ -144,7 +133,7 @@ class GSC01(SerialInstrument, Stage):
     def get_position(self, axis=None):
         status = self.getStatus()
         counts = status.split(',')[0]
-        position = old_div(int(counts),self.counts_per_degree)
+        position = float(counts)/self.counts_per_degree
         self._logger.debug('Status: %s. Counts: %s. Position returned %g' %(status, counts, position))
         return [position]
 
@@ -729,55 +718,6 @@ class HIT(SerialInstrument, Stage):
 
 
 if __name__ == '__main__':
-    # gsc01 = GSC01('COM14')
-    # print 'Line: ', gsc01.readline()
-    # gsc01.MechanicalHome()
-    # print 'Line: ', gsc01.readline()
-    # gsc01.move(0)
-    # print 'Line: ', gsc01.readline()
-    # print 'Status: ', gsc01.getStatus()
-    # # print 'Line: ', gsc01.readline()
-    # gsc01.move(10)   # 265140
-    # print 'Status: ', gsc01.getStatus()
-    # gsc01.getStatus()
-    # gsc01.move(10)
-    # gsc01.getStatus()
-    # gsc01.move(0)
-    # gsc01.getStatus()
-
-    # print 'Status: ', gsc01.getStatus()
-    # print 'ACK3: ', gsc01.getACK3()
-    # print 'ACK3: ', gsc01.getACK3()
-    # print 'ACK3: ', gsc01.getACK3()
-    # print 'ACK3: ', gsc01.getACK3()
-    # print gsc01.get_position()
-    # gsc01.show_gui()
-
-    # enc = sys.getfilesystemencoding()
-    #
     hit = HIT('COM15')
     hit._logger.setLevel("DEBUG")
     hit.show_gui()
-
-    # shot = SHOT("GPIB0::8::INSTR")
-    # shot._logger.setLevel("DEBUG")
-    # shot.show_gui()
-    # print shot.query("?:")
-    #     matches = list(re.findall("'(.+?)'", err[0]))
-    #     for dec in ['cp932', 'euc_jp', 'euc_jis_2004', 'euc_jisx0213', 'iso2022_jp', 'iso2022_jp_1', 'iso2022_jp_2',
-    #                 'iso2022_jp_2004', 'iso2022_jp_3', 'iso2022_jp_ext', 'shift_jis', 'shift_jis_2004',
-    #                 'shift_jisx0213']:
-    #         # print str(matches[0]).decode('cp932')
-    #         print str(matches[1]).decode(dec)
-    #     for match in matches:
-    #         print 'WHY'
-    #         match.decode('cp932')
-    #
-    # fuck = '\ x83t\x83@\x83C\x83\x8b\x96\xbc\x81A\x83f\x83B\x83\x8c\x83N\x83g\x83\x8a\x96\xbc\x81A\x82\xdc\x82\xbd\x82\xcd\x83{\x83\x8a\x83\x85\x81[\x83\x80 \x83\x89\x83x\x83\x8b\x82\xcc\x8d\\\x95\xb6\x82\xaa\x8a\xd4\x88\xe1\x82\xc1\x82\xc4\x82\xa2\x82\xdc\x82\xb7\x81B'
-    # print fuck.decode('cp932')
-    #     # print err[0].decode('cp932')
-    #     # print type(err)
-    #     # print dir(err)
-    #     # print err.args
-    #     # print err.errno.decode('cp932')
-    #     # print (u"%s: %s" % (err.strerror, err.filename.decode(enc))).encode(enc)
