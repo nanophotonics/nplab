@@ -140,14 +140,18 @@ class CameraWithLocation(Instrument):
         """Move the stage by a given amount"""
         self.stage.move_rel(*args, **kwargs)
     def move_to_pixel(self,x,y):
-        image = self.color_image()
-        if (image.pixel_to_sample_matrix != np.identity(4)).any():
+        
+        iwl = ImageWithLocation(self.camera.latest_raw_frame)
+        iwl.attrs['datum_pixel'] = self.datum_pixel
+#        self.use_previous_datum_location = True
+        iwl.attrs['pixel_to_sample_matrix'] = self.pixel_to_sample_matrix
+        if (iwl.pixel_to_sample_matrix != np.identity(4)).any():
             #check if the image has been calibrated
-            print('move coords', image.pixel_to_location([x,y]))
-            print('current position', self.stage.position)
-            self.move(image.pixel_to_location([x,y]))
-            print('post move position', self.stage.position)
-
+            #print('move coords', image.pixel_to_location([x,y]))
+            #print('current position', self.stage.position)
+            self.move(iwl.pixel_to_location([x,y]))
+            #print('post move position', self.stage.position)
+#        self.use_previous_datum_location = False
     @property
     def datum_location(self):
         """The location in the sample of the datum point (i.e. the current stage position, corrected for drift)"""
@@ -478,7 +482,6 @@ class CameraWithLocationUI(QtWidgets.QWidget):
         l.addWidget(self.camera_preview)
         l.addWidget(self.tabs)
         self.setLayout(l)
-
 
 class AcquireGridOfImages(ExperimentWithProgressBar):
     """Use a CameraWithLocation to acquire a grid of image tiles that can later be stitched together"""
