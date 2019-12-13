@@ -143,9 +143,12 @@ class AndorUI(QtWidgets.QWidget, UiTools):
             self._func_dict[param] = func
             register_for_property_changes(self.Andor, param, self._func_dict[param])
         
-        c_row, n_rows = self.Andor.SingleTrack
-        self.spinBoxCenterRow.setValue(c_row)
-        self.spinBoxNumRows.setValue(n_rows)
+        c_row_n_rows = self.Andor.SingleTrack
+        if c_row_n_rows is not None:
+            c_row = c_row_n_rows[0]
+            n_row = c_row_n_rows[1]
+            self.spinBoxCenterRow.setValue(c_row)
+            self.spinBoxNumRows.setValue(n_rows)
 
     def __del__(self):
         self._stopTemperatureThread = True
