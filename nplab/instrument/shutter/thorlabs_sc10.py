@@ -67,9 +67,7 @@ class ThorLabsSC10(Shutter, serial.SerialInstrument):
         except (ValueError, AssertionError):
             if report_success: 
                 print(
-                        '''Communication with shutter failed; 
-                      Assuming shutter is closed!
-                      Change shutter._state if not!'''
+                        '''Communication with shutter failed;\nAssuming shutter is closed!\nChange shutter._state if not!'''
                       )          
             return self._state
     
