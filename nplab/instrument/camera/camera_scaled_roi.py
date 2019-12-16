@@ -244,7 +244,7 @@ class DisplayWidgetRoiScale(ExtendedImageView):
             
 
 class DummyCameraRoiScale(CameraRoiScale):
-    """A version of the Camera code  """
+    """A Dummy CameraRoiScale camera  """
     def __init__(self, data = 'spectrum'):
         super(DummyCameraRoiScale, self).__init__()
         self.data = data
