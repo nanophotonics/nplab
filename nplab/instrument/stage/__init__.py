@@ -208,7 +208,7 @@ class StageUI(QtWidgets.QWidget, UiTools):
 #        for axis in axes:
 #            self.move_axis_absolute(0, axis)
 
-    def create_axes_layout(self, default_step=1e-6, stack_multiple_stages='horizontal', arrange_buttons='stack'):
+    def create_axes_layout(self, default_step=1e-6, stack_multiple_stages='horizontal', arrange_buttons='cross'):
 
         uic.loadUi(os.path.join(os.path.dirname(__file__), 'stage.ui'), self)
         self.update_pos_button.clicked.connect(partial(self.update_positions, None))
@@ -239,19 +239,28 @@ class StageUI(QtWidgets.QWidget, UiTools):
             self.info_layout.addWidget(set_position_button, i % 3, col + 3)
 
             if i % 3 == 0:
-                group = QtWidgets.QGroupBox('axes {0}'.format(1 + (old_div(i, 3))), self)
-                layout = QtWidgets.QGridLayout()
-                layout.setSpacing(3)
-                group.setLayout(layout)
-                self.axes_layout.addWidget(group, 0, old_div(i, 3))
-                zero_button = QtWidgets.QPushButton('', self)
-                zero_button.setIcon(QtGui.QIcon(os.path.join(path, 'zero.png')))
-                zero_button.setIconSize(icon_size)
-                zero_button.resize(icon_size)
-                n = len(self.stage.axis_names) - i if len(self.stage.axis_names) - i < 3 else 3
-                axes_set = self.stage.axis_names[i:i + n]
-#                zero_button.clicked.connect(partial(self.zero_all_axes, axes_set))
-                layout.addWidget(zero_button, 1, 1)
+                if arrange_buttons == 'cross':
+                    group = QtWidgets.QGroupBox('axes {0}'.format(1 + (old_div(i, 3))), self)
+                    layout = QtWidgets.QGridLayout()
+                    layout.setSpacing(3)
+                    group.setLayout(layout)
+                    self.axes_layout.addWidget(group, 0, old_div(i, 3))
+                    zero_button = QtWidgets.QPushButton('', self)
+                    zero_button.setIcon(QtGui.QIcon(os.path.join(path, 'zero.png')))
+                    zero_button.setIconSize(icon_size)
+                    zero_button.resize(icon_size)
+
+                    layout.addWidget(zero_button, 1, 1)
+                    offset = 0
+                elif arrange_buttons == 'stack':
+                    layout = self.axes_layout
+                    offset = 7 * old_div(i, 3)
+
+                    zero_button = QtWidgets.QPushButton('', self)
+                    zero_button.setIcon(QtGui.QIcon(os.path.join(path, 'zero.png')))
+                    zero_button.setIconSize(icon_size)
+                    zero_button.resize(icon_size)
+                    layout.addWidget(zero_button, 1, i % 3 + 1 + offset)
 
             step_size_select = QtWidgets.QComboBox(self)
             step_size_select.addItems(list(self.step_size_values.keys()))
@@ -259,9 +268,9 @@ class StageUI(QtWidgets.QWidget, UiTools):
             step_str = engineering_format(default_step, self.stage.unit)
             step_index = list(self.step_size_values.keys()).index(step_str)
             step_size_select.setCurrentIndex(step_index)
-            layout.addWidget(QtWidgets.QLabel(str(ax), self), i % 3, 5)
-            layout.addWidget(step_size_select, i % 3, 6)
-            if i % 3 == 0:
+            layout.addWidget(QtWidgets.QLabel(str(ax), self), i % 3, 5 + offset)
+            layout.addWidget(step_size_select, i % 3, 6 + offset)
+            if i % 3 == 0 and arrange_buttons == 'cross':
                 layout.addItem(QtWidgets.QSpacerItem(12, 0), 0, 4)
 
             plus_button = QtWidgets.QPushButton('', self)
@@ -287,8 +296,8 @@ class StageUI(QtWidgets.QWidget, UiTools):
             elif arrange_buttons == 'stack':
                 plus_button.setIcon(QtGui.QIcon(os.path.join(path, 'right.png')))
                 minus_button.setIcon(QtGui.QIcon(os.path.join(path, 'left.png')))
-                layout.addWidget(minus_button, i % 3, 0)
-                layout.addWidget(plus_button, i % 3, 2)
+                layout.addWidget(minus_button, i % 3, 0 + offset)
+                layout.addWidget(plus_button, i % 3, 2 + offset)
             else:
                 raise ValueError('Unrecognised arrangment: %s' % arrange_buttons)
             plus_button.setIconSize(icon_size)
