@@ -208,7 +208,7 @@ class StageUI(QtWidgets.QWidget, UiTools):
 #        for axis in axes:
 #            self.move_axis_absolute(0, axis)
 
-    def create_axes_layout(self, default_step=1e-6, stack_multiple_stages='horizontal'):
+    def create_axes_layout(self, default_step=1e-6, stack_multiple_stages='horizontal', arrange_buttons='stack'):
 
         uic.loadUi(os.path.join(os.path.dirname(__file__), 'stage.ui'), self)
         self.update_pos_button.clicked.connect(partial(self.update_positions, None))
@@ -268,21 +268,29 @@ class StageUI(QtWidgets.QWidget, UiTools):
             plus_button.clicked.connect(partial(self.move_axis_relative, i, ax, 1))
             minus_button = QtWidgets.QPushButton('', self)
             minus_button.clicked.connect(partial(self.move_axis_relative, i, ax, -1))
-            if i % 3 == 0:
+            if arrange_buttons == 'cross':
+                if i % 3 == 0:
+                    plus_button.setIcon(QtGui.QIcon(os.path.join(path, 'right.png')))
+                    minus_button.setIcon(QtGui.QIcon(os.path.join(path, 'left.png')))
+                    layout.addWidget(minus_button, 1, 0)
+                    layout.addWidget(plus_button, 1, 2)
+                elif i % 3 == 1:
+                    plus_button.setIcon(QtGui.QIcon(os.path.join(path, 'up.png')))
+                    minus_button.setIcon(QtGui.QIcon(os.path.join(path, 'down.png')))
+                    layout.addWidget(plus_button, 0, 1)
+                    layout.addWidget(minus_button, 2, 1)
+                elif i % 3 == 2:
+                    plus_button.setIcon(QtGui.QIcon(os.path.join(path, 'up.png')))
+                    minus_button.setIcon(QtGui.QIcon(os.path.join(path, 'down.png')))
+                    layout.addWidget(plus_button, 0, 3)
+                    layout.addWidget(minus_button, 2, 3)
+            elif arrange_buttons == 'stack':
                 plus_button.setIcon(QtGui.QIcon(os.path.join(path, 'right.png')))
                 minus_button.setIcon(QtGui.QIcon(os.path.join(path, 'left.png')))
-                layout.addWidget(minus_button, 1, 0)
-                layout.addWidget(plus_button, 1, 2)
-            elif i % 3 == 1:
-                plus_button.setIcon(QtGui.QIcon(os.path.join(path, 'up.png')))
-                minus_button.setIcon(QtGui.QIcon(os.path.join(path, 'down.png')))
-                layout.addWidget(plus_button, 0, 1)
-                layout.addWidget(minus_button, 2, 1)
-            elif i % 3 == 2:
-                plus_button.setIcon(QtGui.QIcon(os.path.join(path, 'up.png')))
-                minus_button.setIcon(QtGui.QIcon(os.path.join(path, 'down.png')))
-                layout.addWidget(plus_button, 0, 3)
-                layout.addWidget(minus_button, 2, 3)
+                layout.addWidget(minus_button, i % 3, 0)
+                layout.addWidget(plus_button, i % 3, 2)
+            else:
+                raise ValueError('Unrecognised arrangment: %s' % arrange_buttons)
             plus_button.setIconSize(icon_size)
             plus_button.resize(icon_size)
             minus_button.setIconSize(icon_size)
