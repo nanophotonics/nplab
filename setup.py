@@ -10,4 +10,19 @@ setup(name='nplab',
       author_email='as2180@cam.ac.uk',
       license='',
       packages=find_packages(),
-      zip_safe=False)
+      zip_safe=False,
+      install_requires=[
+            "colorama",
+            "scipy",
+            "matplotlib",
+            "future",
+            "pyqtgraph",
+            "pillow",
+            "h5py",
+            "opencv-python",
+            "pyserial",
+            "pyvisa",
+            "qtpy",
+            "pip",
+            "PyQt5"
+      ])
