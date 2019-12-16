@@ -201,6 +201,7 @@ class DisplayWidgetRoiScale(ExtendedImageView):
         """
         if boolean:
             self.LineDisplay.show()
+            self.LineDisplay.showAxis('left')
             self.ui.splitter.setSizes([0, self.height()-35, 35])
         else:
             self.ui.splitter.setSizes([self.height()-35, 0, 35])
@@ -250,7 +251,6 @@ class DummyCameraRoiScale(CameraRoiScale):
         picture randomly generated image"""
         if self.data == 'spectrum':
             ran = 100*ArrayWithAttrs(np.random.random(100))
-            ran.attrs['x-axis'] = np.arange(100)
         else:
             ran = 100*np.random.random((100,100))
         self._latest_raw_frame = ran
@@ -261,7 +261,13 @@ class DummyCameraRoiScale(CameraRoiScale):
             self._preview_widgets = WeakSet()
         new_widget = DisplayWidgetRoiScale()
         self._preview_widgets.add(new_widget)
-        return new_widget      
+        return new_widget 
+    @property 
+    def x_axis(self):
+        return np.arange(100)+1
+    @x_axis.setter
+    def x_axis(self, value):
+        self.axis_values['bottom'] = value
 
 if __name__ == '__main__':
     dcrd =  DummyCameraRoiScale()
