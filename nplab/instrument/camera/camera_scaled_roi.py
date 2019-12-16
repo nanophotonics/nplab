@@ -261,33 +261,7 @@ class DummyCameraRoiScale(CameraRoiScale):
             self._preview_widgets = WeakSet()
         new_widget = DisplayWidgetRoiScale()
         self._preview_widgets.add(new_widget)
-        return new_widget   
-    
-
-
-class DummyCameraRoiScale(CameraRoiScale):
-    """A version of the Camera code  """
-    def __init__(self, data = 'spectrum'):
-        super(DummyCameraRoiScale, self).__init__()
-        self.data = data
-    def raw_snapshot(self, update_latest_frame = True):
-        """Returns a True, stating a succesful snapshot, followed by a (100,100)
-        picture randomly generated image"""
-        if self.data == 'spectrum':
-            ran = 100*ArrayWithAttrs(np.random.random(100))
-            ran.attrs['x-axis'] = np.arange(100)
-        else:
-            ran = 100*np.random.random((100,100))
-        self._latest_raw_frame = ran
-        return True, ran
-    def get_preview_widget(self):
-        self._logger.debug('Getting preview widget')
-        if self._preview_widgets is None:
-            self._preview_widgets = WeakSet()
-        new_widget = DisplayWidgetRoiScale()
-        self._preview_widgets.add(new_widget)
-        return new_widget   
-    
+        return new_widget      
 
 if __name__ == '__main__':
     dcrd =  DummyCameraRoiScale()
