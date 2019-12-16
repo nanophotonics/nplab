@@ -146,7 +146,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         c_row_n_rows = self.Andor.SingleTrack
         if c_row_n_rows is not None:
             c_row = c_row_n_rows[0]
-            n_row = c_row_n_rows[1]
+            n_rows = c_row_n_rows[1]
             self.spinBoxCenterRow.setValue(c_row)
             self.spinBoxNumRows.setValue(n_rows)
 
