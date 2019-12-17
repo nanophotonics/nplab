@@ -16,8 +16,10 @@ from nplab.ui.ui_tools import UiTools
 import nplab.datafile as df
 from nplab.datafile import DataFile
 from nplab.utils.notified_property import NotifiedProperty, DumbNotifiedProperty, register_for_property_changes
+from nplab.utils.array_with_attrs import ArrayWithAttrs
 import h5py
 from multiprocessing.pool import ThreadPool
+from nplab.experiment.gui import run_function_modally
 
 import time
 
@@ -317,10 +319,32 @@ class Spectrometer(Instrument):
     def load_reference_from_file(self):
         pass
     
-#    def read_averaged_spectrum(self):
- #       averaged_data = []
-  #      for spectrum_num in range(self.number_averages):
-            
+    def time_series(self, num_spectra = None, delay = None, update_progress = lambda p:p)# delay in ms
+        if num_spectra is None:
+            num_spectra = self.num_spectra
+        if delay is None:
+            delay = self.delay
+        delay/=1000
+        update_progress(0)
+        metadata = self.metadata
+        extra_metadata = {'number of spectra' : num_spectra,
+                          'spectrum end-to-start delay' : delay
+                           }
+        metadata.update(extra_metadata) 
+        to_save = []
+        times = []
+        time = time.time()
+        for spectrum_number in range(num_spectra):
+            times.append(time.time() - start)
+            to_save.append(self.read_spectrum) # should be a numpy array
+            time.sleep(delay)
+            update_progress(spectrum_number)
+        metadata.update('start times' = times)
+        self.create_dataset('time_series_%d', data=to_save, attrs=metadata)
+        to_return = ArrayWithAttrs(to_save, attrs = metadata)
+        return to_save
+
+        
 
 
 class Spectrometers(Instrument):
@@ -393,7 +417,13 @@ class Spectrometers(Instrument):
 
     metadata = property(get_metadata)
 
+    
 
+
+
+
+
+            
 
 class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
     
@@ -439,6 +469,9 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
         self.id_string.resize(self.id_string.sizeHint())
 
         self.integration_time.setText(str(spectrometer.integration_time))
+
+        self.num_spectra_spinBox.valueChanged.connect(self.update_time_series_params)
+        self.delay_doubleSpinBox.valueChanged.connect(self.update_time_series_params)
 
     def update_param(self, *args, **kwargs):
         sender = self.sender()
@@ -543,9 +576,11 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
 
             self.spectrometer._logger.info('No refence/background saved in slot %s to load' %args[0])
             
-        
-            
-        
+    def update_time_series_params(self):
+        self.spectrometer.num_spectra = int(self.num_spectra_spinBox.value())   
+        self.spectrometer.delay = float(self.delay_doubleSpinBox.value())    
+    def time_series(self):
+        run_function_modally(self.spectrometer.time_series, progress_maximum = self.spectrometer.num_spectra)
 
 
 class DisplayThread(QtCore.QThread):
