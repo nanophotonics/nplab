@@ -74,7 +74,7 @@ def error_string(error_code):
     N = 1024  # we need to create a buffer into which we place the returned string
     s = ctypes.create_string_buffer(N)
     seabreeze.seabreeze_get_error_string(error_code, byref(s), N)
-    return s.value
+    return s.value.decode('utf-8')
 
 
 def check_error(error_c_int):
@@ -232,9 +232,10 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
                 seabreeze.seabreeze_get_model(self.index, byref(e), byref(s), N)
                 self.API_ver = 2
             except:
+                seabreeze.seabreeze_get_spectrometer_type(self.index, byref(e), byref(s), N)
                 self.API_ver = 1
             check_error(e)
-            self._model_name = str(s.value)
+            self._model_name = s.value.decode('utf-8')
         return self._model_name
 
     model_name = property(get_model_name)
@@ -247,7 +248,7 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
             e = ctypes.c_int()
             seabreeze.seabreeze_get_serial_number(self.index, byref(e), byref(s), N)
             check_error(e)
-            self._serial_number = str(s.value)
+            self._serial_number = s.value.decode('utf-8')
         return self._serial_number
 
     serial_number = property(get_serial_number)
@@ -259,7 +260,7 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
         e = ctypes.c_int()
         seabreeze.seabreeze_get_usb_descriptor_string(self.index, byref(e), c_int(id), byref(s), N)
         check_error(e)
-        return s.value
+        return s.value.decode('utf-8')
 
     def get_integration_time(self):
         """The current integration time.
