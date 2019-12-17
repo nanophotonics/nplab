@@ -537,10 +537,6 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
 
 
             self.spectrometer._logger.info('No refence/background saved in slot %s to load' %args[0])
-            
-        
-            
-        
 
 
 class DisplayThread(QtCore.QThread):
