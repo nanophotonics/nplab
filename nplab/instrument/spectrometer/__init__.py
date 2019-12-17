@@ -345,10 +345,9 @@ class Spectrometer(Instrument):
         to_return = ArrayWithAttrs(to_save, attrs = metadata)
         return to_return
 
-   
 class Spectrometers(Instrument):
     def __init__(self, spectrometer_list):
-        assert False not in [isinstance(s, Spectrometer) for s in spectrometer_list],\
+        assert False not in [isinstance(s, Spe.conctrometer) for s in spectrometer_list],\
             'an invalid spectrometer was supplied'
         super(Spectrometers, self).__init__()
         self.spectrometers = spectrometer_list
@@ -466,7 +465,7 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
 
         self.num_spectra_spinBox.valueChanged.connect(self.update_time_series_params)
         self.delay_doubleSpinBox.valueChanged.connect(self.update_time_series_params)
-
+        
         self.time_series_pushButton.clicked.connect(self.time_series)
 
     def update_param(self, *args, **kwargs):
@@ -574,7 +573,8 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
             
     def update_time_series_params(self):
         self.spectrometer.num_spectra = int(self.num_spectra_spinBox.value())   
-        self.spectrometer.delay = float(self.delay_doubleSpinBox.value())    
+        self.spectrometer.delay = float(self.delay_doubleSpinBox.value()) 
+        self.time_total_lcdNumber.display(np.round(self.spectrometer.num_spectra*(self.spectrometer.integration_time + self.spectrometer.delay)/1000, decimals = 0))
     def time_series(self):
         run_function_modally(self.spectrometer.time_series, progress_maximum = self.spectrometer.num_spectra)
 
