@@ -416,12 +416,7 @@ class Spectrometers(Instrument):
 
     metadata = property(get_metadata)
 
-    
-
-
-
-
-
+  
             
 
 class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
@@ -784,7 +779,8 @@ class DummySpectrometer(Spectrometer):
     def __init__(self):
         super(DummySpectrometer, self).__init__()
         self._integration_time = 10
-
+        self.background = np.zeros(len(self.wavelengths))
+        self.reference = np.ones(len(self.wavelengths))
     def get_integration_time(self):
         return self._integration_time
 
