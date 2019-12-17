@@ -14,6 +14,8 @@ import numpy as np
 from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 from weakref import WeakSet
 from nplab.utils.array_with_attrs import ArrayWithAttrs
+
+
 class CameraRoiScale(Camera):
     """
     Camera with two main features:
@@ -243,34 +245,38 @@ class DisplayWidgetRoiScale(ExtendedImageView):
 
 class DummyCameraRoiScale(CameraRoiScale):
     """A Dummy CameraRoiScale camera  """
-    def __init__(self, data = 'spectrum'):
+
+    def __init__(self, data='spectrum'):
         super(DummyCameraRoiScale, self).__init__()
         self.data = data
-    def raw_snapshot(self, update_latest_frame = True):
+
+    def raw_snapshot(self, update_latest_frame=True):
         """Returns a True, stating a succesful snapshot, followed by a (100,100)
         picture randomly generated image"""
         if self.data == 'spectrum':
-            ran = 100*ArrayWithAttrs(np.random.random(100))
+            ran = 100 * ArrayWithAttrs(np.random.random(100))
         else:
-            ran = 100*np.random.random((100,100))
+            ran = 100 * np.random.random((100, 100))
         self._latest_raw_frame = ran
         return True, ran
+
     def get_preview_widget(self):
         self._logger.debug('Getting preview widget')
         if self._preview_widgets is None:
             self._preview_widgets = WeakSet()
         new_widget = DisplayWidgetRoiScale()
         self._preview_widgets.add(new_widget)
-        return new_widget 
-    @property 
+        return new_widget
+
+    @property
     def x_axis(self):
-        return np.arange(100)+1
+        return np.arange(100) + 1
+
     @x_axis.setter
     def x_axis(self, value):
         self.axis_values['bottom'] = value
 
-if __name__ == '__main__':
-    dcrd =  DummyCameraRoiScale()
-    dcrd.show_gui(blocking = False)
 
-  
+if __name__ == '__main__':
+    dcrd = DummyCameraRoiScale()
+    dcrd.show_gui(blocking=True)
