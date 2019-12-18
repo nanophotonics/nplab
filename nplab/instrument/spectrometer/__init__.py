@@ -16,8 +16,10 @@ from nplab.ui.ui_tools import UiTools
 import nplab.datafile as df
 from nplab.datafile import DataFile
 from nplab.utils.notified_property import NotifiedProperty, DumbNotifiedProperty, register_for_property_changes
+from nplab.utils.array_with_attrs import ArrayWithAttrs
 import h5py
 from multiprocessing.pool import ThreadPool
+from nplab.experiment.gui import run_function_modally
 
 import time
 
@@ -66,7 +68,8 @@ class Spectrometer(Instrument):
         self.spectra_buffer = np.zeros(0)
         self.data_file = df.current()
         self.curr_scan=None
-
+        self.num_spectra = 1
+        self.delay = 0
 
 
     def __del__(self):
@@ -317,15 +320,34 @@ class Spectrometer(Instrument):
     def load_reference_from_file(self):
         pass
     
-#    def read_averaged_spectrum(self):
- #       averaged_data = []
-  #      for spectrum_num in range(self.number_averages):
-            
-
+    def time_series(self, num_spectra = None, delay = None, update_progress = lambda p:p):# delay in ms
+        if num_spectra is None:
+            num_spectra = self.num_spectra
+        if delay is None:
+            delay = self.delay
+        delay/=1000
+        update_progress(0)
+        metadata = self.metadata
+        extra_metadata = {'number of spectra' : num_spectra,
+                          'spectrum end-to-start delay' : delay
+                           }
+        metadata.update(extra_metadata) 
+        to_save = []
+        times = []
+        start = time.time()
+        for spectrum_number in range(num_spectra):
+            times.append(time.time() - start)
+            to_save.append(self.read_spectrum()) # should be a numpy array
+            time.sleep(delay)
+            update_progress(spectrum_number)
+        metadata.update({'start times' : times})
+        self.create_dataset('time_series_%d', data=to_save, attrs=metadata)
+        to_return = ArrayWithAttrs(to_save, attrs = metadata)
+        return to_return
 
 class Spectrometers(Instrument):
     def __init__(self, spectrometer_list):
-        assert False not in [isinstance(s, Spectrometer) for s in spectrometer_list],\
+        assert False not in [isinstance(s, Spe.conctrometer) for s in spectrometer_list],\
             'an invalid spectrometer was supplied'
         super(Spectrometers, self).__init__()
         self.spectrometers = spectrometer_list
@@ -393,7 +415,8 @@ class Spectrometers(Instrument):
 
     metadata = property(get_metadata)
 
-
+  
+            
 
 class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
     
@@ -439,6 +462,11 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
         self.id_string.resize(self.id_string.sizeHint())
 
         self.integration_time.setText(str(spectrometer.integration_time))
+
+        self.num_spectra_spinBox.valueChanged.connect(self.update_time_series_params)
+        self.delay_doubleSpinBox.valueChanged.connect(self.update_time_series_params)
+        
+        self.time_series_pushButton.clicked.connect(self.time_series)
 
     def update_param(self, *args, **kwargs):
         sender = self.sender()
@@ -543,9 +571,12 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
 
             self.spectrometer._logger.info('No refence/background saved in slot %s to load' %args[0])
             
-        
-            
-        
+    def update_time_series_params(self):
+        self.spectrometer.num_spectra = int(self.num_spectra_spinBox.value())   
+        self.spectrometer.delay = float(self.delay_doubleSpinBox.value()) 
+        self.time_total_lcdNumber.display(np.round(self.spectrometer.num_spectra*(self.spectrometer.integration_time + self.spectrometer.delay)/1000, decimals = 0))
+    def time_series(self):
+        run_function_modally(self.spectrometer.time_series, progress_maximum = self.spectrometer.num_spectra)
 
 
 class DisplayThread(QtCore.QThread):
@@ -748,7 +779,8 @@ class DummySpectrometer(Spectrometer):
     def __init__(self):
         super(DummySpectrometer, self).__init__()
         self._integration_time = 10
-
+        self.background = np.zeros(len(self.wavelengths))
+        self.reference = np.ones(len(self.wavelengths))
     def get_integration_time(self):
         return self._integration_time
 
@@ -761,12 +793,15 @@ class DummySpectrometer(Spectrometer):
         return np.arange(400,1200,1)
 
     wavelengths = property(get_wavelengths)
-
+    
+    
     def read_spectrum(self, bundle_metadata=False):
         from time import sleep
         sleep(self.integration_time/1000.)
-        return self.bundle_metadata(np.array([np.random.random() for wl in self.wavelengths])*self.integration_time/1000.0,
+        if bundle_metadata:
+            return self.bundle_metadata(np.array([np.random.random() for wl in self.wavelengths])*self.integration_time/1000.0,
                                     enable=bundle_metadata)
+        return np.array([np.random.random() for wl in self.wavelengths])*self.integration_time/1000.0
 
 
 if __name__ == '__main__':
