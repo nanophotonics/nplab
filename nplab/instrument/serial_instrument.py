@@ -77,9 +77,9 @@ class SerialInstrument(MessageBusInstrument):
             if port is None: port=self.find_port()
             assert port is not None, "We don't have a serial port to open, meaning you didn't specify a valid port and autodetection failed.  Are you sure the instrument is connected?"
             self.ser = serial.Serial(port,**self.port_settings)
-            self.ser_io = io.TextIOWrapper(io.BufferedRWPair(self.ser, self.ser,1),
-                                           newline = self.termination_character,
-                                           line_buffering = True)
+            # self.ser_io = io.TextIOWrapper(io.BufferedRWPair(self.ser, self.ser,1),
+            #                                newline = self.termination_character,
+            #                                line_buffering = True)
             #the block above wraps the serial IO layer with a text IO layer
             #this allows us to read/write in neat lines.  NB the buffer size must
             #be set to 1 byte for maximum responsiveness.
