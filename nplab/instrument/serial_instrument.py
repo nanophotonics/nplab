@@ -121,18 +121,19 @@ class SerialInstrument(MessageBusInstrument):
     #         return self.ser_io.readline().replace(self.termination_read,"\n")
         
     def readline(self, timeout = None):
-        eol = str.encode(self.termination_character)
-        leneol = len(eol)
-        line = bytearray()
-        while True:
-            c = self.ser.read(1)
-            if c:
-                line += c
-                if line[-leneol:] == eol:
+        with self.comunications_lock:
+            eol = str.encode(self.termination_character)
+            leneol = len(eol)
+            line = bytearray()
+            while True:
+                c = self.ser.read(1)
+                if c:
+                    line += c
+                    if line[-leneol:] == eol:
+                        break
+                else:
                     break
-            else:
-                break
-        return line.decode()
+            return line.decode()
     
     def test_communications(self):
         """Check if the device is available on the current port.
