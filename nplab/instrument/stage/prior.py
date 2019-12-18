@@ -19,7 +19,7 @@ class ProScan(serial.SerialInstrument, stage.Stage):
                         bytesize=serial.EIGHTBITS,
                         parity=serial.PARITY_NONE,
                         stopbits=serial.STOPBITS_TWO,
-                        timeout=1, #wait at most one second for a response
+                        timeout=0.1, #wait at most .one second for a response
                         writeTimeout=1, #similarly, fail if writing takes >1s
                         xonxoff=False, rtscts=False, dsrdtr=False,
                     )
