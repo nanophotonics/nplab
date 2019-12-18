@@ -19,7 +19,6 @@ import io
 import re
 import numpy as np
 
-
 class SerialInstrument(MessageBusInstrument):
     """
     An instrument primarily using serial communications
@@ -78,7 +77,7 @@ class SerialInstrument(MessageBusInstrument):
             if port is None: port=self.find_port()
             assert port is not None, "We don't have a serial port to open, meaning you didn't specify a valid port and autodetection failed.  Are you sure the instrument is connected?"
             self.ser = serial.Serial(port,**self.port_settings)
-            self.ser_io = io.TextIOWrapper(io.BufferedRWPair(self.ser, self.ser, 1),
+            self.ser_io = io.TextIOWrapper(io.BufferedRWPair(self.ser, self.ser,1),
                                            newline = self.termination_character,
                                            line_buffering = True)
             #the block above wraps the serial IO layer with a text IO layer
@@ -112,10 +111,29 @@ class SerialInstrument(MessageBusInstrument):
         """Make sure there's nothing waiting to be read, and clear the buffer if there is."""
         with self.communications_lock:
             if self.ser.inWaiting()>0: self.ser.flushInput()
-    def readline(self, timeout=None):
-        """Read one line from the serial port."""
-        with self.communications_lock:
-            return self.ser_io.readline().replace(self.termination_read,"\n")
+    
+    
+    # def readline(self, timeout=None):
+            # Retired from python 3 as it frequently times out when using an EOL that isn't \n.
+            
+    #     """Read one line from the serial port."""
+    #     with self.communications_lock:
+    #         return self.ser_io.readline().replace(self.termination_read,"\n")
+        
+    def readline(self, timeout = None):
+        eol = str.encode(self.termination_character)
+        leneol = len(eol)
+        line = bytearray()
+        while True:
+            c = self.ser.read(1)
+            if c:
+                line += c
+                if line[-leneol:] == eol:
+                    break
+            else:
+                break
+        return line.decode()
+    
     def test_communications(self):
         """Check if the device is available on the current port.
 
