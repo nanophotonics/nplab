@@ -88,21 +88,21 @@ class Trandor(Andor):#Andor
          
     def capture(self,Close_White_Shutter=True):
         """
-        Edits the capture function is a white light shutter object is supplied, to ensure it is closed while the image is taken.
+        Edits the capture function if a white light shutter object is supplied, to ensure it is closed while the image is taken.
         This behaviour can be overwirtten by passing Close_White_Shutter=False
         """
         if self.White_Shutter is not None and Close_White_Shutter is True:
             try:
                 self.White_Shutter.close_shutter()
             except:
-                 Dump=1
+                 pass
                     
             Output=Andor_Capture_Function(self)
                 
             try:
                 self.White_Shutter.open_shutter()
             except:
-                Dump=1
+                pass
             return Output
         else:
            return Andor_Capture_Function(self)
