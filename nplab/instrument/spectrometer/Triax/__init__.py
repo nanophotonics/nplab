@@ -16,7 +16,7 @@ This is the base class for the Triax spectrometer. This should be wrapped for ea
 class Triax(VisaInstrument):
     metadata_property_names = ('wavelength', )
 
-    def __init__(self, Address, Calibration_Data=[], CCD_Horizontal_Resolution=2000):  
+    def __init__(self, Address, Calibration_Data=[], CCD_Horizontal_Resolution=2000):
         """
         Initialisation function for the triax class. Address in the port address of the triax connection.
 

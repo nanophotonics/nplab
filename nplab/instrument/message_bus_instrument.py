@@ -114,6 +114,7 @@ class MessageBusInstrument(nplab.instrument.Instrument):
                     first_line = self.readline(timeout).strip()
                     if first_line != queryString:
                         self._logger.warn('%s did not echo' % queryString)
+                        self._logger.warn()
                         return first_line
     
             if termination_line is not None:

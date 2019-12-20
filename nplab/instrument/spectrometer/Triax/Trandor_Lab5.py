@@ -41,13 +41,13 @@ class Trandor(Andor):#Andor
     
     ''' Wrapper class for the Triax and the andor
     ''' 
-    def __init__(self,White_Shutter=None):
+    def __init__(self, White_Shutter=None, triax_address = 'GPIB0::1::INSTR'):
         
         print '---------------------------'
         print 'Triax Information:'
 
         super(Trandor,self).__init__()
-        self.triax = Triax('GPIB0::1::INSTR',Calibration_Arrays,CCD_Size) #Initialise triax
+        self.triax = Triax(triax_address, Calibration_Arrays,CCD_Size) #Initialise triax
         self.White_Shutter=White_Shutter
         self.SetParameter('SetTemperature',-90)  #Turn on andor cooler
         self.CoolerON()

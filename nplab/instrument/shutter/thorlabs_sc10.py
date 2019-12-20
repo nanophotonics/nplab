@@ -53,15 +53,19 @@ class ThorLabsSC10(Shutter, serial.SerialInstrument):
 #            return 'Open'
     
     def get_state(self, report_success = False):
-        if bool(int(self.query('ens?'))):
-            self._state = 'Open'            
-            return self._state
-        if not bool(int(self.query('ens?'))):
-            self._state = 'Closed'            
-            return self._state
-        else:
-            if report_success: 
-                print 'Communication with shutter failed; Assuming shutter is closed! ' + self._state + ' Change shutter._state if not!'          
+        try:
+            if bool(int(self.query('ens?'))):
+                self._state = 'Open'            
+                return self._state
+            if not bool(int(self.query('ens?'))):
+                self._state = 'Closed'            
+                return self._state
+            else:
+                if report_success: 
+                    print 'Communication with shutter failed; Assuming shutter is closed! ' + self._state + ' Change shutter._state if not!'          
+                return self._state
+        except:
+            print 'Communication with shutter failed; Assuming shutter is closed! ' + self._state + ' Change shutter._state if not!'          
             return self._state
     def set_state(self, state):
         if state_to_bool(self.get_state()) != state_to_bool(state):
