@@ -690,7 +690,10 @@ class SpectrometerDisplayUI(QtWidgets.QWidget,UiTools):
             self.update_spectrum()
 
     def update_display(self, spectrum):
-        #Update the graphs  
+        #Update the graphs
+        spectrum = spectrum[~np.isnan(spectrum)]
+        wavelengths = self.spectrometer.wavelengths[~np.insnan(spectrum)]
+        
         if self.enable_threshold.checkState() == QtCore.Qt.Checked:
             threshold = float(self.threshold.text())
             if isinstance(self.spectrometer, Spectrometers):
@@ -702,17 +705,17 @@ class SpectrometerDisplayUI(QtWidgets.QWidget,UiTools):
             self.plotdata = []
             if isinstance(self.spectrometer, Spectrometers):
                 for spectrometer_nom in range(self.spectrometer.num_spectrometers):
-                    self.plotdata.append(self.plots[spectrometer_nom].plot(x = self.spectrometer.wavelengths[spectrometer_nom],y = spectrum[spectrometer_nom],pen =(spectrometer_nom,len(list(range(self.spectrometer.num_spectrometers))))))
+                    self.plotdata.append(self.plots[spectrometer_nom].plot(x = wavelengths[spectrometer_nom],y = spectrum[spectrometer_nom],pen =(spectrometer_nom,len(list(range(self.spectrometer.num_spectrometers))))))
                     
    
             else:                
-                self.plotdata.append(self.plots[0].plot(x = self.spectrometer.wavelengths,y = spectrum,pen =(0,len(list(range(self.spectrometer.num_spectrometers))))))
+                self.plotdata.append(self.plots[0].plot(x = wavelengths,y = spectrum,pen =(0,len(list(range(self.spectrometer.num_spectrometers))))))
         else:
             if isinstance(self.spectrometer, Spectrometers):
                 for spectrometer_nom in range(self.spectrometer.num_spectrometers):
-                    self.plotdata[spectrometer_nom].setData(x = self.spectrometer.wavelengths[spectrometer_nom],y= spectrum[spectrometer_nom])
+                    self.plotdata[spectrometer_nom].setData(x = wavelengths[spectrometer_nom],y= spectrum[spectrometer_nom])
             else:
-                self.plotdata[0].setData(x = self.spectrometer.wavelengths,y= spectrum)
+                self.plotdata[0].setData(x = .wavelengths,y= spectrum)
 
     def filename_changed_ui(self):
         self.spectrometer.filename = self.filename_lineEdit.text()
