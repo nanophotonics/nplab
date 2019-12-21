@@ -69,6 +69,8 @@ class FW212C(Instrument):
         
     def shutdown(self):
         self.device.close()
+    def get_qt_ui(self):
+        return FW212C_UI(self)
 
 class FW212C_UI(QtWidgets.QWidget, UiTools)
     def __init__(self, fw):
