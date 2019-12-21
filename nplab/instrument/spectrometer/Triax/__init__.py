@@ -7,6 +7,8 @@ import numpy as np
 import time
 import copy
 import scipy.optimize as spo
+from nplab.utils.gui import QtGui, QtWidgets
+from nplab.utils.gui import QtGui, QtWidgetsfrom nplab.ui.ui_tools import UiTools
 
 
 """
@@ -236,6 +238,14 @@ class Triax(VisaInstrument):
             self.waitTillReady()
         self.Wavelength_Array=self.Convert_Pixels_to_Wavelengths(np.array(range(self.Number_of_Pixels))) #Update wavelength array
 
+    def Set_Center_Wavelength(self,Wavelength):  
+        if self.ccd_size is None:
+            raise ValueError, 'ccd_size must be set in child class'
+        Centre_Pixel=int(self.ccd_size/2)
+        Required_Step=self.triax.Find_Required_Step(Wavelength,Centre_Pixel)
+        Current_Step=self.triax.Motor_Steps()
+        self.triax.Move_Steps(Required_Step-Current_Step)
+    
     def Slit(self, Width=None):
         """
         Function to return or set the triax slit with in units of um. If Width is None, the current width is returned. 
@@ -316,3 +326,25 @@ class Triax(VisaInstrument):
     def exitAxial(self):
         self.write("f0\r")
         self.write("d0\r")  # sets the entrance mirror to axial as well
+ 
+ class TriaxUI(QtWidgets.QWidget,UiTools)
+    def __init__(self, triax, ui_file =os.path.join(os.path.dirname(__file__),'triax_ui.ui'),  parent=None):
+        assert isinstance(spectrometer, Spectrometer), "instrument must be a Spectrometer"
+        super(SpectrometerControlUI, self).__init__()
+        uic.loadUi(ui_file, self)
+        self.triax = triax
+        self.centre_wl_spinBox.valueChanged.connect(self.set_wl_gui)
+        self.slit_spinBox.valueChanged.connect(self.set_slit_gui)
+
+    def set_wl_gui(self):
+        self.triax.Set_Center_Wavelength(float(self.centre_wl_spinBox.value()))
+    def set_slit_gui(self):
+        self.triax.Slit(float(self.slit_spinBox.value()))
+    def set_grating_gui(self):
+        s = self.sender()
+        if s is self.grating_0_radioButton:
+            self.triax.Grating(0)
+        if s is self.grating_1_radioButton:
+            self.triax.Grating(1)
+        if s is self.grating_2_radioButton:
+            self.triax.grating(2)
