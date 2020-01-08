@@ -50,7 +50,8 @@ class Trandor(Andor):#Andor
         self.White_Shutter=White_Shutter
         self.SetParameter('SetTemperature',-90)  #Turn on andor cooler
         self.CoolerON()
-        
+        self.triax.ccd_size = CCD_Size
+	
         print '---------------------------'
         print 'Current Grating:',self.triax.Grating()
         print 'Current Slit Width:', self.triax.Slit(),'um'
