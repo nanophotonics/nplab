@@ -80,5 +80,5 @@ class FW212C_UI(QtWidgets.QWidget, UiTools)
             eval('self.radioButton_'+str(button)+'.clicked.connect(self.button_pressed)')
     def button_pressed(self):
         '''buttons are called radioButton_x'''
-        self.fw.position = int(self.sender().objecName().split(_)[-1])
+        self.fw.position = int(self.sender().objecName().split('_')[-1])
         
