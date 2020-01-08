@@ -691,9 +691,8 @@ class SpectrometerDisplayUI(QtWidgets.QWidget,UiTools):
 
     def update_display(self, spectrum):
         #Update the graphs
-        spectrum = spectrum[~np.isnan(spectrum)]
-        wavelengths = self.spectrometer.wavelengths[~np.insnan(spectrum)]
-        
+        spectrum = np.array([[0 if np.isnan(i) else i for i in s] for s in self.spectrometer.spectrum])
+        wavelengths = self.spectrometer.wavelengths
         if self.enable_threshold.checkState() == QtCore.Qt.Checked:
             threshold = float(self.threshold.text())
             if isinstance(self.spectrometer, Spectrometers):
@@ -706,8 +705,6 @@ class SpectrometerDisplayUI(QtWidgets.QWidget,UiTools):
             if isinstance(self.spectrometer, Spectrometers):
                 for spectrometer_nom in range(self.spectrometer.num_spectrometers):
                     self.plotdata.append(self.plots[spectrometer_nom].plot(x = wavelengths[spectrometer_nom],y = spectrum[spectrometer_nom],pen =(spectrometer_nom,len(list(range(self.spectrometer.num_spectrometers))))))
-                    
-   
             else:                
                 self.plotdata.append(self.plots[0].plot(x = wavelengths,y = spectrum,pen =(0,len(list(range(self.spectrometer.num_spectrometers))))))
         else:
@@ -715,7 +712,7 @@ class SpectrometerDisplayUI(QtWidgets.QWidget,UiTools):
                 for spectrometer_nom in range(self.spectrometer.num_spectrometers):
                     self.plotdata[spectrometer_nom].setData(x = wavelengths[spectrometer_nom],y= spectrum[spectrometer_nom])
             else:
-                self.plotdata[0].setData(x = .wavelengths,y= spectrum)
+                self.plotdata[0].setData(x = wavelengths,y= spectrum)
 
     def filename_changed_ui(self):
         self.spectrometer.filename = self.filename_lineEdit.text()
