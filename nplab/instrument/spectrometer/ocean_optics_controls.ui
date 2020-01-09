@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>503</width>
+    <width>571</width>
     <height>298</height>
    </rect>
   </property>
@@ -353,7 +353,7 @@
        </layout>
       </item>
       <item>
-       <layout class="QGridLayout" name="time_control_gridLayout" rowstretch="0" columnstretch="3,0,0,0">
+       <layout class="QGridLayout" name="time_control_gridLayout" rowstretch="0" columnstretch="3,0,0,0,0">
         <property name="horizontalSpacing">
          <number>4</number>
         </property>
@@ -456,14 +456,14 @@
           </item>
          </layout>
         </item>
-        <item row="0" column="2">
+        <item row="0" column="3">
          <widget class="QPushButton" name="time_series_pushButton">
           <property name="text">
            <string>Go</string>
           </property>
          </widget>
         </item>
-        <item row="0" column="3">
+        <item row="0" column="4">
          <spacer name="horizontalSpacer_3">
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
@@ -476,13 +476,19 @@
           </property>
          </spacer>
         </item>
+        <item row="0" column="2">
+         <widget class="QLineEdit" name="time_series_name_lineEdit">
+          <property name="text">
+           <string>time_series_%d</string>
+          </property>
+         </widget>
+        </item>
        </layout>
       </item>
      </layout>
      <zorder></zorder>
      <zorder></zorder>
      <zorder></zorder>
-     <zorder>gridLayoutWidget</zorder>
     </widget>
    </item>
   </layout>
