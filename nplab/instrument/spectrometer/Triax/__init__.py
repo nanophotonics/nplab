@@ -338,7 +338,7 @@ class TriaxUI(QtWidgets.QWidget,UiTools):
         self.centre_wl_lineEdit.returnPressed.connect(self.set_wl_gui)
         self.slit_lineEdit.returnPressed.connect(self.set_slit_gui)
         wl_arr = self.triax.Get_Wavelength_Array()        
-        self.centre_wl_lineEdit.setText(str(wl_arr[len(wl_arr)/2]))
+        self.centre_wl_lineEdit.setText(str(np.around(wl_arr[len(wl_arr)/2])))
         self.slit_lineEdit.setText(str(self.triax.Slit()))
         eval('self.grating_'+str(self.triax.Grating())+'_radioButton.setChecked(True)')
         for radio_button in range(3):
