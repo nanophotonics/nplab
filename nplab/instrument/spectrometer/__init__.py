@@ -691,9 +691,8 @@ class SpectrometerDisplayUI(QtWidgets.QWidget,UiTools):
 
     def update_display(self, spectrum):
         #Update the graphs
-        spectrum = [spectrum[~np.isnan(s)] for s in spectrum]
-        wavelengths = [self.spectrometer.wavelengths[~np.insnan(s)] for s in spectrum]
-        
+        spectrum = np.array([[0 if np.isnan(i) else i for i in s] for s in self.spectrometer.spectrum])
+        wavelengths = self.spectrometer.wavelengths
         if self.enable_threshold.checkState() == QtCore.Qt.Checked:
             threshold = float(self.threshold.text())
             if isinstance(self.spectrometer, Spectrometers):
