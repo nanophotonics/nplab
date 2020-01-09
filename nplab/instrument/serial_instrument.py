@@ -121,7 +121,7 @@ class SerialInstrument(MessageBusInstrument):
     #         return self.ser_io.readline().replace(self.termination_read,"\n")
         
     def readline(self, timeout = None):
-        with self.comunications_lock:
+        with self.communications_lock:
             eol = str.encode(self.termination_character)
             leneol = len(eol)
             line = bytearray()
