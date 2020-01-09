@@ -50,12 +50,12 @@ class Trandor(Andor):#Andor
         self.White_Shutter=White_Shutter
         self.SetParameter('SetTemperature',-90)  #Turn on andor cooler
         self.CoolerON()
-        
+        self.triax.ccd_size = CCD_Size
+	
         print '---------------------------'
         print 'Current Grating:',self.triax.Grating()
         print 'Current Slit Width:', self.triax.Slit(),'um'
         print '---------------------------'
-
         self.Notch_Filters_Tested=True
         
 
@@ -65,11 +65,9 @@ class Trandor(Andor):#Andor
     def Generate_Wavelength_Axis(self):
         return self.triax.Get_Wavelength_Array()
 
-    def Set_Center_Wavelength(self,Wavelength):  
-        Centre_Pixel=int(CCD_Size/2)
-        Required_Step=self.triax.Find_Required_Step(Wavelength,Centre_Pixel)
-        Current_Step=self.triax.Motor_Steps()
-        self.triax.Move_Steps(Required_Step-Current_Step)
+    def Set_Center_Wavelength(self, wavelength):
+        ''' backwards compatability with lab codes that use trandor.Set_Center_Wavelength'''
+        self.triax.Set_Center_Wavelength(wavelength) 
 
     def Test_Notch_Alignment(self):
         	Accepted=False
