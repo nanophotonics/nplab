@@ -70,6 +70,7 @@ class Spectrometer(Instrument):
         self.curr_scan=None
         self.num_spectra = 1
         self.delay = 0
+        self.time_series_name = 'time_series_%d'
 
 
     def __del__(self):
@@ -341,7 +342,7 @@ class Spectrometer(Instrument):
             time.sleep(delay)
             update_progress(spectrum_number)
         metadata.update({'start times' : times})
-        self.create_dataset('time_series_%d', data=to_save, attrs=metadata)
+        self.create_dataset(self.time_series_name, data=to_save, attrs=metadata)
         to_return = ArrayWithAttrs(to_save, attrs = metadata)
         return to_return
 
@@ -465,7 +466,7 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
 
         self.num_spectra_spinBox.valueChanged.connect(self.update_time_series_params)
         self.delay_doubleSpinBox.valueChanged.connect(self.update_time_series_params)
-        
+        self.time_series_name_lineEdit.textChanged.connect(self.update_time_series_name)
         self.time_series_pushButton.clicked.connect(self.time_series)
 
     def update_param(self, *args, **kwargs):
@@ -575,6 +576,8 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
         self.spectrometer.num_spectra = int(self.num_spectra_spinBox.value())   
         self.spectrometer.delay = float(self.delay_doubleSpinBox.value()) 
         self.time_total_lcdNumber.display(np.round(self.spectrometer.num_spectra*(self.spectrometer.integration_time + self.spectrometer.delay)/1000, decimals = 0))
+    def update_time_series_name(self):
+        self.spectrometer.time_series_name = self.time_series_name_lineEdit.text().strip()
     def time_series(self):
         run_function_modally(self.spectrometer.time_series, progress_maximum = self.spectrometer.num_spectra)
 
