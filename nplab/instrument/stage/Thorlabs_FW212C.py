@@ -10,7 +10,7 @@ from nplab.instrument import Instrument
 import visa
 from nplab.ui.ui_tools import UiTools
 from nplab.utils.gui import QtWidgets, uic
-
+import os
 class FW212C(Instrument):
     def __init__(self, address = 'ASRL4::INSTR'):
         self.visa_address = str(address)
@@ -28,7 +28,7 @@ class FW212C(Instrument):
         self.device.read()
 
     def write(self,msg):
-        self.device.write(str.encode(msg+self.sept_str))
+        self.device.write(msg+self.sept_str)
         self.clear()    
     
     def query(self,msg):
@@ -72,13 +72,17 @@ class FW212C(Instrument):
     def get_qt_ui(self):
         return FW212C_UI(self)
 
-class FW212C_UI(QtWidgets.QWidget, UiTools)
+class FW212C_UI(QtWidgets.QWidget, UiTools):
     def __init__(self, fw):
+        super(FW212C_UI, self).__init__()
         self.fw = fw
-        uic.loadUi(os.path.join(os.path.dirname(__file__), 'thorlabs_fw212c.ui'))
+        uic.loadUi(os.path.join(os.path.dirname(__file__), 'thorlabs_fw212c.ui'), self)
         for button in range(1,13):
             eval('self.radioButton_'+str(button)+'.clicked.connect(self.button_pressed)')
     def button_pressed(self):
         '''buttons are called radioButton_x'''
-        self.fw.position = int(self.sender().objecName().split('_')[-1])
-        
+        self.fw.position = int(self.sender().objectName().split('_')[-1])
+if __name__ == '__main__':
+    fw = FW212C()
+    fw.show_gui(blocking = False)
+    
