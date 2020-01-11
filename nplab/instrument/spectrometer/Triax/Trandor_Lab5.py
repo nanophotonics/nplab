@@ -41,7 +41,7 @@ class Trandor(Andor):#Andor
     
     ''' Wrapper class for the Triax and the andor
     ''' 
-    def __init__(self, White_Shutter=None, triax_address = 'GPIB0::1::INSTR'):
+    def __init__(self, White_Shutter=None, triax_address = 'GPIB0::1::INSTR', use_shifts = False, laser = '_633'):
         
         print '---------------------------'
         print 'Triax Information:'
@@ -52,7 +52,8 @@ class Trandor(Andor):#Andor
         self.SetParameter('SetTemperature',-90)  #Turn on andor cooler
         self.CoolerON()
         self.triax.ccd_size = CCD_Size
-        
+        self.use_shifts = use_shifts
+        self.laser = laser 
         print '---------------------------'
         print 'Current Grating:',self.triax.Grating()
         print 'Current Slit Width:', self.triax.Slit(),'um'
@@ -63,8 +64,16 @@ class Trandor(Andor):#Andor
         return self.triax.Grating(Set_To)
 
     def Generate_Wavelength_Axis(self):
-        return np.flipud(self.triax.Get_Wavelength_Array())
-
+    
+           
+   
+        if self.use_shifts:
+            if self.laser == '_633': centre_wl = 632.8
+            elif self.laser == '_785': centre_wl = 784.81
+            wavelengths = np.array(self.triax.Get_Wavelength_Array()[::-1])
+            return ( 1./(centre_wl*1e-9)- 1./(wavelengths*1e-9))/100    
+        else:
+            return self.triax.Get_Wavelength_Array()[::-1]
     def Test_Notch_Alignment(self):
         	Accepted=False
         	while Accepted is False:
