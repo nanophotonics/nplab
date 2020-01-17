@@ -195,6 +195,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         self.comboBoxBinning.setCurrentIndex(np.log2(self.Andor._parameters['Image'][0]))
         self.binning()
         self.spinBoxNumFrames.setValue(self.Andor._parameters['NKin'])
+        self.checkBoxEMMode.setChecked(not bool(self.Andor.OutAmp))
 
         self.Andor.get_camera_parameter('AcquisitionTimings')
         self.lineEditExpT.setText(
@@ -250,9 +251,6 @@ class AndorUI(QtWidgets.QWidget, UiTools):
     def update_Exposure(self, value):
         self.lineEditExpT.setText(str(value))
 
-    def update_OutAmp(self, value):
-        self.checkBoxEMMode.setCheckState(value)
-
     def callback_to_update_prop(self, propname):
         """Return a callback function that refreshes the named parameter."""
 
@@ -267,12 +265,8 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         self.Andor.set_camera_parameter('TriggerMode', available_modes[currentMode])
 
     def output_amplifier(self):
-        if self.checkBoxEMMode.isChecked():
-            self.Andor.set_camera_parameter('OutAmp', 0)
-        else:
-            self.Andor.set_camera_parameter('OutAmp', 1)
-        if self.checkBoxCrop.isChecked():
-            self.checkBoxCrop.setChecked(False)
+        self.Andor.OutAmp = int(not self.checkBoxEMMode.isChecked())
+        self.checkBoxCrop.setChecked(False)
 
     def binning(self):
         current_binning = int(self.comboBoxBinning.currentText()[0])
