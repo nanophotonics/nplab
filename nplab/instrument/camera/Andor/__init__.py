@@ -314,24 +314,20 @@ class AndorUI(QtWidgets.QWidget, UiTools):
     def isolated_crop(self):
         current_binning = self.Andor.binning
         gui_roi = self.Andor.gui_roi
-        shape = self.Andor.DetectorShape  # _parameters['DetectorShape']
+        maxy = gui_roi[3]
         if self.checkBoxEMMode.isChecked():
             maxx = gui_roi[1]
-            maxy = gui_roi[3]
         else:
+            shape = self.Andor.DetectorShape
             maxx = shape[0] - gui_roi[1]
-            maxy = gui_roi[3]
+
         if self.checkBoxCrop.isChecked():
             self.checkBoxROI.setEnabled(False)
-            # if self.checkBoxROI.isChecked():
-            #     self.checkBoxROI.setChecked(False)
-            self.Andor.set_andor_parameter('IsolatedCropMode', 1, maxy, maxx, current_binning[0], current_binning[1])
-            # self.Andor.set_andor_parameter('Image', current_binning[0], current_binning[1], 1, maxx, 1, maxy)
+            self.Andor.IsolatedCropMode = (1, maxy, maxx, current_binning[0], current_binning[1])
             self.Andor.Image = (current_binning[0], current_binning[1], 1, maxx, 1, maxy)
         else:
             self.checkBoxROI.setEnabled(True)
-            self.Andor.set_andor_parameter('IsolatedCropMode', 0, maxy, maxx, current_binning[0], current_binning[1])
-            # self.Andor.set_andor_parameter('Image', 1, 1, 1, shape[0], 1, shape[1])
+            self.Andor.IsolatedCropMode = (0, maxy, maxx, current_binning[0], current_binning[1])
             shape = self.Andor.DetectorShape
             self.Andor.Image = (current_binning[0], current_binning[1], 1, shape[0], 1, shape[1])
 
