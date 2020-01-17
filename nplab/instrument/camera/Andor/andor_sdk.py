@@ -498,16 +498,14 @@ class AndorBase(object):
             elif self._parameters['ReadMode'] == 3:
                 image_shape = (self._parameters['DetectorShape'][0],)
             elif self._parameters['ReadMode'] == 4:
-                if self._parameters['IsolatedCropMode'][0]:
-                    image_shape = (
-                        self._parameters['IsolatedCropMode'][1] / self._parameters['IsolatedCropMode'][3],
-                        self._parameters['IsolatedCropMode'][2] / self._parameters['IsolatedCropMode'][4])
-                else:
-                    image_shape = (
-                        (self._parameters['Image'][5] - self._parameters['Image'][4] + 1) / self._parameters['Image'][
-                            1],
-                        (self._parameters['Image'][3] - self._parameters['Image'][2] + 1) / self._parameters['Image'][
-                            0],)
+                # if self._parameters['IsolatedCropMode'][0]:
+                #     image_shape = (
+                #         self._parameters['IsolatedCropMode'][1] / self._parameters['IsolatedCropMode'][3],
+                #         self._parameters['IsolatedCropMode'][2] / self._parameters['IsolatedCropMode'][4])
+                # else:
+                image_shape = (
+                    (self._parameters['Image'][5] - self._parameters['Image'][4] + 1) / self._parameters['Image'][1],
+                    (self._parameters['Image'][3] - self._parameters['Image'][2] + 1) / self._parameters['Image'][0],)
             else:
                 raise NotImplementedError('Read Mode %g' % self._parameters['ReadMode'])
 
@@ -547,20 +545,32 @@ class AndorBase(object):
         if len(value) == 4:
             image = self._parameters['Image']
             value = image[:2] + value
-        if self._parameters['IsolatedCropMode'][0]:
-            # Making sure we pass a valid set of parameters
-            # CURRENTLY NOT TESTED
-            params = list(image)
-            params[1] -= (params[1]) % params[3]
-            params[2] -= (params[2]) % params[4]
-            self.set_andor_parameter('IsolatedCropMode', *params)
-        else:
-            # Making sure we pass a valid set of parameters
-            value = list(value)
-            value[3] -= (value[3] - value[2] + 1) % value[0]
-            value[5] -= (value[5] - value[4] + 1) % value[1]
+        # if self._parameters['IsolatedCropMode'][0]:
+        #     # Making sure we pass a valid set of parameters
+        #     # CURRENTLY NOT TESTED
+        #     params = list(value)
+        #     params[1] -= (params[1]) % params[3]
+        #     params[2] -= (params[2]) % params[4]
+        #     self.set_andor_parameter('IsolatedCropMode', *params)
+        # else:
+        # Making sure we pass a valid set of parameters
+        value = list(value)
+        value[3] -= (value[3] - value[2] + 1) % value[0]
+        value[5] -= (value[5] - value[4] + 1) % value[1]
 
-            self.set_andor_parameter('Image', *value)
+        self.set_andor_parameter('Image', *value)
+
+        crop = self.IsolatedCropMode
+        if crop is not None:
+            crop = list(crop)
+            if crop[0]:
+                crop[1] = value[5]
+                crop[2] = value[3]
+                crop[3] = value[0]
+                crop[4] = value[1]
+                self._logger.debug('binning: %s' % str(crop))
+                # self.Andor.set_image(*params)
+                self.set_andor_parameter('IsolatedCropMode', *crop)
 
     @locked_action
     def set_fast_kinetics(self, n_rows=None):

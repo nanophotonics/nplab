@@ -276,14 +276,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
 
     def binning(self):
         current_binning = int(self.comboBoxBinning.currentText()[0])
-        if self.Andor._parameters['IsolatedCropMode'][0]:
-            params = list(self.Andor._parameters['IsolatedCropMode'])
-            params[3] = current_binning
-            params[4] = current_binning
-            self.Andor._logger.debug('binning: %s' % str(params))
-            self.Andor.set_image(*params)
-        else:
-            self.Andor.binning = current_binning
+        self.Andor.binning = current_binning
         self.Andor.FVBHBin = current_binning
 
     def number_frames(self):
@@ -322,9 +315,9 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         self.Andor.set_camera_parameter('EMGain', gain)
 
     def isolated_crop(self):
-        current_binning = int(self.comboBoxBinning.currentText()[0])
+        current_binning = self.Andor.binning
         gui_roi = self.Andor.gui_roi
-        shape = self.Andor._parameters['DetectorShape']
+        shape = self.Andor.DetectorShape  # _parameters['DetectorShape']
         if self.checkBoxEMMode.isChecked():
             maxx = gui_roi[1]
             maxy = gui_roi[3]
@@ -332,13 +325,18 @@ class AndorUI(QtWidgets.QWidget, UiTools):
             maxx = shape[0] - gui_roi[1]
             maxy = gui_roi[3]
         if self.checkBoxCrop.isChecked():
-            if self.checkBoxROI.isChecked():
-                self.checkBoxROI.setChecked(False)
-            self.Andor._parameters['IsolatedCropMode'] = (1,)
-            self.Andor.set_image(1, maxy, maxx, current_binning, current_binning)
+            self.checkBoxROI.setEnabled(False)
+            # if self.checkBoxROI.isChecked():
+            #     self.checkBoxROI.setChecked(False)
+            self.Andor.set_andor_parameter('IsolatedCropMode', 1, maxy, maxx, current_binning[0], current_binning[1])
+            # self.Andor.set_andor_parameter('Image', current_binning[0], current_binning[1], 1, maxx, 1, maxy)
+            self.Andor.Image = (current_binning[0], current_binning[1], 1, maxx, 1, maxy)
         else:
-            self.Andor.set_camera_parameter('IsolatedCropMode', 0, maxy, maxx, current_binning, current_binning)
-            self.Andor.set_image()
+            self.checkBoxROI.setEnabled(True)
+            self.Andor.set_andor_parameter('IsolatedCropMode', 0, maxy, maxx, current_binning[0], current_binning[1])
+            # self.Andor.set_andor_parameter('Image', 1, 1, 1, shape[0], 1, shape[1])
+            shape = self.Andor.DetectorShape
+            self.Andor.Image = (current_binning[0], current_binning[1], 1, shape[0], 1, shape[1])
 
     def take_background(self):
         self.Andor.background = self.Andor.raw_snapshot()[1]
@@ -397,8 +395,10 @@ class AndorUI(QtWidgets.QWidget, UiTools):
 
     def ROI(self):
         if self.checkBoxROI.isChecked():
+            self.checkBoxCrop.setEnabled(False)
             self.Andor.roi = self.Andor.gui_roi  # binning + params
         else:
+            self.checkBoxCrop.setEnabled(True)
             self.Andor.roi = (0, self.Andor._parameters['DetectorShape'][0]-1,
                               0, self.Andor._parameters['DetectorShape'][1]-1)
 
