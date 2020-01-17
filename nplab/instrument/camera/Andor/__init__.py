@@ -196,6 +196,9 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         self.binning()
         self.spinBoxNumFrames.setValue(self.Andor._parameters['NKin'])
         self.checkBoxEMMode.setChecked(not bool(self.Andor.OutAmp))
+        if len(self.Andor.capabilities['EMGainCapability']) == 0:
+            self.checkBoxEMMode.hide()
+            self.spinBoxEMGain.hide()
 
         self.Andor.get_camera_parameter('AcquisitionTimings')
         self.lineEditExpT.setText(
