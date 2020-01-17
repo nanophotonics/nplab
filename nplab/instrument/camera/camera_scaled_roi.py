@@ -80,6 +80,7 @@ class CameraRoiScale(Camera):
         assert len(self._preview_widgets) == 1
         for wdg in self._preview_widgets:
             lims = wdg.get_roi()
+            if lims is None: lims = (0,self.detector_shape[0],0,self.detector_shape[1])
         return lims
 
     @property
