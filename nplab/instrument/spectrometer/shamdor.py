@@ -29,5 +29,8 @@ class Shamdor(Andor):
     
     x_axis = property(get_xaxis)
     
-        
+if __name__ == '__main__':
+    s = Shamdor()
+    s.show_gui(blocking = False)
+    s.shamrock.GetCalibration()       
     
