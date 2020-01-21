@@ -182,8 +182,7 @@ class LumeneraCamera(Camera):
         try:
             self.latest_raw_frame = self.convert_frame(frame_pointer, frame_size)
         except:
-            pass            
-            #print "invalid frame size"
+            print "invalid frame size"
             
     def convert_frame(self, frame_pointer, frame_size):
         """Convert a frame from the camera to an RGB numpy array."""

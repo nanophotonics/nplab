@@ -63,10 +63,3 @@ docs/nplab.*.rst
 *.xml
 *.iml
 .DS_Store
-nplab/instrument/camera/iDus/andor.ui
-*.dll
-nplab/instrument/camera/iDus/CameraDefaultDisplay.ui
-nplab/instrument/camera/iDus/idus.py
-nplab/instrument/camera/__init__.py
-nplab/instrument/camera/Andor/__init__.py
-nplab/instrument/camera/Andor/__init__.py

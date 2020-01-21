@@ -418,7 +418,7 @@ class AndorBase:
 
         if self.parameters['AcquisitionMode']['value'] == 4:
             num_of_images = 1  # self.parameters['FastKinetics']['value'][1]
-            image_shape = (self.parameters['FastKinetics']['value'][1], self.parameters['DetectorShape']['value'][0])
+            image_shape = (self.parameters['FastKinetics']['value'][-1], self.parameters['DetectorShape']['value'][0])
         else:
             if self.parameters['AcquisitionMode']['value'] == 1:
                 num_of_images = 1
@@ -544,8 +544,8 @@ class AndorBase:
         if n_rows is None:
             n_rows = self.parameters['FastKinetics']['value'][0]
 
-        series_Length = self.NKin#int(self.parameters['DetectorShape']['value'][1] / n_rows) - 1
-        expT = self.FastExp #self.parameters['AcquisitionTimings']['value'][0]
+        series_Length = int(self.parameters['DetectorShape']['value'][1] / n_rows) - 1
+        expT = self.parameters['AcquisitionTimings']['value'][0]
         mode = self.parameters['ReadMode']['value']
         hbin = self.parameters['Image']['value'][0]
         vbin = self.parameters['Image']['value'][1]
@@ -986,8 +986,6 @@ class AndorUI(QtWidgets.QWidget, UiTools):
     def NumFramesChanged(self):           
         num_frames = self.spinBoxNumFrames.value()
         self.Andor.SetParameter('NKin', num_frames)
-        if self.Andor.AcquisitionMode==4:
-            self.Andor.SetFastKinetics()
 
     def NumAccumChanged(self):
         num_frames = self.spinBoxNumAccum.value()
@@ -1015,10 +1013,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
             expT = float(self.lineEditExpT.text()) * 5
         elif input == '/':
             expT = float(self.lineEditExpT.text()) / 5
-        if self.Andor.AcquisitionMode==4:
-            self.Andor.FastExp = expT
-        else:
-            self.Andor.Exposure = expT
+        self.Andor.Exposure = expT
         # self.Andor.SetExposureTime(expT)
         #    self.Andor.SetParameter('Exposure', expT)
         # self.Andor.GetAcquisitionTimings()

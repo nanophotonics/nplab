@@ -62,7 +62,6 @@ class SpectrometerAligner(Instrument):
         self.spectrometer = spectrometer
         self.stage = stage
         self.align_to_raw_spectra=False
-        self.use_spectra_max=False
         self.settling_time=0.3
         self.spectrum_mask = None
         
@@ -83,10 +82,7 @@ class SpectrometerAligner(Instrument):
         if not self.align_to_raw_spectra and self.spectrometer.background.shape == spectrum.shape:
             spectrum -= self.spectrometer.background
         if self.spectrum_mask is None:
-            if self.use_spectra_max == True:
-                return np.max(spectrum)
-            else:
-                return np.nansum(spectrum)
+            return np.nansum(spectrum
         else:
             return np.nansum(spectrum[self.spectrum_mask])
     def _do_circle_iteration_fired(self):
