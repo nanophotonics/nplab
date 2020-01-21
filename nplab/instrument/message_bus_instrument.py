@@ -111,12 +111,12 @@ class MessageBusInstrument(nplab.instrument.Instrument):
             self.flush_input_buffer()
             self.write(queryString)
             if self.ignore_echo == True: # Needs Implementing for a multiline read!
-                    first_line = self.readline(timeout).strip()
-                    if first_line == queryString:
-                        self._logger.warn('%s did not echo' % queryString)
-                        return self.readline(timeout).strip()
+                first_line = self.readline(timeout).strip()
+                if first_line == queryString:
+                    return self.readline(timeout).strip()
+                    else:
  print 'This command did not echo!!!'
-    
+        return first_line
             if termination_line is not None:
                 multiline = True
             if multiline:
