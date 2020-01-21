@@ -49,6 +49,7 @@ class Image_Filter_box(Instrument):
             return image
         else:
             return self.current_filter_proxy(image)
+
     def set_current_filter_index(self,filter_index):
         filter_name = self.filter_options[filter_index]
         self._filter_index = filter_index
@@ -156,7 +157,7 @@ def StrBiThresOpen(g, bin_fac= 4,threshold =40,bilat_size = 3,bilat_height = 40,
     except Exception as e:
         print(e)
         
-def STBOC_with_size_filter(g, bin_fac= 4,bilat_size = 3, bilat_height = 40,
+def STBOC_with_size_filter(g, bin_fac= 4, bilat_size = 3, bilat_height = 40,
                            threshold =20,min_size = 2,max_size = 6,morph_kernel_size = 3,
                            show_particles = False, return_original_with_particles = False,
                            return_centers = False):

@@ -34,7 +34,8 @@ class ThorLabsSC10(Shutter, serial.SerialInstrument):
     >>> shutter._state = 'Open' # for example
     
     The self._state attribute is overwritten if communication with the shutter succeeds at any time, so this should maximise the state being right. 
-    using the buttons on the shutter will of course mess this all up. 
+    using the physical buttons on the shutter will of course mess this all up. 
+    -ee306
     '''
     def __init__(self, port=None):
         serial.SerialInstrument.__init__(self, port=port)
@@ -99,7 +100,7 @@ class ThorLabsSC10(Shutter, serial.SerialInstrument):
         self.query('mode?')
     
 if __name__ == '__main__':
-    import sys
+#    import sys
 #    from nplab.utils.gui import *
 #    app = get_qt_app()
     

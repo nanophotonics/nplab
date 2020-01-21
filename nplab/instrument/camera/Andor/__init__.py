@@ -88,6 +88,10 @@ class Andor(CameraRoiScale, AndorBase):
     @property
     def roi(self):
         return tuple([x - 1 for x in self.Image[2:]])
+        #return tuple(map(lambda x: x - 1, self.Image[2:]))
+    def Initialize(self):
+        self.FastExp = 2E-6
+        self._dllWrapper('Initialize', outputs=(c_char(),))
 
     @roi.setter
     def roi(self, value):
@@ -142,14 +146,10 @@ class AndorUI(QtWidgets.QWidget, UiTools):
             func = self.callback_to_update_prop(param)
             self._func_dict[param] = func
             register_for_property_changes(self.Andor, param, self._func_dict[param])
-        
-        c_row_n_rows = self.Andor.SingleTrack
-        if c_row_n_rows is not None:
-            c_row = c_row_n_rows[0]
-            n_rows = c_row_n_rows[1]
+        if self.Andor.SingleTrack is not None:
+            c_row, n_rows = self.Andor.SingleTrack
             self.spinBoxCenterRow.setValue(c_row)
             self.spinBoxNumRows.setValue(n_rows)
-
     def __del__(self):
         self._stopTemperatureThread = True
         if self.DisplayWidget is not None:

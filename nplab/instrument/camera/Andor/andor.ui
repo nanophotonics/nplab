@@ -20,6 +20,269 @@
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
+   <item row="11" column="0" colspan="3">
+    <widget class="QLineEdit" name="filename_lineEdit">
+     <property name="text">
+      <string>Filename....</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="3">
+    <widget class="QComboBox" name="comboBoxReadMode">
+     <property name="maximumSize">
+      <size>
+       <width>70</width>
+       <height>20</height>
+      </size>
+     </property>
+     <item>
+      <property name="text">
+       <string>FVB</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Multi-track</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Random track</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Single track</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Image</string>
+      </property>
+     </item>
+    </widget>
+   </item>
+   <item row="4" column="2">
+    <widget class="QLabel" name="labelReadMode">
+     <property name="text">
+      <string>Read Mode</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="3">
+    <widget class="QPushButton" name="pushButtonAbort">
+     <property name="maximumSize">
+      <size>
+       <width>70</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">color:rgb(85, 0, 0)</string>
+     </property>
+     <property name="text">
+      <string>Abort</string>
+     </property>
+    </widget>
+   </item>
+   <item row="10" column="1">
+    <widget class="QComboBox" name="comboBoxBinning">
+     <property name="maximumSize">
+      <size>
+       <width>70</width>
+       <height>20</height>
+      </size>
+     </property>
+     <item>
+      <property name="text">
+       <string>1x1</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>2x2</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>4x4</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>8x8</string>
+      </property>
+     </item>
+    </widget>
+   </item>
+   <item row="0" column="3">
+    <widget class="QPushButton" name="pushButtonCapture">
+     <property name="maximumSize">
+      <size>
+       <width>70</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">color:rgb(85, 0, 0)</string>
+     </property>
+     <property name="text">
+      <string>Capture</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="2">
+    <widget class="QPushButton" name="pushButtonLive">
+     <property name="maximumSize">
+      <size>
+       <width>70</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">color:rgb(85, 0, 0)</string>
+     </property>
+     <property name="text">
+      <string>Live</string>
+     </property>
+    </widget>
+   </item>
+   <item row="10" column="0">
+    <widget class="QLabel" name="label_3">
+     <property name="maximumSize">
+      <size>
+       <width>50</width>
+       <height>25</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>Binning</string>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="1">
+    <widget class="QComboBox" name="comboBoxAcqMode">
+     <property name="maximumSize">
+      <size>
+       <width>70</width>
+       <height>20</height>
+      </size>
+     </property>
+     <item>
+      <property name="text">
+       <string>Single</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Accumulate</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Kinetic</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Fast Kinetic</string>
+      </property>
+     </item>
+    </widget>
+   </item>
+   <item row="6" column="0">
+    <widget class="QLabel" name="label_2">
+     <property name="maximumSize">
+      <size>
+       <width>50</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>Acq. Mode</string>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="3">
+    <widget class="QComboBox" name="comboBoxTrigMode">
+     <property name="maximumSize">
+      <size>
+       <width>70</width>
+       <height>20</height>
+      </size>
+     </property>
+     <item>
+      <property name="text">
+       <string>Internal</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>External</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>ExternalStart</string>
+      </property>
+     </item>
+    </widget>
+   </item>
+   <item row="6" column="2">
+    <widget class="QLabel" name="label">
+     <property name="maximumSize">
+      <size>
+       <width>50</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>Trig. Mode</string>
+     </property>
+    </widget>
+   </item>
+   <item row="10" column="3">
+    <widget class="QCheckBox" name="checkBoxEMMode">
+     <property name="text">
+      <string>EM mode</string>
+     </property>
+    </widget>
+   </item>
+   <item row="10" column="2">
+    <widget class="QSpinBox" name="spinBoxEMGain">
+     <property name="wrapping">
+      <bool>false</bool>
+     </property>
+     <property name="specialValueText">
+      <string>EM Gain</string>
+     </property>
+     <property name="maximum">
+      <number>50</number>
+     </property>
+     <property name="showGroupSeparator" stdset="0">
+      <bool>false</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="2">
+    <widget class="QPushButton" name="pushButtonTakeBG">
+     <property name="maximumSize">
+      <size>
+       <width>70</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>Take BG</string>
+     </property>
+    </widget>
+   </item>
    <item row="0" column="0" colspan="3">
     <widget class="QFrame" name="frame">
      <property name="maximumSize">
@@ -41,16 +304,7 @@
       <property name="spacing">
        <number>0</number>
       </property>
-      <property name="leftMargin">
-       <number>0</number>
-      </property>
-      <property name="topMargin">
-       <number>0</number>
-      </property>
-      <property name="rightMargin">
-       <number>0</number>
-      </property>
-      <property name="bottomMargin">
+      <property name="margin">
        <number>0</number>
       </property>
       <item>
@@ -141,16 +395,7 @@
       <enum>QFrame::Raised</enum>
      </property>
      <layout class="QGridLayout" name="gridLayout_2">
-      <property name="leftMargin">
-       <number>0</number>
-      </property>
-      <property name="topMargin">
-       <number>0</number>
-      </property>
-      <property name="rightMargin">
-       <number>0</number>
-      </property>
-      <property name="bottomMargin">
+      <property name="margin">
        <number>0</number>
       </property>
       <item row="0" column="3" rowspan="3">
@@ -557,7 +802,7 @@
       <string notr="true">color:rgb(85, 0, 0)</string>
      </property>
      <property name="text">
-      <string>Live</string>
+      <string>Remove BG</string>
      </property>
     </widget>
    </item>
@@ -582,26 +827,6 @@
        <height>16777215</height>
       </size>
      </property>
-     <item>
-      <property name="text">
-       <string>Single</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Accumulate</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Kinetic</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Fast Kinetic</string>
-      </property>
-     </item>
     </widget>
    </item>
    <item row="6" column="0">
@@ -615,10 +840,6 @@
      <property name="text">
       <string>Acq. Mode</string>
      </property>
-    </widget>
-   </item>
-   <item row="6" column="3">
-    <widget class="QComboBox" name="comboBoxTrigMode">
      <property name="maximumSize">
       <size>
        <width>16777215</width>
@@ -650,49 +871,33 @@
        <height>16777215</height>
       </size>
      </property>
-     <property name="text">
-      <string>Trig. Mode</string>
-     </property>
-    </widget>
-   </item>
-   <item row="10" column="3">
-    <widget class="QCheckBox" name="checkBoxEMMode">
-     <property name="text">
-      <string>EM mode</string>
-     </property>
-    </widget>
-   </item>
-   <item row="10" column="2">
-    <widget class="QSpinBox" name="spinBoxEMGain">
-     <property name="wrapping">
+     <property name="backgroundVisible">
       <bool>false</bool>
      </property>
-     <property name="specialValueText">
-      <string>EM Gain</string>
-     </property>
-     <property name="showGroupSeparator" stdset="0">
-      <bool>false</bool>
-     </property>
-     <property name="maximum">
-      <number>50</number>
-     </property>
     </widget>
    </item>
-   <item row="13" column="3">
+   <item row="14" column="0">
     <widget class="QLabel" name="label_6">
      <property name="text">
       <string>Group</string>
      </property>
     </widget>
    </item>
-   <item row="18" column="3">
+   <item row="16" column="0">
+    <widget class="QPushButton" name="pushButton_LoadSettings">
+     <property name="text">
+      <string>Load settings</string>
+     </property>
+    </widget>
+   </item>
+   <item row="16" column="1">
     <widget class="QPushButton" name="referesh_groups_pushButton">
      <property name="text">
       <string>Refresh Groups</string>
      </property>
     </widget>
    </item>
-   <item row="17" column="3">
+   <item row="15" column="0">
     <widget class="QComboBox" name="group_comboBox">
      <item>
       <property name="text">
@@ -739,12 +944,8 @@
      <property name="plainText">
       <string>Description...</string>
      </property>
-    </widget>
-   </item>
-   <item row="3" column="3">
-    <widget class="QCheckBox" name="checkBoxRemoveBG">
      <property name="text">
-      <string>Remove BG</string>
+      <string>Save</string>
      </property>
     </widget>
    </item>
