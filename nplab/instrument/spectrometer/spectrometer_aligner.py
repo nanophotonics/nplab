@@ -82,7 +82,7 @@ class SpectrometerAligner(Instrument):
         if not self.align_to_raw_spectra and self.spectrometer.background.shape == spectrum.shape:
             spectrum -= self.spectrometer.background
         if self.spectrum_mask is None:
-            return np.nansum(spectrum
+            return np.nansum(spectrum)
         else:
             return np.nansum(spectrum[self.spectrum_mask])
     def _do_circle_iteration_fired(self):
