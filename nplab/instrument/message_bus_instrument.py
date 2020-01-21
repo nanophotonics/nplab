@@ -115,8 +115,8 @@ class MessageBusInstrument(nplab.instrument.Instrument):
                 if first_line == queryString:
                     return self.readline(timeout).strip()
                 else:
-                 print 'This command did not echo!!!'
-                return first_line
+                    print 'This command did not echo!!!'
+                    return first_line
             if termination_line is not None:
                 multiline = True
             if multiline:
