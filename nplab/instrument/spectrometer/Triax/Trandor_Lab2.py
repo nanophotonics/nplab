@@ -1,5 +1,5 @@
 """
-jpg66 10/2018
+jpg66
 """
 
 from nplab.instrument.spectrometer.Triax.__init__ import Triax
@@ -10,10 +10,24 @@ import types
 
 Calibration_Arrays=[]
 
-#Calibration_Arrays.append([[-7.424439108610487e-10, 6.292460768517561e-07],[0.00036874014847660606, -0.44250724366972605],[16.477735624797166, 37308.72895571748]])
-Calibration_Arrays.append(np.array([[-1.10599855e-11,  1.63061503e-08, -5.96937267e-06], [ 7.52866906e-06, -1.09783996e-02,  3.85775710e+00],[-1.32813537e+00,  1.97407296e+03, -6.88516843e+05]]))
-Calibration_Arrays.append(np.array([[-2.4177914470470333e-09, 1.6417391549636192e-06],[0.0007738426921082634, -0.6321570360204632],[-36.638718339068475, 41890.920064338614]]))
-Calibration_Arrays.append(np.array([[2.254536467105263e-09, -1.5938649616776316e-06], [-0.0003591761835526315, 0.14020083408881573],[25.670334605263154, -8126.616965131576]]))
+Calibration_Arrays.append([])
+Calibration_Arrays.append([])
+Calibration_Arrays.append([])
+
+#Calibration_Arrays[0].append([614.0, 708.19, 785.0, 880.0])
+#Calibration_Arrays[0].append([-1.426770400496046e-07,8.568118871080799e-08,-3.842673870179174e-08,-1.6931025292314229e-07])
+#Calibration_Arrays[0].append([-0.03622191490065281,-0.1703883696157233,-0.09181517506331724,0.018598551356333176])
+#Calibration_Arrays[0].append([21803.133194394515, 47048.52913039829, 39063.730061611925, 21204.44706541431])
+#
+#Calibration_Arrays[1].append([546.,614.0, 708.19, 785.0, 880.0])
+#Calibration_Arrays[1].append([-7.33329431e-08,  2.29960498e-07,  5.49540270e-08, -2.13869451e-07,  3.24330445e-08])
+#Calibration_Arrays[1].append([-9.36587388e-02, -1.74583163e-01, -1.32106181e-01,-3.97356293e-02, -1.24762620e-01])
+#Calibration_Arrays[1].append([ 1.31671421e+04,  2.01994705e+04,  2.02198457e+04,1.42806356e+04,  2.38358208e+04])
+#
+#Calibration_Arrays[2].append([546., 614.0, 708.19, 785.0, 880.])
+#Calibration_Arrays[2].append([ 2.13781882e-07, -2.70362665e-08, -6.43226122e-08, 1.75946165e-07, -1.95240542e-07])
+#Calibration_Arrays[2].append([-1.37059698e-01, -1.06307663e-01, -1.03561184e-01, -1.41752470e-01, -7.34959142e-02])
+#Calibration_Arrays[2].append([ 8.50652000e+03, 8.33733583e+03, 9.53751217e+03, 1.20245957e+04, 9.96250851e+03])
 
 
 
@@ -29,19 +43,21 @@ class Trandor(Andor):#Andor
     ''' Wrapper class for the Triax and the andor
     ''' 
     def __init__(self,White_Shutter=None):
-
-        super(Trandor,self).__init__()
-        self.triax = Triax('GPIB0::1::INSTR',Calibration_Arrays) #Initialise triax
-        self.White_Shutter=White_Shutter
-        self.SetParameter('SetTemperature',-90)  #Turn on andor cooler
-        self.CoolerON()
         
         print '---------------------------'
         print 'Triax Information:'
+
+        super(Trandor,self).__init__()
+        self.triax = Triax('GPIB0::1::INSTR',Calibration_Arrays,CCD_Size) #Initialise triax
+        self.White_Shutter=White_Shutter
+        self.SetParameter('SetTemperature',-90)  #Turn on andor cooler
+        self.CoolerON()
+        self.triax.ccd_size = CCD_Size
+	
+        print '---------------------------'
         print 'Current Grating:',self.triax.Grating()
         print 'Current Slit Width:', self.triax.Slit(),'um'
         print '---------------------------'
-
         self.Notch_Filters_Tested=True
         
 
@@ -49,14 +65,11 @@ class Trandor(Andor):#Andor
         return self.triax.Grating(Set_To)
 
     def Generate_Wavelength_Axis(self):
-        Pixels=np.arange(0,CCD_Size)
-        return self.triax.Convert_Pixels_to_Wavelengths(Pixels)
+        return self.triax.Get_Wavelength_Array()
 
-    def Set_Center_Wavelength(self,Wavelength):  
-        Centre_Pixel=int(CCD_Size/2)
-        Required_Step=self.triax.Find_Required_Step(Wavelength,Centre_Pixel)
-        Current_Step=self.triax.Motor_Steps()
-        self.triax.Move_Steps(Required_Step-Current_Step)
+    def Set_Center_Wavelength(self, wavelength):
+        ''' backwards compatability with lab codes that use trandor.Set_Center_Wavelength'''
+        self.triax.Set_Center_Wavelength(wavelength) 
 
     def Test_Notch_Alignment(self):
         	Accepted=False

@@ -117,7 +117,6 @@ class MessageBusInstrument(nplab.instrument.Instrument):
                 else:
                     print 'This command did not echo!!!'
                     return first_line
-    
             if termination_line is not None:
                 multiline = True
             if multiline:

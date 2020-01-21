@@ -87,6 +87,9 @@ class Andor(CameraRoiScale, AndorBase):
     @property
     def roi(self):
         return tuple(map(lambda x: x - 1, self.Image[2:]))
+    def Initialize(self):
+        self.FastExp = 2E-6
+        self._dllWrapper('Initialize', outputs=(c_char(),))
 
     @roi.setter
     def roi(self, value):
