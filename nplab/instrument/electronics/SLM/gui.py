@@ -5,6 +5,9 @@ Collection of modular GUIs that can be used for creating SLM patterns.
 When a new SLM class is called, the GUI created adds any of the following to a pyqtgraph.DockArea by importing them by
 name (so the naming of these classes is not arbitrary).
 """
+from __future__ import division
+from builtins import str
+from past.utils import old_div
 from nplab.utils.gui import QtWidgets, uic
 import os
 import numpy as np
@@ -166,7 +169,7 @@ class focusUi(BaseUi):
         step_size = float(self.lineEdit_step.text())
         offset = float(self.lineEdit_offset.text())
 
-        steps = int((value - offset) / step_size)
+        steps = int(old_div((value - offset), step_size))
         self.slider.setValue(steps)
 
     def get_params(self):
@@ -216,7 +219,7 @@ class linear_lutUi(BaseUi):
         step_size = float(self.offset_lineEdit_step.text())
         offset = float(self.offset_lineEdit_offset.text())
 
-        steps = int((value - offset) / step_size)
+        steps = int(old_div((value - offset), step_size))
         self.offset_slider.setValue(steps)
 
     def update_contrast_lineedit(self):
@@ -232,7 +235,7 @@ class linear_lutUi(BaseUi):
         step_size = float(self.contrast_lineEdit_step.text())
         offset = float(self.contrast_lineEdit_offset.text())
 
-        steps = int((value - offset) / step_size)
+        steps = int(old_div((value - offset), step_size))
         self.contrast_slider.setValue(steps)
 
     def get_params(self):

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from builtins import str
 from nplab.utils.gui import QtWidgets, QtCore, uic
 from nplab.instrument.camera.camera_scaled_roi import DisplayWidgetRoiScale, CameraRoiScale
 from nplab.instrument.camera.Hamamatsu_streak.streak_sdk import StreakSdk, StreakError

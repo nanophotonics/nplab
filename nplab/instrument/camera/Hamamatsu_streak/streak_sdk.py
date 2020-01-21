@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from builtins import map
+from builtins import range
 from nplab.instrument.visa_instrument import VisaInstrument
 import os
 import pprint
@@ -350,14 +352,14 @@ class StreakSdk(VisaInstrument):
             sub_dictionary = base_dictionary[sub_level]
             if isinstance(sub_dictionary, dict):
                 return_dict = dict()
-                for subsublevel in sub_dictionary.keys():
+                for subsublevel in list(sub_dictionary.keys()):
                     return_dict[subsublevel] = self.get_parameter(base_name, sub_level, subsublevel)
                 return return_dict
             else:
                 return self.send_command(command, sub_level, sub_sub_level)
         else:
             return_dict = dict()
-            for sublevel in base_dictionary.keys():
+            for sublevel in list(base_dictionary.keys()):
                 return_dict[sublevel] = self.get_parameter(base_name, sublevel)
             return return_dict
 
@@ -392,13 +394,13 @@ class StreakSdk(VisaInstrument):
         elif sub_sub_level is None:
             sub_dictionary = base_dictionary[sub_level]
             if isinstance(sub_dictionary, dict):
-                for sub_sub_level, subsub_value in value.items():
+                for sub_sub_level, subsub_value in list(value.items()):
                     assert sub_sub_level in sub_dictionary
                     self.set_parameter(base_name, sub_level, sub_sub_level, subsub_value)
             else:
                 self.send_command(command, sub_level, value)
         else:
-            for sub_level, values in value.items():
+            for sub_level, values in list(value.items()):
                 self.set_parameter(base_name, sub_level, sub_sub_level, values)
 
     def get_parameter_info(self, base_name, sub_level=None, sub_sub_level=None):
@@ -427,14 +429,14 @@ class StreakSdk(VisaInstrument):
             sub_values = base_values[sub_level]
             if isinstance(sub_values, dict):
                 return_vals = dict()
-                for sub_sub_level in sub_values.keys():
+                for sub_sub_level in list(sub_values.keys()):
                     return_vals[sub_sub_level] = self.get_parameter_info(base_name, sub_level, sub_sub_level)
                 return return_vals
             else:
                 return self.send_command(command, sub_level, sub_sub_level)
         else:
             return_vals = dict()
-            for sub_level in base_values.keys():
+            for sub_level in list(base_values.keys()):
                 return_vals[sub_level] = self.get_parameter_info(base_name, sub_level)
             return return_vals
 

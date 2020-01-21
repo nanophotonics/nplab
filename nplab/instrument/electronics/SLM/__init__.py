@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import division
+from builtins import zip
+from builtins import range
+from past.utils import old_div
 from nplab.utils.gui import QtWidgets, QtGui, QtCore, uic, get_qt_app
 from nplab.ui.ui_tools import UiTools
 from nplab.instrument import Instrument
@@ -34,13 +38,13 @@ def zernike_polynomial(array_size, n, m, beam_size=1):
     _x = np.linspace(-1, 1, array_size)
     x, y = np.meshgrid(_x, _x)
     # By normalising the radius to the beamsize, we can make Zernike polynomials of different sizes
-    rho = np.sqrt(x**2 + y**2) / beam_size
+    rho = old_div(np.sqrt(x**2 + y**2), beam_size)
     phi = np.arctan2(x, y)
 
     summ = []
-    for k in range(1 + (n - m) / 2):
-        summ += [((-1)**k * math.factorial(n - k) * (rho**(n-2*k))) /
-                 (math.factorial(k) * math.factorial((n+m)/2 - k) * math.factorial((n-m)/2 - k))]
+    for k in range(1 + old_div((n - m), 2)):
+        summ += [old_div(((-1)**k * math.factorial(n - k) * (rho**(n-2*k))),
+                 (math.factorial(k) * math.factorial(old_div((n+m),2) - k) * math.factorial(old_div((n-m),2) - k)))]
     r = np.sum(summ, 0)
     if (n-m) % 2:
         r = 0
@@ -67,7 +71,7 @@ class SlmDisplay(QtWidgets.QWidget):
         """
         super(SlmDisplay, self).__init__()
 
-        self._pixels = [int(x[0]/x[1]) for x in zip(shape, resolution)]
+        self._pixels = [int(old_div(x[0],x[1])) for x in zip(shape, resolution)]
         self._bitness = bitness
 
         self._QImage = None
@@ -76,7 +80,7 @@ class SlmDisplay(QtWidgets.QWidget):
 
         self.LUT = None
         # The default LUT assumes that the phase goes from 0 to 2 pi, and we want to display it from 0 to 256
-        self.set_lut(256/(2*np.pi), 0)
+        self.set_lut(old_div(256,(2*np.pi)), 0)
 
     def _make_gui(self, hide_border=True):
         """Creates and sets the widget layout
@@ -261,7 +265,7 @@ class SlmUi(QtWidgets.QWidget, UiTools):
         :return: dict. Keys are the self.options.keys() and the values are whatever the widgets return from get_params
         """
         all_params = dict()
-        for name, widget in self.all_widgets.items():
+        for name, widget in list(self.all_widgets.items()):
             all_params[name] = widget.get_params()
         self.SLM._logger.debug('get_gui_phase_params: %s' % all_params)
         return all_params

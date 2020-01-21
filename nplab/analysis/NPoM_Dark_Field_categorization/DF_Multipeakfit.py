@@ -756,8 +756,8 @@ def normToTrans(x, y, transNorm = 1, troughNorm = 0.61, transInit = 533):
 
             initMins = [minimum for minimum in mins if minimum[0] < transWl]
 
-        initMinWls = np.array(zip(*mins)[0])
-        initMinHeights = np.array(zip(*mins)[1])
+        initMinWls = np.array(list(zip(*mins))[0])
+        initMinHeights = np.array(list(zip(*mins))[1])
         initMindex = abs(initMinWls - transInit).argmin()
         initMinWl = initMinWls[initMindex]
 
@@ -2232,8 +2232,8 @@ def plotIntensityRatios(outputFileName, plotName = 'All NPoMs', dataType = 'Raw'
             sns.set_style('white')
 
             xy = np.array([[x[n], i] for n, i in enumerate(y) if 0 < i < 10 and x[n] < 848])
-            x = np.array(zip(*xy)[0])
-            y = np.array(zip(*xy)[1])
+            x = np.array(list(zip(*xy))[0])
+            y = np.array(list(zip(*xy))[1])
 
             fig, ax1 = plt.subplots(figsize = (9, 9))
             cmap = plt.get_cmap('Greys')

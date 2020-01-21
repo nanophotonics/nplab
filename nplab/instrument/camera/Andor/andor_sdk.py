@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import division
+from __future__ import print_function
+from builtins import zip
+from builtins import str
+from builtins import range
+from builtins import object
+from past.utils import old_div
 from nplab.instrument.camera import CameraParameter
 from nplab.utils.thread_utils import locked_action
 from nplab.utils.log import create_logger
@@ -492,9 +499,9 @@ class AndorBase(object):
 
             if self._parameters['ReadMode'] == 0:
                 if self._parameters['IsolatedCropMode'][0]:
-                    image_shape = (self._parameters['IsolatedCropMode'][2] / self._parameters['IsolatedCropMode'][4], )
+                    image_shape = (old_div(self._parameters['IsolatedCropMode'][2], self._parameters['IsolatedCropMode'][4]), )
                 else:
-                    image_shape = (self._parameters['DetectorShape'][0] / self._parameters['FVBHBin'], )
+                    image_shape = (old_div(self._parameters['DetectorShape'][0], self._parameters['FVBHBin']), )
             elif self._parameters['ReadMode'] == 3:
                 image_shape = (self._parameters['DetectorShape'][0],)
             elif self._parameters['ReadMode'] == 4:
@@ -504,8 +511,8 @@ class AndorBase(object):
                 #         self._parameters['IsolatedCropMode'][2] / self._parameters['IsolatedCropMode'][4])
                 # else:
                 image_shape = (
-                    (self._parameters['Image'][5] - self._parameters['Image'][4] + 1) / self._parameters['Image'][1],
-                    (self._parameters['Image'][3] - self._parameters['Image'][2] + 1) / self._parameters['Image'][0],)
+                    old_div((self._parameters['Image'][5] - self._parameters['Image'][4] + 1), self._parameters['Image'][1]),
+                    old_div((self._parameters['Image'][3] - self._parameters['Image'][2] + 1), self._parameters['Image'][0]),)
             else:
                 raise NotImplementedError('Read Mode %g' % self._parameters['ReadMode'])
 
@@ -573,7 +580,7 @@ class AndorBase(object):
         if n_rows is None:
             n_rows = self._parameters['FastKinetics'][0]
 
-        series_Length = int(self._parameters['DetectorShape'][1] / n_rows) - 1
+        series_Length = int(old_div(self._parameters['DetectorShape'][1], n_rows)) - 1
         expT = self._parameters['AcquisitionTimings'][0]
         mode = self._parameters['ReadMode']
         hbin = self._parameters['Image'][0]

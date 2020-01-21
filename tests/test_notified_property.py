@@ -9,7 +9,9 @@ Example:
 >>>
 
 """
+from __future__ import print_function
 
+from builtins import object
 from nplab.utils.notified_property import NotifiedProperty, DumbNotifiedProperty
 
 
@@ -25,7 +27,7 @@ def c_changed(a):
     print("c is now {0}".format(a))
 
 
-class foo:
+class foo(object):
     a = DumbNotifiedProperty()
     b = DumbNotifiedProperty(10)
     @NotifiedProperty

@@ -18,6 +18,7 @@ Changing spyder's matplotlib backed to inline makes it faster.
 from __future__ import print_function
 from __future__ import division
 
+from builtins import range
 from builtins import str
 from builtins import input
 import matplotlib.pyplot as plt
@@ -48,7 +49,7 @@ def accept_reject(group, cutoff = np.inf):
         particle = P[1] # the particle data group
         if p_name[:3] != 'Par': # discarding non-particle groups
             continue
-        if int(p_name.split('_')[1]) not in range(cutoff): # if your track stopped after particle 100, put in 101
+        if int(p_name.split('_')[1]) not in list(range(cutoff)): # if your track stopped after particle 100, put in 101
             continue
         if p_name in prar: # if you're continuing from some previously saved accepted/rejected lists
             continue

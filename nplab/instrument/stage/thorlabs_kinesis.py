@@ -16,6 +16,9 @@ It also uses the excellent ``pythonnet`` package to get access to the .NET API.
 This is by far the least painful way to get Kinesis to work nicely as it 
 avoids the low-level faffing about.
 """
+from __future__ import print_function
+from builtins import zip
+from builtins import range
 from nplab.instrument.stage import Stage
 import clr
 import sys

@@ -4,6 +4,8 @@ Created on Sat Jul 08 19:47:22 2017
 
 @author: Hera
 """
+from __future__ import division
+from past.utils import old_div
 from nplab.instrument.camera.Andor import Andor
 from nplab.instrument.spectrometer.shamrock import Shamrock
 import numpy as np
@@ -24,7 +26,7 @@ class Shamdor(Andor):
             if self.laser == '_633': centre_wl = 632.8
             elif self.laser == '_785': centre_wl = 784.81
             wavelengths = np.array(self.shamrock.GetCalibration()[::-1])
-            return ( 1./(centre_wl*1e-9)- 1./(wavelengths*1e-9))/100    
+            return old_div(( 1./(centre_wl*1e-9)- 1./(wavelengths*1e-9)),100)    
         else:
             return self.shamrock.GetCalibration()[::-1]
     
