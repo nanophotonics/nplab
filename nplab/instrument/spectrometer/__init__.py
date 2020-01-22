@@ -696,6 +696,7 @@ class SpectrometerDisplayUI(QtWidgets.QWidget,UiTools):
 
     def update_display(self, spectrum):
         #Update the graphs
+        if len(np.ravel(spectrum))>len(spectrum):# checking if it's 2d
             spectrum = np.array([[0 if np.isnan(i) else i for i in s] for s in list(spectrum)])
         else:
             spectrum= np.array([0 if np.isnan(i) else i for i in spectrum])
