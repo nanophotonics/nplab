@@ -68,6 +68,7 @@ class SpectrometerAligner(Instrument):
         self.align_to_raw_spectra=False
         self.settling_time=0.3
         self.spectrum_mask = None
+        
 #        self.step_size=Range(0.01,100.,0.5)
 #        self.tolerance=Range(0.01,10.,0.05)
 #        self.number_of_points = Range(2,20,5)

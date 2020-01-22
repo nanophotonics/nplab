@@ -7,6 +7,7 @@ Serial Instrument interface
 
 from __future__ import print_function
 #from traits.api import HasTraits, Bool, Int, Str, Button, Array, Enum, List
+from builtins import str
 import nplab
 from nplab.instrument.message_bus_instrument import MessageBusInstrument
 import threading

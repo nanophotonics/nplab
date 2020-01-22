@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import division
+from builtins import zip
+from builtins import range
+from past.utils import old_div
 import numpy as np
 # import pyfftw
 from scipy import misc
@@ -28,7 +32,7 @@ def calibration_responsiveness(input_phase, grey_level, axis=0):
     :return:
     """
     shape = np.shape(input_phase)
-    centers = [int(x / 2) for x in shape]
+    centers = [int(old_div(x, 2)) for x in shape]
     out_phase = np.zeros(shape)
     if axis == 0:
         out_phase[centers[0]:] = grey_level
@@ -48,15 +52,15 @@ def gratings(input_phase, grating_const_x=0, grating_const_y=0):
     :return:
     """
     shape = np.shape(input_phase)
-    x = np.arange(shape[1]) - int(shape[1] / 2)
-    y = np.arange(shape[0]) - int(shape[0] / 2)
+    x = np.arange(shape[1]) - int(old_div(shape[1], 2))
+    y = np.arange(shape[0]) - int(old_div(shape[0], 2))
     x, y = np.meshgrid(x, y)
 
     phase = np.zeros(shape)
     if grating_const_x != 0:
-        phase += (np.pi / grating_const_x) * x
+        phase += (old_div(np.pi, grating_const_x)) * x
     if grating_const_y != 0:
-        phase += (np.pi / grating_const_y) * y
+        phase += (old_div(np.pi, grating_const_y)) * y
 
     return input_phase + phase
 
@@ -69,8 +73,8 @@ def focus(input_phase, curvature=0):
     :return:
     """
     shape = np.shape(input_phase)
-    x = np.arange(shape[1]) - int(shape[1] / 2)
-    y = np.arange(shape[0]) - int(shape[0] / 2)
+    x = np.arange(shape[1]) - int(old_div(shape[1], 2))
+    y = np.arange(shape[0]) - int(old_div(shape[0], 2))
     x, y = np.meshgrid(x, y)
 
     phase = curvature * (x ** 2 + y ** 2)
@@ -87,8 +91,8 @@ def astigmatism(input_phase, horizontal=0, diagonal=0):
     :return:
     """
     shape = np.shape(input_phase)
-    x = np.arange(shape[1]) - int(shape[1] / 2)
-    y = np.arange(shape[0]) - int(shape[0] / 2)
+    x = np.arange(shape[1]) - int(old_div(shape[1], 2))
+    y = np.arange(shape[0]) - int(old_div(shape[0], 2))
     x, y = np.meshgrid(x, y)
     rho = np.sqrt(x ** 2 + y ** 2)
     phi = np.arctan2(x, y)
@@ -109,7 +113,7 @@ def vortexbeam(input_phase, order, angle, center=None):
     """
     shape = np.shape(input_phase)
     if center is None:
-        center = [int(x / 2) for x in shape]
+        center = [int(old_div(x, 2)) for x in shape]
     x = np.arange(shape[1]) - center[1]
     y = np.arange(shape[0]) - center[0]
     x, y = np.meshgrid(x, y)
@@ -150,14 +154,14 @@ def mraf(original_phase, target_intensity, input_field=None, mixing_ratio=0.4, s
     :return:
     """
     shp = target_intensity.shape
-    x, y = np.ogrid[-shp[1] / 2:shp[1] / 2, -shp[0] / 2:shp[0] / 2]
+    x, y = np.ogrid[old_div(-shp[1], 2):old_div(shp[1], 2), old_div(-shp[0], 2):old_div(shp[0], 2)]
     x, y = np.meshgrid(x, y)
 
     target_intensity = np.asarray(target_intensity, np.float)
     if input_field is None:
         # By default, the initial phase focuses a uniform SLM illumination onto the signal region
-        input_phase = ((x ** 2 / (shp[1] / (signal_region_size * 2 * np.sqrt(2)))) +
-                       (y ** 2 / (shp[0] / (signal_region_size * 2 * np.sqrt(2)))))
+        input_phase = ((old_div(x ** 2, (old_div(shp[1], (signal_region_size * 2 * np.sqrt(2)))))) +
+                       (old_div(y ** 2, (old_div(shp[0], (signal_region_size * 2 * np.sqrt(2)))))))
         input_field = np.exp(1j * input_phase)
     # Normalising the input field and target intensity to 1 (doesn't have to be 1, but they have to be equal)
     input_field /= np.sqrt(np.sum(np.abs(input_field)**2))
@@ -174,7 +178,7 @@ def mraf(original_phase, target_intensity, input_field=None, mixing_ratio=0.4, s
     for _ in range(iterations):
         output_field = np.fft.fft2(input_field)
         # makes sure power out = power in, so that the distribution of power in signal and noise regions makes sense
-        output_field = output_field / np.sqrt(np.prod(shp))
+        output_field = old_div(output_field, np.sqrt(np.prod(shp)))
         output_field = np.fft.fftshift(output_field)
         output_phase = np.angle(output_field)
 
@@ -230,7 +234,7 @@ def test_ifft_smoothness(alg_func, *args, **kwargs):
     """
     target = np.asarray(misc.face()[:, :, 0], np.float)
     shp = target.shape
-    x, y = np.ogrid[-shp[1] / 2:shp[1] / 2, -shp[0] / 2:shp[0] / 2]
+    x, y = np.ogrid[old_div(-shp[1], 2):old_div(shp[1], 2), old_div(-shp[0], 2):old_div(shp[0], 2)]
     x, y = np.meshgrid(x, y)
     mask = (x**2 + y**2) > (0.2 * np.min(shp))**2
     target[mask] = 0
@@ -248,7 +252,7 @@ def test_ifft_smoothness(alg_func, *args, **kwargs):
         mask = np.ones(shp, dtype=np.bool)
         mixing_ratio = 1
     elif alg_func == mraf:
-        x, y = np.ogrid[-shp[1] / 2:shp[1] / 2, -shp[0] / 2:shp[0] / 2]
+        x, y = np.ogrid[old_div(-shp[1], 2):old_div(shp[1], 2), old_div(-shp[0], 2):old_div(shp[0], 2)]
         x, y = np.meshgrid(x, y)
         signal_region_size = 0.5
         if 'signal_region_size' in kwargs:
@@ -266,13 +270,13 @@ def test_ifft_smoothness(alg_func, *args, **kwargs):
         init_phase = alg_func(0, target, *args, **kwargs)
         input_field = np.exp(1j * init_phase)
         kwargs['input_field'] = input_field
-        output = np.fft.fftshift(np.fft.fft2(np.exp(1j * init_phase))) / (np.prod(shp))
+        output = old_div(np.fft.fftshift(np.fft.fft2(np.exp(1j * init_phase))), (np.prod(shp)))
         output_int = np.abs(output) ** 2
         # print(np.sum(np.abs(output_int)), np.sum(np.abs(output_int)[mask]))
-        smth += [np.sum(np.abs(output_int - mixing_ratio*target)[mask]) / np.sum(mask)]
+        smth += [old_div(np.sum(np.abs(output_int - mixing_ratio*target)[mask]), np.sum(mask))]
         outputs += [output]
 
-    fig = plt.figure(figsize=(8*shp[1]/shp[0]*2, 8))
+    fig = plt.figure(figsize=(old_div(8*shp[1],shp[0])*2, 8))
     gs = gridspec.GridSpec(1, 2)
     gs2 = gridspec.GridSpecFromSubplotSpec(5, 6, gs[0], 0.001, 0.001)
     reindex = np.linspace(0, iterations-1, 30)
@@ -302,7 +306,7 @@ def test_ifft_basic(alg_func, *args, **kwargs):
     """
     target = np.asarray(misc.face()[:, :, 0], np.float)
     shp = target.shape
-    x, y = np.ogrid[-shp[1] / 2:shp[1] / 2, -shp[0] / 2:shp[0] / 2]
+    x, y = np.ogrid[old_div(-shp[1], 2):old_div(shp[1], 2), old_div(-shp[0], 2):old_div(shp[0], 2)]
     x, y = np.meshgrid(x, y)
     mask = (x**2 + y**2) > (0.2 * np.min(shp))**2
     target[mask] = 0
@@ -310,7 +314,7 @@ def test_ifft_basic(alg_func, *args, **kwargs):
 
     init_phase = np.zeros(target.shape)
     phase = alg_func(init_phase, target, *args, **kwargs)
-    output = np.fft.fftshift(np.fft.fft2(np.exp(1j * phase))) / (np.prod(shp))
+    output = old_div(np.fft.fftshift(np.fft.fft2(np.exp(1j * phase))), (np.prod(shp)))
 
     fig, axs = plt.subplots(2, 2, sharey=True, sharex=True, gridspec_kw=dict(wspace=0.01))
     vmin, vmax = (np.min(target), np.max(target))

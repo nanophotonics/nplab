@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+from __future__ import print_function
+from builtins import zip
+from builtins import map
 from nplab.utils.gui import QtCore, QtWidgets, uic
 import pyqtgraph as pg
 import numpy as np

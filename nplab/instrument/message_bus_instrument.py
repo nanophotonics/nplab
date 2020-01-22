@@ -10,6 +10,7 @@ This base class
 from __future__ import print_function
 #from traits.api import HasTraits, Bool, Int, Str, Button, Array, Enum, List
 #import nplab
+from past.builtins import basestring
 from builtins import str
 from builtins import zip
 from builtins import map

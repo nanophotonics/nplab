@@ -83,6 +83,7 @@ Examples
 Refer to the test() function at the end of the document for more examples.
 
 """
+from __future__ import print_function
 
 
 
@@ -2632,14 +2633,14 @@ def test():
 
     # print serial numbers of all connected cameras
     allcameras = LucamEnumCameras()
-    print("Cameras found:",
-          ", ".join(str(cam.serialnumber) for cam in allcameras))
+    print(("Cameras found:",
+          ", ".join(str(cam.serialnumber) for cam in allcameras)))
 
     # use first camera
     lucam = Lucam(1)
 
     # print detailed information about camera
-    print("Camera Properties", lucam)
+    print(("Camera Properties", lucam))
 
     # set camera to 16 bit, 4x4 binning, max framerate
     lucam.SetFormat(
@@ -2654,9 +2655,9 @@ def test():
     # get actual frame format, framerate, and bit depth
     frameformat, framerate = lucam.GetFormat()
     pixeldepth = lucam.GetTruePixelDepth()
-    print("Pixel Depth:", pixeldepth)
-    print("Framerate:", framerate)
-    print("Frame Format", frameformat)
+    print(("Pixel Depth:", pixeldepth))
+    print(("Framerate:", framerate))
+    print(("Frame Format", frameformat))
 
     print("Color correction matrix:")
     print(lucam.GetCurrentMatrix())
@@ -2754,7 +2755,7 @@ def test():
     # run a callback function during snapshot
     def snapshot_callback(context, data, size):
         data[0] = 42
-        print("Snapshot callback function:", context, data[:2], size)
+        print(("Snapshot callback function:", context, data[:2], size))
     callbackid = lucam.AddSnapshotCallback(snapshot_callback)
     image = lucam.TakeSnapshot()
     assert image[0, 0] == 42
@@ -2763,7 +2764,7 @@ def test():
     # run a callback function in streaming mode
     def streaming_callback(context, data, size):
         data[0] = 42
-        print("Streaming callback function:", context, data[:2], size)
+        print(("Streaming callback function:", context, data[:2], size))
     callbackid = lucam.AddStreamingCallback(streaming_callback)
     lucam.StreamVideoControl('start_streaming')
     time.sleep(2.0 / framerate)
@@ -2786,7 +2787,7 @@ def test():
 
     # Read user-defined non-volatile memory
     memory = lucam.PermanentBufferRead()
-    print("Non-volatile memory:", memory)
+    print(("Non-volatile memory:", memory))
 
     # close camera connection
     lucam.CameraClose()
@@ -2806,7 +2807,7 @@ def test():
     avi.Control('pause')
     avi.SetPositionFrame(avi.GetFrameCount() // 2)
     avi.Control('stop')
-    print("AVI Properties", avi)
+    print(("AVI Properties", avi))
     print("Done")
 
 
