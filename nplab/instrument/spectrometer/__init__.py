@@ -348,13 +348,14 @@ class Spectrometer(Instrument):
 
 class Spectrometers(Instrument):
     def __init__(self, spectrometer_list):
-        assert False not in [isinstance(s, Spe.conctrometer) for s in spectrometer_list],\
+        assert False not in [isinstance(s, Spectrometer) for s in spectrometer_list],\
             'an invalid spectrometer was supplied'
         super(Spectrometers, self).__init__()
         self.spectrometers = spectrometer_list
         self.num_spectrometers = len(spectrometer_list)
         self._pool = ThreadPool(processes=self.num_spectrometers)
         self._wavelengths = None
+        filename = DumbNotifiedProperty('spectra')
 
     def __del__(self):
         self._pool.close()
@@ -403,7 +404,7 @@ class Spectrometers(Instrument):
         """
         spectra = self.read_spectra() if spectra is None else spectra
         metadata_list = self.get_metadata_list()
-        g = self.create_data_group('spectra',attrs=attrs) # create a uniquely numbered group in the default place
+        g = self.create_data_group(self.filename,attrs=attrs) # create a uniquely numbered group in the default place
         for spectrum,metadata in zip(spectra,metadata_list):
             g.create_dataset('spectrum_%d',data=spectrum,attrs=metadata)
             
@@ -649,6 +650,7 @@ class SpectrometerDisplayUI(QtWidgets.QWidget,UiTools):
 
         self.period = 0.2
         self.filename_lineEdit.textChanged.connect(self.filename_changed_ui)
+       
         register_for_property_changes(self.spectrometer,'filename',self.filename_changed)
     def button_pressed(self, *args, **kwargs):
         sender = self.sender()
@@ -694,7 +696,6 @@ class SpectrometerDisplayUI(QtWidgets.QWidget,UiTools):
 
     def update_display(self, spectrum):
         #Update the graphs
-        if len(spectrum.shape)>1:
             spectrum = np.array([[0 if np.isnan(i) else i for i in s] for s in list(spectrum)])
         else:
             spectrum= np.array([0 if np.isnan(i) else i for i in spectrum])
@@ -710,7 +711,8 @@ class SpectrometerDisplayUI(QtWidgets.QWidget,UiTools):
             self.plotdata = []
             if isinstance(self.spectrometer, Spectrometers):
                 for spectrometer_nom in range(self.spectrometer.num_spectrometers):
-                    self.plotdata.append(self.plots[spectrometer_nom].plot(x = wavelengths[spectrometer_nom],y = spectrum[spectrometer_nom],pen =(spectrometer_nom,len(list(range(self.spectrometer.num_spectrometers))))))
+                    self.plotdata.append(self.plots[spectrometer_nom].plot(x = wavelengths[spectrometer_nom],y \
+                    = spectrum[spectrometer_nom],pen =(spectrometer_nom,len(list(range(self.spectrometer.num_spectrometers))))))
             else:                
                 self.plotdata.append(self.plots[0].plot(x = wavelengths,y = spectrum,pen =(0,len(list(range(self.spectrometer.num_spectrometers))))))
         else:

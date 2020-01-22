@@ -12,7 +12,7 @@ from nplab.ui.ui_tools import UiTools
 from nplab.utils.gui import QtWidgets, uic
 import os
 class FW212C(Instrument):
-    def __init__(self, address = 'ASRL4::INSTR'):
+    def __init__(self, address = 'ASRLCOM7::INSTR'):
         self.visa_address = str(address)
         self.baud_rate=115200
         self.num_position=12
