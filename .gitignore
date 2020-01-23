@@ -68,5 +68,6 @@ docs/nplab.*.rst
 .DS_Store
 nplab/ui/open_browser_cmd_ee306.bat
 
+.vscode/
+env/
 nplab/instrument/camera/camera_with_location_car72.py
-*.bak
