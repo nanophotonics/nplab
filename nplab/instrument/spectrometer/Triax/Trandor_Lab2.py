@@ -51,8 +51,8 @@ class Trandor(Andor):#Andor
     ''' 
     def __init__(self,White_Shutter=None):
         
-        print '---------------------------'
-        print 'Triax Information:'
+        # print '__________________'
+        # print 'Triax Information:'
 
         super(Trandor,self).__init__()
         self.triax = Triax('GPIB0::1::INSTR',Calibration_Arrays,CCD_Size) #Initialise triax
@@ -61,10 +61,10 @@ class Trandor(Andor):#Andor
         self.CoolerON()
         self.triax.ccd_size = CCD_Size
 	
-        print '---------------------------'
-        print 'Current Grating:',self.triax.Grating()
-        print 'Current Slit Width:', self.triax.Slit(),'um'
-        print '---------------------------'
+        # print '______________________'
+        # print 'Current Grating:',self.triax.Grating()
+        # print 'Current Slit Width:', self.triax.Slit(),'um'
+        # print '______________________'
         self.Notch_Filters_Tested=True
         
 

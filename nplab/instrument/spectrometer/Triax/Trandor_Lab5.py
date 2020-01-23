@@ -4,6 +4,8 @@ jpg66
 from __future__ import division
 from __future__ import print_function
 
+from builtins import input
+from builtins import str
 from past.utils import old_div
 from nplab.instrument.spectrometer.Triax.__init__ import Triax
 import numpy as np
@@ -47,7 +49,7 @@ class Trandor(Andor):#Andor
     ''' 
     def __init__(self, White_Shutter=None, triax_address = 'GPIB0::1::INSTR', use_shifts = False, laser = '_633'):
         
-        print('---------------------------')
+        # print('_____________________')
         print ('Triax Information:')
 
         super(Trandor,self).__init__()
@@ -58,10 +60,10 @@ class Trandor(Andor):#Andor
         self.triax.ccd_size = CCD_Size
         self.use_shifts = use_shifts
         self.laser = laser 
-        print ('---------------------------')
+        # print ('_____________________')
         print ('Current Grating:'+str(self.triax.Grating()))
         print ('Current Slit Width:'+str(self.triax.Slit())+'um')
-        print ('---------------------------')
+        # print ('_____________________')
         
 
     def Grating(self, Set_To=None):
@@ -81,7 +83,7 @@ class Trandor(Andor):#Andor
     def Test_Notch_Alignment(self):
         	Accepted=False
         	while Accepted is False:
-        		Input=raw_input('WARNING! A slight misalignment of the narrow band notch filters could be catastrophic! Has the laser thoughput been tested? [Yes/No]')
+        		Input=input('WARNING! A slight misalignment of the narrow band notch filters could be catastrophic! Has the laser thoughput been tested? [Yes/No]')
         		if Input.upper() in ['Y','N','YES','NO']:
         			Accepted=True
         			if len(Input)>1:
