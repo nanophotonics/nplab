@@ -460,10 +460,7 @@ class AndorBase(object):
         self.set_andor_parameter('SetTemperature', -90)
         self.set_andor_parameter('CoolerMode', 0)
         self.set_andor_parameter('FanMode', 0)
-        if self.Capabilities['EMGainCapability'] > 1:
-            self.set_andor_parameter('OutAmp', 1)
-        else:
-            self.set_andor_parameter('OutAmp', 0)
+        self.set_andor_parameter('OutAmp', 1) # This means EMCCD off - this is the default mode
         self.cooler = 1
 
     @locked_action
