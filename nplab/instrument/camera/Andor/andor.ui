@@ -677,6 +677,42 @@
      </property>
     </widget>
    </item>
+   <item row="14" column="2">
+    <widget class="QLabel" name="label_4">
+     <property name="text">
+      <string>Temperature</string>
+     </property>
+    </widget>
+   </item>
+   <item row="15" column="2" rowspan="2" colspan="2">
+    <layout class="QHBoxLayout" name="horizontalLayout_2">
+     <item>
+      <widget class="QLCDNumber" name="lcdNumber">
+       <property name="digitCount">
+        <number>3</number>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <layout class="QVBoxLayout" name="verticalLayout_2">
+       <item>
+        <widget class="QPushButton" name="read_temperature_pushButton">
+         <property name="text">
+          <string>Read</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="live_temperature_checkBox">
+         <property name="text">
+          <string>Live</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+    </layout>
+   </item>
   </layout>
  </widget>
  <resources/>
