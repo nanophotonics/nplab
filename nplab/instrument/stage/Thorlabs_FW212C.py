@@ -78,7 +78,7 @@ class FW212C_UI(QtWidgets.QWidget, UiTools):
         super(FW212C_UI, self).__init__()
         self.fw = fw
         uic.loadUi(os.path.join(os.path.dirname(__file__), 'thorlabs_fw212c.ui'), self)
-        for button in range(1,13):
+        for button in range(1,13):#1-12
             eval('self.radioButton_'+str(button)+'.clicked.connect(self.button_pressed)')
     def button_pressed(self):
         '''buttons are called radioButton_x'''
