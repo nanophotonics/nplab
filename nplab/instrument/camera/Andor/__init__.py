@@ -11,7 +11,7 @@ import os
 import numpy as np
 from nplab.ui.ui_tools import UiTools
 from weakref import WeakSet
-
+import time
 
 class Andor(CameraRoiScale, AndorBase):
 
@@ -130,7 +130,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         super(AndorUI, self).__init__()
         self.Andor = andor
         self.DisplayWidget = None
-
+        self.temperature_display_thread = DisplayThread(self)
         uic.loadUi((os.path.dirname(__file__) + '/andor.ui'), self)
 
         self._setup_signals()
@@ -426,7 +426,7 @@ class DisplayThread(QtCore.QThread):
                 continue
             else:
                 t0 = time.time()
-            self.ready.emit(p)
+            self.ready.emit(T)
             if self.single_shot:
                 self.single_shot = False               
                 break
