@@ -183,6 +183,10 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         self.pushButtonTakeBG.clicked.connect(self.take_background)
         self.checkBoxRemoveBG.stateChanged.connect(self.remove_background)
         self.referesh_groups_pushButton.clicked.connect(self.update_groups_box)
+        
+        self.read_temperature_pushButton.clicked.connect(self.temperature_gui)
+        self.live_temperature_checkBox.clicked.connect(self.temperature_gui)
+        self.temperature_display_thread.ready.connect(self.update_display)
 
     def init_gui(self):
         trig_modes = {0: 0, 1: 1, 6: 2}
