@@ -406,7 +406,27 @@ class AndorUI(QtWidgets.QWidget, UiTools):
 
     def Abort(self):
         self.Andor.live_view = False
+class DisplayThread(QtCore.QThread):
+    ready = QtCore.Signal(float)
+    def __init__(self, parent):
+        super(DisplayThread, self).__init__()
+        self.parent = parent
+        self.single_shot = False
+        self.refresh_rate = 10.
 
+    def run(self):
+        t0 = time.time()
+        while self.parent.live_button.isChecked() or self.single_shot:
+            T = self.parent.GetTemperature()
+            if time.time()-t0 < 1./self.refresh_rate:
+                continue
+            else:
+                t0 = time.time()
+            self.ready.emit(p)
+            if self.single_shot:
+                self.single_shot = False               
+                break
+        self.finished.emit()
 
 if __name__ == '__main__':
     andor = Andor()
