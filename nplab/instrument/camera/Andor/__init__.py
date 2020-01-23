@@ -206,7 +206,10 @@ class AndorUI(QtWidgets.QWidget, UiTools):
 
     def cooler(self):
         self.Andor.cooler = self.checkBoxCooler.isChecked()
-
+    def temperature_gui(self):    
+        if self.sender() == self.read_temperature_pushButton:
+                self.temperature_display_thread.single_shot = True
+        self.temperature_display_thread.start()
     def acquisition_mode(self):
         available_modes = ['Single', 'Accumulate', 'Kinetic', 'Fast Kinetic']
         currentMode = self.comboBoxAcqMode.currentText()
