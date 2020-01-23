@@ -55,8 +55,6 @@ class Trandor(Andor):#Andor
         super(Trandor,self).__init__()
         self.triax = Triax(triax_address, Calibration_Arrays,CCD_Size) #Initialise triax
         self.White_Shutter=White_Shutter
-        self.SetParameter('SetTemperature',-90)  #Turn on andor cooler
-        self.CoolerON()
         self.triax.ccd_size = CCD_Size
         self.use_shifts = use_shifts
         self.laser = laser 
