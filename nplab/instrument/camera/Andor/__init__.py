@@ -186,7 +186,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         
         self.read_temperature_pushButton.clicked.connect(self.temperature_gui)
         self.live_temperature_checkBox.clicked.connect(self.temperature_gui)
-        self.temperature_display_thread.ready.connect(self.update_display)
+        self.temperature_display_thread.ready.connect(self.update_temperature_display)
 
     def init_gui(self):
         trig_modes = {0: 0, 1: 1, 6: 2}
@@ -214,6 +214,10 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         if self.sender() == self.read_temperature_pushButton:
                 self.temperature_display_thread.single_shot = True
         self.temperature_display_thread.start()
+    def update_temperature_display(self, temperature):
+        self.temperature_lcdNumber.display(float(temperature))
+    def get_temperature(self):
+        return self.Andor.CurrentTemperature
     def acquisition_mode(self):
         available_modes = ['Single', 'Accumulate', 'Kinetic', 'Fast Kinetic']
         currentMode = self.comboBoxAcqMode.currentText()
@@ -420,8 +424,8 @@ class DisplayThread(QtCore.QThread):
 
     def run(self):
         t0 = time.time()
-        while self.parent.live_button.isChecked() or self.single_shot:
-            T = self.parent.GetTemperature()
+        while self.parent.live_temperature_checkBox.isChecked() or self.single_shot:
+            T = self.parent.get_temperature()
             if time.time()-t0 < 1./self.refresh_rate:
                 continue
             else:

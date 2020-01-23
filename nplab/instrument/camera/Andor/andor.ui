@@ -687,7 +687,7 @@
    <item row="15" column="2" rowspan="2" colspan="2">
     <layout class="QHBoxLayout" name="horizontalLayout_2">
      <item>
-      <widget class="QLCDNumber" name="lcdNumber">
+      <widget class="QLCDNumber" name="temperature_lcdNumber">
        <property name="digitCount">
         <number>3</number>
        </property>
