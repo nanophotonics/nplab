@@ -10,6 +10,7 @@ import numpy as np
 from nplab.utils.notified_property import NotifiedProperty
 from nplab.instrument.camera.Andor import Andor
 import types
+import future
 
 Calibration_Arrays=[]
 
@@ -38,7 +39,7 @@ Calibration_Arrays=np.array(Calibration_Arrays)
 CCD_Size=1600 #Size of ccd in pixels
 
 #Make a deepcopy of the andor capture function, to add a white light shutter close command to if required later
-Andor_Capture_Function=types.FunctionType(Andor.capture.func_code, Andor.capture.func_globals, 'Unimportant_Name',Andor.capture.func_defaults, Andor.capture.func_closure)
+Andor_Capture_Function=types.FunctionType(Andor.capture.__code__, Andor.capture.__globals__, 'Unimportant_Name',Andor.capture.__defaults__, Andor.capture.__closure__)
 
 class Trandor(Andor):#Andor
     
@@ -46,8 +47,8 @@ class Trandor(Andor):#Andor
     ''' 
     def __init__(self, White_Shutter=None, triax_address = 'GPIB0::1::INSTR', use_shifts = False, laser = '_633'):
         
-        print '---------------------------'
-        print 'Triax Information:'
+        print('---------------------------')
+        print ('Triax Information:')
 
         super(Trandor,self).__init__()
         self.triax = Triax(triax_address, Calibration_Arrays,CCD_Size) #Initialise triax
@@ -57,10 +58,10 @@ class Trandor(Andor):#Andor
         self.triax.ccd_size = CCD_Size
         self.use_shifts = use_shifts
         self.laser = laser 
-        print '---------------------------'
-        print 'Current Grating:',self.triax.Grating()
-        print 'Current Slit Width:', self.triax.Slit(),'um'
-        print '---------------------------'
+        print ('---------------------------')
+        print ('Current Grating:'+str(self.triax.Grating()))
+        print ('Current Slit Width:'+str(self.triax.Slit())+'um')
+        print ('---------------------------')
         
 
     def Grating(self, Set_To=None):
@@ -86,10 +87,10 @@ class Trandor(Andor):#Andor
         			if len(Input)>1:
         				Input=Input.upper()[0]
         	if Input.upper()=='Y':
-        		print 'You are now free to capture spectra'
+        		print ('You are now free to capture spectra')
         		self.Notch_Filters_Tested=True
         	else:
-        		print 'The next spectrum capture will be allowed for you to test this. Please LOWER the laser power and REDUCE the integration time.'
+        		print ('The next spectrum capture will be allowed for you to test this. Please LOWER the laser power and REDUCE the integration time.')
         		self.Notch_Filters_Tested=None
     def Set_Center_Wavelength(self, wavelength):
         ''' backwards compatability with lab codes that use trandor.Set_Center_Wavelength'''

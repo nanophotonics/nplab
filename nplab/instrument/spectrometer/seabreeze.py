@@ -423,8 +423,6 @@ class OceanOpticsControlUI(SpectrometerControlUI):
     def __init__(self, spectrometer):
         assert isinstance(spectrometer, OceanOpticsSpectrometer), 'spectrometer must be an OceanOpticsSpectrometer'
         super(OceanOpticsControlUI, self).__init__(spectrometer,os.path.join(os.path.dirname(__file__),'ocean_optics_controls.ui'))
-
-
 #        self.tec_temperature.setValidator(QtGui.QDoubleValidator())
         # self.tec_temperature.textChanged.connect(self.check_state)
         # self.tec_temperature.textChanged.connect(self.update_param)
@@ -436,13 +434,16 @@ class OceanOpticsControlUI(SpectrometerControlUI):
             print(e, 'removing cooling functionality')
             tec = False
         if tec:
-            self.set_tec_temperature_lineEdit.textChanged.connect(self.gui_set_tec_temperature)
+            pass
+            self.set_tec_temperature_pushButton.clicked.connect(self.gui_set_tec_temperature)
             self.read_tec_temperature_pushButton.clicked.connect(self.gui_read_tec_tempeature)
             self.enable_tec.stateChanged.connect(self.update_enable_tec)
             self.enable_tec.setChecked(self.spectrometer.enable_tec)
             initial_temperature = np.round(self.spectrometer.get_tec_temperature(), decimals = 1)
             self.tec_temperature_lcdNumber.display(float(initial_temperature))
             self.set_tec_temperature_LineEdit.setText(str(initial_temperature))
+            self.update_enable_tec(0) # sometimes helps enable cooling
+            self.update_enable_tec(1)
         # self.read_tec.clicked.connect(self.update_tec)
         else:
             self.set_tec_temperature_pushButton.setVisible(False)
@@ -522,8 +523,8 @@ if __name__ == "__main__":
     print(list_spectrometers(), type(list_spectrometers()))
     # spec1 = OceanOpticsSpectrometer(1)
     # # spec1.show_gui(blocking = False)
-    # spec2 = OceanOpticsSpectrometer(0)
-    # spec2.show_gui(blocking = False)
-    main()
+    spec2 = OceanOpticsSpectrometer(0)
+    spec2.show_gui(blocking = False)
+#    main()
     # specs = Spectrometers([spec1, spec2])
     # specs.show_gui(blocking = False)
