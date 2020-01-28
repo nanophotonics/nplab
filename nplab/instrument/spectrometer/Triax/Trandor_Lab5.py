@@ -7,7 +7,7 @@ from __future__ import print_function
 from builtins import input
 from builtins import str
 from past.utils import old_div
-from nplab.instrument.spectrometer.Triax.__init__ import Triax
+from nplab.instrument.spectrometer.Triax import Triax
 import numpy as np
 from nplab.utils.notified_property import NotifiedProperty
 from nplab.instrument.camera.Andor import Andor

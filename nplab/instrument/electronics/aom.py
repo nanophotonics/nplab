@@ -1,3 +1,9 @@
+from __future__ import division
+from __future__ import print_function
+from builtins import str
+from builtins import range
+from builtins import object
+from past.utils import old_div
 import visa
 import numpy as np
 import time
@@ -9,7 +15,7 @@ def Sigmoid(x,Shift=0.68207277,Scale=8.49175969):
     Output=(x-Shift)*Scale
     Output=np.exp(-Output)+1
     Output=1./Output
-    return (Output-Zero)/(One-Zero)
+    return old_div((Output-Zero),(One-Zero))
     
 def Inverse_Sigmoid(x,Shift=0.68207277,Scale=8.49175969):
     Zero=1./(np.exp(Shift*Scale)+1)
@@ -20,8 +26,8 @@ def Inverse_Sigmoid(x,Shift=0.68207277,Scale=8.49175969):
     Output+=Shift 
     return Output
 
-class AOM: 
-    def __init__(self,address='USB0::0x0957::0x0407::MY44037993::0::INSTR'):
+class AOM(object): 
+    def __init__(self,address = 'USB0::0x0957::0x0407::MY44037993::0::INSTR'):
         rm = visa.ResourceManager()
         self.Power_Supply=rm.open_resource(address)
         self.mode = 'R'
@@ -97,7 +103,7 @@ class AOM:
         
         
         if y[0]>Power or y[1]<Power:
-            print 'Out of Range!'
+            print('Out of Range!')
             return
         
         for i in range(2):
@@ -116,11 +122,11 @@ class AOM:
         Error=np.inf
         while Step<Steps or Error>Tolerance:
             Step+=1
-            print 'Error:',str(round(Error,2)),'uW'
+            print('Error:',str(round(Error,2)),'uW')
             if x[1]!=x[0]:
-                m=(y[1]-y[0])/(x[1]-x[0])
+                m=old_div((y[1]-y[0]),(x[1]-x[0]))
                 c=y[0]-(m*x[0])
-                Guess=(Power-c)/m
+                Guess=old_div((Power-c),m)
                 self.Power(Guess)
                 Reading=Take_Reading()
                 Error=np.abs(Reading-Power)
@@ -135,9 +141,9 @@ class AOM:
                 Step=np.inf 
                 Error=0
         if x[1]!=x[0]:
-            m=(y[1]-y[0])/(x[1]-x[0])
+            m=old_div((y[1]-y[0]),(x[1]-x[0]))
             c=y[0]-(m*x[0])
-            Guess=(Power-c)/m
+            Guess=old_div((Power-c),m)
         else:
             Guess=x[0]
         self.Power(Guess)

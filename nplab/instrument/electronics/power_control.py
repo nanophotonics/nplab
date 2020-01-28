@@ -15,8 +15,8 @@ from qtpy import QtWidgets, uic
 from nplab.ui.ui_tools import UiTools
 from nplab.experiment.gui import run_function_modally
 from nplab.instrument import Instrument
-from AOM import AOM as Aom
-from Rotation_Stage import Filter_Wheel
+from nplab.instrument.electronics.aom import AOM as Aom
+from nplab.instrument.stage.Thorlabs_ELL8K import Thorlabs_ELL8K as RStage
 
 
 class PowerControl(Instrument):
@@ -37,7 +37,7 @@ class PowerControl(Instrument):
                          
         else: raise ValueError('power_controller must be AOM or Filter Wheel')
         
-        if isinstance(self.pc, Filter_Wheel): 
+        if isinstance(self.pc, RStage): 
             self.min_param = 260
             self.max_param = 500
         if isinstance(self.pc, Aom):
@@ -72,15 +72,15 @@ class PowerControl(Instrument):
         else: print('wavelength not corrected for')
     @property
     def param(self):
-        if isinstance(self.pc, Filter_Wheel):
-            p = int(self.pc.Stage.Get_Position().split(' ')[-1])
+        if isinstance(self.pc, RStage):
+            p = int(self.pc.Get_Position().split(' ')[-1])
             return 0. if p>500 else np.round(p, decimals = 2)
         if isinstance(self.pc, Aom):
             return self.pc.Get_Power()               
     @param.setter
     def param(self,value):
-        if isinstance(self.pc, Filter_Wheel):        
-            self.pc.Stage.Rotate_To(value)     
+        if isinstance(self.pc, RStage):        
+            self.pc.move(value)     
         if isinstance(self.pc, Aom):
             self.pc.Power(value) 
     @property
@@ -89,7 +89,7 @@ class PowerControl(Instrument):
 
     @property
     def points(self):
-        if isinstance(self.pc, Filter_Wheel):        
+        if isinstance(self.pc, RStage):        
             return np.logspace(0,np.log10(self.max_param-self.min_param),self.number_points)+self.min_param
         if isinstance(self.pc, Aom):
             return np.linspace(self.min_param,self.max_param,num = self.number_points, endpoint = True) 
@@ -97,7 +97,7 @@ class PowerControl(Instrument):
     def Calibrate_Power(self, update_progress=lambda p:p):
         attrs = {}       
         if self.measured_power is not None: attrs['Measured power at maxpoint'] = self.measured_power
-        if isinstance(self.pc, Filter_Wheel):
+        if isinstance(self.pc, RStage):
             attrs['Angles']  = self.points  
     
         if isinstance(self.pc, Aom):
@@ -142,7 +142,7 @@ class PowerControl(Instrument):
                     print('This calibration doesn\'t exist!')
                     return
                 self.power_calibration = {'ref_powers' : power_calibration_group['ref_powers']}
-                if isinstance(self.pc, Filter_Wheel):self.power_calibration.update({'Angles' : power_calibration_group.attrs['Angles']})
+                if isinstance(self.pc, RStage):self.power_calibration.update({'Angles' : power_calibration_group.attrs['Angles']})
                 if isinstance(self.pc, Aom): self.power_calibration.update({'Voltages' : power_calibration_group.attrs['Voltages']})
                 self.power_calibration.update({'parameters' : power_calibration_group['parameters']})
                 return
@@ -152,7 +152,7 @@ class PowerControl(Instrument):
             for name, group in list(search_in.items()) \
             if name.startswith('Power_Calibration') and (name.split('_')[-2] == laser[1:])])[1]
             self.power_calibration = {'ref_powers' : power_calibration_group['ref_powers']} 
-            if isinstance(self.pc, Filter_Wheel):
+            if isinstance(self.pc, RStage):
                 self.power_calibration.update({'Angles' : power_calibration_group.attrs['Angles']})
                 self.update_config('Angles'+self.laser, power_calibration_group.attrs['Angles'])
             if isinstance(self.pc, Aom):
@@ -174,7 +174,7 @@ class PowerControl(Instrument):
         return self.pometer.power
     @power.setter
     def power(self, value):
-        if self.isinstance(self.pc, Filter_Wheel):
+        if self.isinstance(self.pc, RStage):
             self.param = self.Power_to_Voltage(value)
         if isinstance(self.pc, Aom):
             self.param = self.Power_to_Angle(value)
@@ -228,16 +228,16 @@ class PowerControl_UI(QtWidgets.QWidget,UiTools):
 if __name__ == '__main__': 
 
     from nplab.instrument.shutter.BX51_uniblitz import Uniblitz
-    from mine.Lab_5.thorlabs_pm1000 import Thorlabs_powermeter
+    from nplab.instrument.electronics.thorlabs_pm100 import Thorlabs_powermeter
     from nplab.instrument.shutter.thorlabs_sc10 import ThorLabsSC10
     from nplab import datafile    
    
-    lutter = ThorLabsSC10('COM30')
-    FW = Filter_Wheel() 
+    lutter = ThorLabsSC10('COM12')
+    FW = RStage() 
     lutter.set_mode(1)
     aom = Aom()
     pometer = Thorlabs_powermeter()
-    wutter = Uniblitz("COM8")
+    wutter = Uniblitz("COM4")
     PC = PowerControl(FW, wutter, lutter, pometer)
     PC.show_gui(blocking = False)
     pometer.show_gui(blocking = False)

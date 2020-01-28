@@ -420,7 +420,7 @@ class DisplayThread(QtCore.QThread):
         super(DisplayThread, self).__init__()
         self.parent = parent
         self.single_shot = False
-        self.refresh_rate = 10.
+        self.refresh_rate = 1. # every second
 
     def run(self):
         t0 = time.time()

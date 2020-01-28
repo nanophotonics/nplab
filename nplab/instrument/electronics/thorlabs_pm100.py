@@ -5,7 +5,7 @@ Created on Thu Dec 19 16:24:49 2019
 @author: ee306
 """
 import numpy as np
-from mine.Lab_5.power_meter import PowerMeter
+from nplab.instrument.electronics.power_meter import PowerMeter
 #from nplab.instrument.electronics.ThorlabPM100_powermeter import ThorlabsPM100
 from ThorlabsPM100 import ThorlabsPM100
 import visa
