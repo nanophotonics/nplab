@@ -10,6 +10,7 @@ from builtins import str
 from builtins import range
 from nplab.instrument import Instrument
 from ThorlabsPM100 import ThorlabsPM100
+from nplab.instrument.electronics.power_meter import PowerMeter
 import visa
 import numpy as np
 from nplab.ui.ui_tools import QuickControlBox
@@ -36,7 +37,7 @@ class ThorPM100(ThorlabsPM100,Instrument):
         values =[]
         for i in range(num_averages):
             values.append(self.read)
-        return np.average(values)
+        return np.median(values)
     
     def read_average_power(self):
         """Return the average power including a calibration """
@@ -66,4 +67,21 @@ class ThorlabsPM100_widget(QuickControlBox):
         self.add_lineedit('Power')
       #  self.controls['average_read'].setReadOnly(True)
         self.auto_connect_by_name(controlled_object = self.power_meter)
+
+class Thorlabs_powermeter(ThorPM100, PowerMeter):
+    def __init__(self, address = 'USB0::0x1313::0x807B::17121118::INSTR'):
+        rm = visa.ResourceManager()
+        instr = rm.open_resource(address, timeout = 0.1)       
+        PowerMeter.__init__(self)
+        ThorPM100.__init__(self, num_averages = 20, address = 'USB0::0x1313::0x807B::17121118::INSTR')
+        
+    def read_power(self):
+        return self.read_average()*1000#mW
+    def get_qt_ui(self):
+        return PowerMeter.get_qt_ui(self)
     
+
+if __name__ == '__main__':
+    pm = Thorlabs_powermeter()
+    pm.show_gui(blocking = False)
+       
