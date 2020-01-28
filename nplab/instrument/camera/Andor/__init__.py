@@ -11,7 +11,7 @@ import os
 import numpy as np
 from nplab.ui.ui_tools import UiTools
 from weakref import WeakSet
-
+import time
 
 class Andor(CameraRoiScale, AndorBase):
 
@@ -130,7 +130,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         super(AndorUI, self).__init__()
         self.Andor = andor
         self.DisplayWidget = None
-
+        self.temperature_display_thread = DisplayThread(self)
         uic.loadUi((os.path.dirname(__file__) + '/andor.ui'), self)
 
         self._setup_signals()
@@ -183,6 +183,10 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         self.pushButtonTakeBG.clicked.connect(self.take_background)
         self.checkBoxRemoveBG.stateChanged.connect(self.remove_background)
         self.referesh_groups_pushButton.clicked.connect(self.update_groups_box)
+        
+        self.read_temperature_pushButton.clicked.connect(self.temperature_gui)
+        self.live_temperature_checkBox.clicked.connect(self.temperature_gui)
+        self.temperature_display_thread.ready.connect(self.update_temperature_display)
 
     def init_gui(self):
         trig_modes = {0: 0, 1: 1, 6: 2}
@@ -206,7 +210,14 @@ class AndorUI(QtWidgets.QWidget, UiTools):
 
     def cooler(self):
         self.Andor.cooler = self.checkBoxCooler.isChecked()
-
+    def temperature_gui(self):    
+        if self.sender() == self.read_temperature_pushButton:
+                self.temperature_display_thread.single_shot = True
+        self.temperature_display_thread.start()
+    def update_temperature_display(self, temperature):
+        self.temperature_lcdNumber.display(float(temperature))
+    def get_temperature(self):
+        return self.Andor.CurrentTemperature
     def acquisition_mode(self):
         available_modes = ['Single', 'Accumulate', 'Kinetic', 'Fast Kinetic']
         currentMode = self.comboBoxAcqMode.currentText()
@@ -403,7 +414,27 @@ class AndorUI(QtWidgets.QWidget, UiTools):
 
     def Abort(self):
         self.Andor.live_view = False
+class DisplayThread(QtCore.QThread):
+    ready = QtCore.Signal(float)
+    def __init__(self, parent):
+        super(DisplayThread, self).__init__()
+        self.parent = parent
+        self.single_shot = False
+        self.refresh_rate = 10.
 
+    def run(self):
+        t0 = time.time()
+        while self.parent.live_temperature_checkBox.isChecked() or self.single_shot:
+            T = self.parent.get_temperature()
+            if time.time()-t0 < 1./self.refresh_rate:
+                continue
+            else:
+                t0 = time.time()
+            self.ready.emit(T)
+            if self.single_shot:
+                self.single_shot = False               
+                break
+        self.finished.emit()
 
 if __name__ == '__main__':
     andor = Andor()
