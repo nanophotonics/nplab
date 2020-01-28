@@ -234,7 +234,7 @@ class PowerControl_UI(QtWidgets.QWidget,UiTools):
 if __name__ == '__main__': 
 
     from nplab.instrument.shutter.BX51_uniblitz import Uniblitz
-    from nplab.instrument.electronics.ThorlabPM100_powermeter import Thorlabs_powermeter
+    from nplab.instrument.electronics.thorlabs_pm100 import Thorlabs_powermeter
     from nplab.instrument.shutter.thorlabs_sc10 import ThorLabsSC10
     from nplab import datafile    
    
