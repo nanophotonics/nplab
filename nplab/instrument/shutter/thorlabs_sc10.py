@@ -40,7 +40,7 @@ class ThorLabsSC10(Shutter, serial.SerialInstrument):
     def __init__(self, port=None):
         serial.SerialInstrument.__init__(self, port=port)
         Shutter.__init__(self)
-        self.ignore_echo = False     
+        self.ignore_echo = True     
         self._state = 'Closed'  # usually the case      
         self.get_state(report_success = True) # overwrites self._state if communication succeeds     
             

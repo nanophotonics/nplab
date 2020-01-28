@@ -54,6 +54,7 @@ class PowerControl(Instrument):
         super(PowerControl, self).__init__()
         self._initiate_pc()
         self.pometer = power_meter
+        self.number_points = 50
   
     def _initiate_pc(self):
         if isinstance(self.pc, Aom):            
@@ -104,6 +105,7 @@ class PowerControl(Instrument):
             attrs['Voltages'] = self.points
         attrs['x_axis'] = self.points
         attrs['parameters'] = self.points
+        attrs['wavelengths'] = self.points
 
         powers = []
         
@@ -116,11 +118,11 @@ class PowerControl(Instrument):
             powers = np.append(powers,self.pometer.power)
             update_progress(counter)
         group = self.create_data_group('Power_Calibration{}_%d'.format(self.laser), attrs = attrs)
-        group.create_dataset('measured_powers',data=powers)
+        group.create_dataset('measured_powers',data=powers, attrs = attrs)
         if self.measured_power is None:
             group.create_dataset('ref_powers',data=powers, attrs = attrs)
         else:
-            group.create_dataset('ref_powers',data=( old_div(powers*self.measured_power,max(powers))), attrs = attrs)
+            group.create_dataset('ref_powers',data=(old_div(powers*self.measured_power,max(powers))), attrs = attrs)
         self.lutter.close_shutter()
         self._set_to_midpoint()
         self.wutter.open_shutter()
@@ -194,6 +196,7 @@ class PowerControl_UI(QtWidgets.QWidget,UiTools):
         uic.loadUi(os.path.join(os.path.dirname(__file__), 'power_control.ui'), self)
         self.PC = PC         
         self.SetupSignals()
+        self.number_points_spinBox.setValue(self.PC.number_points)
         
     def SetupSignals(self):
         self.pushButton_calibrate_power.clicked.connect(self.Calibrate_Power_gui)             
@@ -204,7 +207,8 @@ class PowerControl_UI(QtWidgets.QWidget,UiTools):
         self.laser_textBrowser.setPlainText('Laser: '+self.PC.laser[1:])    
         self.pushButton_set_param.clicked.connect(self.set_param)
         self.doubleSpinBox_measured_power.valueChanged.connect(self.update_measured_power)
-        self.pushButton_set_power.clicked.connect(self.set_power_gui)        
+        self.pushButton_set_power.clicked.connect(self.set_power_gui)  
+        self.number_points_spinBox.valueChanged.connect(self.update_number_points)
      
     def update_min_max_params(self):
         self.PC.min_param = self.doubleSpinBox_min_param.value()
@@ -222,6 +226,8 @@ class PowerControl_UI(QtWidgets.QWidget,UiTools):
             self.PC.param = self.doubleSpinBox_set_input_param.value()
     def set_power_gui(self):
         self.PC.power = float(self.doubleSpinBox_set_power.value())
+    def update_number_points(self):
+        self.PC.number_points = self.number_points_spinBox.value()
     def Calibrate_Power_gui(self):
         run_function_modally(self.PC.Calibrate_Power, progress_maximum = len(self.PC.points))
     

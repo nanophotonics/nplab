@@ -28,7 +28,8 @@ class Thorlabs_powermeter(ThorlabsPM100, PowerMeter):
             except:
                 Fail+=1
             if Fail==10:
-                raise Exception('Restart power meter')
+                print('Restart power meter')
+                break
         return np.median(Output)*1000 # mW
     
 
