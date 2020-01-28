@@ -211,7 +211,7 @@ class PowerControl_UI(QtWidgets.QWidget,UiTools):
         self.PC.max_param = self.doubleSpinBox_max_param.value()
         if self.PC.laser == '_633' and self.PC.max_param>1:
             print('voltages over 1 not allowed!')
-            self.PC.maxvolt = 1
+            self.PC.max_param = 1
     def update_measured_power(self):
         self.PC.measured_power = float(self.doubleSpinBox_measured_power.value())
     def set_param(self):

@@ -68,7 +68,9 @@ class Andor(CameraRoiScale, AndorBase):
             return True, self.CurImage
         except Exception as e:
             self._logger.warn("Couldn't Capture because %s" % e)
-
+    def Capture(self):
+        '''takes a spectrum, and displays it'''
+        return self.raw_image(update_latest_frame = True)
     def filter_function(self, frame):
         if self.backgrounded:
             return frame - self.background
@@ -120,7 +122,7 @@ class Andor(CameraRoiScale, AndorBase):
         self._preview_widgets.add(new_widget)
 
         return new_widget
-
+    
 
 class AndorUI(QtWidgets.QWidget, UiTools):
     ImageUpdated = QtCore.Signal()

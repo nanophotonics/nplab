@@ -344,7 +344,7 @@ class TriaxUI(QtWidgets.QWidget,UiTools):
         self.slit_lineEdit.returnPressed.connect(self.set_slit_gui)
         wl_arr = self.triax.Get_Wavelength_Array()      
         self.centre_wl_lineEdit.setText(str(np.around(wl_arr[len(wl_arr)//2])))
-        self.slit_lineEdit.setText(str(self.triax.Slit))
+        self.slit_lineEdit.setText(str(self.triax.Slit()))
         eval('self.grating_'+str(self.triax.Grating())+'_radioButton.setChecked(True)')
         for radio_button in range(3):
             eval('self.grating_'+str(radio_button)+'_radioButton.clicked.connect(self.set_grating_gui)')
@@ -359,6 +359,6 @@ class TriaxUI(QtWidgets.QWidget,UiTools):
         elif s is self.grating_1_radioButton:
             self.triax.Grating(1)
         elif s is self.grating_2_radioButton:
-            self.triax.grating(2)
+            self.triax.Grating(2)
         else:
             raise ValueError('radio buttons not connected!')

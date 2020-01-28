@@ -9,7 +9,6 @@ from builtins import str
 from past.utils import old_div
 from nplab.instrument.spectrometer.Triax import Triax
 import numpy as np
-from nplab.utils.notified_property import NotifiedProperty
 from nplab.instrument.camera.Andor import Andor
 import types
 import future
@@ -41,36 +40,28 @@ Calibration_Arrays=np.array(Calibration_Arrays)
 CCD_Size=1600 #Size of ccd in pixels
 
 #Make a deepcopy of the andor capture function, to add a white light shutter close command to if required later
-Andor_Capture_Function=types.FunctionType(Andor.capture.__code__, Andor.capture.__globals__, 'Unimportant_Name',Andor.capture.__defaults__, Andor.capture.__closure__)
+# Andor_Capture_Function=types.FunctionType(Andor.capture.__code__, Andor.capture.__globals__, 'Unimportant_Name',Andor.capture.__defaults__, Andor.capture.__closure__)
 
 class Trandor(Andor):#Andor
     
     ''' Wrapper class for the Triax and the andor
     ''' 
     def __init__(self, White_Shutter=None, triax_address = 'GPIB0::1::INSTR', use_shifts = False, laser = '_633'):
-        
-        # print('_____________________')
         print ('Triax Information:')
-
         super(Trandor,self).__init__()
         self.triax = Triax(triax_address, Calibration_Arrays,CCD_Size) #Initialise triax
         self.White_Shutter=White_Shutter
         self.triax.ccd_size = CCD_Size
         self.use_shifts = use_shifts
-        self.laser = laser 
-        # print ('_____________________')
+        self.laser = laser
         print ('Current Grating:'+str(self.triax.Grating()))
         print ('Current Slit Width:'+str(self.triax.Slit())+'um')
-        # print ('_____________________')
         
-
     def Grating(self, Set_To=None):
         return self.triax.Grating(Set_To)
 
     def Generate_Wavelength_Axis(self):
-    
-           
-   
+
         if self.use_shifts:
             if self.laser == '_633': centre_wl = 632.8
             elif self.laser == '_785': centre_wl = 784.81
@@ -78,6 +69,8 @@ class Trandor(Andor):#Andor
             return ( 1./(centre_wl*1e-9)- 1./(wavelengths*1e-9))/100    
         else:
             return self.triax.Get_Wavelength_Array()[::-1]
+    x_axis = property(Generate_Wavelength_Axis)
+    
     def Test_Notch_Alignment(self):
         	Accepted=False
         	while Accepted is False:
@@ -96,31 +89,27 @@ class Trandor(Andor):#Andor
         ''' backwards compatability with lab codes that use trandor.Set_Center_Wavelength'''
         self.triax.Set_Center_Wavelength(wavelength)    
     
-    def capture(self,Close_White_Shutter=True):
-        """
-        Edits the capture function if a white light shutter object is supplied, to ensure it is closed while the image is taken.
-        This behaviour can be overwirtten by passing Close_White_Shutter=False
-        """
-        if self.White_Shutter is not None and Close_White_Shutter is True:
-            try:
-                self.White_Shutter.close_shutter()
-            except:
-                 pass
+    # def _Capture(self,Close_White_Shutter=True): # shouldn't be used. use andor.Capture()
+    #     """
+    #     Edits the capture function if a white light shutter object is supplied, to ensure it is closed while the image is taken.
+    #     This behaviour can be overwirtten by passing Close_White_Shutter=False
+    #     """
+    #     if self.White_Shutter is not None and Close_White_Shutter is True:
+    #         try:
+    #             self.White_Shutter.close_shutter()
+    #         except:
+    #               pass
                     
-            Output=Andor_Capture_Function(self)
+    #         Output = super().capture()
                 
-            try:
-                self.White_Shutter.open_shutter()
-            except:
-                pass
-            return Output
-        else:
-           return Andor_Capture_Function(self)
+    #         try:
+    #             self.White_Shutter.open_shutter()
+    #         except:
+    #             pass
+    #         return Output
+    #     else:
+    #         return super().capture()
 
-    x_axis=NotifiedProperty(Generate_Wavelength_Axis) #This is grabbed by the Andor code 
+  
     
-    def read_spectrum(self):
-            return np.array(self.capture()[0])
 
-    def read_spectrum(self):
-        return np.array(self.capture()[0])
