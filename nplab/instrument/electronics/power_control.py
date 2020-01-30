@@ -18,6 +18,10 @@ from nplab.instrument import Instrument
 from nplab.instrument.electronics.aom import AOM as Aom
 from nplab.instrument.stage.Thorlabs_ELL8K import Thorlabs_ELL8K as RStage
 
+def isMonotonic(A): 
+  
+    return (all(A[i] <= A[i + 1] for i in range(len(A) - 1)) or
+            all(A[i] >= A[i + 1] for i in range(len(A) - 1))) 
 
 class PowerControl(Instrument):
     '''
@@ -154,15 +158,16 @@ class PowerControl(Instrument):
             for name, group in list(search_in.items()) \
             if name.startswith('Power_Calibration') and (name.split('_')[-2] == laser[1:])])[1]
             self.power_calibration = {'ref_powers' : power_calibration_group['ref_powers']} 
+            monotonic = isMonotonic(self.power_calibration['ref_powers'])
             if isinstance(self.pc, RStage):
                 self.power_calibration.update({'Angles' : power_calibration_group.attrs['Angles']})
-                self.update_config('Angles'+self.laser, power_calibration_group.attrs['Angles'])
+                if monotonic: self.update_config('Angles'+self.laser, power_calibration_group.attrs['Angles'])
             if isinstance(self.pc, Aom):
                 self.power_calibration.update({'Voltages' : power_calibration_group.attrs['Voltages']})
-                self.update_config('Voltages'+self.laser, power_calibration_group.attrs['Voltages'])
+                if monotonic: self.update_config('Voltages'+self.laser, power_calibration_group.attrs['Voltages'])
             self.power_calibration.update({'parameters' : power_calibration_group.attrs['parameters']})
-            self.update_config('parameters'+self.laser, power_calibration_group.attrs['parameters'])
-            self.update_config('ref_powers'+self.laser, self.power_calibration['ref_powers'])
+            if monotonic: self.update_config('parameters'+self.laser, power_calibration_group.attrs['parameters'])
+            if monotonic: self.update_config('ref_powers'+self.laser, self.power_calibration['ref_powers'])
             
         except ValueError:
             if len(self.config_file)>0:            

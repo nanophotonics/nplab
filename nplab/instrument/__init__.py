@@ -194,9 +194,10 @@ class Instrument(ShowGUIMixin):
         data for the spectrometer, including reference/background.  This
         function allows values to be stored in that file."""
         f = self.config_file
-        if name not in f:
-            f.create_dataset(name, data=data ,attrs = attrs)
+        if name in f:
+            try: del f[name]
+            except: 
+                f[name][...] = data
+                f.flush()    
         else:
-            dset = f[name]
-            dset[...] = data
-            f.flush()
+            f.create_dataset(name, data=data ,attrs = attrs)
