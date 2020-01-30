@@ -358,7 +358,7 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
             print(error)
             print('Most likely raised due to the lack of a tec on this device')
 
-    #tec_temperature = property(get_tec_temperature, set_tec_temperature)
+    tec_temperature = property(get_tec_temperature, set_tec_temperature)
 
     def read_wavelengths(self):
         """get an array of the wavelengths in nm"""
@@ -444,7 +444,6 @@ class OceanOpticsControlUI(SpectrometerControlUI):
             self.set_tec_temperature_LineEdit.setText(str(initial_temperature))
             self.update_enable_tec(0) # sometimes helps enable cooling
             self.update_enable_tec(1)
-        # self.read_tec.clicked.connect(self.update_tec)
         else:
             self.set_tec_temperature_pushButton.setVisible(False)
             self.read_tec_temperature_pushButton.setVisible(False)
@@ -470,18 +469,16 @@ class OceanOpticsControlUI(SpectrometerControlUI):
                 pass
     
     def gui_set_tec_temperature(self):
-        self.spectrometer.set_tec_temperature(float(self.set_tec_temperature_LineEdit.text().strip()))
+        self.spectrometer.tec_temperature = float(self.set_tec_temperature_LineEdit.text().strip())
     
     def gui_read_tec_tempeature(self):
-        self.tec_temperature_lcdNumber.display(float(self.spectrometer.get_tec_temperature()))
+        self.tec_temperature_lcdNumber.display(float(self.spectrometer.tec_temperature))
+    
     def update_enable_tec(self, state):
         if state == QtCore.Qt.Checked:
             self.spectrometer.enable_tec = True
         elif state == QtCore.Qt.Unchecked:
             self.spectrometer.enable_tec = False
-
-    def update_tec(self):
-        self.tec_temperature.setText(str(self.spectrometer.tec_temperature))
 
 
 
