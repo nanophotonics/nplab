@@ -173,9 +173,9 @@ class PowerControl(Instrument):
         except ValueError:
             if len(self.config_file)>0:            
                 self.power_calibration = {'_'.join(n.split('_')[:-1]) : f for n,f in list(self.config_file.items()) if n.endswith(self.laser)}
-                print('No power calibration in current file, using inaccurate configuration')
+                print('No power calibration in current file, using inaccurate configuration (' + self.laser[1:]+ ')')
             else:
-                print('No power calibration found')
+                print('No power calibration found (' + self.laser[1:]+ ')')
 
     @property
     def power(self):
