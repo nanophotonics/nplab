@@ -42,8 +42,8 @@ class PowerControl(Instrument):
         else: raise ValueError('power_controller must be AOM or Filter Wheel')
         
         if isinstance(self.pc, RStage): 
-            self.min_param = 260
-            self.max_param = 500
+            self.min_param = 0
+            self.max_param = 360
         if isinstance(self.pc, Aom):
             self.min_param = 0
             self.max_param = 1
@@ -78,8 +78,8 @@ class PowerControl(Instrument):
     @property
     def param(self):
         if isinstance(self.pc, RStage):
-            p = int(self.pc.Get_Position().split(' ')[-1])
-            return 0. if p>500 else np.round(p, decimals = 2)
+            return self.pc.get_position()
+            return
         if isinstance(self.pc, Aom):
             return self.pc.Get_Power()               
     @param.setter
@@ -110,12 +110,12 @@ class PowerControl(Instrument):
         attrs['x_axis'] = self.points
         attrs['parameters'] = self.points
         attrs['wavelengths'] = self.points
-
+        
         powers = []
         
         self.wutter.close_shutter()    
         self.lutter.open_shutter() 
-        
+        if self.pometer._ShowGUIMixin__gui_instance is not None: self.pometer.show_gui().live_button.setChecked(False) # if there's a gui turn off live mode
         for counter, point in enumerate(self.points):          
             self.param = point
             time.sleep(0.01)
@@ -159,6 +159,7 @@ class PowerControl(Instrument):
             if name.startswith('Power_Calibration') and (name.split('_')[-2] == laser[1:])])[1]
             self.power_calibration = {'ref_powers' : power_calibration_group['ref_powers']} 
             monotonic = isMonotonic(self.power_calibration['ref_powers'])
+            if not monotonic: print('power curve isn\'t monotonic, not saving to config file')
             if isinstance(self.pc, RStage):
                 self.power_calibration.update({'Angles' : power_calibration_group.attrs['Angles']})
                 if monotonic: self.update_config('Angles'+self.laser, power_calibration_group.attrs['Angles'])
@@ -181,10 +182,7 @@ class PowerControl(Instrument):
         return self.pometer.power
     @power.setter
     def power(self, value):
-        if self.isinstance(self.pc, RStage):
-            self.param = self.Power_to_Voltage(value)
-        if isinstance(self.pc, Aom):
-            self.param = self.Power_to_Angle(value)
+        self.param = self.power_to_param(value)
     
     def power_to_param(self, power):       
         angles = self.power_calibration['Angles']    
