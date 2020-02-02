@@ -100,6 +100,10 @@ class PowerControl(Instrument):
             return np.linspace(self.min_param,self.max_param,num = self.number_points, endpoint = True) 
             
     def Calibrate_Power(self, update_progress=lambda p:p):
+        '''
+        currently doesn't work if power meter gui is in 'live' mode.
+      
+        '''
         attrs = {}       
         if self.measured_power is not None: attrs['Measured power at maxpoint'] = self.measured_power
         if isinstance(self.pc, RStage):
@@ -115,7 +119,8 @@ class PowerControl(Instrument):
         
         self.wutter.close_shutter()    
         self.lutter.open_shutter() 
-        if self.pometer._ShowGUIMixin__gui_instance is not None: self.pometer.show_gui().live_button.setChecked(False) # if there's a gui turn off live mode
+        # if self.pometer._ShowGUIMixin__gui_instance is not None: self.pometer.show_gui().live_button.setChecked(False) # if there's a gui turn off live mode - doesn't work unfortunately
+        [self.pometer.power for _ in range(10)]# flush the powermeter
         for counter, point in enumerate(self.points):          
             self.param = point
             time.sleep(0.01)
@@ -139,17 +144,14 @@ class PowerControl(Instrument):
         '''
         if laser is None:
            laser = self.laser 
-        
         try:
             search_in = self.get_root_data_folder()
             if specific_calibration is not None:
-                try:power_calibration_group = search_in[specific_calibration] 
+                try: power_calibration_group = search_in[specific_calibration] 
                 except: 
                     print('This calibration doesn\'t exist!')
                     return
                 self.power_calibration = {'ref_powers' : power_calibration_group['ref_powers']}
-                if isinstance(self.pc, RStage):self.power_calibration.update({'Angles' : power_calibration_group.attrs['Angles']})
-                if isinstance(self.pc, Aom): self.power_calibration.update({'Voltages' : power_calibration_group.attrs['Voltages']})
                 self.power_calibration.update({'parameters' : power_calibration_group['parameters']})
                 return
             
@@ -158,18 +160,12 @@ class PowerControl(Instrument):
             for name, group in list(search_in.items()) \
             if name.startswith('Power_Calibration') and (name.split('_')[-2] == laser[1:])])[1]
             self.power_calibration = {'ref_powers' : power_calibration_group['ref_powers']} 
-            monotonic = isMonotonic(self.power_calibration['ref_powers'])
-            if not monotonic: print('power curve isn\'t monotonic, not saving to config file')
-            if isinstance(self.pc, RStage):
-                self.power_calibration.update({'Angles' : power_calibration_group.attrs['Angles']})
-                if monotonic: self.update_config('Angles'+self.laser, power_calibration_group.attrs['Angles'])
-            if isinstance(self.pc, Aom):
-                self.power_calibration.update({'Voltages' : power_calibration_group.attrs['Voltages']})
-                if monotonic: self.update_config('Voltages'+self.laser, power_calibration_group.attrs['Voltages'])
             self.power_calibration.update({'parameters' : power_calibration_group.attrs['parameters']})
-            if monotonic: self.update_config('parameters'+self.laser, power_calibration_group.attrs['parameters'])
-            if monotonic: self.update_config('ref_powers'+self.laser, self.power_calibration['ref_powers'])
             
+            if isMonotonic(self.power_calibration['ref_powers']): 
+                self.update_config('parameters'+self.laser, power_calibration_group.attrs['parameters'])
+            else:
+                print('power curve isn\'t monotonic, not saving to config file')
         except ValueError:
             if len(self.config_file)>0:            
                 self.power_calibration = {'_'.join(n.split('_')[:-1]) : f for n,f in list(self.config_file.items()) if n.endswith(self.laser)}
@@ -185,9 +181,9 @@ class PowerControl(Instrument):
         self.param = self.power_to_param(value)
     
     def power_to_param(self, power):       
-        angles = self.power_calibration['Angles']    
+        params = self.power_calibration['parameters']    
         powers = np.array(self.power_calibration['ref_powers'])
-        curve = interpolate.interp1d(powers, angles, kind = 'cubic') #  
+        curve = interpolate.interp1d(powers, params, kind = 'cubic') #  
         return curve(power)       
     
     def get_qt_ui(self):
