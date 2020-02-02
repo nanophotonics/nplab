@@ -17,6 +17,7 @@ from nplab.experiment.gui import run_function_modally
 from nplab.instrument import Instrument
 from nplab.instrument.electronics.aom import AOM as Aom
 from nplab.instrument.stage.Thorlabs_ELL8K import Thorlabs_ELL8K as RStage
+from nplab import datafile
 
 def isMonotonic(A): 
   
@@ -58,7 +59,7 @@ class PowerControl(Instrument):
         super(PowerControl, self).__init__()
         self._initiate_pc()
         self.pometer = power_meter
-        self.number_points = 50
+        self.number_points = 25
   
     def _initiate_pc(self):
         if isinstance(self.pc, Aom):            
@@ -145,14 +146,17 @@ class PowerControl(Instrument):
         if laser is None:
            laser = self.laser 
         try:
+            initial = datafile._use_current_group
+            datafile._use_current_group = False
             search_in = self.get_root_data_folder()
+            datafile._use_current_group = initial
             if specific_calibration is not None:
                 try: power_calibration_group = search_in[specific_calibration] 
                 except: 
                     print('This calibration doesn\'t exist!')
                     return
                 self.power_calibration = {'ref_powers' : power_calibration_group['ref_powers']}
-                self.power_calibration.update({'parameters' : power_calibration_group['parameters']})
+                self.power_calibration.update({'parameters' : power_calibration_group.attrs['parameters']})
                 return
             
             
@@ -178,6 +182,7 @@ class PowerControl(Instrument):
         return self.pometer.power
     @power.setter
     def power(self, value):
+        self._power = value
         self.param = self.power_to_param(value)
     
     def power_to_param(self, power):       
