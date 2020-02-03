@@ -10,13 +10,14 @@ import numpy as np
 
 import time
 from nplab.utils.gui import QtCore, QtWidgets, uic
-
+from nplab.utils.notified_property import DumbNotifiedProperty, register_for_property_changes
 from nplab.ui.ui_tools import UiTools
 from nplab.instrument import Instrument
 import threading
 import os
 
 class PowerMeter(Instrument):
+    live = DumbNotifiedProperty(False)
     def __init__(self):
         super(PowerMeter, self).__init__()
         
@@ -29,7 +30,7 @@ class PowerMeter(Instrument):
     def get_qt_ui(self):
         return PowerMeterUI(self)
     
-class PowerMeterUI(QtWidgets.QWidget,UiTools):
+class PowerMeterUI(QtWidgets.QWidget, UiTools):
     update_data_signal = QtCore.Signal(np.ndarray)
     def __init__(self, pm):    
         super(PowerMeterUI, self).__init__()
@@ -38,7 +39,7 @@ class PowerMeterUI(QtWidgets.QWidget,UiTools):
         self.update_condition = threading.Condition()        
         self.display_thread = DisplayThread(self)        
         self.SetupSignals()
-        
+        register_for_property_changes(self.pm, 'live', self.live_changed)
     def SetupSignals(self):
         self.read_pushButton.clicked.connect(self.button_pressed)
         self.live_button.clicked.connect(self.button_pressed)
@@ -46,10 +47,14 @@ class PowerMeterUI(QtWidgets.QWidget,UiTools):
     def button_pressed(self):
         if self.sender() == self.read_pushButton:
             self.display_thread.single_shot = True
+        elif self.sender() == self.live_button:
+            self.pm.live = self.live_button.isChecked()
         self.display_thread.start()
     def update_display(self, power):
         self.power_lcdNumber.display(float(power))
-            
+    def live_changed(self):
+        self.live_button.setChecked(self.pm.live)
+        
 class DisplayThread(QtCore.QThread):
     ready = QtCore.Signal(float)
     def __init__(self, parent):
@@ -70,6 +75,7 @@ class DisplayThread(QtCore.QThread):
             if self.single_shot:
                 self.single_shot = False               
                 break
+        self.parent.pc.live = False
         self.finished.emit()
         
 class dummyPowerMeter(PowerMeter):
