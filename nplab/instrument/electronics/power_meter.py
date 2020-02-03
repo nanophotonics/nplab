@@ -17,6 +17,10 @@ import threading
 import os
 
 class PowerMeter(Instrument):
+    '''
+    brings basic nplab functionality, and a gui with live mode to a powermeter.
+    The minimum you need to do to subclass this is overwrite the read_power method
+    '''
     live = DumbNotifiedProperty(False)
     def __init__(self):
         super(PowerMeter, self).__init__()
