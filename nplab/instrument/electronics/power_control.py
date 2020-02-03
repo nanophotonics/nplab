@@ -120,7 +120,7 @@ class PowerControl(Instrument):
         
         self.wutter.close_shutter()    
         self.lutter.open_shutter() 
-        # if self.pometer._ShowGUIMixin__gui_instance is not None: self.pometer.show_gui().live_button.setChecked(False) # if there's a gui turn off live mode - doesn't work unfortunately
+        self.pometer.live = False# if there's a gui turn off live mode 
         [self.pometer.power for _ in range(10)]# flush the powermeter
         for counter, point in enumerate(self.points):          
             self.param = point
