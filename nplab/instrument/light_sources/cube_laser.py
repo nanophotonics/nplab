@@ -9,7 +9,8 @@ from nplab.instrument.serial_instrument import SerialInstrument
 from nplab.instrument.light_sources import LightSource
 import serial
 import sys
-from PyQt4 import QtGui
+#from PyQt4 import QtGui
+from qtpy import QtGui
 
 class CubeLaser(SerialInstrument, LightSource):
     def __init__(self, port=None):
@@ -44,73 +45,74 @@ class CubeLaser(SerialInstrument, LightSource):
         else:
             mode = 'pulsed must be 0 (CW) or 1 (Pulsed)'           
         print mode
-
-class CubeLaserUI(QtGui.QWidget):
-    def __init__(self):
-        QtGui.QWidget.__init__(self)
-        self.setWindowTitle("Cube Laser")
-        self.resize(300,100)
-        self.move(100,1500)
-        self.power_switch = QtGui.QCheckBox('Power ON',self)
-        self.power_switch.clicked.connect(self.handle_power_switch)
-        self.pulsed_switch = QtGui.QCheckBox('Pulsed Mode',self)
-        self.pulsed_switch.clicked.connect(self.handle_pulsed_switch)
-        self.power_input_label = QtGui.QLabel('Input Power:')
-        self.power_input = QtGui.QDoubleSpinBox()
-        self.power_input.valueChanged.connect(self.handle_power_input)
-        self.power_input.setMinimum(0)
-        self.power_input.setMaximum(40)
-        self.power_input_unit = QtGui.QLabel('mW')
-        self.power_readout_label = QtGui.QLabel('Readout Power:')
-        self.power_readout = QtGui.QLabel('0.0')
-        self.power_readout_unit = QtGui.QLabel('mW')
-
-        layout = QtGui.QGridLayout(self)
-        
-        layout.addWidget(self.power_switch, 1, 0)
-        layout.addWidget(self.power_input_label, 2, 0)
-        layout.addWidget(self.power_input, 2, 1)
-        layout.addWidget(self.power_input_unit, 2, 2)
-        layout.addWidget(self.power_readout_label, 3, 0)
-        layout.addWidget(self.power_readout, 3, 1)
-        layout.addWidget(self.power_readout_unit, 3, 2)
-        layout.addWidget(self.pulsed_switch, 4, 0)
-        
-        
-    def handle_power_switch(self):
-        laser = CubeLaser("COM7")
-        if self.power_switch.isChecked():
-            laser.set_power(self.power_input.value())
-            print('Power ON')
-        else:
-            laser.set_power(0)
-            print('Power OFF')
-            
-        self.power_readout.setText(str(laser.get_power()))    
-        laser.close()
-    
-    def handle_pulsed_switch(self):
-        laser = CubeLaser("COM7")
-        if self.pulsed_switch.isChecked():
-            laser.mode_switch(1)
-        else:
-            laser.mode_switch(0)
-        self.power_readout.setText(str(laser.get_power()))    
-        laser.close()
-    
-    def handle_power_input(self):
-        laser = CubeLaser("COM7")
-        if self.power_switch.isChecked():
-            laser.set_power(self.power_input.value())
-        else:
-            laser.set_power(0)      
-        self.power_readout.setText(str(laser.get_power()))    
-        laser.close()
+#
+#class CubeLaserUI(QtGui.QWidget):
+#    def __init__(self):
+#        QtGui.QWidget.__init__(self)
+#        self.setWindowTitle("Cube Laser")
+#        self.resize(300,100)
+#        self.move(100,1500)
+#        self.power_switch = QtGui.QCheckBox('Power ON',self)
+#        self.power_switch.clicked.connect(self.handle_power_switch)
+#        self.pulsed_switch = QtGui.QCheckBox('Pulsed Mode',self)
+#        self.pulsed_switch.clicked.connect(self.handle_pulsed_switch)
+#        self.power_input_label = QtGui.QLabel('Input Power:')
+#        self.power_input = QtGui.QDoubleSpinBox()
+#        self.power_input.valueChanged.connect(self.handle_power_input)
+#        self.power_input.setMinimum(0)
+#        self.power_input.setMaximum(40)
+#        self.power_input_unit = QtGui.QLabel('mW')
+#        self.power_readout_label = QtGui.QLabel('Readout Power:')
+#        self.power_readout = QtGui.QLabel('0.0')
+#        self.power_readout_unit = QtGui.QLabel('mW')
+#
+#        layout = QtGui.QGridLayout(self)
+#        
+#        layout.addWidget(self.power_switch, 1, 0)
+#        layout.addWidget(self.power_input_label, 2, 0)
+#        layout.addWidget(self.power_input, 2, 1)
+#        layout.addWidget(self.power_input_unit, 2, 2)
+#        layout.addWidget(self.power_readout_label, 3, 0)
+#        layout.addWidget(self.power_readout, 3, 1)
+#        layout.addWidget(self.power_readout_unit, 3, 2)
+#        layout.addWidget(self.pulsed_switch, 4, 0)
+#        
+#        
+#    def handle_power_switch(self):
+#        laser = CubeLaser("COM7")
+#        if self.power_switch.isChecked():
+#            laser.set_power(self.power_input.value())
+#            print('Power ON')
+#        else:
+#            laser.set_power(0)
+#            print('Power OFF')
+#            
+#        self.power_readout.setText(str(laser.get_power()))    
+#        laser.close()
+#    
+#    def handle_pulsed_switch(self):
+#        laser = CubeLaser("COM7")
+#        if self.pulsed_switch.isChecked():
+#            laser.mode_switch(1)
+#        else:
+#            laser.mode_switch(0)
+#        self.power_readout.setText(str(laser.get_power()))    
+#        laser.close()
+#    
+#    def handle_power_input(self):
+#        laser = CubeLaser("COM7")
+#        if self.power_switch.isChecked():
+#            laser.set_power(self.power_input.value())
+#        else:
+#            laser.set_power(0)      
+#        self.power_readout.setText(str(laser.get_power()))    
+#        laser.close()
 
 if __name__ == "__main__":
-    app = QtGui.QApplication(sys.argv)
-    win = CubeLaserUI()
-    win.show()
+    print 'hi'
+#    app = QtGui.QApplica1tion(sys.argv)
+#    win = CubeLaserUI()
+#    win.show()
     #sys.exit(app.exec_())
     #laser = CubeLaser("COM7")
     #laser.set_power(10)

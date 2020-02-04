@@ -5,7 +5,7 @@ class to use during the experiment.
 """
 __author__ = 'alansanders'
 
-from nplab.instrument.electronics.keithley_2635a_smu import Keithley2635A
+from nplab.instrument.electronics.keithley_2636b_smu import Keithley2636B
 import numpy as np
 import matplotlib.pyplot as plt
 from time import sleep
@@ -13,13 +13,15 @@ from threading import Thread
 
 
 def run_experiment(voltages, currents):
-    smu = Keithley2635A.get_instance()
+    smu = Keithley2636B.get_instance()
     smu.output = 1
+
     sleep(0.001)
     for j,v in enumerate(voltages):
         smu.src_voltage = v
         sleep(0.001)
-        currents[j] = smu.get_meas_current()
+        currents[j] = smu.read_current()
+        print currents[j]
     smu.output = 0
 
 
@@ -32,6 +34,7 @@ def example_experiment(start, stop, step):
     l1, = plt.plot(voltages, currents, 'ko-')
     plt.xlabel('voltage (V)')
     plt.ylabel('current (A)')
+    plt.ylim(-0.0001,0.0001)
     plt.show()
 
     thread = Thread(target=run_experiment, args=(voltages, currents))
@@ -47,11 +50,11 @@ def example_experiment(start, stop, step):
         fig.canvas.draw()
         sleep(0.1)
 
-    plt.show(block=True)
+    plt.show()
 
 
 if __name__ == '__main__':
-    smu = Keithley2635A()
+    smu = Keithley2636B()
     max_I = 1e-3
     max_V = 1e3 * max_I
     example_experiment(0, max_V, 50)

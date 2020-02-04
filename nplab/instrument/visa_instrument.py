@@ -1,7 +1,7 @@
 __author__ = 'alansanders'
 
 from nplab.instrument.message_bus_instrument import MessageBusInstrument, queried_property, queried_channel_property
-import visa
+import pyvisa
 from functools import partial
 
 
@@ -20,7 +20,7 @@ class VisaInstrument(MessageBusInstrument):
         :type object
         """
         super(VisaInstrument, self).__init__()
-        rm = visa.ResourceManager()
+        rm = pyvisa.ResourceManager()
         try:
             assert address in rm.list_resources(), "The instrument was not found"
         except AssertionError:

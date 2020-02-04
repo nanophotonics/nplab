@@ -1,8 +1,8 @@
 """
-Classes related to the Keithley 2635A SMU.
+Classes related to the Keithley 2636B SMU.
 """
 
-__author__ = 'alansanders'
+__author__ = 'alansanders (last updated by zay21, Jan 29, 2020)'
 
 from nplab.instrument.visa_instrument import VisaInstrument, queried_property
 import numpy as np
@@ -10,12 +10,10 @@ from nplab.utils.gui import *
 from nplab.utils.gui import uic
 
 
-class Keithley2635A(VisaInstrument):
-    """Interface to the Keithley 2635A SMU."""
-    #def __init__(self, address='GPIB0::26::INSTR'):
-    #Alice: Note this only works for USB interface connection (Keithley 2636B)
+class Keithley2636B(VisaInstrument):
+    """Interface to the Keithley 2636B SMU."""
     def __init__(self, address='USB0::0x05E6::0x2636::4439367::INSTR'):
-        super(Keithley2635A, self).__init__(address)
+        super(Keithley2636B, self).__init__(address)
         self.instr.read_termination = '\n'
         self.instr.write_termination = '\n'
         self.reset()
@@ -89,6 +87,8 @@ class Keithley2635A(VisaInstrument):
 
     def read_current(self):
         """Measure the current."""
+        #return self.instr.query('print(smua.measure.i())')
+
         return float(self.instr.query('print(smua.measure.i())'))
 
     def read_resistance(self):
@@ -270,7 +270,7 @@ class SmuUI(QtWidgets.QWidget):
 
 
 if __name__ == '__main__':
-    smu = Keithley2635A()
+    smu = Keithley2636B()
     smu.output = 1
     smu.src_voltage = 10e-3
     print smu.read_iv()

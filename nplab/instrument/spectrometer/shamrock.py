@@ -29,8 +29,12 @@ class Shamrock(Instrument):
         architecture = platform.architecture()
 
         if architecture[0] == "64bit":
-            self.dll2 = CDLL("C:\\Program Files\\Andor SOLIS\\Drivers\\Shamrock64\\atshamrock")
-            self.dll = CDLL("C:\\Program Files\\Andor SOLIS\\Drivers\\Shamrock64\\ShamrockCIF")
+            try:
+                self.dll2 = CDLL("C:\\Program Files\\Andor SOLIS\\Drivers\\Shamrock64\\atshamrock")
+                self.dll = CDLL("C:\\Program Files\\Andor SOLIS\\Drivers\\Shamrock64\\ShamrockCIF")
+            except:
+                self.dll2 = CDLL("C:\\Program Files\\Andor SDK\\Shamrock64\\atshamrock")
+                self.dll = CDLL("C:\\Program Files\\Andor SDK\\Shamrock64\\ShamrockCIF")                
             tekst = c_char()        
             error = self.dll.ShamrockInitialize(byref(tekst))
 
