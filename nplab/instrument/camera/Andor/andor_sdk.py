@@ -457,6 +457,7 @@ class AndorBase(object):
         detector_shape = self.get_andor_parameter('DetectorShape')
         self.set_andor_parameter('Image', 1, 1, 1, detector_shape[0], 1, detector_shape[1])
         self.set_andor_parameter('Shutter', 1, 0, 1, 1)
+        self.keep_shutter_open = False
         self.set_andor_parameter('SetTemperature', -90)
         self.set_andor_parameter('CoolerMode', 0)
         self.set_andor_parameter('FanMode', 0)
@@ -476,11 +477,11 @@ class AndorBase(object):
             int         number of images taken
             tuple       shape of the images taken
         """
-
+        self.Shutter = (1, self.keep_shutter_open, 1, 1)
         self._dll_wrapper('StartAcquisition')
         self._dll_wrapper('WaitForAcquisition')
         self.wait_for_driver()
-
+        self.Shutter = (1, 0, 1, 1)
         if self._parameters['AcquisitionMode'] == 4:
             num_of_images = 1  # self.parameters['FastKinetics']['value'][1]
             image_shape = (self._parameters['FastKinetics'][-1], self._parameters['DetectorShape'][0])

@@ -185,7 +185,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         self.pushButtonTakeBG.clicked.connect(self.take_background)
         self.checkBoxRemoveBG.stateChanged.connect(self.remove_background)
         self.referesh_groups_pushButton.clicked.connect(self.update_groups_box)
-        
+        self.keep_shutter_open_checkBox.stateChanged.connect(self.update_shutter_mode)
         self.read_temperature_pushButton.clicked.connect(self.temperature_gui)
         self.live_temperature_checkBox.clicked.connect(self.temperature_gui)
         self.temperature_display_thread.ready.connect(self.update_temperature_display)
@@ -218,8 +218,13 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         self.temperature_display_thread.start()
     def update_temperature_display(self, temperature):
         self.temperature_lcdNumber.display(float(temperature))
+    
     def get_temperature(self):
         return self.Andor.CurrentTemperature
+    
+    def update_shutter_mode(self):
+        self.Andor.keep_shutter_open = self.keep_shutter_open_checkBox.isChecked()
+    
     def acquisition_mode(self):
         available_modes = ['Single', 'Accumulate', 'Kinetic', 'Fast Kinetic']
         currentMode = self.comboBoxAcqMode.currentText()
@@ -228,9 +233,15 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         if currentMode == 'Fast Kinetic':
             self.spinBoxNumRows.show()
             self.labelNumRows.show()
-        elif self.comboBoxReadMode.currentText() != 'Single track':
+        if currentMode == 'Fast Kinetic' or currentMode == 'Kinetic'
+            self.keep_shutter_open_checkBox.show()
+        else:
+            self.keep_shutter_open_checkBox.hide()
+            
+        elif currentMode != 'Single track':
             self.spinBoxNumRows.hide()
             self.labelNumRows.hide()
+        
         if currentMode == 'Accumulate':
             self.spinBoxNumAccum.show()
             self.labelNumAccum.show()
