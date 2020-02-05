@@ -233,11 +233,11 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         if currentMode == 'Fast Kinetic':
             self.spinBoxNumRows.show()
             self.labelNumRows.show()
-        if currentMode == 'Fast Kinetic' or currentMode == 'Kinetic'
+        if (currentMode == 'Fast Kinetic') or (currentMode == 'Kinetic'):
             self.keep_shutter_open_checkBox.show()
         else:
             self.keep_shutter_open_checkBox.hide()
-            
+
         elif currentMode != 'Single track':
             self.spinBoxNumRows.hide()
             self.labelNumRows.hide()
