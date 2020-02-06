@@ -150,19 +150,17 @@ class PowerControl(Instrument):
             datafile._use_current_group = False
             search_in = self.get_root_data_folder()
             datafile._use_current_group = initial
+            
             if specific_calibration is not None:
                 try: power_calibration_group = search_in[specific_calibration] 
                 except: 
                     print('This calibration doesn\'t exist!')
                     return
-                self.power_calibration = {'ref_powers' : power_calibration_group['ref_powers']}
-                self.power_calibration.update({'parameters' : power_calibration_group.attrs['parameters']})
-                return
+            else:
+                power_calibration_group = max([(int(name.split('_')[-1]), group)\
+                for name, group in list(search_in.items()) \
+                if name.startswith('Power_Calibration') and (name.split('_')[-2] == laser[1:])])[1]
             
-            
-            power_calibration_group = max([(int(name.split('_')[-1]), group)\
-            for name, group in list(search_in.items()) \
-            if name.startswith('Power_Calibration') and (name.split('_')[-2] == laser[1:])])[1]
             self.power_calibration = {'ref_powers' : power_calibration_group['ref_powers']} 
             self.power_calibration.update({'parameters' : power_calibration_group.attrs['parameters']})
             
@@ -170,6 +168,7 @@ class PowerControl(Instrument):
                 self.update_config('parameters'+self.laser, power_calibration_group.attrs['parameters'])
             else:
                 print('power curve isn\'t monotonic, not saving to config file')
+        
         except ValueError:
             if len(self.config_file)>0:            
                 self.power_calibration = {'_'.join(n.split('_')[:-1]) : f for n,f in list(self.config_file.items()) if n.endswith(self.laser)}
