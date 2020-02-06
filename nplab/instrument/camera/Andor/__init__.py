@@ -233,10 +233,6 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         if currentMode == 'Fast Kinetic':
             self.spinBoxNumRows.show()
             self.labelNumRows.show()
-        if (currentMode == 'Fast Kinetic') or (currentMode == 'Kinetic'):
-            self.keep_shutter_open_checkBox.show()
-        else:
-            self.keep_shutter_open_checkBox.hide()
 
         elif currentMode != 'Single track':
             self.spinBoxNumRows.hide()
@@ -248,6 +244,11 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         else:
             self.spinBoxNumAccum.hide()
             self.labelNumAccum.hide()
+        
+        if (currentMode == 'Fast Kinetic') or (currentMode == 'Kinetic'):
+            self.keep_shutter_open_checkBox.show()
+        else:
+            self.keep_shutter_open_checkBox.hide()
 
     def read_mode(self):
         available_modes = ['FVB', 'Multi-track', 'Random track', 'Single track', 'Image']
