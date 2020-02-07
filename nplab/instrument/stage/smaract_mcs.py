@@ -1281,22 +1281,22 @@ class SmaractMCSUI(QtWidgets.QWidget, UiTools):
 
 if __name__ == '__main__':
 
-    smaract = SmaractMCSSerial('COM10')
+    #smaract = SmaractMCSSerial('COM10')
 
 
     # print SA_OK
-#    system_id = SmaractMCS.find_mcs_systems()
+    system_id = SmaractMCS.find_mcs_systems()
 #
-#    stage1 = SmaractMCS(system_id)
-#    stage1.show_gui(blocking=False)
+    stage1 = SmaractMCS(system_id)
+    stage1.show_gui()
 
     #print stage.position
     #print stage.get_position()
     #print stage.get_position(0)
 
-#    import sys
-#    from nplab.utils.gui import get_qt_app
-#    app = get_qt_app()
-#    ui = stage.get_qt_ui()
-#    ui.show()
-#    sys.exit(app.exec_())
+    import sys
+    #from nplab.utils.gui import get_qt_app
+    #app = get_qt_app()
+    #ui = stage1.get_qt_ui()
+    #ui.show()
+    #sys.exit(app.exec_())

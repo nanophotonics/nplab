@@ -6,20 +6,14 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>942</width>
-    <height>672</height>
+    <width>1139</width>
+    <height>711</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_2">
-   <property name="spacing">
-    <number>6</number>
-   </property>
-   <property name="bottomMargin">
-    <number>9</number>
-   </property>
    <item>
     <widget class="QWidget" name="verticalWidget" native="true">
      <layout class="QVBoxLayout" name="verticalLayout">
@@ -27,20 +21,240 @@
        <number>20</number>
       </property>
       <item>
+       <layout class="QVBoxLayout" name="verticalLayout_5">
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_8">
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_12">
+            <item>
+             <widget class="QGroupBox" name="groupBox_5">
+              <property name="title">
+               <string>Measurement type</string>
+              </property>
+              <layout class="QHBoxLayout" name="horizontalLayout_3">
+               <item>
+                <widget class="QRadioButton" name="mode_RamanOnly">
+                 <property name="text">
+                  <string>Raman only</string>
+                 </property>
+                 <property name="checked">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer name="horizontalSpacer_22">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeType">
+                  <enum>QSizePolicy::Maximum</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>40</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item>
+                <widget class="QRadioButton" name="mode_DarkfieldOnly">
+                 <property name="enabled">
+                  <bool>true</bool>
+                 </property>
+                 <property name="text">
+                  <string>Darkfield only</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer name="horizontalSpacer_23">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeType">
+                  <enum>QSizePolicy::Maximum</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>40</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item>
+                <widget class="QRadioButton" name="mode_RamanAndDarkfield">
+                 <property name="text">
+                  <string>Raman + Darkfield</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer name="horizontalSpacer_3">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeType">
+                  <enum>QSizePolicy::Maximum</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>40</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item>
+                <widget class="QRadioButton" name="mode_smuOnly">
+                 <property name="text">
+                  <string>SMU only</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer name="horizontalSpacer_21">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>40</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+              </layout>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="QGroupBox" name="groupBox_6">
+            <property name="title">
+             <string>SmarAct rotation</string>
+            </property>
+            <layout class="QVBoxLayout" name="verticalLayout_7">
+             <item>
+              <layout class="QHBoxLayout" name="horizontalLayout_16">
+               <item>
+                <widget class="QPushButton" name="SmarAct_rotate_left_button">
+                 <property name="styleSheet">
+                  <string notr="true"/>
+                 </property>
+                 <property name="text">
+                  <string>&lt;---</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="SmarAct_rotate_right_button">
+                 <property name="text">
+                  <string>---&gt;</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item>
+              <layout class="QHBoxLayout" name="horizontalLayout_20">
+               <item>
+                <widget class="QLabel" name="label_20">
+                 <property name="text">
+                  <string>Amplitude (°)</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QComboBox" name="SmarAct_rotation_degrees_comboBox">
+                 <property name="currentIndex">
+                  <number>0</number>
+                 </property>
+                 <item>
+                  <property name="text">
+                   <string>0.1</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>0.2</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>0.5</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>1</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>5</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>15</string>
+                  </property>
+                 </item>
+                 <item>
+                  <property name="text">
+                   <string>90</string>
+                  </property>
+                 </item>
+                </widget>
+               </item>
+              </layout>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_15">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="text">
+             <string>Measured output power</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QLineEdit" name="lineEdit">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="open_OO_spectrometer_button">
+            <property name="text">
+             <string>Open OO spectrometer</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </item>
+      <item>
        <widget class="QGroupBox" name="groupBox_4">
-        <property name="maximumSize">
-         <size>
-          <width>16777215</width>
-          <height>150</height>
-         </size>
-        </property>
         <property name="title">
          <string>Andor and Shamrock settings</string>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_11">
-         <property name="bottomMargin">
-          <number>9</number>
-         </property>
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_4">
            <item>
@@ -216,7 +430,7 @@
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout">
            <item>
-            <widget class="QPushButton" name="set_shamrock_wavelength_button">
+            <widget class="QPushButton" name="set_triax_wavelength_button">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -229,7 +443,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QSpinBox" name="shamrockWavelength_spinBox">
+            <widget class="QSpinBox" name="spinBox_centre_wavelength">
              <property name="suffix">
               <string> nm</string>
              </property>
@@ -258,10 +472,7 @@
             </spacer>
            </item>
            <item>
-            <widget class="QPushButton" name="set_shamrock_grating_button">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
+            <widget class="QPushButton" name="set_triax_grating_button">
              <property name="text">
               <string>Set Shamrock grating number</string>
              </property>
@@ -269,17 +480,11 @@
            </item>
            <item>
             <widget class="QComboBox" name="TriaxGratingNumber_comboBox">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
              <property name="sizePolicy">
               <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
-             </property>
-             <property name="editable">
-              <bool>false</bool>
              </property>
              <property name="currentIndex">
               <number>2</number>
@@ -323,7 +528,7 @@
             </spacer>
            </item>
            <item>
-            <widget class="QPushButton" name="set_shamrock_slit_button">
+            <widget class="QPushButton" name="set_triax_slit_button">
              <property name="text">
               <string>Set Shamrock slit</string>
              </property>
@@ -341,10 +546,10 @@
               <string> µm</string>
              </property>
              <property name="minimum">
-              <number>50</number>
+              <number>1</number>
              </property>
              <property name="maximum">
-              <number>2500</number>
+              <number>1000</number>
              </property>
             </widget>
            </item>
@@ -386,99 +591,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QGroupBox" name="groupBox_2">
-        <property name="minimumSize">
-         <size>
-          <width>600</width>
-          <height>100</height>
-         </size>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>16777215</width>
-          <height>85</height>
-         </size>
-        </property>
-        <property name="title">
-         <string>Measurement type</string>
-        </property>
-        <widget class="QWidget" name="verticalLayoutWidget">
-         <property name="geometry">
-          <rect>
-           <x>10</x>
-           <y>20</y>
-           <width>881</width>
-           <height>80</height>
-          </rect>
-         </property>
-         <layout class="QVBoxLayout" name="verticalLayout_7">
-          <item>
-           <widget class="QRadioButton" name="mode_RamanOnly">
-            <property name="text">
-             <string>Raman only</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_2">
-            <item>
-             <widget class="QRadioButton" name="mode_DarkfieldOnly">
-              <property name="enabled">
-               <bool>true</bool>
-              </property>
-              <property name="text">
-               <string>Darkfield only</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="open_OO_spectrometer_button">
-              <property name="text">
-               <string>Open OO spectrometer</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <spacer name="horizontalSpacer_15">
-              <property name="orientation">
-               <enum>Qt::Horizontal</enum>
-              </property>
-              <property name="sizeHint" stdset="0">
-               <size>
-                <width>40</width>
-                <height>20</height>
-               </size>
-              </property>
-             </spacer>
-            </item>
-            <item>
-             <widget class="QPushButton" name="flipMirror_button">
-              <property name="text">
-               <string>Manually flip mirror</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item>
-           <widget class="QRadioButton" name="mode_RamanAndDarkfield">
-            <property name="text">
-             <string>Raman + Darkfield</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </widget>
-      </item>
-      <item>
        <widget class="QGroupBox" name="groupBox">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
         <property name="sizePolicy">
          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
           <horstretch>0</horstretch>
@@ -495,30 +608,6 @@
          <string>SMU controls</string>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_6">
-         <item>
-          <layout class="QHBoxLayout" name="horizontalLayout_13">
-           <item>
-            <widget class="QLabel" name="label_11">
-             <property name="text">
-              <string>Voltage scan description</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QLineEdit" name="description_lineEdit">
-             <property name="maximumSize">
-              <size>
-               <width>16777215</width>
-               <height>20</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>description</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </item>
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_7">
            <item>
@@ -725,19 +814,6 @@
               <double>0.000009000000000</double>
              </property>
             </widget>
-           </item>
-           <item>
-            <spacer name="horizontalSpacer_14">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>40</width>
-               <height>20</height>
-              </size>
-             </property>
-            </spacer>
            </item>
            <item>
             <widget class="QLabel" name="label_12">
@@ -1209,10 +1285,30 @@
              </property>
             </widget>
            </item>
+           <item>
+            <layout class="QHBoxLayout" name="_2">
+             <property name="rightMargin">
+              <number>0</number>
+             </property>
+             <item>
+              <widget class="QLabel" name="label_11">
+               <property name="text">
+                <string>Voltage scan description</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLineEdit" name="description_lineEdit">
+               <property name="text">
+                <string>description</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
           </layout>
          </item>
         </layout>
-        <zorder></zorder>
         <zorder></zorder>
         <zorder></zorder>
        </widget>

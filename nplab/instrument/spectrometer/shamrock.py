@@ -29,12 +29,8 @@ class Shamrock(Instrument):
         architecture = platform.architecture()
 
         if architecture[0] == "64bit":
-            try:
-                self.dll2 = CDLL("C:\\Program Files\\Andor SOLIS\\Drivers\\Shamrock64\\atshamrock")
-                self.dll = CDLL("C:\\Program Files\\Andor SOLIS\\Drivers\\Shamrock64\\ShamrockCIF")
-            except:
-                self.dll2 = CDLL("C:\\Program Files\\Andor SDK\\Shamrock64\\atshamrock")
-                self.dll = CDLL("C:\\Program Files\\Andor SDK\\Shamrock64\\ShamrockCIF")                
+            self.dll2 = CDLL("C:\\Program Files\\Andor SDK\\Shamrock64\\atshamrock")
+            self.dll = CDLL("C:\\Program Files\\Andor SDK\\Shamrock64\\ShamrockCIF")
             tekst = c_char()        
             error = self.dll.ShamrockInitialize(byref(tekst))
 
@@ -45,7 +41,7 @@ class Shamrock(Instrument):
             error = self.dll.ShamrockInitialize(tekst)
             
         self.current_shamrock = 0 #for more than one Shamrock this has to be varied, see ShamrockGetNumberDevices
-        self.center_wavelength = 0.0
+        self.center_wavelength = 650 #ALICE
 
     def verbose(self, error, function=''):
         self.log( "[%s]: %s" %(function, error),level = 'info')
