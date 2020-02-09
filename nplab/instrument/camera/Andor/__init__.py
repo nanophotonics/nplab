@@ -22,7 +22,7 @@ class Andor(CameraRoiScale, AndorBase):
         self.CurImage = None
         self.background = None
         self.backgrounded = False
-
+        self.keep_shutter_open = False
         if settings_filepath is not None:
             self.load_params_from_file(settings_filepath)
         self.isAborted = False
@@ -54,8 +54,13 @@ class Andor(CameraRoiScale, AndorBase):
 
     def raw_snapshot(self):
         try:
+            if self.keep_shutter_open:
+                i = self.Shutter # initial shutter settings
+                self.Shutter = (i[0], 1, i[2], i[3])
             imageArray, num_of_images, image_shape = self.capture()
-
+            if self.keep_shutter_open:
+                self.Shutter = i
+            
             # The image is reversed depending on whether you read in the conventional CCD register or the EM register,
             # so we reverse it back
             if self._parameters['OutAmp']:
@@ -429,6 +434,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
     def Abort(self):
         self.Andor.live_view = False
 class DisplayThread(QtCore.QThread):
+    '''for displaying the temperature'''
     ready = QtCore.Signal(float)
     def __init__(self, parent):
         super(DisplayThread, self).__init__()
