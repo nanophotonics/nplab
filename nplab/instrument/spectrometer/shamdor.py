@@ -6,7 +6,9 @@ Created on Sat Jul 08 19:47:22 2017
 """
 from nplab.instrument.camera.Andor import Andor
 from nplab.instrument.spectrometer.shamrock import Shamrock
+from nplab.utils.notified_property import NotifiedProperty
 import numpy as np
+import types
 
 class Shamdor(Andor):
     ''' Wrapper class for the shamrock and the andor
@@ -29,11 +31,25 @@ class Shamdor(Andor):
             return ( 1./(centre_wl*1e-9)- 1./(wavelengths*1e-9))/100    
         else:
             return self.shamrock.GetCalibration()[::-1]
-        
+    x_axis=NotifiedProperty(get_xaxis) #This is grabbed by the Andor code 
+
+ #   def Grating(self, Set_To=None):
+ #       return self.triax.Grating(Set_To)
+
  #   def Set_Center_Wavelength(self, centre_wavelength) :
  #       self.centre_wl = centre_wavelength
-        
-    x_axis = property(get_xaxis)
+#     def Set_Center_Wavelength(self,Wavelength):  
+#        Centre_Pixel=int(CCD_Size/2)
+#        Required_Step=self.triax.Find_Required_Step(Wavelength,Centre_Pixel)
+#        Current_Step=self.triax.Motor_Steps()
+#        self.triax.Move_Steps(Required_Step-Current_Step)
     
+#    def read_spectrum(self):
+#        return np.array(self.capture()[0])
+
+
+
+  
+
         
     
