@@ -122,7 +122,7 @@ class AndorBase:
         if self.Capabilities['CameraType'] in [3, 4]:
             if self.cooler:
                 self.cooler = 0
-            while self.CurrentTemperature < -20:
+            while self.CurrentTemperature < -60:
                 print 'Waiting'
                 time.sleep(1)
         self._logger.info('Shutting down')
