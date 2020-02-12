@@ -35,5 +35,5 @@ class Shamdor(Andor):
 if __name__ == '__main__':
     s = Shamdor()
     s.show_gui(blocking = False)
-    s.shamrock.GetCalibration()       
+    s.shamrock.show_gui(block = False)       
     

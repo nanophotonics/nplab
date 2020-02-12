@@ -476,11 +476,9 @@ class AndorBase(object):
             int         number of images taken
             tuple       shape of the images taken
         """
-
         self._dll_wrapper('StartAcquisition')
         self._dll_wrapper('WaitForAcquisition')
         self.wait_for_driver()
-
         if self._parameters['AcquisitionMode'] == 4:
             num_of_images = 1  # self.parameters['FastKinetics']['value'][1]
             image_shape = (self._parameters['FastKinetics'][-1], self._parameters['DetectorShape'][0])

@@ -22,7 +22,7 @@ class Andor(CameraRoiScale, AndorBase):
         self.CurImage = None
         self.background = None
         self.backgrounded = False
-
+        self.keep_shutter_open = False
         if settings_filepath is not None:
             self.load_params_from_file(settings_filepath)
         self.isAborted = False
@@ -54,8 +54,13 @@ class Andor(CameraRoiScale, AndorBase):
 
     def raw_snapshot(self):
         try:
+            if self.keep_shutter_open:
+                i = self.Shutter # initial shutter settings
+                self.Shutter = (i[0], 1, i[2], i[3])
             imageArray, num_of_images, image_shape = self.capture()
-
+            if self.keep_shutter_open:
+                self.Shutter = i
+            
             # The image is reversed depending on whether you read in the conventional CCD register or the EM register,
             # so we reverse it back
             if self._parameters['OutAmp']:
@@ -185,7 +190,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         self.pushButtonTakeBG.clicked.connect(self.take_background)
         self.checkBoxRemoveBG.stateChanged.connect(self.remove_background)
         self.referesh_groups_pushButton.clicked.connect(self.update_groups_box)
-        
+        self.keep_shutter_open_checkBox.stateChanged.connect(self.update_shutter_mode)
         self.read_temperature_pushButton.clicked.connect(self.temperature_gui)
         self.live_temperature_checkBox.clicked.connect(self.temperature_gui)
         self.temperature_display_thread.ready.connect(self.update_temperature_display)
@@ -218,8 +223,13 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         self.temperature_display_thread.start()
     def update_temperature_display(self, temperature):
         self.temperature_lcdNumber.display(float(temperature))
+    
     def get_temperature(self):
         return self.Andor.CurrentTemperature
+    
+    def update_shutter_mode(self):
+        self.Andor.keep_shutter_open = self.keep_shutter_open_checkBox.isChecked()
+    
     def acquisition_mode(self):
         available_modes = ['Single', 'Accumulate', 'Kinetic', 'Fast Kinetic']
         currentMode = self.comboBoxAcqMode.currentText()
@@ -228,15 +238,22 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         if currentMode == 'Fast Kinetic':
             self.spinBoxNumRows.show()
             self.labelNumRows.show()
-        elif self.comboBoxReadMode.currentText() != 'Single track':
+
+        elif currentMode != 'Single track':
             self.spinBoxNumRows.hide()
             self.labelNumRows.hide()
+        
         if currentMode == 'Accumulate':
             self.spinBoxNumAccum.show()
             self.labelNumAccum.show()
         else:
             self.spinBoxNumAccum.hide()
             self.labelNumAccum.hide()
+        
+        if (currentMode == 'Fast Kinetic') or (currentMode == 'Kinetic'):
+            self.keep_shutter_open_checkBox.show()
+        else:
+            self.keep_shutter_open_checkBox.hide()
 
     def read_mode(self):
         available_modes = ['FVB', 'Multi-track', 'Random track', 'Single track', 'Image']
@@ -417,6 +434,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
     def Abort(self):
         self.Andor.live_view = False
 class DisplayThread(QtCore.QThread):
+    '''for displaying the temperature'''
     ready = QtCore.Signal(float)
     def __init__(self, parent):
         super(DisplayThread, self).__init__()
