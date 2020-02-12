@@ -46,14 +46,15 @@ class Trandor(Andor):#Andor
     
     ''' Wrapper class for the Triax and the andor
     ''' 
-    def __init__(self, White_Shutter=None, triax_address = 'GPIB0::1::INSTR', use_shifts = False, laser = '_633'):
+    def __init__(self, white_shutter=None, triax_address = 'GPIB0::1::INSTR', use_shifts = False, laser = '_633'):
         print ('Triax Information:')
         super(Trandor,self).__init__()
         self.triax = Triax(triax_address, Calibration_Arrays,CCD_Size) #Initialise triax
-        self.White_Shutter=White_Shutter
+        self.white_shutter = white_shutter
         self.triax.ccd_size = CCD_Size
         self.use_shifts = use_shifts
         self.laser = laser
+        
         print ('Current Grating:'+str(self.triax.Grating()))
         print ('Current Slit Width:'+str(self.triax.Slit())+'um')
         
