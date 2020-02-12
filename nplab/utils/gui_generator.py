@@ -23,7 +23,7 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
     """
 
     def __init__(self, instrument_dict, parent=None, dock_settings_path=None,
-                 scripts_path=None, working_directory=None, file_path=None):  #
+                 scripts_path=None, working_directory=None, file_path=None, terminal = False):  #
         """Args:
             instrument_dict(dict) :     This is a dictionary containing the
                                         instruments objects where the key is the 
@@ -40,6 +40,9 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
             file_path(str):             A path to the file for saving data. If None,
                                         a dialog will ask for one. Can be a relative
                                         path (from working_directory) or an absolute path
+            terminal(bool):             Specifies whether the generated gui has an ipython 
+                                        console. Sripts ran in an ipython console cannot 
+                                        generate another one.
                                 """
         super(GuiGenerator, self).__init__(parent)
         self._logger = LOGGER
@@ -85,8 +88,9 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
         else:
             self.scripts_path = 'scripts'
         self.terminalWindow = None
-        self.menuTerminal()
-        self._addActionViewMenu('Terminal')
+        if terminal:
+            self.menuTerminal()
+            self._addActionViewMenu('Terminal')
         self.makeScriptMenu()
 
         self.NightMode = 1
