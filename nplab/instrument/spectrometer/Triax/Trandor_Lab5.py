@@ -9,7 +9,7 @@ from builtins import str
 from past.utils import old_div
 from nplab.instrument.spectrometer.Triax import Triax
 import numpy as np
-from nplab.instrument.camera.Andor import Andor
+from nplab.instrument.camera.Andor import Andor, AndorUI
 import types
 import future
 
@@ -46,14 +46,15 @@ class Trandor(Andor):#Andor
     
     ''' Wrapper class for the Triax and the andor
     ''' 
-    def __init__(self, White_Shutter=None, triax_address = 'GPIB0::1::INSTR', use_shifts = False, laser = '_633'):
+    def __init__(self, white_shutter=None, triax_address = 'GPIB0::1::INSTR', use_shifts = False, laser = '_633'):
         print ('Triax Information:')
         super(Trandor,self).__init__()
         self.triax = Triax(triax_address, Calibration_Arrays,CCD_Size) #Initialise triax
-        self.White_Shutter=White_Shutter
+        self.white_shutter = white_shutter
         self.triax.ccd_size = CCD_Size
         self.use_shifts = use_shifts
         self.laser = laser
+        
         print ('Current Grating:'+str(self.triax.Grating()))
         print ('Current Slit Width:'+str(self.triax.Slit())+'um')
         
@@ -89,6 +90,17 @@ class Trandor(Andor):#Andor
         ''' backwards compatability with lab codes that use trandor.Set_Center_Wavelength'''
         self.triax.Set_Center_Wavelength(wavelength)    
     
+def Capture(_AndorUI):
+    if _AndorUI.Andor.white_shutter is not None:
+        isopen = _AndorUI.Andor.white_shutter.is_open()
+        if isopen:
+            _AndorUI.Andor.white_shutter.close_shutter()
+        _AndorUI.Andor.raw_image(update_latest_frame = True)
+        if isopen:
+            _AndorUI.Andor.white_shutter.open_shutter()
+    else:
+        _AndorUI.Andor.raw_image(update_latest_frame = True)
+setattr(AndorUI, 'Capture', Capture)
     # def _Capture(self,Close_White_Shutter=True): # shouldn't be used. use andor.Capture()
     #     """
     #     Edits the capture function if a white light shutter object is supplied, to ensure it is closed while the image is taken.
