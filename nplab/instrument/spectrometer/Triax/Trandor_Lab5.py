@@ -89,12 +89,12 @@ class Trandor(Andor):#Andor
         ''' backwards compatability with lab codes that use trandor.Set_Center_Wavelength'''
         self.triax.Set_Center_Wavelength(wavelength)    
     
-def Capture(_AndorUI)
+def Capture(_AndorUI):
     if _AndorUI.Andor.white_shutter is not None:
-        isopen = self.white_shutter.isopen()
+        isopen = _AndorUI.Andor.white_shutter.is_open()
         if isopen:
             _AndorUI.Andor.white_shutter.close_shutter()
-        self.Andor.raw_image(update_latest_frame = True)
+        _AndorUI.Andor.raw_image(update_latest_frame = True)
         if isopen:
             _AndorUI.Andor.white_shutter.open_shutter()
     else:

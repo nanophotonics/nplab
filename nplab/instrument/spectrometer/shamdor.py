@@ -6,19 +6,21 @@ Created on Sat Jul 08 19:47:22 2017
 """
 from __future__ import division
 from past.utils import old_div
-from nplab.instrument.camera.Andor import Andor
+from nplab.instrument.camera.Andor import Andor, AndorUI
 from nplab.instrument.spectrometer.shamrock import Shamrock
 import numpy as np
+from nplab.instrument.shutter.BX51_uniblitz import Uniblitz
 
 class Shamdor(Andor):
     ''' Wrapper class for the shamrock and the andor
     '''
-    def __init__(self, pixel_number = 1600, pixel_width = 16, use_shifts = False, laser = '_633'):
+    def __init__(self, pixel_number = 1600, pixel_width = 16, use_shifts = False, laser = '_633', white_shutter = None):
         self.shamrock = Shamrock()
         self.shamrock.pixel_number = pixel_number
         self.shamrock.pixel_width = pixel_width
         self.use_shifts = use_shifts
         self.laser = laser
+        self.white_shutter = white_shutter
         super(Shamdor, self).__init__()
     
     def get_xaxis(self):
@@ -31,9 +33,21 @@ class Shamdor(Andor):
             return self.shamrock.GetCalibration()[::-1]
     
     x_axis = property(get_xaxis)
-    
+def Capture(_AndorUI):
+    if _AndorUI.Andor.white_shutter is not None:
+        isopen = _AndorUI.Andor.white_shutter.is_open()
+        if isopen:
+            _AndorUI.Andor.white_shutter.close_shutter()
+        _AndorUI.Andor.raw_image(update_latest_frame = True)
+        if isopen:
+            _AndorUI.Andor.white_shutter.open_shutter()
+    else:
+        _AndorUI.Andor.raw_image(update_latest_frame = True)
+setattr(AndorUI, 'Capture', Capture)
 if __name__ == '__main__':
-    s = Shamdor()
+    wutter = Uniblitz("COM10")
+    wutter.close_shutter()
+    s = Shamdor(white_shutter = wutter)
     s.show_gui(blocking = False)
     s.shamrock.show_gui(block = False)       
     
