@@ -74,6 +74,10 @@ class AOM(object):
         
     def Get_Power(self):
         return float(self.Power_Supply.ask("SOUR:VOLT:OFFS?"))
+    
+    def Power_Apply(self, shape, frequency, amplitude, offset):
+        self.Power_Supply.write("APPL:%s %d Hz, %f VPP, %f V" % (shape, frequency, amplitude, offset))
+        
     def Find_Power(self,Power,Power_Meter,Laser_Shutter,Steps=10,Tolerance=1.):
         Bounds=[0,1]
         Laser_Shutter.close_shutter()
