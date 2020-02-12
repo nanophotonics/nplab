@@ -9,7 +9,7 @@ from builtins import str
 from past.utils import old_div
 from nplab.instrument.spectrometer.Triax import Triax
 import numpy as np
-from nplab.instrument.camera.Andor import Andor
+from nplab.instrument.camera.Andor import Andor, AndorUI
 import types
 import future
 
@@ -89,6 +89,17 @@ class Trandor(Andor):#Andor
         ''' backwards compatability with lab codes that use trandor.Set_Center_Wavelength'''
         self.triax.Set_Center_Wavelength(wavelength)    
     
+def Capture(_AndorUI)
+    if _AndorUI.Andor.white_shutter is not None:
+        isopen = self.white_shutter.isopen()
+        if isopen:
+            _AndorUI.Andor.white_shutter.close_shutter()
+        self.Andor.raw_image(update_latest_frame = True)
+        if isopen:
+            _AndorUI.Andor.white_shutter.open_shutter()
+    else:
+        _AndorUI.Andor.raw_image(update_latest_frame = True)
+setattr(AndorUI, 'Capture', Capture)
     # def _Capture(self,Close_White_Shutter=True): # shouldn't be used. use andor.Capture()
     #     """
     #     Edits the capture function if a white light shutter object is supplied, to ensure it is closed while the image is taken.
