@@ -5,6 +5,7 @@ import nplab.datafile as df
 from nplab.utils.log import create_logger, ColoredFormatter
 
 import os
+import sys
 import inspect
 import numpy as np
 
@@ -81,13 +82,15 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
 
         for instr in self.instr_dict:
             self._open_one_gui(instr)
-
+            
         self.script_menu = None
         if scripts_path is not None:
             self.scripts_path = scripts_path
         else:
             self.scripts_path = 'scripts'
+        sys.path.append(self.scripts_path)
         self.terminalWindow = None
+        self.terminal = terminal
         if terminal:
             self.menuTerminal()
             self._addActionViewMenu('Terminal')
@@ -339,10 +342,14 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
 
     def menuScriptClicked(self, scriptname):
         """Runs the selected script """
-        if self.terminalWindow is None:
-            self.menuTerminal()
-        self.terminalWindow.run_script(scriptname)
-
+        if self.terminal:
+            if self.terminalWindow is None:
+                self.menuTerminal()
+                self.terminalWindow.run_script(scriptname)
+        else: 
+            print('Running',os.path.join(self.scripts_path, scriptname))
+            exec(open(os.path.join(self.scripts_path, scriptname)).read())
+            
     def VerboseChanged(self, action):
         """Automatically change the loggers 
         verbosity level across all instruments upon 
