@@ -40,6 +40,9 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
             file_path(str):             A path to the file for saving data. If None,
                                         a dialog will ask for one. Can be a relative
                                         path (from working_directory) or an absolute path
+            terminal(bool):             Specifies whether the generated gui has an ipython 
+                                        console. Sripts ran in an ipython console cannot 
+                                        generate another one.
                                 """
         super(GuiGenerator, self).__init__(parent)
         self._logger = LOGGER
