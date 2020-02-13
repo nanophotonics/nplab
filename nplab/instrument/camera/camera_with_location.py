@@ -500,8 +500,7 @@ class AcquireGridOfImages(ExperimentWithProgressBar):
     def run(self, n_tiles=(1,1), autofocus_args=None):
         """Acquire a grid of images with the specified overlap."""
         self.update_progress(0)
-        cwl = self.cwl
-        centre_image = cwl.color_image()
+        centre_image = self.cwl.color_image()
         scan_step = np.array(centre_image.shape[:2]) - self.overlap_pixels
         self.log("Starting a {} scan with a step size of {}".format(n_tiles, scan_step))
 
@@ -513,14 +512,12 @@ class AcquireGridOfImages(ExperimentWithProgressBar):
             for y_index in y_indices:
                 for x_index in x_indices:
                     # Go to the grid point
-                    if self.autofocus == True:
-                        cwl.autofocus()
-                    cwl.move(centre_image.pixel_to_location(np.array([x_index, y_index]) * scan_step)[:2])
+                    self.cwl.move(centre_image.pixel_to_location(np.array([x_index, y_index]) * scan_step)[:2])
                     # TODO: make autofocus update drift or something...
                     if autofocus_args is not None:
-                        cwl.autofocus(**autofocus_args)
-                    cwl.settle()  # wait for the camera to be ready/stage to settle
-                    dest.create_dataset("tile_%d",data=cwl.color_image())
+                        self.cwl.autofocus(**autofocus_args)
+                    self.cwl.settle()  # wait for the camera to be ready/stage to settle
+                    dest.create_dataset("tile_%d",data=self.cwl.color_image())
                     dest.file.flush()
                     images_acquired += 1 # TODO: work out why I can't just use dest.count_numbered_items("tile")
                     self.update_progress(images_acquired)

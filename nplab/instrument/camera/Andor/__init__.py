@@ -14,7 +14,7 @@ from weakref import WeakSet
 import time
 
 class Andor(CameraRoiScale, AndorBase):
-
+    metadata_property_names = ('Exposure', 'Slit', 'x_axis', 'wavelengths', 'CurrentTemperature',)
     def __init__(self, settings_filepath=None, camera_index=None, **kwargs):
         super(Andor, self).__init__()
         self.start(camera_index)

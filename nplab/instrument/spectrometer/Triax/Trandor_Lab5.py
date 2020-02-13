@@ -71,7 +71,12 @@ class Trandor(Andor):#Andor
         else:
             return self.triax.Get_Wavelength_Array()[::-1]
     x_axis = property(Generate_Wavelength_Axis)
-    
+    @property
+    def wavelengths(self):
+        return self.x_axis
+    @property
+    def Slit(self):
+        return self.triax.Slit()
     def Test_Notch_Alignment(self):
         	Accepted=False
         	while Accepted is False:
