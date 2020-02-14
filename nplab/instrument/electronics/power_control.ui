@@ -228,17 +228,17 @@
     <string>points</string>
    </property>
   </widget>
+  <zorder>label_11</zorder>
+  <zorder>label_8</zorder>
   <zorder>label_9</zorder>
   <zorder>pushButton_calibrate_power</zorder>
   <zorder>doubleSpinBox_measured_power</zorder>
   <zorder>label_2</zorder>
   <zorder>doubleSpinBox_set_input_param</zorder>
-  <zorder>label_8</zorder>
   <zorder>pushButton_set_param</zorder>
   <zorder>doubleSpinBox_min_param</zorder>
   <zorder>doubleSpinBox_max_param</zorder>
   <zorder>laser_textBrowser</zorder>
-  <zorder>label_11</zorder>
   <zorder>doubleSpinBox_set_power</zorder>
   <zorder>pushButton_set_power</zorder>
   <zorder>number_points_spinBox</zorder>
