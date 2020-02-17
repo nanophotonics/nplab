@@ -3,6 +3,8 @@ This example demonstrates a real experiment using a Keithley SMU. The main focus
 Instrument subclass which allows a user to get a previously created instance of the Keithley
 class to use during the experiment.
 """
+from future import standard_library
+standard_library.install_aliases()
 __author__ = 'alansanders'
 
 from nplab.instrument.electronics.keithley_2636b_smu import Keithley2636B

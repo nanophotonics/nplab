@@ -1,3 +1,5 @@
+from __future__ import print_function
+from builtins import range
 __author__ = 'alansanders'
 
 from nplab.instrument.visa_instrument import VisaInstrument
@@ -18,7 +20,7 @@ class PIStage(VisaInstrument, Stage):
         self.instr.baud_rate = 57600
    #     self.instr.timeout = 10
         self.axis_names = ('a', 'b')
-        self.positions = [0 for ch in xrange(3)]
+        self.positions = [0 for ch in range(3)]
         self._stage_id = None
         self.startup()
 
@@ -46,12 +48,12 @@ class PIStage(VisaInstrument, Stage):
         its initial position.
         """
         positions = np.zeros((3, len(axes)))
-        for i in xrange(3):
+        for i in range(3):
             positions[i] = [self.get_position(axis) for axis in axes]
             time.sleep(0.005)
         sum_of_diffs = np.sum(positions-positions[0], axis=1)
         if np.any(sum_of_diffs > 0.01):
-            print sum_of_diffs
+            print(sum_of_diffs)
             return True
         else:
             return False
@@ -64,7 +66,7 @@ class PIStage(VisaInstrument, Stage):
     def startup(self):
         self.online = 1
         while not self.online:
-            print self.online
+            print(self.online)
         self.loop_mode = 1
         self.speed_mode = 0
         self.velocity = 100
@@ -134,7 +136,7 @@ class PIStage(VisaInstrument, Stage):
 
 
 if __name__ == '__main__':
-    stage = PIStage()
+    stage = PIStage(address='ASRL4::INSTR')
   #  stage.move((5e-6, 10e-6))
 #    print stage.position
 #    print stage.get_position()

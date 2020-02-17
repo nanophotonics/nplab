@@ -4,9 +4,11 @@ Created on Wed Sept 20 2017
 
 @author: Femi Ojambati (fo263)
 """
+from __future__ import print_function
 
 
 
+from builtins import str
 from ctypes import *
 import sys
 from nplab.instrument import Instrument
@@ -234,10 +236,10 @@ if __name__ == '__main__':
     th.TimeHarp_ShutDown()
     
     
-    print('The resolution is ' + str(resoltuion))
-    print('The Sync Rate is ' + str(syncrate))
-    print('The Count Rate is ' + str(countrate))
-    print('The total count is ' + str(total_count))
+    print(('The resolution is ' + str(resoltuion)))
+    print(('The Sync Rate is ' + str(syncrate)))
+    print(('The Count Rate is ' + str(countrate)))
+    print(('The total count is ' + str(total_count)))
     
     counts = []
     #

@@ -1,8 +1,13 @@
+from __future__ import division
+from __future__ import print_function
+from builtins import str
+from builtins import range
+from past.utils import old_div
 __author__ = 'alansanders'
 
 from nplab.instrument import Instrument
-from PyDAQmx import *
-import PyDAQmx as pdmx #pointess line of code ?
+from pydaqmx import *
+import pydaqmx as pdmx #pointess line of code ?
 import numpy as np
 
 
@@ -215,14 +220,14 @@ if __name__ == '__main__':
     from time import sleep
 
     def multi_read(d):
-        print 5./6000
+        print(5./6000)
         d.setup_multi_ai([0,1,2,3,4], 1e6, 0.001)
         j = 0
         while j<2:
             time, data = d.read_multi_ai()
             ref = data[0]
-            x = data[1]/data[2]
-            y = data[3]/data[4]
+            x = old_div(data[1],data[2])
+            y = old_div(data[3],data[4])
             new_data = [ref, x, y]
             for i in range(len(new_data)):
                 plot(time, new_data[i])
@@ -230,7 +235,7 @@ if __name__ == '__main__':
         d.clear_multi_ai()
 
     def cont_multi_read(d):
-        print 'should take %s ms' % (1000*5./6000.)
+        print('should take %s ms' % (1000*5./6000.))
         d.setup_multi_ai_cont([0,1,2,3,4], 1e6, 5./6000.)
         i=0
         while i<10:

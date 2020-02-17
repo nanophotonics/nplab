@@ -1,3 +1,6 @@
+from __future__ import print_function
+from builtins import str
+from builtins import range
 __author__ = 'alansanders'
 
 from nplab.experiment.scanning_experiment import ScanningExperiment, TimedScan
@@ -34,7 +37,7 @@ class LinearScan(ScanningExperiment, TimedScan):
         :return:
         """
         if isinstance(self.acquisition_thread, threading.Thread) and self.acquisition_thread.is_alive():
-            print 'scan already running'
+            print('scan already running')
             return
         self.init_scan()
         self.acquisition_thread = threading.Thread(target=self.scan,
@@ -62,7 +65,7 @@ class LinearScan(ScanningExperiment, TimedScan):
         p = self.init_parameter(start, stop, step)
         self.open_scan()
         # get the indices of points along each of the scan axes for use with snaking over array
-        pnts = range(p.size)
+        pnts = list(range(p.size))
 
         self.index = -1
         self._index = -1
@@ -240,7 +243,7 @@ if __name__ == '__main__':
         def update(self, force=False):
             super(DummyLinearScan, self).update(force)
             if self.data is None or self.fig.canvas is None:
-                print 'no canvas or data'
+                print('no canvas or data')
                 return
             if force:
                 data = (self.parameter, self.data)

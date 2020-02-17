@@ -5,7 +5,12 @@ Issues:
     - The waitStop property for moving doesn't really work, and if you send two move commands quickly after each other,
     the system doesn't react fast enough and doesn't reach the final destination.
 """
+from __future__ import print_function
 
+from builtins import map
+from builtins import hex
+from builtins import str
+from builtins import range
 import time
 
 from nplab.instrument.serial_instrument import SerialInstrument
@@ -172,7 +177,7 @@ class SMC100(SerialInstrument, Stage):
                             done = True
                         else:
                             raise SMC100InvalidResponseException(command, response)
-                    except Exception, ex:
+                    except Exception as ex:
                         if not retry or retry <= 0:
                             raise ex
                         else:
@@ -384,7 +389,7 @@ class SMC100(SerialInstrument, Stage):
         if not hasattr(position_mm, '__iter__'):
             position_mm = (position_mm, )
 
-        final_pos = map(lambda x, y: x+y, self.software_home, position_mm)
+        final_pos = list(map(lambda x, y: x+y, self.software_home, position_mm))
 
         self.move(final_pos, **kwargs)
 
@@ -612,10 +617,10 @@ class SMC100(SerialInstrument, Stage):
 
 if __name__ == '__main__':
     smc100 = SMC100('COM13', (1,2))
-    print 'Axes: ', smc100.axis_names
+    print('Axes: ', smc100.axis_names)
 
-    print smc100.get_position() #_mm() #get_position()
-    print smc100.get_status()
+    print(smc100.get_position()) #_mm() #get_position()
+    print(smc100.get_status())
 
     smc100.show_gui()
 

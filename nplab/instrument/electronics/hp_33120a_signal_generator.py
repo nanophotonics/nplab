@@ -1,3 +1,4 @@
+from __future__ import print_function
 __author__ = 'alansanders'
 
 from nplab.instrument.visa_instrument import VisaInstrument, queried_property
@@ -25,11 +26,11 @@ class SignalGenerator(VisaInstrument):
 
 if __name__ == '__main__':
     s = SignalGenerator()
-    print s.frequency
+    print(s.frequency)
     s.frequency = 1e3
-    print s.frequency
+    print(s.frequency)
     s.frequency = 2e3
-    print s.frequency
-    print s.function
+    print(s.frequency)
+    print(s.function)
     s.function = 'sinusoid'
-    print s.function
+    print(s.function)

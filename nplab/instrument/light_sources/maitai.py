@@ -4,6 +4,7 @@ Created on Thu Jul 06 13:57:22 2017
 
 @author: Hera
 """
+from builtins import str
 import serial
 import numpy as np
 
@@ -77,11 +78,18 @@ class Maitai(SerialInstrument):
                                 must between 690 and 1020
         '''
         return float(self.query('WAVELENGTH?')[:-2])
+#    def set_wavelength(self,wavelength):
+#        if wavelength>690 and wavelength<1020:
+#            return self.write('WAVELENGTH ')
+#        else:
+#            self.log('Wavelength out of range ('+wavelength+')')
+        
     def set_wavelength(self,wavelength):
         if wavelength>690 and wavelength<1020:
-            return self.write('WAVELENGTH ')
+            return self.write('WAVelength ' + str(wavelength))
         else:
-            self.log('Wavelength out of range ('+wavelength+')')
+            self.log('Wavelength out of range ('+wavelength+')')            
+        
     wavelength = NotifiedProperty(get_set_wavelength,set_wavelength)
     
     def set_watchdog(self,n):

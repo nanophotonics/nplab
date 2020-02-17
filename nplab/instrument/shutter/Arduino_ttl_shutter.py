@@ -1,15 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Aug 02 21:16:42 2017
+Created on Mon Aug 14 11:00:00 2019
 
-@author: Hera
+@author: Giovanni Orlando
 """
 from nplab.instrument.serial_instrument import SerialInstrument
 from nplab.instrument.shutter import Shutter
 import serial
 from nplab.utils.notified_property import NotifiedProperty
-from nplab.ui.ui_tools import QuickControlBox
-from nplab.utils.gui import QtWidgets
 from nplab.ui.ui_tools import *
 from nplab.utils.gui import *
 
@@ -53,6 +51,7 @@ class Arduino_tri_shutter(SerialInstrument):
                             to in any of the accepted serial formats
             
         '''
+        self.termination_character = '\n'
         self.port_settings = {
                     'baudrate':9600,
              #       'bytesize':serial.EIGHTBITS,
@@ -148,6 +147,8 @@ class Arduino_tri_shutter(SerialInstrument):
     
     Shutter_1_State_2 = NotifiedProperty(fset = set_shutter_1_state, fget = get_state_1)
     Shutter_2_State_2 = NotifiedProperty(fset = set_shutter_2_state, fget = get_state_2)
+    Shutter_1_State = NotifiedProperty(fset = set_shutter_1_state, fget = get_state_1)
+    Shutter_2_State = NotifiedProperty(fset = set_shutter_2_state, fget = get_state_2)
     Flipper_1_State = NotifiedProperty(fset = set_mirror_1_state, fget = get_state_3)    
 
     #      self.get_state()
@@ -168,3 +169,9 @@ if __name__ == '__main__':
     import time 
     time.sleep(5)
     shutter.show_gui()
+    self.add_checkbox('Shutter_1_State')
+    self.add_checkbox('Shutter_2_State')
+    self.add_checkbox('Flipper_1_State')
+    self.auto_connect_by_name(controlled_object = self.shutter)
+    
+    

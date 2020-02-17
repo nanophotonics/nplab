@@ -1,11 +1,18 @@
-__author__ = 'alansanders'
+# -*- coding: utf-8 -*-
 
+from __future__ import print_function
+from builtins import range
+__author__ = 'alansanders'
 import ctypes as ct
-pvcam = ct.windll.pvcam32
+import os
+
+pvcam=PVCAM = ct.WinDLL(os.path.dirname(__file__) +"/DLL/Pvcam32.dll")
+
 import nplab.instrument.ccd.pvcam_h as pv
 import numpy as np
 import time
 from nplab.instrument.ccd import CCD
+from nplab.instrument.camera import Camera
 from nplab.utils.gui import *
 from nplab.ui.ui_tools import UiTools
 from nplab import inherit_docstring
@@ -13,21 +20,21 @@ from nplab import inherit_docstring
 
 class PixisError(Exception):
     def __init__(self, msg):
-        print msg
+        print(msg)
         i = pvcam.pl_error_code()
         msg = ct.create_string_buffer(20)
         pvcam.pl_error_message(i, msg)
-        print 'self.pvcam Error:', i, msg
+        print('self.pvcam Error:', i, msg)
         pvcam.pl_self.pvcam_uninit()
 
 
-class Pixis256E(CCD):
+class Pixis256E(CCD,Camera):
     def __init__(self):
         super(Pixis256E, self).__init__()
         try:
-            self.pvcam = ct.windll.pvcam32
+            self.pvcam = PVCAM #ct.windll.pvcam32
         except WindowsError as e:
-            print 'pvcam not found'
+            print('pvcam not found')
         cam_selection = ct.c_int16()
         # Initialize the self.pvcam library and open the camera #
         self.open_lib()
@@ -45,7 +52,7 @@ class Pixis256E(CCD):
         #print 'trying to allocate0', (ct.c_int16 * 10)()
 
     def __del__(self):
-        print 'deleting'
+        print('deleting')
         if self.cam_open:
             self.close_cam()
         self.close_lib()
@@ -81,11 +88,11 @@ class Pixis256E(CCD):
         if not self.pvcam.pl_pvcam_init():
             raise PixisError("failed to init self.pvcam")
         else:
-            print 'init self.pvcam complete'
+            print('init self.pvcam complete')
 
     def close_lib(self):
         self.pvcam.pl_pvcam_uninit()
-        print "pvcam closed"
+        print("pvcam closed")
 
     def open_cam(self, cam_selection):
         cam_name = ct.create_string_buffer(20)
@@ -101,7 +108,7 @@ class Pixis256E(CCD):
             self.finish_sequence()
         self.pvcam.pl_cam_close(self._handle)
         self.cam_open = False
-        print 'cam closed'
+        print('cam closed')
 
     def set_any_param(self, param_id, param_value):
         b_status = ct.c_bool()
@@ -122,14 +129,14 @@ class Pixis256E(CCD):
             if param_access.value == pv.ACC_READ_WRITE or param_access.value == pv.ACC_WRITE_ONLY:
                 if not self.pvcam.pl_set_param(self._handle, param_id,
                                           ct.cast(ct.byref(param_value), ct.c_void_p)):
-                    print "error: param %d (value = %d) did not get set" % (
-                    param_id.value, param_value.value)
+                    print("error: param %d (value = %d) did not get set" % (
+                    param_id.value, param_value.value))
                     return False
             else:
-                print "error: param %d is not writable: %s" % (param_id.value, param_access.value)
+                print("error: param %d is not writable: %s" % (param_id.value, param_access.value))
                 return False
         else:
-            print "error: param %d is not available" % param_id.value
+            print("error: param %d is not available" % param_id.value)
             return False
         return True
 
@@ -166,7 +173,7 @@ class Pixis256E(CCD):
         }
         for p in params:
             status = self.set_any_param(p, params[p][0])
-            if not status: print 'problem with %s' % params[p][1]
+            if not status: print('problem with %s' % params[p][1])
 
         read_params = [
             pv.PARAM_PIX_TIME,
@@ -202,7 +209,7 @@ class Pixis256E(CCD):
             # if not status: print 'problem with clear mode'
             status = self.set_any_param(pv.PARAM_CONT_CLEARS, ct.c_bool(self.cont_clears))
             if not status:
-                print 'problem with continuous cleans 2'
+                print('problem with continuous cleans 2')
             # status = self.set_any_param(pv.PARAM_CLN_WHILE_EXPO, ct.c_uint16(1))
             # if not status: print 'problem with clear while exposing'
 
@@ -257,6 +264,13 @@ class Pixis256E(CCD):
         self.reference = self.read_image(self.exposure, self.timing, self.mode,
                                          new=True, end=True)
         self.update_config('reference', self.reference)
+    
+    def raw_snapshot(self):
+        try:
+            image = self.read_image(self.exposure, timing='timed', mode='kinetics', new=False, end= True, k_size=1)
+            return 1, image
+        except Exception as e:
+            self._logger.warn("Couldn't Capture because %s" % e)
 
 
 @inherit_docstring(Pixis256E)
@@ -282,21 +296,22 @@ class Pixis256EUI(QtWidgets.QWidget, UiTools):
     def __init__(self, pixis):
         if not isinstance(pixis, Pixis256EQt):
             raise TypeError('pixis is not an instance of Pixis256EQt')
+        super(Pixis256EUI, self).__init__()
         self.pixis = pixis
 
-        self.exposure.setValidator(QtWidgets.QIntValidator())
-        self.exposure.textChanged.connect(self.check_state)
-        self.exposure.textChanged.connect(self.on_text_change)
-        self.mode.activated.connect(self.on_activated)
-        self.timing.activated.connect(self.on_activated)
-        self.cont_clears.stateChanged.connect(self.on_state_change)
-        self.take_image_button.clicked.connect(self.on_click)
-        self.take_bkgd_button.clicked.connect(self.on_click)
-        self.clear_bkgd_button.clicked.connect(self.on_click)
-        self.take_ref_button.clicked.connect(self.on_click)
-        self.clear_ref_button.clicked.connect(self.on_click)
+        # self.exposure.setValidator(QtWidgets.QIntValidator())
+        # self.exposure.textChanged.connect(self.check_state)
+        # self.exposure.textChanged.connect(self.on_text_change)
+        # self.mode.activated.connect(self.on_activated)
+        # self.timing.activated.connect(self.on_activated)
+        # self.cont_clears.stateChanged.connect(self.on_state_change)
+        # self.take_image_button.clicked.connect(self.on_click)
+        # self.take_bkgd_button.clicked.connect(self.on_click)
+        # self.clear_bkgd_button.clicked.connect(self.on_click)
+        # self.take_ref_button.clicked.connect(self.on_click)
+        # self.clear_ref_button.clicked.connect(self.on_click)
 
-        self.pixis.image_taken.connect()
+        # self.pixis.image_taken.connect()
 
     def on_text_change(self, text):
         sender = super(Pixis256EUI, self).on_text_change(text)
@@ -337,21 +352,21 @@ class Pixis256EUI(QtWidgets.QWidget, UiTools):
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
-
     p = Pixis256EQt()
-    p.exposure = 40
+    p.exposure = 1
 
     def test():
         p.setup_kinetics(p.exposure, 1)
-        print p.check_readout()
+        print(p.check_readout())
         imgs = []
-        print 'ready'
+        print('ready')
         shots = 3
         for i in range(shots):
-            print 'shot {0}'.format(i+1)
+            print('shot {0}'.format(i+1))
             p.start_sequence()
+            time.sleep(0.1)
             while not (p.check_readout()): continue
-            print "triggered"
+            print("triggered")
             img = p.readout_image()
             imgs.append(img)
         p.finish_sequence()
@@ -359,17 +374,24 @@ if __name__ == '__main__':
         img = p.read_image(p.exposure, timing='timed', mode='kinetics', k_size=1)
         imgs.append(img)
         #p.close_cam()
-        print 'finished'
+        print('finished')
 
-        print 'plotting data'
+        print('plotting data')
         fig, axes = plt.subplots(shots+1, sharex=True)
         for i, ax in enumerate(axes):
             img = ax.imshow(imgs[i])
-        print 'done'
+        print('done')
         plt.show()
 
-    p.read_image(p.exposure, timing='timed', mode='kinetics', new=True, end= False, k_size=1)
-    img = p.read_image(p.exposure, timing='timed', mode='kinetics', new=False, end= True, k_size=1)
-    print img
+    print("one")
+#    app = get_qt_app()
+#    ui = Pixis256EUI(pixis=p)
+#    print "two"
 
-    test()
+#    ui.show()
+ #   sys.exit(app.exec_())
+
+    # p.read_image(p.exposure, timing='timed', mode='kinetics', new=True, end= False, k_size=1)
+    # img = p.read_image(p.exposure, timing='timed', mode='kinetics', new=False, end= True, k_size=1)
+    # plt.imshow(img)
+    # plt.show()

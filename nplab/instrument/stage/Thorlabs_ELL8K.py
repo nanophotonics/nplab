@@ -1,7 +1,12 @@
 '''
 author: im354
 '''
+from __future__ import division
+from __future__ import print_function
 
+from builtins import str
+from builtins import range
+from past.utils import old_div
 import struct,sys,math
 from bitarray import bitarray
 import numpy as np 
@@ -15,9 +20,9 @@ def bytes_to_binary(bytearr,debug = 0):
     '''
     Helper method for converting a bytearray datatype to a binary representation
     '''
-    if debug > 0: print bytearr
+    if debug > 0: print(bytearr)
     bytes_as_binary =[ format(int(b,base=16),"#06b").replace("0b","") for b in bytearr ]  
-    if debug > 0: print bytes_as_binary
+    if debug > 0: print(bytes_as_binary)
     binary = "".join(bytes_as_binary)
     return binary 
 
@@ -25,7 +30,7 @@ def twos_complement_to_int(binary,debug = 0):
     '''
     Compute 2s complement of binary number representation
     '''
-    if debug > 0: print binary
+    if debug > 0: print(binary)
     N = len(binary)
     a_N = int(binary[0])
     return float(-a_N*2**(N-1) + int(binary[1:],base=2))
@@ -50,25 +55,25 @@ def int_to_twos_complement(integer, padded_length=16,debug = 0):
 
     #number is below zero - return twos complement representation:
     elif integer < 0:
-        if debug > 0: print "Below zero - returning twos complement"
+        if debug > 0: print("Below zero - returning twos complement")
         integer = -1*integer
         binary = format(integer,"0{}b".format(padded_length+2)).replace("0b","")
         ones_complement = [str(1-int(b)) for b in str(binary)]
         ones_complement = int("".join(ones_complement))
-        print ones_complement
+        print(ones_complement)
         twos_complement = int("0b"+str(ones_complement),base=2) + 1
         twos_complement = format(twos_complement,"034b").replace("0b","")
         if debug > 0:
-            print "input:",integer
-            print "binary:",binary 
-            print "ones comp:", ones_complement
-            print "twos comp (int):", int(twos_complement,base=2) 
+            print("input:",integer)
+            print("binary:",binary) 
+            print("ones comp:", ones_complement)
+            print("twos comp (int):", int(twos_complement,base=2)) 
         return int("0b"+twos_complement,base=2)
 
 class Thorlabs_ELL8K(SerialInstrument,Stage):
 
     #default id is 0, but if multiple devices of same type connected may have others
-    VALID_DEVICE_IDs = [str(v) for v in range(0,11) + ["A","B","C","D","E","F"]]
+    VALID_DEVICE_IDs = [str(v) for v in list(range(0,11)) + ["A","B","C","D","E","F"]]
 
     #How much a stage sleeps (in seconds) between successive calls to .get_position.
     #Used to make blocking calls to move_absolute and move_relative. 
@@ -124,9 +129,9 @@ class Thorlabs_ELL8K(SerialInstrument,Stage):
         self.PULSES_PER_REVOLUTION = configuration["pulses"]
         
         if self.debug > 0:
-            print "Travel (degrees):", self.TRAVEL
-            print "Pulses per revolution", self.PULSES_PER_REVOLUTION
-            print "Device status:",self.get_device_status()
+            print("Travel (degrees):", self.TRAVEL)
+            print("Pulses per revolution", self.PULSES_PER_REVOLUTION)
+            print("Device status:",self.get_device_status())
 
     def query_device(self,query):
 
@@ -136,10 +141,10 @@ class Thorlabs_ELL8K(SerialInstrument,Stage):
         '''
         raw_query = "{0}{1}".format(self.device_index,query)
         if self.debug > 0:
-            print "raw_query",raw_query
+            print("raw_query",raw_query)
         raw_response = self.query(raw_query) 
         if self.debug > 0:
-            print "raw_response",raw_response
+            print("raw_response",raw_response)
         return raw_response
 
     
@@ -156,8 +161,8 @@ class Thorlabs_ELL8K(SerialInstrument,Stage):
         pulse_per_deg = self.PULSES_PER_REVOLUTION/float(self.TRAVEL)
         pulses = int(np.rint(angle*pulse_per_deg))
         if self.debug > 0:
-            print "Input angle:", angle 
-            print "Pulses:", pulses 
+            print("Input angle:", angle) 
+            print("Pulses:", pulses) 
         return pulses
 
     def __pulse_count_to_angle(self,pulse_count):
@@ -169,7 +174,7 @@ class Thorlabs_ELL8K(SerialInstrument,Stage):
 
         Method used when reading data received from stage
         '''
-        return (float(self.TRAVEL)*pulse_count)/self.PULSES_PER_REVOLUTION
+        return old_div((float(self.TRAVEL)*pulse_count),self.PULSES_PER_REVOLUTION)
 
     def __angle_to_hex_pulses(self,angle):
         '''
@@ -182,13 +187,13 @@ class Thorlabs_ELL8K(SerialInstrument,Stage):
 
         #convert angle to number of pulses used to drive motors:
         pulses_int = self.__angle_to_pulse_count(angle)    
-        if self.debug > 0 : print "Pulses (int)", pulses_int
+        if self.debug > 0 : print("Pulses (int)", pulses_int)
         #make two's complement to allow for -ve values
         pulses_int = int_to_twos_complement(pulses_int)
-        if self.debug > 0 : print "Pulses (int,2s compl)", pulses_int
+        if self.debug > 0 : print("Pulses (int,2s compl)", pulses_int)
         #convert integer to hex
         pulses_hex = int_to_hex(pulses_int) 
-        if self.debug > 0 : print "Pulses hex:", pulses_hex
+        if self.debug > 0 : print("Pulses hex:", pulses_hex)
         return pulses_hex
 
     def __hex_pulses_to_angle(self, hex_pulse_position):
@@ -332,13 +337,13 @@ class Thorlabs_ELL8K(SerialInstrument,Stage):
         #read response and decode it:
         header = response[0:3]
         byte_status = response[3:5]
-        if self.debug > 0: print "Byte status:", byte_status
+        if self.debug > 0: print("Byte status:", byte_status)
 
         binary_status = bytes_to_binary(byte_status)
-        if self.debug > 0: print "Binary status", binary_status
+        if self.debug > 0: print("Binary status", binary_status)
         int_status = int(binary_status,base=2)
 
-        if int_status in Thorlabs_ELL8K.DEVICE_STATUS_CODES.keys():
+        if int_status in list(Thorlabs_ELL8K.DEVICE_STATUS_CODES.keys()):
             return {"header": header, "status": Thorlabs_ELL8K.DEVICE_STATUS_CODES[int_status]}
         else:
             return {"header": header, "status": Thorlabs_ELL8K.DEVICE_STATUS_CODES["OutOfBounds"]}
@@ -425,7 +430,7 @@ class Thorlabs_ELL8K_UI(QtWidgets.QWidget, UiTools):
         try:
             angle = float(self.move_relative_textbox.text())
         except ValueError as e:
-            print e
+            print(e)
             return 
         self.stage.move(pos=angle,relative=True)
 
@@ -434,7 +439,7 @@ class Thorlabs_ELL8K_UI(QtWidgets.QWidget, UiTools):
         try:
             angle = float(self.move_absolute_textbox.text())
         except ValueError as e:
-            print e
+            print(e)
             return 
         self.stage.move(pos=angle,relative=False)
 
@@ -454,24 +459,24 @@ def test_stage():
     '''
     debug = False
     s = Thorlabs_ELL8K("COM8",debug=debug)
-    print "Status",s.get_device_status()
-    print "Info",s.get_device_info()
-    print "Homing",s.move_home()
-    print "Home position",s.get_position()
+    print("Status",s.get_device_status())
+    print("Info",s.get_device_info())
+    print("Homing",s.move_home())
+    print("Home position",s.get_position())
     angle = 30
     s.move(angle,relative=True)
-    print "30==",s.get_position()
+    print("30==",s.get_position())
     angle = -30
     s.move(angle,relative=True)
-    print "0==",s.get_position()
+    print("0==",s.get_position())
 
     angle = 150
     s.move(angle,relative=False)
-    print "150==", s.get_position()
+    print("150==", s.get_position())
 
     angle = -10
     s.move(angle,relative=False)
-    print "350==", s.get_position()
+    print("350==", s.get_position())
 
 def test_ui():
     '''

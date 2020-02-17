@@ -17,7 +17,9 @@ Decorating a function with @background_action means that it will happen in a thr
 
 A function running in the background returns a thread object; to find the return value, you can call t.join_and_return_result() (you may want to check if the thread has finished first with t.is_alive()).
 """
+from __future__ import print_function
 
+from builtins import object
 import time
 import threading
 import functools
@@ -52,7 +54,7 @@ def locked_action_decorator(wait_for_lock=True):
                     self._nplab_action_lock.acquire() #this will wait until we can lock the device
                 else:    #if "wait for lock" is false, just return false if it's busy
                     if not self._nplab_action_lock.acquire(block=False):
-                        print "Could not acquire action lock, giving up."
+                        print("Could not acquire action lock, giving up.")
                         return False
                 return function(self, *args, **kwargs)
             except Exception as e:
@@ -122,14 +124,14 @@ if __file__ == "__main__":
             time.sleep(1)
             for c in "Hello World!\n":
                 time.sleep(0.1)
-                print(c),
+                print((c), end=' ')
             return "Return Value"
         @background_action
         def say(self, message):
             time.sleep(1)
             for c in message+"\n":
                 time.sleep(0.1)
-                print(c),
+                print((c), end=' ')
             return len(message)
 
     class Bar(object):
@@ -137,11 +139,11 @@ if __file__ == "__main__":
             time.sleep(1)
             for c in "Hello World!\n":
                 time.sleep(0.1)
-                print(c),
+                print((c), end=' ')
         def say(self, message):
             time.sleep(1)
             for c in message+"\n":
                 time.sleep(0.1)
-                print(c),
+                print((c), end=' ')
 
 

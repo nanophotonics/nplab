@@ -1,3 +1,4 @@
+from builtins import range
 import numpy as np 
 import matplotlib.pyplot as plt 
 from scipy.signal import correlate
@@ -48,7 +49,7 @@ def demo():
 	up = 1.0
 	shift, xcorr = correlation_align(signal0,signal1,upsampling=up)
 	
-	xs = np.array(range(0,N))
+	xs = np.array(list(range(0,N)))
 	axarr[0].plot(xs,signal0,label="signal0")
 	axarr[0].plot(xs,signal1,label="signal1")
 	axarr[0].plot(xs-shift,signal1,label="signal1_shifted")

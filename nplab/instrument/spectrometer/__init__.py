@@ -1,3 +1,9 @@
+from __future__ import division
+from __future__ import print_function
+from builtins import str
+from builtins import zip
+from builtins import range
+from past.utils import old_div
 __author__ = 'alansanders'
 
 import numpy as np
@@ -7,10 +13,13 @@ from nplab.utils.gui import QtCore, QtGui, QtWidgets, get_qt_app, uic
 from collections import deque
 
 from nplab.ui.ui_tools import UiTools
+import nplab.datafile as df
 from nplab.datafile import DataFile
 from nplab.utils.notified_property import NotifiedProperty, DumbNotifiedProperty, register_for_property_changes
+from nplab.utils.array_with_attrs import ArrayWithAttrs
 import h5py
 from multiprocessing.pool import ThreadPool
+from nplab.experiment.gui import run_function_modally
 
 import time
 
@@ -33,6 +42,7 @@ class Spectrometer(Instrument):
    
     variable_int_enabled = DumbNotifiedProperty(False)
     filename = DumbNotifiedProperty("spectrum")
+
     def __init__(self):
         super(Spectrometer, self).__init__()
         self._model_name = None
@@ -55,6 +65,12 @@ class Spectrometer(Instrument):
         self.stored_references = {}
         self.stored_backgrounds = {}
         self.reference_ID = 0
+        self.spectra_buffer = np.zeros(0)
+        self.data_file = df.current()
+        self.curr_scan=None
+        self.num_spectra = 1
+        self.delay = 0
+        self.time_series_name = 'time_series_%d'
 
 
     def __del__(self):
@@ -113,7 +129,7 @@ class Spectrometer(Instrument):
     def set_integration_time(self, value):
         """Set the integration time of the spectrometer (this is a stub)!"""
         warnings.warn("Using the default implementation for integration time: this should be overridden!",DeprecationWarning)
-        print 'setting 0'
+        print('setting 0')
 
     integration_time = property(get_integration_time, set_integration_time)
 
@@ -146,7 +162,7 @@ class Spectrometer(Instrument):
         else:
             background_2 = self.read_spectrum()
         self.integration_time = self.integration_time/2.0
-        self.background_gradient = (background_2-background_1)/self.integration_time
+        self.background_gradient = old_div((background_2-background_1),self.integration_time)
         self.background_constant = background_1-(self.integration_time*self.background_gradient)
         self.background = background_1
         self.background_int = self.integration_time
@@ -209,10 +225,9 @@ class Spectrometer(Instrument):
                 old_error_settings = np.seterr(all='ignore')
            #     new_spectrum = (spectrum - (self.background-np.min(self.background))*self.integration_time/self.background_int+np.min(self.background))/(((self.reference-np.min(self.background))*self.integration_time/self.reference_int - (self.background-np.min(self.background))*self.integration_time/self.background_int)+np.min(self.background))
                 if self.variable_int_enabled == True:
-                    new_spectrum = ((spectrum-(self.background_constant+self.background_gradient*self.integration_time))
-                                    /((self.reference-(self.background_constant+self.background_gradient*self.reference_int))*self.integration_time/self.reference_int))
+                    new_spectrum = (old_div((spectrum-(self.background_constant+self.background_gradient*self.integration_time)),(old_div((self.reference-(self.background_constant+self.background_gradient*self.reference_int))*self.integration_time,self.reference_int))))
                 else:
-                    new_spectrum = (spectrum-self.background)/(self.reference-self.background)
+                    new_spectrum = old_div((spectrum-self.background),(self.reference-self.background))
                 np.seterr(**old_error_settings)
                 new_spectrum[np.isinf(new_spectrum)] = np.NaN #if the reference is nearly 0, we get infinities - just make them all NaNs.
             else:
@@ -224,7 +239,7 @@ class Spectrometer(Instrument):
         else:
             new_spectrum = spectrum
         if self.absorption_enabled == True:
-            return np.log10(1/new_spectrum)
+            return np.log10(old_div(1,new_spectrum))
         return new_spectrum
 
     def read_processed_spectrum(self):
@@ -306,11 +321,30 @@ class Spectrometer(Instrument):
     def load_reference_from_file(self):
         pass
     
-#    def read_averaged_spectrum(self):
- #       averaged_data = []
-  #      for spectrum_num in range(self.number_averages):
-            
-
+    def time_series(self, num_spectra = None, delay = None, update_progress = lambda p:p):# delay in ms
+        if num_spectra is None:
+            num_spectra = self.num_spectra
+        if delay is None:
+            delay = self.delay
+        delay/=1000
+        update_progress(0)
+        metadata = self.metadata
+        extra_metadata = {'number of spectra' : num_spectra,
+                          'spectrum end-to-start delay' : delay
+                           }
+        metadata.update(extra_metadata) 
+        to_save = []
+        times = []
+        start = time.time()
+        for spectrum_number in range(num_spectra):
+            times.append(time.time() - start)
+            to_save.append(self.read_spectrum()) # should be a numpy array
+            time.sleep(delay)
+            update_progress(spectrum_number)
+        metadata.update({'start times' : times})
+        self.create_dataset(self.time_series_name, data=to_save, attrs=metadata)
+        to_return = ArrayWithAttrs(to_save, attrs = metadata)
+        return to_return
 
 class Spectrometers(Instrument):
     def __init__(self, spectrometer_list):
@@ -321,6 +355,7 @@ class Spectrometers(Instrument):
         self.num_spectrometers = len(spectrometer_list)
         self._pool = ThreadPool(processes=self.num_spectrometers)
         self._wavelengths = None
+        filename = DumbNotifiedProperty('spectra')
 
     def __del__(self):
         self._pool.close()
@@ -347,8 +382,8 @@ class Spectrometers(Instrument):
         return self._pool.map(lambda s: s.read_processed_spectrum(), self.spectrometers)
 
     def process_spectra(self, spectra):
-        pairs = zip(self.spectrometers, spectra)
-        return self._pool.map(lambda (s, spectrum): s.process_spectrum(spectrum), pairs)
+        pairs = list(zip(self.spectrometers, spectra))
+        return self._pool.map(lambda s_spectrum: s_spectrum[0].process_spectrum(s_spectrum[1]), pairs)
 
     def get_metadata_list(self):
         """Return a list of metadata for each spectrometer."""
@@ -369,7 +404,7 @@ class Spectrometers(Instrument):
         """
         spectra = self.read_spectra() if spectra is None else spectra
         metadata_list = self.get_metadata_list()
-        g = self.create_data_group('spectra',attrs=attrs) # create a uniquely numbered group in the default place
+        g = self.create_data_group(self.filename,attrs=attrs) # create a uniquely numbered group in the default place
         for spectrum,metadata in zip(spectra,metadata_list):
             g.create_dataset('spectrum_%d',data=spectrum,attrs=metadata)
             
@@ -382,7 +417,8 @@ class Spectrometers(Instrument):
 
     metadata = property(get_metadata)
 
-
+  
+            
 
 class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
     
@@ -429,6 +465,11 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
 
         self.integration_time.setText(str(spectrometer.integration_time))
 
+        self.num_spectra_spinBox.valueChanged.connect(self.update_time_series_params)
+        self.delay_doubleSpinBox.valueChanged.connect(self.update_time_series_params)
+        self.time_series_name_lineEdit.textChanged.connect(self.update_time_series_name)
+        self.time_series_pushButton.clicked.connect(self.time_series)
+
     def update_param(self, *args, **kwargs):
         sender = self.sender()
         if sender is self.integration_time:
@@ -470,13 +511,13 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
                 if 'background_gradient' in self.spectrometer.config_file:
                     self.spectrometer.background_gradient = self.spectrometer.config_file['background_gradient'][:]
                 if 'background_int' in self.spectrometer.config_file:
-                    self.spectrometer.background_int = self.spectrometer.config_file['background_constant'][...]
+                    self.spectrometer.background_int = self.spectrometer.config_file['background_int'][...]
                     
                 self.background_subtracted.blockSignals(True)
                 self.background_subtracted.setCheckState(QtCore.Qt.Checked)
                 self.background_subtracted.blockSignals(False)
             else:
-                print 'background not found in config file'
+                print('background not found in config file')
             if 'reference' in self.spectrometer.config_file:
                 self.spectrometer.reference = self.spectrometer.config_file['reference'][:]
                 if 'reference_int' in self.spectrometer.config_file:
@@ -485,7 +526,7 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
                 self.referenced.setCheckState(QtCore.Qt.Checked)
                 self.referenced.blockSignals(False)
             else:
-                print 'reference not found in config file'
+                print('reference not found in config file')
                 
 
     def state_changed(self, state):
@@ -532,9 +573,14 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
 
             self.spectrometer._logger.info('No refence/background saved in slot %s to load' %args[0])
             
-        
-            
-        
+    def update_time_series_params(self):
+        self.spectrometer.num_spectra = int(self.num_spectra_spinBox.value())   
+        self.spectrometer.delay = float(self.delay_doubleSpinBox.value()) 
+        self.time_total_lcdNumber.display(np.round(self.spectrometer.num_spectra*(self.spectrometer.integration_time + self.spectrometer.delay)/1000, decimals = 0))
+    def update_time_series_name(self):
+        self.spectrometer.time_series_name = self.time_series_name_lineEdit.text().strip()
+    def time_series(self):
+        run_function_modally(self.spectrometer.time_series, progress_maximum = self.spectrometer.num_spectra)
 
 
 class DisplayThread(QtCore.QThread):
@@ -578,7 +624,7 @@ class SpectrometerDisplayUI(QtWidgets.QWidget,UiTools):
         if isinstance(spectrometer,Spectrometer):
             spectrometer.num_spectrometers = 1
         self.spectrometer = spectrometer
-        print self.spectrometer
+        print(self.spectrometer)
 
         pg.setConfigOption('background', 'w')
         pg.setConfigOption('foreground', 'k')
@@ -598,21 +644,20 @@ class SpectrometerDisplayUI(QtWidgets.QWidget,UiTools):
         self.save_button.clicked.connect(self.button_pressed)
         self.threshold.setValidator(QtGui.QDoubleValidator())
         self.threshold.textChanged.connect(self.check_state)
-
-
         self._display_thread = DisplayThread(self)
         self._display_thread.spectrum_ready.connect(self.update_display)
         self._display_thread.spectra_ready.connect(self.update_display)
 
         self.period = 0.2
         self.filename_lineEdit.textChanged.connect(self.filename_changed_ui)
+       
         register_for_property_changes(self.spectrometer,'filename',self.filename_changed)
     def button_pressed(self, *args, **kwargs):
         sender = self.sender()
         if sender is self.take_spectrum_button:
             #if self._display_thread.is_alive():
             if self._display_thread.isRunning():
-                print 'already acquiring'
+                print('already acquiring')
                 return
             #self._display_thread = Thread(target=self.update_spectrum)
             self._display_thread.single_shot = True
@@ -627,7 +672,7 @@ class SpectrometerDisplayUI(QtWidgets.QWidget,UiTools):
             if self.live_button.isChecked():
                 #if self._display_thread.is_alive():
                 if self._display_thread.isRunning():
-                    print 'already acquiring'
+                    print('already acquiring')
                     return
                 #self._display_thread = Thread(target=self.continuously_update_spectrum)
                 self._display_thread.single_shot = False
@@ -650,7 +695,12 @@ class SpectrometerDisplayUI(QtWidgets.QWidget,UiTools):
             self.update_spectrum()
 
     def update_display(self, spectrum):
-        #Update the graphs  
+        #Update the graphs
+        if len(np.ravel(spectrum))>len(spectrum):# checking if it's 2d
+            spectrum = np.array([[0 if np.isnan(i) else i for i in s] for s in list(spectrum)])
+        else:
+            spectrum= np.array([0 if np.isnan(i) else i for i in spectrum])
+        wavelengths = self.spectrometer.wavelengths
         if self.enable_threshold.checkState() == QtCore.Qt.Checked:
             threshold = float(self.threshold.text())
             if isinstance(self.spectrometer, Spectrometers):
@@ -662,17 +712,16 @@ class SpectrometerDisplayUI(QtWidgets.QWidget,UiTools):
             self.plotdata = []
             if isinstance(self.spectrometer, Spectrometers):
                 for spectrometer_nom in range(self.spectrometer.num_spectrometers):
-                    self.plotdata.append(self.plots[spectrometer_nom].plot(x = self.spectrometer.wavelengths[spectrometer_nom],y = spectrum[spectrometer_nom],pen =(spectrometer_nom,len(range(self.spectrometer.num_spectrometers)))))
-                    
-   
+                    self.plotdata.append(self.plots[spectrometer_nom].plot(x = wavelengths[spectrometer_nom],y \
+                    = spectrum[spectrometer_nom],pen =(spectrometer_nom,len(list(range(self.spectrometer.num_spectrometers))))))
             else:                
-                self.plotdata.append(self.plots[0].plot(x = self.spectrometer.wavelengths,y = spectrum,pen =(0,len(range(self.spectrometer.num_spectrometers)))))
+                self.plotdata.append(self.plots[0].plot(x = wavelengths,y = spectrum,pen =(0,len(list(range(self.spectrometer.num_spectrometers))))))
         else:
             if isinstance(self.spectrometer, Spectrometers):
                 for spectrometer_nom in range(self.spectrometer.num_spectrometers):
-                    self.plotdata[spectrometer_nom].setData(x = self.spectrometer.wavelengths[spectrometer_nom],y= spectrum[spectrometer_nom])
+                    self.plotdata[spectrometer_nom].setData(x = wavelengths[spectrometer_nom],y= spectrum[spectrometer_nom])
             else:
-                self.plotdata[0].setData(x = self.spectrometer.wavelengths,y= spectrum)
+                self.plotdata[0].setData(x = wavelengths,y= spectrum)
 
     def filename_changed_ui(self):
         self.spectrometer.filename = self.filename_lineEdit.text()
@@ -739,7 +788,8 @@ class DummySpectrometer(Spectrometer):
     def __init__(self):
         super(DummySpectrometer, self).__init__()
         self._integration_time = 10
-
+        self.background = np.zeros(len(self.wavelengths))
+        self.reference = np.ones(len(self.wavelengths))
     def get_integration_time(self):
         return self._integration_time
 
@@ -752,12 +802,15 @@ class DummySpectrometer(Spectrometer):
         return np.arange(400,1200,1)
 
     wavelengths = property(get_wavelengths)
-
+    
+    
     def read_spectrum(self, bundle_metadata=False):
         from time import sleep
         sleep(self.integration_time/1000.)
-        return self.bundle_metadata(np.array([np.random.random() for wl in self.wavelengths])*self.integration_time/1000.0,
+        if bundle_metadata:
+            return self.bundle_metadata(np.array([np.random.random() for wl in self.wavelengths])*self.integration_time/1000.0,
                                     enable=bundle_metadata)
+        return np.array([np.random.random() for wl in self.wavelengths])*self.integration_time/1000.0
 
 
 if __name__ == '__main__':

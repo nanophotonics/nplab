@@ -1,3 +1,7 @@
+from __future__ import division
+from __future__ import print_function
+from builtins import range
+from past.utils import old_div
 import numpy as np 
 import matplotlib.pyplot as plt 
 import scipy.signal
@@ -61,11 +65,11 @@ class Pacton(Instrument):
 		self.acton.set_wavelength(center_wavelength,blocking=True,debug=debug)
 		if roi is not None:
 
-			if debug>0: print "starting try-catch"
+			if debug>0: print("starting try-catch")
 			try:
 				[x_min,x_max,y_min,y_max] = roi
 				if debug > 0:
-					print "Pacton.get_image: region of interest:", roi
+					print("Pacton.get_image: region of interest:", roi)
 				return self.pixis.get_roi(x_min=x_min, x_max = x_max, y_min=y_min,y_max = y_max,debug=debug)
 
 			except: 
@@ -89,10 +93,10 @@ class Pacton(Instrument):
 			calibration_wavelengths =CALIBRATION_WAVELENGTHS[indices]
 
 			calibration_intensity = calibration_intensity - np.min(calibration_intensity)
-			calibration_intensity = calibration_intensity/np.max(calibration_intensity)
+			calibration_intensity = old_div(calibration_intensity,np.max(calibration_intensity))
 
 			intensity = intensity - np.min(intensity)
-			intensity = intensity/np.max(intensity)
+			intensity = old_div(intensity,np.max(intensity))
 
 			upsampled_calibration_intensity = scipy.signal.resample(calibration_intensity, len(wavelengths), t=None, axis=0, window=None)
 			upsampled_calibration_wavelengths= scipy.signal.resample(calibration_wavelengths, len(wavelengths), t=None, axis=0, window=None)
@@ -102,7 +106,7 @@ class Pacton(Instrument):
 			max_xcs, xcs = spectrum_pixel_offset(upsampled_calibration_intensity,intensity)
 			xcs = np.fft.fftshift(xcs)
 			max_xcs = np.argmax(xcs)
-			offset = max_xcs - len(wavelengths)/2
+			offset = max_xcs - old_div(len(wavelengths),2)
 			# if self.debug > 0:
 			# 	print "Calibration wavelength range:", np.min(upsampled_calibration_wavelengths),np.max(upsampled_calibration_wavelengths)
 			# 	print "Measured wavelength range:", np.min(wavelengths),np.max(wavelengths)
@@ -135,7 +139,7 @@ class Pacton(Instrument):
 		Smooth the average using cvx and use this in furthre processing for background subtraction on the LHS
 		to make it easier to stitch together spectra
 		'''
-		wavelengths = range(50,80,10)
+		wavelengths = list(range(50,80,10))
 		spectra = []
 		for wl in wavelengths:
 			self.acton.set_wavelength(wl,blocking=True,fast=True,debug=debug)
@@ -210,7 +214,7 @@ class Pacton(Instrument):
 				sp2 = spectra[j]
 				peak,xcs = spectrum_pixel_offset(sp1,sp2)
 				if debug > 0:
-					print "Correlation peak (=pixel offset): {0}".format(peak)
+					print("Correlation peak (=pixel offset): {0}".format(peak))
 				d_wl = wavelengths[j] - wavelengths[i]
 				d_pixel = peak
 				sf = pixel_wavelength_conversion(d_pixel,d_wl)
@@ -221,13 +225,13 @@ class Pacton(Instrument):
 					axarr[1].plot(peak,xcs[peak],"o",color=p[0].get_color())
 
 				if debug > 0:
-					print "Scale factor [{0} nm] vs [{1} nm]:".format(wavelengths[i],wavelengths[j]), sf
+					print("Scale factor [{0} nm] vs [{1} nm]:".format(wavelengths[i],wavelengths[j]), sf)
 
 		#compute mean of scaling factor
 		sf_mean = np.mean(scale_factors)
 		sf_std = np.std(scale_factors)
 		if debug > 0:
-			print "Final pixel to wavelength conversion  factor: {0:4g} +/- {1:4g} [nm/pixel]".format(sf_mean,sf_std)
+			print("Final pixel to wavelength conversion  factor: {0:4g} +/- {1:4g} [nm/pixel]".format(sf_mean,sf_std))
 		
 		if plot == True:
 			axarr[0].legend()
@@ -260,4 +264,4 @@ class Pacton(Instrument):
 		# return stitched spectrum
 
 if __name__ == "__main__":
-	print "pass"
+	print("pass")

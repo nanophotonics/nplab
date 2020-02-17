@@ -1,3 +1,7 @@
+from __future__ import division
+from builtins import str
+from builtins import range
+from past.utils import old_div
 __author__ = 'alansanders'
 
 import numpy as np
@@ -151,7 +155,7 @@ def plot_line_scan(hs_image, ax, axis, line, imnorm=False, linenorm=False, dat='
 
     if linenorm == True:
         for i in range(line_spectra.shape[0]):
-            line_spectra[i] = line_spectra[i] / line_spectra[i].max()
+            line_spectra[i] = old_div(line_spectra[i], line_spectra[i].max())
 
     if imnorm == True:
         minimum = line_spectra.min()

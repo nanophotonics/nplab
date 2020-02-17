@@ -1,8 +1,14 @@
 # -*- coding: utf-8 -*-
 
-from nplab.utils.gui import QtCore
+from __future__ import division
+from __future__ import print_function
+from builtins import zip
+from builtins import str
+from builtins import range
+from builtins import object
+from past.utils import old_div
 from nplab.instrument.camera import CameraParameter
-from nplab.utils.thread_utils import locked_action, background_action
+from nplab.utils.thread_utils import locked_action
 from nplab.utils.log import create_logger
 import nplab.datafile as df
 import os
@@ -10,9 +16,12 @@ import platform
 import time
 from ctypes import *
 import numpy as np
+import tempfile
+import shutil
 
 
 LOGGER = create_logger('Andor SDK')
+TEMPORARY_PREFIX = '_andortemporary'
 
 
 def to_bits(integer):
@@ -72,7 +81,7 @@ class AndorParameter(CameraParameter):
         super(AndorParameter, self).fset(obj, value)
 
 
-class AndorBase:
+class AndorBase(object):
     """Base code handling the Andor SDK
 
     Most of the code for this class is setting up a general way of reading and writing parameters, which are then set up
@@ -89,44 +98,64 @@ class AndorBase:
         Andor.GetParameter('VSSpeed', 0)
     Which does not return the current VSSpeed, but the VSSpeed (in microseconds) of the setting 0.
     """
-
-    def __init__(self):
-        self._logger = LOGGER
+    def start(self, camera_index=None):
+        if not hasattr(self, '_logger'):
+            self._logger = LOGGER
 
         if platform.system() == 'Windows':
-            if platform.architecture()[0] == '32bit':
-                self.dll = windll.LoadLibrary(os.path.dirname(__file__) + "\\atmcd32d")
-            elif platform.architecture()[0] == '64bit':
-                self.dll = CDLL(os.path.dirname(__file__) + "\\atmcd64d")
+            directory = os.path.dirname(__file__)
+            bitness = platform.architecture()[0][:2]  # either 32 or 64
+            original_file = "%s/atmcd%sd.dll" % (directory, bitness)
+
+            if bitness == '32':
+                self.dll = windll.LoadLibrary(original_file)
+            elif bitness == '64':
+                self.dll = CDLL(original_file)
             else:
                 raise Exception("Cannot detect Windows architecture")
         elif platform.system() == "Linux":
-            dllname = "usr/local/lib/libandor.so"
-            self.dll = cdll.LoadLibrary(dllname)
+            original_file = "usr/local/lib/libandor.so"
+            self.dll = cdll.LoadLibrary(original_file)
         else:
             raise Exception("Cannot detect operating system for Andor")
         self.parameters = parameters
         self._parameters = dict()
-        for key, value in parameters.items():
+        for key, value in list(parameters.items()):
             if 'value' in value:
                 self._parameters[key] = value['value']
             else:
                 self._parameters[key] = None
+
+        self.camera_index = camera_index
+        if camera_index is None:
+            self.camera_index = 0
+        if self.get_andor_parameter('AvailableCameras') > 1:
+            if camera_index is None:
+                self._logger.warn('More than one camera available, but no index provided. Initializing camera 0')
+            camera_handle = self.get_andor_parameter('CameraHandle', self.camera_index)
+            self.set_andor_parameter('CurrentCamera', camera_handle)
         self.initialize()
 
-    @background_action
-    def __del__(self):
+    def end(self):
         """ Safe shutdown procedure """
-        # If the camera is a Classic or iCCD, you have to wait for the temperature to be higher than -20 before shutting
-        # down
+        # If the camera is a Classic or iCCD, wait for the temperature to be higher than -20 before shutting down
         if self.Capabilities['CameraType'] in [3, 4]:
             if self.cooler:
                 self.cooler = 0
             while self.CurrentTemperature < -60:
-                print 'Waiting'
+                print('Waiting')
                 time.sleep(1)
         self._logger.info('Shutting down')
         self._dll_wrapper('ShutDown')
+
+    def _set_dll_camera(self):
+        """Ensures the DLL library is pointing to the correct instrument for any particular instances of this class"""
+        camera_handle = c_uint()
+        error = getattr(self.dll, 'GetCameraHandle')(c_uint(self.camera_index), byref(camera_handle))
+        self._error_handler(error)
+
+        error = getattr(self.dll, 'SetCurrentCamera')(camera_handle)
+        self._error_handler(error)
 
     '''Base functions'''
 
@@ -140,6 +169,8 @@ class AndorBase:
         :param reverse:     bool. whether to have the inputs first or the outputs first when calling the dll
         :return:
         """
+
+        self._set_dll_camera()
 
         dll_input = ()
         if reverse:
@@ -214,16 +245,19 @@ class AndorBase:
 
                 if 'Finally' in self.parameters[param_loc]:
                     self.get_andor_parameter(self.parameters[param_loc]['Finally'])
-            except AndorWarning:
-                if self.parameters[param_loc]['value'] is None:
-                    self._logger.error('Not supported parameter and None value in the parameter dictionary')
+            except AndorWarning as andor_warning:
+                if andor_warning.error_name == 'DRV_NOT_SUPPORTED':
+                    if self.parameters[param_loc]['value'] is None:
+                        self._logger.error('Not supported parameter and None value in the parameter dictionary')
+                    else:
+                        self.parameters[param_loc]['not_supported'] = True
+                        inputs = self.parameters[param_loc]['value']
+                        if not isinstance(inputs, tuple):
+                            inputs = (inputs, )
                 else:
-                    self.parameters[param_loc]['not_supported'] = True
-                    inputs = self.parameters[param_loc]['value']
-                    if not isinstance(inputs, tuple):
-                        inputs = (inputs, )
+                    self._logger.warn(andor_warning)
 
-        if 'Get' not in self.parameters[param_loc].keys():
+        if 'Get' not in list(self.parameters[param_loc].keys()):
             if len(inputs) == 1:
                 setattr(self, '_' + param_loc, inputs[0])
             else:
@@ -246,7 +280,7 @@ class AndorBase:
             self.parameters[param_loc]['value'] = getattr(self, '_' + param_loc)
             self._parameters[param_loc] = getattr(self, '_' + param_loc)
             return getattr(self, '_' + param_loc)
-        if 'Get' in self.parameters[param_loc].keys():
+        if 'Get' in list(self.parameters[param_loc].keys()):
             func = self.parameters[param_loc]['Get']
 
             form_out = ()
@@ -261,7 +295,7 @@ class AndorBase:
                     form_in += ({'value': getattr(self, input_param[0]), 'type': input_param[1]},)
             for ii in range(len(inputs)):
                 form_in += ({'value': inputs[ii], 'type': func['Inputs'][ii]},)
-            if 'Iterator' not in func.keys():
+            if 'Iterator' not in list(func.keys()):
                 vals = self._dll_wrapper(func['cmdName'], inputs=form_in, outputs=form_out)
             else:
                 vals = ()
@@ -271,12 +305,12 @@ class AndorBase:
             self.parameters[param_loc]['value'] = vals
             self._parameters[param_loc] = vals
             return vals
-        elif 'Get_from_prop' in self.parameters[param_loc].keys() and hasattr(self, '_' + param_loc):
+        elif 'Get_from_prop' in list(self.parameters[param_loc].keys()) and hasattr(self, '_' + param_loc):
             vals = getattr(self, self.parameters[param_loc]['Get_from_prop'])[getattr(self, '_' + param_loc)]
             self.parameters[param_loc]['value'] = vals
             self._parameters[param_loc] = vals
             return vals
-        elif 'Get_from_fixed_prop' in self.parameters[param_loc].keys():
+        elif 'Get_from_fixed_prop' in list(self.parameters[param_loc].keys()):
             vals = getattr(self, self.parameters[param_loc]['Get_from_fixed_prop'])[0]
             self.parameters[param_loc]['value'] = vals
             self._parameters[param_loc] = vals
@@ -308,7 +342,7 @@ class AndorBase:
         """
 
         assert isinstance(parameter_dictionary, dict)
-        for name, value in parameter_dictionary.items():
+        for name, value in list(parameter_dictionary.items()):
             if not hasattr(self, name):
                 self._logger.warn('The parameter ' + name + 'does not exist and therefore cannot be set')
                 continue
@@ -415,6 +449,7 @@ class AndorBase:
     def initialize(self):
         """Sets the initial parameters for the Andor typical for our experiments"""
         self._dll_wrapper('Initialize', outputs=(c_char(),))
+        self.channel = 0
         self.set_andor_parameter('ReadMode', 4)
         self.set_andor_parameter('AcquisitionMode', 1)
         self.set_andor_parameter('TriggerMode', 0)
@@ -425,8 +460,7 @@ class AndorBase:
         self.set_andor_parameter('SetTemperature', -90)
         self.set_andor_parameter('CoolerMode', 0)
         self.set_andor_parameter('FanMode', 0)
-        if self.Capabilities['EMGainCapability'] > 1:
-            self.set_andor_parameter('OutAmp', 1)
+        self.set_andor_parameter('OutAmp', 1) # This means EMCCD off - this is the default mode
         self.cooler = 1
 
     @locked_action
@@ -442,11 +476,9 @@ class AndorBase:
             int         number of images taken
             tuple       shape of the images taken
         """
-
         self._dll_wrapper('StartAcquisition')
         self._dll_wrapper('WaitForAcquisition')
         self.wait_for_driver()
-
         if self._parameters['AcquisitionMode'] == 4:
             num_of_images = 1  # self.parameters['FastKinetics']['value'][1]
             image_shape = (self._parameters['FastKinetics'][-1], self._parameters['DetectorShape'][0])
@@ -462,29 +494,24 @@ class AndorBase:
 
             if self._parameters['ReadMode'] == 0:
                 if self._parameters['IsolatedCropMode'][0]:
-                    image_shape = (
-                        self._parameters['IsolatedCropMode'][2] / self._parameters['IsolatedCropMode'][
-                            4],)
+                    image_shape = (old_div(self._parameters['IsolatedCropMode'][2], self._parameters['IsolatedCropMode'][4]), )
                 else:
-                    image_shape = (self._parameters['DetectorShape'][0] / self._parameters['FVBHBin'],)
+                    image_shape = (old_div(self._parameters['DetectorShape'][0], self._parameters['FVBHBin']), )
             elif self._parameters['ReadMode'] == 3:
                 image_shape = (self._parameters['DetectorShape'][0],)
             elif self._parameters['ReadMode'] == 4:
-                if self._parameters['IsolatedCropMode'][0]:
-                    image_shape = (
-                        self._parameters['IsolatedCropMode'][1] / self._parameters['IsolatedCropMode'][
-                            3],
-                        self._parameters['IsolatedCropMode'][2] / self._parameters['IsolatedCropMode'][
-                            4])
-                else:
-                    image_shape = (
-                        (self._parameters['Image'][5] - self._parameters['Image'][4] + 1) /
-                        self._parameters['Image'][1],
-                        (self._parameters['Image'][3] - self._parameters['Image'][2] + 1) /
-                        self._parameters['Image'][0],)
+                # if self._parameters['IsolatedCropMode'][0]:
+                #     image_shape = (
+                #         self._parameters['IsolatedCropMode'][1] / self._parameters['IsolatedCropMode'][3],
+                #         self._parameters['IsolatedCropMode'][2] / self._parameters['IsolatedCropMode'][4])
+                # else:
+                image_shape = (
+                    old_div((self._parameters['Image'][5] - self._parameters['Image'][4] + 1), self._parameters['Image'][1]),
+                    old_div((self._parameters['Image'][3] - self._parameters['Image'][2] + 1), self._parameters['Image'][0]),)
             else:
                 raise NotImplementedError('Read Mode %g' % self._parameters['ReadMode'])
 
+        image_shape = tuple([int(x) for x in image_shape])
         dim = num_of_images * np.prod(image_shape)
         cimageArray = c_int * dim
         cimage = cimageArray()
@@ -503,35 +530,36 @@ class AndorBase:
 
         return imageArray, num_of_images, image_shape
 
-    def set_image(self, *params):
-        """Set camera parameters for either the IsolatedCrop mode or Image mode
+    @property
+    def Image(self):
+        return self.get_andor_parameter('Image')
 
-        :param params: optional, inputs for either the IsolatedCrop mode or Image mode
+    @Image.setter
+    def Image(self, value):
+        """Ensures a valid image shape is passed
+
+        e.g. if binning is 2x2, and an image with an odd number of pixels along one direction is passed, this function
+        rounds it down to the nearest even number, providing a valid image shape
+
+        :param value:
         :return:
         """
+        if len(value) == 4:
+            image = self._parameters['Image']
+            value = image[:2] + value
+        # Making sure we pass a valid set of parameters
+        value = list(value)
+        value[3] -= (value[3] - value[2] + 1) % value[0]
+        value[5] -= (value[5] - value[4] + 1) % value[1]
 
-        if self._parameters['IsolatedCropMode'][0]:
-            if len(params) == 0:
-                params += (self._parameters['IsolatedCropMode'])
-            elif len(params) != 5:
-                raise ValueError('Wrong number of parameters (need bool, cropheight, cropwidth, vbin, hbin')
+        self.set_andor_parameter('Image', *value)
 
-            # Making sure we pass a valid set of parameters
-            params = list(params)
-            params[1] -= (params[1]) % params[3]
-            params[2] -= (params[2]) % params[4]
-            self.set_andor_parameter('IsolatedCropMode', *params)
+        crop = self.IsolatedCropMode
+        if crop is not None:
+            crop = [crop[0], value[5], value[3], value[0], value[1]]
         else:
-            if len(params) == 0:
-                params = self._parameters['Image']
-            elif len(params) != 6:
-                raise ValueError('Wrong number of parameters (need hbin, vbin, hstart, hend, vstart, vend')
-
-            # Making sure we pass a valid set of parameters
-            params = list(params)
-            params[3] -= (params[3] - params[2] + 1) % params[0]
-            params[5] -= (params[5] - params[4] + 1) % params[1]
-            self.set_andor_parameter('Image', *params)
+            crop = [0, value[5], value[3], value[0], value[1]]
+        self.set_andor_parameter('IsolatedCropMode', *crop)
 
     @locked_action
     def set_fast_kinetics(self, n_rows=None):
@@ -547,7 +575,7 @@ class AndorBase:
         if n_rows is None:
             n_rows = self._parameters['FastKinetics'][0]
 
-        series_Length = int(self._parameters['DetectorShape'][1] / n_rows) - 1
+        series_Length = int(old_div(self._parameters['DetectorShape'][1], n_rows)) - 1
         expT = self._parameters['AcquisitionTimings'][0]
         mode = self._parameters['ReadMode']
         hbin = self._parameters['Image'][0]
@@ -612,7 +640,7 @@ class AndorBase:
             data_file = df.open_file(set_current=False, mode='r')
         else:
             data_file = df.DataFile(filepath)
-        if 'AndorSettings' in data_file.keys():
+        if 'AndorSettings' in list(data_file.keys()):
             self.set_andor_parameters(dict(data_file['AndorSettings'].attrs))
         else:
             self._logger.error('Load settings failed as "AndorSettings" does not exist')
@@ -621,6 +649,9 @@ class AndorBase:
 
 parameters = dict(
     AvailableCameras=dict(Get=dict(cmdName='GetAvailableCameras', Outputs=(c_uint,)), value=None),
+    CurrentCamera=dict(Get=dict(cmdName='GetCurrentCamera', Outputs=(c_uint,)),
+                       Set=dict(cmdName='SetCurrentCamera', Inputs=(c_uint,))),
+    CameraHandle=dict(Get=dict(cmdName='GetCameraHandle', Outputs=(c_uint,), Inputs=(c_uint, ))),
     channel=dict(value=0),
     PixelSize=dict(Get=dict(cmdName='GetPixelSize', Outputs=(c_float, c_float))),
     SoftwareWaitBetweenCaptures=dict(value=0),
@@ -682,7 +713,8 @@ parameters = dict(
     BitDepth=dict(Get=dict(cmdName='GetBitDepth', Inputs=(c_int,), Outputs=(c_int,), Iterator='NumADChannels'))
 )
 for param_name in parameters:
-    setattr(AndorBase, param_name, AndorParameter(param_name))
+    if param_name != 'Image':
+        setattr(AndorBase, param_name, AndorParameter(param_name))
 
 
 ERROR_CODE = {

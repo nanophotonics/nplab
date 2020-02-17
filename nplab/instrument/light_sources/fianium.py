@@ -1,3 +1,4 @@
+from __future__ import print_function
 __author__ = 'alansanders'
 
 import nplab.instrument.serial_instrument as serial
@@ -61,21 +62,21 @@ class Fianium(LightSource, serial.SerialInstrument):
 
 
     def get_queries(self):
-        for k,v in self.COMMAND_LIST.items():
+        for k,v in list(self.COMMAND_LIST.items()):
             if v["type"]=="query":
-                print "Query:[{0}], Description:[{1}]".format(k,v["description"])
+                print("Query:[{0}], Description:[{1}]".format(k,v["description"]))
 
     def get_setters(self):
-        for k,v in self.COMMAND_LIST.items():
+        for k,v in list(self.COMMAND_LIST.items()):
             if v["type"]=="setter":
-                print "Query:[{0}], Description:[{1}]".format(k,v["description"])
+                print("Query:[{0}], Description:[{1}]".format(k,v["description"]))
     
     
 
 
     def get_alarms(self):
         response = self.query('A?')
-        print "Fianium.get_alarms:", response
+        print("Fianium.get_alarms:", response)
         return response
 
     def get_back_reflection_value(self):

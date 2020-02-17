@@ -4,6 +4,7 @@ Created on Thu Jul 30 13:13:27 2015
 
 """
 
+from builtins import str
 from nplab.utils.gui import QtWidgets, uic, QtCore
 import os
 

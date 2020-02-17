@@ -1,7 +1,11 @@
 '''
 author: im354
 '''
+from __future__ import division
 
+from builtins import zip
+from builtins import range
+from past.utils import old_div
 import numpy as np
 import matplotlib.pyplot as plt
 import pywt
@@ -33,7 +37,7 @@ def bumps():
 		return (1 + np.absolute(t))**-4
 	y = np.zeros(t.shape)
 	for (tj,hj,wj) in zip(Tj,Hj,Wj):
-		y = y + hj*K((t - tj)/wj)
+		y = y + hj*K(old_div((t - tj),wj))
 	return t,10*y
 
 
@@ -48,7 +52,7 @@ def doppler():
 	N = 2048
 	t = np.linspace(0,1,N)
 	eps = 0.05
-	y = np.sqrt(t*(1-t))*np.sin(2*np.pi*(1+eps)/(t+eps))
+	y = np.sqrt(t*(1-t))*np.sin(old_div(2*np.pi*(1+eps),(t+eps)))
 	return t,y*(12.5/0.5)
 
 
@@ -278,7 +282,7 @@ def plot_denoised_functions():
 		ys = ys + noise
 		denoised = SUREShrink(ys)
 		axarr[i].plot(xs,denoised)
-		axarr[i].set_title("Denoised {}".format(f.func_name))
+		axarr[i].set_title("Denoised {}".format(f.__name__))
 	plt.show()
 
 

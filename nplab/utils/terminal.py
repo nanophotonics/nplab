@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import print_function
+from builtins import object
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.inprocess import QtInProcessKernelManager
 # from IPython.qt.console.rich_ipython_widget import RichIPythonWidget
@@ -10,7 +12,7 @@ import os
 from IPython.lib import guisupport
 
 
-class Ipython:
+class Ipython(object):
     def __init__(self, scripts_path=''):
         self.kernel_manager = QtInProcessKernelManager()
         self.kernel_manager.start_kernel()
@@ -81,6 +83,9 @@ class QIPythonWidget(RichJupyterWidget):
         kernel_manager.kernel.gui = 'qt'
         self.kernel_client = kernel_client = self._kernel_manager.client()
         kernel_client.start_channels()
+        self.kernel = self.kernel_manager.kernel
+        sys.stdout = self.kernel.stdout
+        sys.stderr = self.kernel.stderr
 
         def stop():
             kernel_client.stop_channels()
@@ -114,5 +119,5 @@ class QIPythonWidget(RichJupyterWidget):
             scriptpath = os.path.join(self.scripts_path, scriptname)
             self._execute('run -i %s' % scriptpath, False)
         except Exception as e:
-            print 'Failed because ', e
+            print('Failed because ', e)
 

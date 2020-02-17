@@ -83,9 +83,14 @@ Examples
 Refer to the test() function at the end of the document for more examples.
 
 """
+from __future__ import print_function
 
-from __future__ import division, print_function
 
+
+from builtins import str
+from builtins import hex
+from builtins import range
+from builtins import object
 import sys
 import ctypes
 
@@ -582,7 +587,7 @@ def API():
     else:
         raise NotImplementedError("Only Windows is supported")
 
-    for _name, _value in locals().items():
+    for _name, _value in list(locals().items()):
         if _name.startswith('Lucam'):
             _func = getattr(_api, _name)
             setattr(_func, 'restype', _value[0])
@@ -788,7 +793,7 @@ class Lucam(object):
 
     def set_properties(self, **kwargs):
         """Set value of mutiple camera properties."""
-        for name, value in kwargs.items():
+        for name, value in list(kwargs.items()):
             if name.endswith('_flag'):
                 continue
             prop = Lucam.PROPERTY[name]
@@ -1506,11 +1511,9 @@ class Lucam(object):
             Context data to be passed to callback function.
 
         """
-        
-        asVoidPtr = ctypes.pythonapi.PyCObject_AsVoidPtr #this function converts PyCObject to void *, why is it not in ctypes natively...?
-        asVoidPtr.restype = ctypes.c_void_p #we need to set the result and argument types of the imported function
-        asVoidPtr.argtypes = [ctypes.py_object]        
-        
+        # asVoidPtr = ctypes.pythonapi.PyCObject_AsVoidPtr #this function converts PyCObject to void *, why is it not in ctypes natively...?
+        # asVoidPtr.restype = ctypes.c_void_p #we need to set the result and argument types of the imported function
+        # asVoidPtr.argtypes = [ctypes.py_object]        
         callback = API.VideoFilterCallback(callback)
         if context is not None:
             context = ctypes.py_object(context)
@@ -1520,6 +1523,15 @@ class Lucam(object):
             raise LucamError(self)
         self._callbacks[(API.VideoFilterCallback, callbackid)] = callback
         return callbackid
+        # callback = API.VideoFilterCallback(callback)
+        # if context is not None:
+        #     context = ctypes.py_object(context)
+        # callbackid = API.LucamAddStreamingCallback(self._handle,
+        #                                            callback, context)
+        # if callbackid == -1:
+        #     raise LucamError(self)
+        # self._callbacks[(API.VideoFilterCallback, callbackid)] = callback
+        # return callbackid
 
     def RemoveStreamingCallback(self, callbackid):
         """Remove previously registered video filter callback function.
@@ -2515,7 +2527,7 @@ def ndarray(frameformat, byteorder='=', out=None, validate=True, numframes=1):
 
 def list_property_flags(flags):
     """Return list of PROPERTY_FLAG strings from flag number."""
-    return [k for k, v in Lucam.PROP_FLAG.items() if (v & flags)]
+    return [k for k, v in list(Lucam.PROP_FLAG.items()) if (v & flags)]
 
 
 def print_property_range(minval, maxval, default, flags):
@@ -2523,7 +2535,7 @@ def print_property_range(minval, maxval, default, flags):
     if flags:
         return "[%s, %s] default=%s flags=%s" % (
             minval, maxval, default,
-            ",".join(k for k, v in Lucam.PROP_FLAG.items() if (v & flags)))
+            ",".join(k for k, v in list(Lucam.PROP_FLAG.items()) if (v & flags)))
     else:
         return "[%s, %s] default=%s" % (minval, maxval, default)
 
@@ -2621,14 +2633,14 @@ def test():
 
     # print serial numbers of all connected cameras
     allcameras = LucamEnumCameras()
-    print("Cameras found:",
-          ", ".join(str(cam.serialnumber) for cam in allcameras))
+    print(("Cameras found:",
+          ", ".join(str(cam.serialnumber) for cam in allcameras)))
 
     # use first camera
     lucam = Lucam(1)
 
     # print detailed information about camera
-    print("Camera Properties", lucam)
+    print(("Camera Properties", lucam))
 
     # set camera to 16 bit, 4x4 binning, max framerate
     lucam.SetFormat(
@@ -2643,9 +2655,9 @@ def test():
     # get actual frame format, framerate, and bit depth
     frameformat, framerate = lucam.GetFormat()
     pixeldepth = lucam.GetTruePixelDepth()
-    print("Pixel Depth:", pixeldepth)
-    print("Framerate:", framerate)
-    print("Frame Format", frameformat)
+    print(("Pixel Depth:", pixeldepth))
+    print(("Framerate:", framerate))
+    print(("Frame Format", frameformat))
 
     print("Color correction matrix:")
     print(lucam.GetCurrentMatrix())
@@ -2743,7 +2755,7 @@ def test():
     # run a callback function during snapshot
     def snapshot_callback(context, data, size):
         data[0] = 42
-        print("Snapshot callback function:", context, data[:2], size)
+        print(("Snapshot callback function:", context, data[:2], size))
     callbackid = lucam.AddSnapshotCallback(snapshot_callback)
     image = lucam.TakeSnapshot()
     assert image[0, 0] == 42
@@ -2752,7 +2764,7 @@ def test():
     # run a callback function in streaming mode
     def streaming_callback(context, data, size):
         data[0] = 42
-        print("Streaming callback function:", context, data[:2], size)
+        print(("Streaming callback function:", context, data[:2], size))
     callbackid = lucam.AddStreamingCallback(streaming_callback)
     lucam.StreamVideoControl('start_streaming')
     time.sleep(2.0 / framerate)
@@ -2760,7 +2772,7 @@ def test():
     lucam.RemoveStreamingCallback(callbackid)
 
     # set camera look up table to invers
-    lucam.Setup8bitsLUT(list(reversed(range(256))))
+    lucam.Setup8bitsLUT(list(reversed(list(range(256)))))
 
     # stream to AVI file
     lucam.StreamVideoControlAVI('start_streaming', '_tmp.avi')
@@ -2775,7 +2787,7 @@ def test():
 
     # Read user-defined non-volatile memory
     memory = lucam.PermanentBufferRead()
-    print("Non-volatile memory:", memory)
+    print(("Non-volatile memory:", memory))
 
     # close camera connection
     lucam.CameraClose()
@@ -2795,7 +2807,7 @@ def test():
     avi.Control('pause')
     avi.SetPositionFrame(avi.GetFrameCount() // 2)
     avi.Control('stop')
-    print("AVI Properties", avi)
+    print(("AVI Properties", avi))
     print("Done")
 
 

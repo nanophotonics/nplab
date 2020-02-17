@@ -1,3 +1,5 @@
+from __future__ import print_function
+from builtins import object
 __author__ = 'alansanders'
 
 import numpy as np
@@ -54,4 +56,4 @@ class TimedScan(object):
 
     def print_scan_time(self, t):
         """Prints the duration of the scan."""
-        print 'Scan took', self.format_time(t)
+        print('Scan took', self.format_time(t))

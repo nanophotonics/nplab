@@ -1,3 +1,9 @@
+from __future__ import division
+from __future__ import print_function
+from builtins import zip
+from builtins import str
+from builtins import range
+from past.utils import old_div
 __author__ = 'alansanders, chrisgrosse'
 
 import ctypes, time
@@ -34,10 +40,10 @@ def get_enums(): # get status return values from MCSControl.h
 
 def set_enums():
     enums = get_enums()
-    for k, v in zip(enums.keys(), enums.values()):
+    for k, v in zip(list(enums.keys()), list(enums.values())):
         # print k+' = '+str(v)
         cmd = k + ' = c_int(' + str(v) + ')'
-        exec cmd in globals()
+        exec(cmd, globals())
 
 
 set_enums()
@@ -51,10 +57,10 @@ class MCSError(Exception):
             self.value = value
             error_text = ctypes.c_char_p()
             mcsc.SA_GetStatusInfo(value, byref(error_text))
-            print "MCS error {:d}".format(value)
-            print ctypes.string_at(error_text)
+            print("MCS error {:d}".format(value))
+            print(ctypes.string_at(error_text))
         except:
-            print "MCS error {:d}".format(value)
+            print("MCS error {:d}".format(value))
 
 
 #class SmaractError(Exception): #?? why two different types of errors: MCSError and SmaractError??
@@ -90,7 +96,7 @@ class SmaractMCS(PiezoStage):
         # bufferSize holds the number of bytes written to outBuffer
         if cls.check_status(mcsc.SA_FindSystems("", outBuffer, byref(bufferSize))):
 #            print 'buffer size:', bufferSize
-            print 'buffer:', ctypes.string_at(outBuffer)
+            print('buffer:', ctypes.string_at(outBuffer))
         return ctypes.string_at(outBuffer)
 
     def __init__(self, system_id):
@@ -273,7 +279,7 @@ class SmaractMCS(PiezoStage):
         return status.value
 
     def calibrate_system(self):
-        print 'calibrating system'
+        print('calibrating system')
         self.check_open_status()
         self.set_sensor_power_mode(1)
         num_ch = self.get_num_channels()
@@ -305,7 +311,7 @@ class SmaractMCS(PiezoStage):
         return forward_channels
 
     def find_references_ch(self, ch):
-        print 'finding reference for ch', ch
+        print('finding reference for ch', ch)
         ch = c_int(int(ch))
         self.check_open_status()
         self.set_sensor_power_mode(1)
@@ -763,7 +769,7 @@ class SmaractMCSSerial(SerialInstrument,PiezoStage):
                 if first_line == queryString:
                     return self.check_for_error(self.readline(timeout).strip())
                 else:
-                    print 'This command did not echo!!!'
+                    print('This command did not echo!!!')
                     return first_line
 
             if termination_line is not None:
@@ -777,7 +783,7 @@ class SmaractMCSSerial(SerialInstrument,PiezoStage):
 
     def check_for_error(self,response):
         if response[1] == "E" and not response[-1] == "0":
-            print response
+            print(response)
             raise MCSSerialError(response[2:].split(','))
         else:
             return response
@@ -790,9 +796,9 @@ class SmaractMCSSerial(SerialInstrument,PiezoStage):
     def get_communication_mode(self):
         mode = self.query("GCM")
         if mode[-1] == '0':
-            print "synchronous communication mode"
+            print("synchronous communication mode")
         elif mode[-1] == '1':
-            print "asynchronous communication mode"
+            print("asynchronous communication mode")
         return int(mode[-1])
 
     def set_communication_mode(self,mode):
@@ -816,9 +822,9 @@ class SmaractMCSSerial(SerialInstrument,PiezoStage):
 
     def get_interface_version(self):
         response = self.query("GIV")[3:].split(',')
-        print "versionHigh:", response[0]
-        print "versionLow:", response[1]
-        print "versionUpdate:", response[2]
+        print("versionHigh:", response[0])
+        print("versionLow:", response[1])
+        print("versionUpdate:", response[2])
         return response
 
     def get_num_channels(self):
@@ -833,10 +839,10 @@ class SmaractMCSSerial(SerialInstrument,PiezoStage):
     def reset(self):
         acknowledgment = self.query("R")
         if acknowledgment == ":E-1,0":
-            print "SmarAct MCS reset succesfully"
+            print("SmarAct MCS reset succesfully")
             return True
         else:
-            print "SmarAct MCS reset failled"
+            print("SmarAct MCS reset failled")
             return False
 
     def check_status(self, ch):
@@ -848,7 +854,7 @@ class SmaractMCSSerial(SerialInstrument,PiezoStage):
 
     def wait_until_stopped(self, ch):
         while self.check_status(ch)!=0:
-            print "sleep"
+            print("sleep")
             time.sleep(1)
 
     """ =====================
@@ -861,7 +867,7 @@ class SmaractMCSSerial(SerialInstrument,PiezoStage):
         self.set_sensor_power_mode(1)
         num_ch = self.get_num_channels()
         for ch in range(num_ch):
-            print "calibrating channel",ch, ".."
+            print("calibrating channel",ch, "..")
             self.write("CS"+str(ch))
             self.wait_until_stopped(ch)
 
@@ -891,7 +897,7 @@ class SmaractMCSSerial(SerialInstrument,PiezoStage):
 
 
     def find_references_ch(self, ch):
-        print 'finding reference for ch', ch
+        print('finding reference for ch', ch)
         self.set_sensor_power_mode(1)
         safe_directions = self.set_safe_directions()
         self.write("FRM"+str(ch)+","+str(safe_directions[ch])+",0,1")
@@ -1107,8 +1113,8 @@ class SmaractMCSSerial(SerialInstrument,PiezoStage):
         returns the absolute angle and revolutions of the given positioner channel ch
         """
         response = self.query("GA")[3:].split(',')
-        print "angle in microdegree:", response[0]
-        print "revolutions:", response[1]
+        print("angle in microdegree:", response[0])
+        print("revolutions:", response[1])
         return response
 
 
@@ -1255,11 +1261,11 @@ class SmaractScanStageUI(PiezoStageUI):
 #                self.positions[i].setText(p)
         else:
             if axis % 3 == 0:
-                self.position_widgets[axis/3].xy_widget.setValue(piezo_levels[axis],self.stage.max_voltage_levels[axis+1]-piezo_levels[axis+1])
+                self.position_widgets[old_div(axis,3)].xy_widget.setValue(piezo_levels[axis],self.stage.max_voltage_levels[axis+1]-piezo_levels[axis+1])
             elif axis % 3 == 1:
-                self.position_widgets[axis/3].xy_widget.setValue(piezo_levels[axis-1],self.stage.max_voltage_levels[axis]-piezo_levels[axis])
+                self.position_widgets[old_div(axis,3)].xy_widget.setValue(piezo_levels[axis-1],self.stage.max_voltage_levels[axis]-piezo_levels[axis])
             else:
-                self.position_widgets[axis/3].z_bar.setValue(self.stage.max_voltage_levels[axis]-piezo_levels[axis])
+                self.position_widgets[old_div(axis,3)].z_bar.setValue(self.stage.max_voltage_levels[axis]-piezo_levels[axis])
 #            i = self.stage.axis_names.index(axis)
 #            p = engineering_format(self.stage.scan_position[i], base_unit='m', digits_of_precision=3)
 #            self.positions[i].setText(p)
@@ -1282,7 +1288,7 @@ class SmaractMCSUI(QtWidgets.QWidget, UiTools):
 if __name__ == '__main__':
 
     #smaract = SmaractMCSSerial('COM10')
-
+    smaract = SmaractMCSSerial('COM3')
 
     # print SA_OK
     system_id = SmaractMCS.find_mcs_systems()

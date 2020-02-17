@@ -3,7 +3,11 @@
 Modified from https://github.com/plasmon360/python_newport_1918_powermeter
 
 """
+from __future__ import division
+from __future__ import print_function
 
+from builtins import str
+from past.utils import old_div
 from nplab.instrument import Instrument
 from ctypes import *
 import time
@@ -24,6 +28,7 @@ class NewportPowermeter(Instrument):
         else:
             libname = "usbdll.dll"
         self.dll = windll.LoadLibrary(libname)
+
         self.product_id = product_id
 
         self.open_device_with_product_id()
@@ -32,8 +37,8 @@ class NewportPowermeter(Instrument):
 
         self.wvl_range = [int(self.query('PM:MIN:Lambda?')), int(self.query('PM:MAX:Lambda?'))]
 
-    def __del__(self):
-        self.close_device()
+    # def __del__(self):
+    #     self.close_device()
 
     def _dllWrapper(self, command, *args):
         """Simple dll wrapper
@@ -42,9 +47,10 @@ class NewportPowermeter(Instrument):
         :param args: list of (optional) arguments to pass to the dll function
         :return:
         """
+        self._logger.debug("Calling DLL with: %s %s" % (command, args))
         status = getattr(self.dll, command)(*args)
         if status != 0:
-            raise Exception('Command failed: %s' % command)
+            raise Exception('%s failed with status %s' % (command, status))
         else:
             pass
 
@@ -84,13 +90,16 @@ class NewportPowermeter(Instrument):
         :return:
         """
         self.write(query_string)
+        return self.read()
+
+    def read(self):
         cdevice_id = c_long(self.device_id)
         time.sleep(0.2)
-        response = create_string_buffer('\000' * 1024)
+        response = create_string_buffer(('\000' * 1024).encode())
         leng = c_ulong(1024)
         read_bytes = c_ulong()
         self._dllWrapper("newp_usb_get_ascii", cdevice_id, byref(response), leng, byref(read_bytes))
-        answer = response.value[0:read_bytes.value].rstrip('\r\n')
+        answer = response.value[0:read_bytes.value].rstrip(b'\r\n')
         return answer
 
     def write(self, command_string):
@@ -100,9 +109,10 @@ class NewportPowermeter(Instrument):
         :param command_string: Name of the string to be sent. Check Manual for commands
         :raise:
         """
-        command = create_string_buffer(command_string)
+        command = create_string_buffer(command_string.encode())
         length = c_ulong(sizeof(command))
         cdevice_id = c_long(self.device_id)
+
         self._dllWrapper("newp_usb_send_ascii", cdevice_id, byref(command), length)
 
     @property
@@ -163,7 +173,7 @@ class NewportPowermeter(Instrument):
             interval_ms * 10))  # to set 1 ms rate we have to give int value of 10. This is strange as manual says the INT should be in ms
         self.write('PM:DS:ENable 1')
         while int(self.query('PM:DS:COUNT?')) < buff_size:  # Waits for the buffer is full or not.
-            time.sleep(0.001 * interval_ms * buff_size / 10)
+            time.sleep(old_div(0.001 * interval_ms * buff_size, 10))
         actualwavelength = self.query('PM:Lambda?')
         mean_power = self.query('PM:STAT:MEAN?')
         std_power = self.query('PM:STAT:SDEV?')
@@ -183,9 +193,9 @@ class NewportPowermeter(Instrument):
 if __name__ == '__main__':
     nd = NewportPowermeter(0xCEC7)
     nd._logger.setLevel("DEBUG")
-
-    print nd.get_instrument_list()
-    print nd.wavelength
-    print nd.power
-    print nd.wavelength
-    print nd.power
+    print('Init finished')
+    print(nd.get_instrument_list())
+    print(nd.wavelength)
+    print(nd.power)
+    print(nd.wavelength)
+    print(nd.power)
