@@ -7,6 +7,12 @@ Created on Wed Aug 02 21:16:42 2017
 from nplab.instrument.serial_instrument import SerialInstrument
 from nplab.instrument.shutter import Shutter
 import serial
+from nplab.utils.notified_property import NotifiedProperty
+from nplab.ui.ui_tools import QuickControlBox
+from nplab.utils.gui import QtWidgets
+from nplab.ui.ui_tools import *
+from nplab.utils.gui import *
+
 class Arduino_TTL_shutter(SerialInstrument,Shutter):
     '''A class for the Piezoconcept objective collar '''
 
@@ -149,13 +155,14 @@ class Arduino_tri_shutter(SerialInstrument):
 class tri_shutter_ui(QuickControlBox):
     '''Control Widget for the Shamrock spectrometer
     '''
-#    def __init__(self,shutter):
-#        super(tri_shutter_ui,self).__init__(title = 'Tri_shutter')
+    def __init__(self,shutter):
+        super(tri_shutter_ui,self).__init__(title = 'Tri_shutter')
         self.shutter = shutter
         self.add_checkbox('Shutter_1_State_2', title = 'Shutter 1')
         self.add_checkbox('Shutter_2_State_2', title = 'Shutter_2')
         self.add_checkbox('Flipper_1_State', title = 'Mirror 1')
         self.auto_connect_by_name(controlled_object = self.shutter)
+
 if __name__ == '__main__':
     shutter = Arduino_tri_shutter(port = 'COM4')
     import time 

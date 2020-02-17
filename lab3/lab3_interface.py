@@ -12,7 +12,7 @@ from nplab.instrument.spectrometer.shamdor import Shamdor
 from nplab.instrument.spectrometer.seabreeze import OceanOpticsSpectrometer
 from nplab.instrument.electronics.keithley_2636b_smu import Keithley2636B as Keithley
 from nplab.instrument.stage.smaract_mcs import SmaractMCS
-#import arduinoLab3
+from nplab.instrument.shutter.Arduino_ttl_shutter import Arduino_tri_shutter as shutter
 #from nplab.instrument.light_sources.matchbox_laser import MatchboxLaser
 
 import nplab
@@ -68,7 +68,9 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
 
         self.initialise_Shamdor()
         self.initialise_smu()
-        self.initialise_SmarAct_stage()
+#        self.initialise_SmarAct_stage()
+ #       self.initialise_shutter()
+        
         self.setup_plot_widgets()
         
         self.activeDatafile = activeDatafile
@@ -88,7 +90,7 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
 #        print('Andor initialised')
         
 
-    #TODO ALICE - get this to work    
+    #TODO ALICE - go through this line by line
     def run(self, *args):
         # *args collects extra unnecessary arguments from qt
         self.voltages_data = []
@@ -198,7 +200,7 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
 
     def initialise_Shamdor(self):
         self.myShamdor = Shamdor()
-        self.myShamdor.shamrock.SetSlit(100)
+        self.myShamdor.shamrock.SetSlit(1000)
 #        self.myShamdor.use_shifts = True   #Uncomment For Raman Shift (Instead of Plotting with wavelength)
         print('Shamdor initialised')
 
@@ -214,6 +216,11 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
         SmarAct_system_id = SmaractMCS.find_mcs_systems()
         self.SmarAct_stage = SmaractMCS(SmarAct_system_id)
  #       self.SmarAct_stage.show_gui(blocking=False)
+        
+    def initialise_shutter(self):
+        self.myShutter = shutter(port = 'COM4')
+        time.sleep(5)
+        self.myShutter.show_gui(blocking=False) # comment this out later. checking to make sure shutter works
         
     def andor_cooler(self):
         if self.andor_cooler_checkBox.isChecked():
@@ -321,7 +328,10 @@ class Lab3_experiment(Experiment, QtWidgets.QWidget, UiTools):
         self.myShamdor.shamrock.SetWavelength(self.shamrockWavelength_spinBox.value())
         self.RamanWavelengths = self.myShamdor.get_xaxis()
         time.sleep(0.5)
+        #TODO: Set various shutters and mirrors
+        #self.shutter.
         self.RamanSpectrum = np.asarray( self.myShamdor.capture()[0] )
+        #TODO: Set various shutters and mirrors again
         self.RamanSpectrum_plot.plot(self.RamanWavelengths, self.RamanSpectrum, clear = True, pen = 'r')
         
     def save_single_Raman_spectrum(self):
