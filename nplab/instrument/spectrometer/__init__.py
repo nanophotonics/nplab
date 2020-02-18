@@ -551,8 +551,6 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
             self.spectrometer.absorption_enabled = not self.spectrometer.absorption_enabled
         
     def variable_int_state_change(self, new):
-        print('registered functions')
-        print(self.Variable_int, self.Variable_int.isChecked(), new)
         self.Variable_int.setChecked(new)
             
     def update_references(self,*args, **kwargs):
