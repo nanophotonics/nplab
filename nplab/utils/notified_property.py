@@ -68,7 +68,7 @@ object to be passed in.
 from builtins import str
 from builtins import object
 import functools
-from weakref import WeakSet, WeakKeyDictionary
+from weakref import WeakKeyDictionary
 import numpy as np
 
 class Property(object):
@@ -166,7 +166,7 @@ class NotifiedProperty(Property):
         NB if the function raises an exception, it will not be called again.
         """
         if obj not in list(self.callbacks_by_object.keys()):
-            self.callbacks_by_object[obj] = WeakSet()
+            self.callbacks_by_object[obj] = set()
         self.callbacks_by_object[obj].add(callback)
         
     def deregister_callback(self, obj, callback):

@@ -540,7 +540,8 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
         elif sender is self.referenced and state == QtCore.Qt.Unchecked:
             self.spectrometer.clear_reference()
             
-        elif sender is self.Variable_int:
+        elif sender is self.Variable_int and\
+        self.Variable_int.isChecked() != self.spectrometer.variable_int_enabled:
             self.spectrometer.variable_int_enabled = not self.spectrometer.variable_int_enabled
             
         elif sender is self.average_checkBox:
@@ -549,11 +550,10 @@ class SpectrometerControlUI(QtWidgets.QWidget,UiTools):
         elif sender is self.Absorption_checkBox:
             self.spectrometer.absorption_enabled = not self.spectrometer.absorption_enabled
         
-    def variable_int_state_change(self):
-        if self.spectrometer.variable_int_enabled == True:
-            self.Variable_int.setCheckState(QtCore.Qt.Checked)
-        if self.spectrometer.variable_int_enabled == False:
-            self.Variable_int.setCheckState(QtCore.Qt.Unchecked)
+    def variable_int_state_change(self, new):
+        print('registered functions')
+        print(self.Variable_int, self.Variable_int.isChecked(), new)
+        self.Variable_int.setChecked(new)
             
     def update_references(self,*args, **kwargs):
         self.spectrometer.reference_ID = args[0]
