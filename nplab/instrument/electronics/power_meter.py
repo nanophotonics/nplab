@@ -23,7 +23,7 @@ class PowerMeter(Instrument):
     '''
     live = DumbNotifiedProperty(False)
     def __init__(self):
-        super(PowerMeter, self).__init__()
+        Instrument.__init__(self)
         
     def read_power(self):
         raise NotImplementedError
