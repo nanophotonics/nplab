@@ -14,38 +14,39 @@ import visa
 
 class Thorlabs_powermeter(PowerMeter, VisaInstrument):
     def __init__(self, address = 'USB0::0x1313::0x807B::17121118::INSTR',
-                 settings = {'timeout': 0.1,
-                             'read_termination': '\r',
-                             'write_termination': '\r',
-                             'send_end': True}):
+                 settings = {
+                             # 'timeout': 0.1,
+                              'read_termination': '\n',
+                              'write_termination': '\r\n',
+                             # 'send_end': True
+                                }):
      
         VisaInstrument.__init__(self, address = address, settings = settings)
         PowerMeter.__init__(self)
-        
+        self.address = address
+        self.settings = settings
+        self.num_averages = 10
     def _read(self):
-        self.query('READ?')
-    def set_wavelength(wl):
-        self.write('')
-    
+        return float(self.query('READ?'))
+    def get_wavelengths(self):
+        return self.query('Sense:Correction:WAVelength?')
+    def set_wavelength(self, wl):
+        self.write('Sense:Correction:WAVelength '+str(wl))
+    def read_average(self,num_averages = None):
+        """a quick averaging tool for the pm100 power meter """
+        live = self.live
+        self.live = False
+        if num_averages is None:
+            num_averages = self.num_averages
+        average = np.mean([self._read() for _ in range(num_averages)])*1000#mW
+        self.live = live
+        return average
     def read_power(self):
-        Output=[]
-        Fail=0      
-        while len(Output)<20:
-            try:
-                Output.append(self.read())
-                Fail=0
-            except Exception as e:
-                self.e = e
-                Fail+=1
-            if Fail==10:
-                print('Restarting power meter',self.e)
-                self.restart()
-                return np.NaN
-        return np.median(Output)*1000 # mW
+        return self._read()*1000
     def restart(self):
         self.__init__(self.address)
         
 
 if __name__ == '__main__':
-    pm = Thorlabs_powermeter('USB0::0x1313::0x807B::200207307::INSTR')
+    pm = Thorlabs_powermeter(visa.ResourceManager().list_resources()[0])
     pm.show_gui(blocking = False)
