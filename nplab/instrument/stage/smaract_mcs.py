@@ -129,7 +129,7 @@ class SmaractMCS(PiezoStage):
 
     def open_mcs(self):
         if not self.is_open:
-            mode = ctypes.c_char_p('sync') # use synchronouse communication mode
+            mode = ctypes.c_char_p('sync'.encode('utf-8')) # use synchronouse communication mode
             if self.check_status(mcsc.SA_OpenSystem(byref(self.handle), self.mcs_id, mode)):
                 self.is_open = True
                 return True
@@ -1288,7 +1288,7 @@ class SmaractMCSUI(QtWidgets.QWidget, UiTools):
 if __name__ == '__main__':
 
     #smaract = SmaractMCSSerial('COM10')
-    smaract = SmaractMCSSerial('COM3')
+    #smaract = SmaractMCSSerial('COM3')
 
     # print SA_OK
     system_id = SmaractMCS.find_mcs_systems()
