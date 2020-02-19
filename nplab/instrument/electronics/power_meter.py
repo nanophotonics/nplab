@@ -57,9 +57,9 @@ class PowerMeterUI(QtWidgets.QWidget, UiTools):
     def update_display(self, power):
         self.power_lcdNumber.display(float(power))
     def live_changed(self, new):
-        print('delete_me')
-        self.live_button.setChecked(new)
-        
+        if self.live_button.isChecked() is not self.pm.live:
+            self.live_button.setChecked(new)
+        self.display_thread.start()
 class DisplayThread(QtCore.QThread):
     ready = QtCore.Signal(float)
     def __init__(self, parent):
