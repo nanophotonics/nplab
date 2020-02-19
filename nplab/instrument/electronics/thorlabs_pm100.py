@@ -28,9 +28,11 @@ class Thorlabs_powermeter(PowerMeter, VisaInstrument):
         self.num_averages = 10
     def _read(self):
         return float(self.query('READ?'))
-    def get_wavelengths(self):
+    @property
+    def wavelength(self):
         return self.query('Sense:Correction:WAVelength?')
-    def set_wavelength(self, wl):
+    @wavelength.setter
+    def wavelength(self, wl):
         self.write('Sense:Correction:WAVelength '+str(wl))
     def read_average(self,num_averages = None):
         """a quick averaging tool for the pm100 power meter """
