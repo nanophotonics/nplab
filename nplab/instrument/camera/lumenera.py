@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 """
 Lumenera camera wrapper for NPLab
 =================================
@@ -9,17 +11,22 @@ software from Lumenera's website).
 
 @author: Richard Bowman (rwb27@cam.ac.uk)
 """
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
 
+
+from builtins import range
+from past.utils import old_div
 import sys
 import time
-
 import ctypes
-asVoidPtr = ctypes.pythonapi.PyCObject_AsVoidPtr #this function converts PyCObject to void *, why is it not in ctypes natively...?
-asVoidPtr.restype = ctypes.c_void_p #we need to set the result and argument types of the imported function
-asVoidPtr.argtypes = [ctypes.py_object]
+# asVoidPtr = ctypes.pythonapi.PyCObject_AsVoidPtr #this function converts PyCObject to void *, why is it not in ctypes natively...?
+# asVoidPtr.restype = ctypes.c_void_p #we need to set the result and argument types of the imported function
+# asVoidPtr.argtypes = [ctypes.py_object]
 
 try:
-    import lucam
+    from . import lucam
 except WindowsError:
     explanation="""
 WARNING: could not open the lucam driver.
@@ -31,8 +38,8 @@ Capture), and that its version matches your Python architecture (64 or 32 bit).
         import traitsui.message
         traitsui.message.error(explanation,"Infinity Driver Missing", buttons=["OK"])
     except Exception as e:
-        print "uh oh, problem with the message..."
-        print e
+        print("uh oh, problem with the message...")
+        print(e)
         pass
     finally:
         raise ImportError(explanation) 
@@ -102,7 +109,7 @@ class LumeneraCamera(Camera):
             del self.cam
             self.log("Camera deleted")
         except Exception as e:
-            print "Warning, an exception was raised deleting the old camera:\n{0}".format(e)
+            print("Warning, an exception was raised deleting the old camera:\n{0}".format(e))
         time.sleep(2)
         self.log("Creating new camera object")
         self.cam = lucam.Lucam(self._camera_number)
@@ -150,17 +157,17 @@ class LumeneraCamera(Camera):
                                         ctypes.POINTER(ctypes.c_byte))
                     image = self.convert_frame(frame_pointer,np.product(frame.shape))
                     if crop_fraction is not None:
-                        x_size = int(image.shape[0]*crop_fraction)/2
-                        x_mid = int(image.shape[0])/2
-                        y_size = int(image.shape[1]*crop_fraction)/2
-                        y_mid = int(image.shape[1])/2
+                        x_size = old_div(int(image.shape[0]*crop_fraction),2)
+                        x_mid = old_div(int(image.shape[0]),2)
+                        y_size = old_div(int(image.shape[1]*crop_fraction),2)
+                        y_mid = old_div(int(image.shape[1]),2)
                         image = image[x_mid-x_size:x_mid+x_size,y_mid-y_size:y_mid+y_size]
                     return True, image
                 except Exception as e:
-                    print "Attempt number {0} failed to capture a frame from the camera: {1}".format(i,e)
-        print "Camera.raw_snapshot() has failed to capture a frame."
+                    print("Attempt number {0} failed to capture a frame from the camera: {1}".format(i,e))
+        print("Camera.raw_snapshot() has failed to capture a frame.")
         if reset_on_error:
-            print "Camera dropped lots of frames.  Turning it off and on again.  Fingers crossed!"
+            print("Camera dropped lots of frames.  Turning it off and on again.  Fingers crossed!")
             self.restart() #try restarting the camera!
             return self.raw_snapshot(suppress_errors=suppress_errors, 
                                      reset_on_error=False, #this matters: avoid infinite loop!
@@ -177,12 +184,12 @@ class LumeneraCamera(Camera):
         can store it in latest_image and thus update the GUI.
         """
         now = time.clock()
-        self.fps = 1/(now - self.last_frame_time)
+        self.fps = old_div(1,(now - self.last_frame_time))
         self.last_frame_time = now
         try:
             self.latest_raw_frame = self.convert_frame(frame_pointer, frame_size)
         except:
-            print "invalid frame size"
+            print("invalid frame size")
             
     def convert_frame(self, frame_pointer, frame_size):
         """Convert a frame from the camera to an RGB numpy array."""
@@ -293,7 +300,7 @@ class LumeneraCameraControlWidget(CameraControlWidget):
 # this is slightly dangerous, but here we populate the camera with properties
 # to set all the things in its list of properties.  We may want to prune this
 # a little.
-for pname in lucam.Lucam.PROPERTY.keys():
+for pname in list(lucam.Lucam.PROPERTY.keys()):
     setattr(LumeneraCamera, pname, CameraParameter(pname))
 
 

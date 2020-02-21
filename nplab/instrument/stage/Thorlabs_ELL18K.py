@@ -7,13 +7,17 @@ Does backlash correction.
 
 """
 
+from builtins import str
+from builtins import hex
+from builtins import range
+from builtins import object
 import struct
 from nplab.instrument import serial_instrument as serial
 import numpy as np
 
 
 
-class ELL18K():
+class ELL18K(object):
 
 	def __init__(self,Port=None,Backlash_Correct=True):
 		"""

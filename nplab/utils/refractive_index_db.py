@@ -1,3 +1,5 @@
+from __future__ import print_function
+from builtins import object
 import requests
 import yaml
 import os, inspect
@@ -43,9 +45,9 @@ class RefractiveIndexInfoDatabase(object):
 			# return [get_data(i) for i in it]
 		elif type(it) == dict:
 			outp = []
-			if "content" in it.keys():
+			if "content" in list(it.keys()):
 				outp = outp + cls.get_data(it["content"])
-			if "data" in it.keys():
+			if "data" in list(it.keys()):
 				outp = outp + [it["data"]]
 		return outp
 
@@ -73,8 +75,8 @@ class RefractiveIndexInfoDatabase(object):
 			outp.update({k:RefractiveIndexInfoDatabase.make_dict(values)})
 
 		#if all values of output dict are empty lists - collapse dict
-		if all(len(v)==0 for v in outp.values()):
-			return outp.keys()
+		if all(len(v)==0 for v in list(outp.values())):
+			return list(outp.keys())
 		else:
 			return outp
 
@@ -91,7 +93,7 @@ class RefractiveIndexInfoDatabase(object):
 				return ''
 		elif type(iterable) == dict:
 			outp = []
-			for k in iterable.keys():
+			for k in list(iterable.keys()):
 				values = RefractiveIndexInfoDatabase.make_data(iterable[k])
 				if len(values) > 0:
 					for v in values:
@@ -152,7 +154,7 @@ class RefractiveIndexInfoDatabase(object):
 					wavelengths.append(float(w))
 					refractive_index.append(float(n))
 				except:
-					print "failed on: ({})".format(d)
+					print("failed on: ({})".format(d))
 		return {"wavelength":wavelengths, "n": refractive_index}
 
 	@classmethod
@@ -185,8 +187,8 @@ class RefractiveIndexInfoDatabase(object):
 			else:
 				output_n = np.interp(required_wavelength*1e6,xp=dataset["wavelength"],fp=dataset["n"])
 				if debug > 0:
-					print "--- DEBUG Interpolation---"
-					print "Wavelen: {0}, Refractive_index: {1}".format(required_wavelength,output_n)
+					print("--- DEBUG Interpolation---")
+					print("Wavelen: {0}, Refractive_index: {1}".format(required_wavelength,output_n))
 				return output_n
 
 		return generator
@@ -202,6 +204,6 @@ if __name__ == "__main__":
 
 	wls = np.linspace(500e-9,800e-9,300)
 	for w in wls:
-		print generator(required_wavelength=w,debug = 1)
+		print(generator(required_wavelength=w,debug = 1))
 
-	print "Passed basic test"
+	print("Passed basic test")

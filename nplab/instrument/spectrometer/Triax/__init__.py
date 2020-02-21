@@ -1,7 +1,12 @@
 """
 jpg66
 """
+from __future__ import division
+from __future__ import print_function
 
+from builtins import str
+from builtins import range
+from past.utils import old_div
 from nplab.instrument.visa_instrument import VisaInstrument
 import numpy as np
 import time
@@ -80,10 +85,10 @@ class Triax(VisaInstrument):
 
         self.Regions=[]
 
-        print 'This Triax spectrometer is calibrated for use over the following ranges:'
+        print('This Triax spectrometer is calibrated for use over the following ranges:')
         for i in range(len(Calibration_Data)):
             if len(Calibration_Data[i])==4:
-                print 'Grating',i,':',np.min(Calibration_Data[i][0]),'nm - ',np.max(Calibration_Data[i][0]),'nm'
+                print('Grating',i,':',np.min(Calibration_Data[i][0]),'nm - ',np.max(Calibration_Data[i][0]),'nm')
                 self.Regions.append([np.min(Calibration_Data[i][0]),np.max(Calibration_Data[i][0])])
             else:
                 self.Regions.append(None)
@@ -96,7 +101,7 @@ class Triax(VisaInstrument):
         Returns the wavelength array in memory. If it is yet to be calculated, it is caluculated here
         """
         if self.Wavelength_Array is None:
-            self.Wavelength_Array=self.Convert_Pixels_to_Wavelengths(np.array(range(self.Number_of_Pixels)))
+            self.Wavelength_Array=self.Convert_Pixels_to_Wavelengths(np.array(list(range(self.Number_of_Pixels))))
         return self.Wavelength_Array
 
     def Grating(self, Set_To=None):
@@ -121,7 +126,7 @@ class Triax(VisaInstrument):
             self.waitTillReady()
             self.Grating_Number = Set_To
             #try:
-            self.Wavelength_Array=self.Convert_Pixels_to_Wavelengths(np.array(range(self.Number_of_Pixels))) #Update wavelength array
+            self.Wavelength_Array=self.Convert_Pixels_to_Wavelengths(np.array(list(range(self.Number_of_Pixels)))) #Update wavelength array
             #except:
                 #Dump=1
 
@@ -237,11 +242,11 @@ class Triax(VisaInstrument):
             self.write("F0,%i\r" % Steps)
             time.sleep(1)
             self.waitTillReady()
-        self.Wavelength_Array=self.Convert_Pixels_to_Wavelengths(np.array(range(self.Number_of_Pixels))) #Update wavelength array
+        self.Wavelength_Array=self.Convert_Pixels_to_Wavelengths(np.array(list(range(self.Number_of_Pixels)))) #Update wavelength array
 
     def Set_Center_Wavelength(self,Wavelength):  
         if self.ccd_size is None:
-            raise ValueError, 'ccd_size must be set in child class'
+            raise ValueError('ccd_size must be set in child class')
         Centre_Pixel=int(self.ccd_size/2)
         Required_Step=self.Find_Required_Step(Wavelength,Centre_Pixel)
         Current_Step=self.Motor_Steps()
@@ -292,7 +297,7 @@ class Triax(VisaInstrument):
             time.sleep(1)
             if (time.time() - Start_Time) > Timeout:
                 self._logger.warn('Timed out')
-                print 'Timed out'
+                print('Timed out')
                 break
     def get_qt_ui(self):
         return TriaxUI(self)
@@ -337,8 +342,8 @@ class TriaxUI(QtWidgets.QWidget,UiTools):
         self.triax = triax
         self.centre_wl_lineEdit.returnPressed.connect(self.set_wl_gui)
         self.slit_lineEdit.returnPressed.connect(self.set_slit_gui)
-        wl_arr = self.triax.Get_Wavelength_Array()        
-        self.centre_wl_lineEdit.setText(str(np.around(wl_arr[len(wl_arr)/2])))
+        wl_arr = self.triax.Get_Wavelength_Array()      
+        self.centre_wl_lineEdit.setText(str(np.around(wl_arr[len(wl_arr)//2])))
         self.slit_lineEdit.setText(str(self.triax.Slit()))
         eval('self.grating_'+str(self.triax.Grating())+'_radioButton.setChecked(True)')
         for radio_button in range(3):
@@ -354,6 +359,6 @@ class TriaxUI(QtWidgets.QWidget,UiTools):
         elif s is self.grating_1_radioButton:
             self.triax.Grating(1)
         elif s is self.grating_2_radioButton:
-            self.triax.grating(2)
+            self.triax.Grating(2)
         else:
             raise ValueError('radio buttons not connected!')

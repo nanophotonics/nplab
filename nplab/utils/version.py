@@ -1,7 +1,9 @@
+from __future__ import print_function
 # Quick-and-dirty way to extract the Git commit hash
 # Note this doesn't rely on any git packages being installed
 # but it does need us to be in a git repository
 
+from builtins import str
 import nplab
 import os, sys, platform
 
@@ -36,7 +38,7 @@ def latest_commit():
 def all_module_versions_string():
     """A string containing the version of all loaded modules with accessible version info."""
     modulestring = ""
-    for m in sys.modules.values():
+    for m in list(sys.modules.values()):
         try:
             modulestring += m.__name__ + ": " + m.__version__ + "\n"
         except:
@@ -70,4 +72,4 @@ def version_info_string():
     return version_string
 
 if __name__ == '__main__':
-    print version_info_string()
+    print(version_info_string())

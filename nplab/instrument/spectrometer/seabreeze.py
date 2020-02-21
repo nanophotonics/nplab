@@ -29,7 +29,12 @@ Contents:
 
 @author: Richard Bowman (rwb27)
 """
+from __future__ import division
+from __future__ import print_function
 
+from builtins import str
+from builtins import range
+from past.utils import old_div
 import ctypes
 from ctypes import byref, c_int, c_ulong, c_double
 import numpy as np
@@ -55,10 +60,10 @@ website (http://downloads.oceanoptics.com/OEM/), and that its version matches
 your Python architecture (64 or 32 bit).  See the module help for more
 information"""
     try:
-        print explanation, "SeaBreeze Driver Missing"
+        print(explanation, "SeaBreeze Driver Missing")
     except Exception as e:
-        print "uh oh, problem with the message..."
-        print e
+        print("uh oh, problem with the message...")
+        print(e)
         pass
     finally:
         raise Exception(explanation)
@@ -69,7 +74,7 @@ def error_string(error_code):
     N = 1024  # we need to create a buffer into which we place the returned string
     s = ctypes.create_string_buffer(N)
     seabreeze.seabreeze_get_error_string(error_code, byref(s), N)
-    return s.value
+    return s.value.decode('utf-8')
 
 
 def check_error(error_c_int):
@@ -154,7 +159,7 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
         wrapper and include them in it.  If not, attempt to open and wrap all
         spectrometers connected to the computer."""
         instances = cls.get_instances()
-        print instances
+        print(instances)
         if instances == []:
             return cls.get_spectrometers()
         else:
@@ -162,19 +167,17 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
 
     def __init__(self, index):
         """Initialise the spectrometer"""
-        
         self.index = index  # the spectrometer's ID, used by all seabreeze functions
         self._comms_lock = threading.RLock()
         self._isOpen = False
         self._open()
-              
         super(OceanOpticsSpectrometer, self).__init__()
         self.get_API_version() 
-        self._minimum_integration_time = None        
+        self._minimum_integration_time = None
         self.integration_time = self.minimum_integration_time
         self._tec_enabled = True
         self.enable_tec = True
-        
+
     def __del__(self):
         self._close()
         super(OceanOpticsSpectrometer, self).__del__()
@@ -219,19 +222,20 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
         except:
             self.API_ver = 1
         check_error(e)        
-        
-    
+
     def get_model_name(self):
         if self._model_name is None:
             N = 32  # make a buffer for the DLL to return a string into
             s = ctypes.create_string_buffer(N)
             e = ctypes.c_int()
-            if self.API_ver == 2:
+            try:
                 seabreeze.seabreeze_get_model(self.index, byref(e), byref(s), N)
-            if self.API_ver == 1:
+                self.API_ver = 2
+            except:
                 seabreeze.seabreeze_get_spectrometer_type(self.index, byref(e), byref(s), N)
+                self.API_ver = 1
             check_error(e)
-            self._model_name = s.value
+            self._model_name = s.value.decode('utf-8')
         return self._model_name
 
     model_name = property(get_model_name)
@@ -244,7 +248,7 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
             e = ctypes.c_int()
             seabreeze.seabreeze_get_serial_number(self.index, byref(e), byref(s), N)
             check_error(e)
-            self._serial_number = s.value
+            self._serial_number = s.value.decode('utf-8')
         return self._serial_number
 
     serial_number = property(get_serial_number)
@@ -256,7 +260,7 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
         e = ctypes.c_int()
         seabreeze.seabreeze_get_usb_descriptor_string(self.index, byref(e), c_int(id), byref(s), N)
         check_error(e)
-        return s.value
+        return s.value.decode('utf-8')
 
     def get_integration_time(self):
         """The current integration time.
@@ -278,6 +282,7 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
             seabreeze.seabreeze_set_integration_time(self.index, byref(e), c_ulong(int(milliseconds * 1000)))
         if self.API_ver == 2:
             seabreeze.seabreeze_set_integration_time_microsec(self.index, byref(e), c_ulong(int(milliseconds * 1000)))
+        
         check_error(e)
         self._latest_integration_time = milliseconds
 
@@ -290,7 +295,7 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
             if self.API_ver == 1:
                 min_time = seabreeze.seabreeze_get_minimum_integration_time_micros(self.index, byref(e))
             if self.API_ver == 2:
-                min_time = seabreeze.seabreeze_get_min_integration_time_microsec(self.index, byref(e))            
+                min_time = seabreeze.seabreeze_get_min_integration_time_microsec(self.index, byref(e))   
             check_error(e)
             self._minimum_integration_time = min_time / 1000.
         return self._minimum_integration_time
@@ -302,10 +307,8 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
         try:
             return self._tec_enabled
         except OceanOpticsError as error:
-            print error
-            print 'Most likely raised due to the lack of a tec on this device'
-
-
+            print(error)
+            print('Most likely raised due to the lack of a tec on this device')
 
     def set_tec_enable(self, state=True):
         """Turn the cooling system on or off."""
@@ -315,8 +318,8 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
             check_error(e)
             self._tec_enabled = state
         except OceanOpticsError as error:
-            print error
-            print 'Most likely raised due to the lack of a tec on this device'
+            print(error)
+            print('Most likely raised due to the lack of a tec on this device')
 
     enable_tec = property(get_tec_enable, set_tec_enable)
 
@@ -339,8 +342,8 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
            
             return temperature
         except OceanOpticsError as error:
-            print error
-            print 'Most likely raised due to the lack of a tec on this device'
+            print(error)
+            print('Most likely raised due to the lack of a tec on this device')
 
     def set_tec_temperature(self, temperature):
         """Enable the cooling system and set the temperature"""
@@ -352,10 +355,10 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
             seabreeze.seabreeze_set_tec_enable(self.index, byref(e), 1)
             check_error(e)
         except OceanOpticsError as error:
-            print error
-            print 'Most likely raised due to the lack of a tec on this device'
+            print(error)
+            print('Most likely raised due to the lack of a tec on this device')
 
-    #tec_temperature = property(get_tec_temperature, set_tec_temperature)
+    tec_temperature = property(get_tec_temperature, set_tec_temperature)
 
     def read_wavelengths(self):
         """get an array of the wavelengths in nm"""
@@ -420,21 +423,34 @@ class OceanOpticsControlUI(SpectrometerControlUI):
     def __init__(self, spectrometer):
         assert isinstance(spectrometer, OceanOpticsSpectrometer), 'spectrometer must be an OceanOpticsSpectrometer'
         super(OceanOpticsControlUI, self).__init__(spectrometer,os.path.join(os.path.dirname(__file__),'ocean_optics_controls.ui'))
-
-
 #        self.tec_temperature.setValidator(QtGui.QDoubleValidator())
         # self.tec_temperature.textChanged.connect(self.check_state)
         # self.tec_temperature.textChanged.connect(self.update_param)
         # self.tec_temperature.setText(str(spectrometer.tec_temperature))
-        self.set_tec_temperature_pushButton.clicked.connect(self.gui_set_tec_temperature)
-        self.read_tec_temperature_pushButton.clicked.connect(self.gui_read_tec_tempeature)
-        self.enable_tec.stateChanged.connect(self.update_enable_tec)
-        self.enable_tec.setChecked(self.spectrometer.enable_tec)
-        initial_temperature = np.round(self.spectrometer.get_tec_temperature(), decimals = 1)
-        self.tec_temperature_lcdNumber.display(float(initial_temperature))
-        self.set_tec_temperature_LineEdit.setText(str(initial_temperature))
-        # self.read_tec.clicked.connect(self.update_tec)
-
+        try: 
+            self.spectrometer.get_tec_temperature()
+            tec = True
+        except AttributeError as e:
+            print(e, 'removing cooling functionality')
+            tec = False
+        if tec:
+            pass
+            self.set_tec_temperature_pushButton.clicked.connect(self.gui_set_tec_temperature)
+            self.read_tec_temperature_pushButton.clicked.connect(self.gui_read_tec_tempeature)
+            self.enable_tec.stateChanged.connect(self.update_enable_tec)
+            self.enable_tec.setChecked(self.spectrometer.enable_tec)
+            initial_temperature = np.round(self.spectrometer.get_tec_temperature(), decimals = 1)
+            self.tec_temperature_lcdNumber.display(float(initial_temperature))
+            self.set_tec_temperature_LineEdit.setText(str(initial_temperature))
+            self.update_enable_tec(0) # sometimes helps enable cooling
+            self.update_enable_tec(1)
+        else:
+            self.set_tec_temperature_pushButton.setVisible(False)
+            self.read_tec_temperature_pushButton.setVisible(False)
+            self.enable_tec.setVisible(False)
+            self.tec_temperature_lcdNumber.setVisible(False)
+            self.set_tec_temperature_LineEdit.setVisible(False)
+            
     def update_param(self, value):
         sender = self.sender()
         if sender.validator() is not None:
@@ -453,18 +469,16 @@ class OceanOpticsControlUI(SpectrometerControlUI):
                 pass
     
     def gui_set_tec_temperature(self):
-        self.spectrometer.set_tec_temperature(float(self.set_tec_temperature_LineEdit.text()))
+        self.spectrometer.tec_temperature = float(self.set_tec_temperature_LineEdit.text().strip())
     
     def gui_read_tec_tempeature(self):
-        self.tec_temperature_lcdNumber.display(float(self.spectrometer.get_tec_temperature()))
+        self.tec_temperature_lcdNumber.display(float(self.spectrometer.tec_temperature))
+    
     def update_enable_tec(self, state):
         if state == QtCore.Qt.Checked:
             self.spectrometer.enable_tec = True
         elif state == QtCore.Qt.Unchecked:
             self.spectrometer.enable_tec = False
-
-    def update_tec(self):
-        self.tec_temperature.setText(str(self.spectrometer.tec_temperature))
 
 
 
@@ -475,13 +489,13 @@ def main():
 
     try:
         N = len(list_spectrometers())
-        print "Spectrometers connected:", list_spectrometers()
-        print "%d spectrometers found" % N
+        print("Spectrometers connected:", list_spectrometers())
+        print("%d spectrometers found" % N)
         assert N != 0, 'There are no Ocean Optics spectrometers attached (are you using the seabreeze drivers?)'
 
         spectrometers = OceanOpticsSpectrometer.get_spectrometers()
         for s in spectrometers.spectrometers:
-            print "spectrometer %s is a %s" % (s.serial_number, s.model_name)
+            print("spectrometer %s is a %s" % (s.serial_number, s.model_name))
             if s.model_name in ["QE65000", "QE-PRO"]:
                 s.set_tec_temperature = -20
             s.read()
@@ -489,20 +503,25 @@ def main():
  #       ui = spectrometers.get_qt_ui()
  #       ui.show()
  #       sys.exit(app.exec_()) #this is the "long way" of running a GUI
-        spectrometers.show_gui(blocking = False)  # the "short way" of running a GUI
+        spectrometers.show_gui()  # the "short way" of running a GUI
     except OceanOpticsError as error:
-        print "An error occurred with the spectrometer: %s" % error
+        print("An error occurred with the spectrometer: %s" % error)
     finally:
         try:
             pass
             #           del s     #we close the spectrometer afterwards, regardless of what happened.
         except:  # of course, if there's no spectrometer this will fail, hence the error handling
             shutdown_seabreeze()  # reset things if we've had errors
-            print "The spectrometer did not close cleanly. SeaBreeze has been reset."
+            print("The spectrometer did not close cleanly. SeaBreeze has been reset.")
 # to alter max/min: s.spectrum_plot.value_mapper.range.high=0.01
 
 # example code:
 if __name__ == "__main__":
+    print(list_spectrometers(), type(list_spectrometers()))
+    # spec1 = OceanOpticsSpectrometer(1)
+    # # spec1.show_gui(blocking = False)
+    spec2 = OceanOpticsSpectrometer(0)
+    spec2.show_gui(blocking = False)
 #    main()
-    spec = OceanOpticsSpectrometer(0)
-    spec.show_gui()
+    # specs = Spectrometers([spec1, spec2])
+    # specs.show_gui(blocking = False)

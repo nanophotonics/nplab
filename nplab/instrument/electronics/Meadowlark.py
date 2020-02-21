@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import division
+from builtins import map
+from past.utils import old_div
 from nplab.instrument.serial_instrument import SerialInstrument
 from serial import EIGHTBITS, PARITY_NONE, STOPBITS_ONE
 import time
@@ -12,36 +15,21 @@ class VariableRetarder(SerialInstrument):
     """
     port_settings = dict(baudrate=38400, bytesize=EIGHTBITS, parity=PARITY_NONE, stopbits=STOPBITS_ONE,
                          timeout=2)
-    termination_character = '\n'
+    termination_character = '\r'
+    termination_read = '\r\n'
     wait_time = 2
 
-    def __init__(self, port=None):
+    def __init__(self, port=None, channel=1):
         super(VariableRetarder, self).__init__(port)
-        self._channel = 1
-
-    def write(self, query_string):
-        """Re-writing the nplab.SerialInstrument.write because the instrument has different termination characters for
-        sending and receiving commands"""
-        with self.communications_lock:
-            assert self.ser.isOpen(), "Warning: attempted to write to the serial port before it was opened.  Perhaps you need to call the 'open' method first?"
-            try:
-                if self.ser.outWaiting() > 0: self.ser.flushOutput()  # ensure there's nothing waiting
-            except AttributeError:
-                if self.ser.out_waiting > 0: self.ser.flushOutput()  # ensure there's nothing waiting
-            self.ser.write(query_string + '\r')
-
-    def readline(self, timeout=None):
-        """Read one line from the serial port."""
-        with self.communications_lock:
-            return self.ser_io.readline().replace("\r\n", '')
+        self._channel = channel
 
     def query(self, queryString, *args, **kwargs):
         reply = super(VariableRetarder, self).query(queryString, *args, **kwargs)
-
+        self._logger.debug('Received: %s' % reply)
         split_reply = reply.split(':')
         split_query = queryString.split(':')
         if split_reply[0] != split_query[0]:
-            self._logger.warn('Error trying to query')
+            self._logger.warn('Error trying to query: %s %s' % (queryString, split_reply))
         return split_reply[1]
 
     @property
@@ -91,8 +79,8 @@ class VariableRetarder(SerialInstrument):
         :return:
         """
         reply = self.query('ldd:?')
-        integers = map(int, reply.split(','))
-        voltages = map(lambda x: x / 6553.5, integers)
+        integers = list(map(int, reply.split(',')))
+        voltages = [x / 6553.5 for x in integers]
         return voltages
 
     @all_voltages.setter
@@ -107,7 +95,7 @@ class VariableRetarder(SerialInstrument):
         for val in value:
             assert 0 <= val <= 10
         voltages = tuple(value)
-        integers = map(lambda x: x * 6553.5, voltages)
+        integers = [x * 6553.5 for x in voltages]
         self.write('ldd:%d,%d,%d,%d' % integers)
 
     @property
@@ -117,7 +105,7 @@ class VariableRetarder(SerialInstrument):
         :return:
         """
         integer = int(self.query('tmp:?'))
-        return (integer * 500 / 65535) - 273.15
+        return (old_div(integer * 500, 65535)) - 273.15
 
     @property
     def temperature_setpoint(self):
@@ -126,7 +114,7 @@ class VariableRetarder(SerialInstrument):
         :return:
         """
         integer = int(self.query('tsp:?'))
-        return (integer * 500 / 16384) - 273.15
+        return (old_div(integer * 500, 16384)) - 273.15
 
     @temperature_setpoint.setter
     def temperature_setpoint(self, value):
@@ -135,7 +123,7 @@ class VariableRetarder(SerialInstrument):
         :param value:
         :return:
         """
-        integer = (value + 273.15) * 16384 / 500
+        integer = old_div((value + 273.15) * 16384, 500)
         self.write('tsp:%d' % integer)
 
     def sync(self):

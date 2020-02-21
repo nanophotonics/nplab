@@ -1,3 +1,5 @@
+from __future__ import print_function
+from builtins import str
 __author__ = 'alansanders'
 
 from nplab.instrument.shutter import Shutter
@@ -8,7 +10,7 @@ def bool_to_state(Bool):
         return 'Open'
     if not Bool:
         return 'Closed'
-def state_to_bool(state): 
+def state_to_bool(state):
     if state == 'Open':
         return True
     if state == 'Closed':
@@ -45,7 +47,7 @@ class ThorLabsSC10(Shutter, serial.SerialInstrument):
     def toggle(self):
         self.write('ens')
         self._state = bool_to_state(not state_to_bool(self._state))#toggles self._state
-      
+#        
 #    def get_state(self):
 #        if self.query('ens?') == '0':
 #            return 'Closed'
@@ -54,19 +56,22 @@ class ThorLabsSC10(Shutter, serial.SerialInstrument):
     
     def get_state(self, report_success = False):
         try:
-            if bool(int(self.query('ens?'))):
+            state = bool(int(self.query('ens?')))
+
+            if state:
                 self._state = 'Open'            
                 return self._state
-            if not bool(int(self.query('ens?'))):
+            if not state:
                 self._state = 'Closed'            
                 return self._state
-            else:
-                if report_success: 
-                    print 'Communication with shutter failed; Assuming shutter is closed! ' + self._state + ' Change shutter._state if not!'          
-                return self._state
-        except:
-            print 'Communication with shutter failed; Assuming shutter is closed! ' + self._state + ' Change shutter._state if not!'          
+            assert False 
+        except (ValueError, AssertionError):
+            if report_success: 
+                print(
+                        '''Communication with shutter failed; assuming shutter is closed.\nChange shutter._state if not!'''
+                      )          
             return self._state
+    
     def set_state(self, state):
         if state_to_bool(self.get_state()) != state_to_bool(state):
             self.toggle()
@@ -75,13 +80,13 @@ class ThorLabsSC10(Shutter, serial.SerialInstrument):
         if not state_to_bool(self.get_state()):
             self.toggle()
         elif state_to_bool(self._state):
-            print 'Shutter is already open!'
+            print('Shutter is already open!')
         
     def close_shutter(self):  
         if state_to_bool(self._state):
             self.toggle()
         elif not state_to_bool(self._state):
-            print 'Shutter is already closed!'
+            print('Shutter is already closed!')
         
     def set_mode(self,n):
         """ Where n equals an associated mode
@@ -98,8 +103,10 @@ if __name__ == '__main__':
 #    import sys
 #    from nplab.utils.gui import *
 #    app = get_qt_app()
-    shutter = ThorLabsSC10('COM30')
-#    ui = shutter.get_qt_ui()
+    
+    shutter = ThorLabsSC10('COM1')
+    shutter.query('ens?', termination_line = "r")
+#     ui = shutter.get_qt_ui()
 #    ui.show()
 #    sys.exit(app.exec_())
     shutter.show_gui()

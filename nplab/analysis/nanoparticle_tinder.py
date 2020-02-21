@@ -18,6 +18,7 @@ Changing spyder's matplotlib backed to inline makes it faster.
 from __future__ import print_function
 from __future__ import division
 
+from builtins import range
 from builtins import str
 from builtins import input
 import matplotlib.pyplot as plt
@@ -28,7 +29,7 @@ import time
 
 plt.ion()
 
-def accept_reject(group, cutoff = np.inf):
+def accept_reject(group, cutoff = 5000):
     accepted = []
     rejected = []
     #---load the previously saved NPs
@@ -48,7 +49,7 @@ def accept_reject(group, cutoff = np.inf):
         particle = P[1] # the particle data group
         if p_name[:3] != 'Par': # discarding non-particle groups
             continue
-        if int(p_name.split('_')[1]) not in range(cutoff): # if your track stopped after particle 100, put in 101
+        if int(p_name.split('_')[1]) not in list(range(cutoff)): #eg. if your track stopped after particle 100, put in 101
             continue
         if p_name in prar: # if you're continuing from some previously saved accepted/rejected lists
             continue
@@ -84,14 +85,14 @@ def accept_reject(group, cutoff = np.inf):
     return accepted, rejected
             
 
-# if __name__ == '__main__':
-#     plt.rc('font',family='arial', size = 18)
-#     start = time.time()
+if __name__ == '__main__':
+    plt.rc('font',family='arial', size = 18)
+    start = time.time()
     
-#     with [Your_File_here] as File:   
-#         accepted, rejected = accept_reject(File['ParticleScannerScan_0'])    
-#         np.save('accepted', accepted)
-#         np.save('rejected', accepted)
-#     end = time.time()
+    with [Your_File_here] as File:   
+        accepted, rejected = accept_reject(File['ParticleScannerScan_0'])    
+        np.save('accepted', accepted)
+        np.save('rejected', accepted)
     
-#     print('That took '+str(np.round(end - start))+ 'seconds')
+    
+    print('That took '+str(int(end - time.time))+ ' seconds')

@@ -4,8 +4,14 @@ Created on Tue Jul 25 10:18:49 2017
 
 @author: wmd22
 """
+from __future__ import division
+from __future__ import print_function
 
 
+from builtins import zip
+from builtins import str
+from builtins import range
+from past.utils import old_div
 from numpy.lib.stride_tricks import as_strided
 import cv2
 import numpy as np
@@ -130,7 +136,7 @@ def strided_rescale(g, bin_fac= 4):
         else:
             return np.copy(strided)
     except Exception as e:
-        print e
+        print(e)
         
 def StrBiThresOpen(g, bin_fac= 4,threshold =40,bilat_size = 3,bilat_height = 40,morph_kernel_size = 3):
     try:
@@ -141,7 +147,7 @@ def StrBiThresOpen(g, bin_fac= 4,threshold =40,bilat_size = 3,bilat_height = 40,
      #       cv2.THRESH_BINARY,3,2)
         strided = cv2.adaptiveThreshold(strided,255,cv2.ADAPTIVE_THRESH_MEAN_C,cv2.THRESH_BINARY,101,-1*threshold)
         
-        strided = cv2.bilateralFilter(np.uint8(strided),bilat_size,bilat_height/4,50)
+        strided = cv2.bilateralFilter(np.uint8(strided),bilat_size,old_div(bilat_height,4),50)
       #  strided[strided>threshold]-=threshold
         kernel = np.ones((morph_kernel_size,morph_kernel_size),np.uint8)
         strided =cv2.morphologyEx(strided, cv2.MORPH_OPEN, kernel)
@@ -149,7 +155,7 @@ def StrBiThresOpen(g, bin_fac= 4,threshold =40,bilat_size = 3,bilat_height = 40,
         strided[strided!=0]=255
         return np.copy(strided)
     except Exception as e:
-        print e
+        print(e)
         
 def STBOC_with_size_filter(g, bin_fac= 4, bilat_size = 3, bilat_height = 40,
                            threshold =20,min_size = 2,max_size = 6,morph_kernel_size = 3,
@@ -159,7 +165,6 @@ def STBOC_with_size_filter(g, bin_fac= 4, bilat_size = 3, bilat_height = 40,
         g = np.copy(g)
         strided = StrBiThresOpen(g, bin_fac,threshold,bilat_size,bilat_height,morph_kernel_size)
         contours, hierarchy = cv2.findContours(strided,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)[-2:]
-        
         centers = []
         radi = []
         for cnt in contours:
@@ -172,7 +177,7 @@ def STBOC_with_size_filter(g, bin_fac= 4, bilat_size = 3, bilat_height = 40,
                 strided[center[1]-radius:center[1]+radius,center[0]-radius:center[0]+radius] = 0
             else:
                 M = cv2.moments(cnt,binaryImage = True)
-                center = (int(M['m10']/M['m00']),int(M['m01']/M['m00']))
+                center = (int(old_div(M['m10'],M['m00'])),int(old_div(M['m01'],M['m00'])))
                 centers.append(center)
                 radi.append(radius)
         if return_centers==True:
@@ -201,14 +206,14 @@ def STBOC_with_size_filter(g, bin_fac= 4, bilat_size = 3, bilat_height = 40,
     #    strided=strided.repeat(bin_fac, 1)
  #       return strided
     except Exception as e:
-        print e
+        print(e)
 
 def find_particles(self,img=None,border_pixels = 50):
     """find particles in the supplied image, or in the camera image"""
     self.threshold_image(self.denoise_image(
             cv2.cvtColor(frame,cv2.COLOR_RGB2GRAY)))[self.border_pixels:-self.border_pixels,self.border_pixels:-self.border_pixels] #ignore the edges
     labels, nlabels = ndimage.measurements.label(img)
-    return [np.array(p)+15 for p in ndimage.measurements.center_of_mass(img, labels, range(1,nlabels+1))] #add 15 onto all the positions
+    return [np.array(p)+15 for p in ndimage.measurements.center_of_mass(img, labels, list(range(1,nlabels+1)))] #add 15 onto all the positions
 
 #def STBOC_with_size_filter_switch(g, bin_fac= 4,bilat_size = 3, bilat_height = 40,
 #                           threshold =20,min_size = 2,max_size = 6,morph_kernel_size = 3):

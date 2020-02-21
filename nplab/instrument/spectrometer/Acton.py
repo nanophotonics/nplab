@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from builtins import str
 from nplab.instrument.visa_instrument import VisaInstrument
 import re
 import time
@@ -11,10 +12,20 @@ class SP2750(VisaInstrument):
     ftp://ftp.princetoninstruments.com/public/manuals/Acton/SP-2750.pdf
     """
 
+    @property
+    def wavelength(self):
+        return self.get_wavelength()
+
+    @wavelength.setter
+    def wavelength(self, value):
+        self.set_wavelength_fast(value)
+
     def __init__(self, address):
         port_settings = dict(baud_rate=9600, read_termination="\r\n", write_termination="\r", timeout=10000)
         super(SP2750, self).__init__(address, port_settings)
         self.clear_read_buffer()
+
+        self.metadata_property_names += ('wavelength', )
 
     def query(self, *args, **kwargs):
         """
@@ -136,4 +147,3 @@ class SP2750(VisaInstrument):
         :return:
         """
         return self.query("?GRATINGS")
-

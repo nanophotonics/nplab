@@ -1,3 +1,6 @@
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import range
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -6,20 +9,20 @@ from nplab.analysis.smoothing import convex_smooth
 
 from nplab.instrument.spectrometer.acton_2300i import Acton
 from nplab.instrument.camera.Picam.pixis import Pixis
-from Pacton import Pacton
+from .Pacton import Pacton
 
 
-print "Starting.."
-print "Pixis..."
+print("Starting..")
+print("Pixis...")
 p = Pixis(debug=0)
 p.StartUp()
-print "Acton..."
+print("Acton...")
 act = Acton("COM6",debug=0)
-print "Done..."
+print("Done...")
 
 pacton = Pacton(pixis=p,acton=act,debug=0)
 
-print "Measuring..."
+print("Measuring...")
 from nplab import datafile as df 
 output_file = df.DataFile("measured_spectrum.hdf5","w")
 dg = output_file.require_group("spectra")
@@ -32,7 +35,7 @@ from nplab.analysis.signal_alignment import correlation_align
 
 for wl in range(400,800,4):
 	
-	print p.GetExposureTime()
+	print(p.GetExposureTime())
 	spectrum,wavelengths = pacton.get_spectrum(wl,subtract_background=True,roi=[0,1024,600,800],debug=1)
 	measured_ys = measured_ys + [spectrum]
 	measured_xs = measured_xs + [wavelengths] 

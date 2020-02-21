@@ -1,15 +1,23 @@
-from nplab.instrument.flipper import Flipper
+from nplab.instrument.Flipper import Flipper
 import struct
 import numpy as np
 import time
 from nplab.utils.thread_utils import locked_action, background_action
-
+import serial
 
 class ThorlabsMFF(Flipper):
+    port_settings = dict(baudrate=115200,
+                         bytesize=8,
+                         parity=serial.PARITY_NONE,
+                         stopbits=1,
+                         xonxoff=0,
+                         rtscts=0,
+                         timeout=5,
+                         writeTimeout=1)
+
     def __init__(self, port, **kwargs):
         Flipper.__init__(self, port)
 
-    # @background_action    # background_actions do not work well with properties
     @locked_action
     def set_state(self, value):
         if value:

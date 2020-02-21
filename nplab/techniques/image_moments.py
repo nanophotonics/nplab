@@ -1,3 +1,6 @@
+from __future__ import division
+from __future__ import print_function
+from past.utils import old_div
 __author__ = 'alansanders'
 
 import numpy as np
@@ -42,12 +45,12 @@ def find_centroid(img, x=None, y=None, threshold=None):
     m10 = np.sum(y.reshape(img.shape[0], 1) * img)
     m01 = np.sum(x.reshape(1, img.shape[1]) * img)
     m00 = np.sum(img)
-    centroid_x = m01 / m00
-    centroid_y = m10 / m00
+    centroid_x = old_div(m01, m00)
+    centroid_y = old_div(m10, m00)
     return centroid_x, centroid_y
 
 
-gaussian = lambda x, bkgd, A, x0, sigma: bkgd + A * np.exp(-(x - x0) ** 2 / sigma ** 2)
+gaussian = lambda x, bkgd, A, x0, sigma: bkgd + A * np.exp(old_div(-(x - x0) ** 2, sigma ** 2))
 
 
 def measure_fwhm(img, x=None, y=None, return_curve=False):
@@ -59,8 +62,8 @@ def measure_fwhm(img, x=None, y=None, return_curve=False):
     cx, cy = find_centroid(img, x, y)
     xdata = np.sum(img, axis=0)
     ydata = np.sum(img, axis=1)
-    p0_x = [xdata.min(), xdata.max() - xdata.min(), cx, (x.max() - x.min()) / 2]
-    p0_y = [ydata.min(), ydata.max() - ydata.min(), cy, (y.max() - y.min()) / 2]
+    p0_x = [xdata.min(), xdata.max() - xdata.min(), cx, old_div((x.max() - x.min()), 2)]
+    p0_y = [ydata.min(), ydata.max() - ydata.min(), cy, old_div((y.max() - y.min()), 2)]
     popt_x, pcov_x = curve_fit(gaussian, x, xdata, p0_x)
     popt_y, pcov_y = curve_fit(gaussian, y, ydata, p0_y)
     fwhm_x = 2 * np.sqrt(2 * np.log(2)) * popt_x[3]
@@ -80,7 +83,7 @@ if __name__ == '__main__':
     plt.pcolormesh(x,y,img)
 
     cx, cy = find_centroid(img, x, y)
-    print cy, cy
+    print(cy, cy)
     plt.plot([cx], [cy], 'wo')
 
     plt.show()

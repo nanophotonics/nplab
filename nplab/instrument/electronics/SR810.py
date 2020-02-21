@@ -8,6 +8,9 @@ Created on Tue Jul 14 18:50:08 2015
 
 @author: wmd22
 """
+from __future__ import print_function
+from builtins import str
+from builtins import range
 from time import sleep
 import numpy as np, nplab.instrument.visa_instrument as vi
 
@@ -34,8 +37,8 @@ class Lockin_SR810(vi.VisaInstrument):
         self.instr.read_termination = '\n'
         self.instr.write_termination = '\n'
         self.instr.timeout = None
-        print self.instr.read_termination
-        print self.write('OUTX')
+        print(self.instr.read_termination)
+        print(self.write('OUTX'))
         self.write('ICPL 0')
         self.ch_list = {}
         self.sens_list = {}
@@ -195,12 +198,12 @@ class Lockin_SR810(vi.VisaInstrument):
             integrationtime(float):     The real value for the time constant in seconds
                                         for allowed values see self.time_list
         """
-        for i in range(len(self.time_list.values()[:])):
-            if self.time_list.values()[i] == integrationtime:
-                self.time_constant = self.time_list.keys()[i]
+        for i in range(len(list(self.time_list.values())[:])):
+            if list(self.time_list.values())[i] == integrationtime:
+                self.time_constant = list(self.time_list.keys())[i]
                 return True
 
-        print 'Setting integration time failed. ' + str(integrationtime) + ' is not in self.time_list'
+        print('Setting integration time failed. ' + str(integrationtime) + ' is not in self.time_list')
         return False
 
     def get_line_filter(self):
@@ -306,7 +309,7 @@ class Lockin_SR810(vi.VisaInstrument):
                 else:
                     if testmax > self.sensitivity[1]:
                         if self.sensitivity[0] == 14:
-                            print 'OVERLOADED RUNNNNNN'
+                            print('OVERLOADED RUNNNNNN')
                         self.sensitivity = self.sensitivity[0] + 1
                     elif testmax < Lowersense:
                         self.sensitivity = self.sensitivity[0] - 1
