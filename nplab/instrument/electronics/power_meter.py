@@ -79,9 +79,9 @@ class DisplayThread(QtCore.QThread):
         self.parent = parent
         self.single_shot = False
         self.refresh_rate = 4.
-        self.beep_power = self.parent.pm.power
     def run(self):
         t0 = time.time()
+        beep_power = self.parent.pm.power
         while self.parent.pm.live or self.single_shot:
             p = self.parent.pm.power
             if time.time()-t0 < 1./self.refresh_rate:
@@ -90,7 +90,7 @@ class DisplayThread(QtCore.QThread):
                 t0 = time.time()
             
             if self.parent.pm.beep:
-                beep_freq = 1500*(p/self.beep_power)
+                beep_freq = 1500*(p/beep_power)
                 if 37<beep_freq<32767:
                     winsound.Beep(int(beep_freq), 100)
                     
