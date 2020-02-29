@@ -293,7 +293,7 @@ class Triax(VisaInstrument):
 
         Start_Time = time.time()
 
-        while self._isBusy()==True:
+        while self._isBusy():
             time.sleep(1)
             if (time.time() - Start_Time) > Timeout:
                 self._logger.warn('Timed out')
@@ -308,11 +308,11 @@ class Triax(VisaInstrument):
     """
 
     def reset(self):
-        self.instr.write_raw('\xde')
+        self.instr.write_raw(b'\xde')
         time.sleep(5)
         buff = self.query(" ")
         if buff == 'B':
-            self.instr.write_raw('\x4f\x32\x30\x30\x30\x00')  # <O2000>0
+            self.instr.write_raw(b'\x4f\x32\x30\x30\x30\x00')  # <O2000>0
             buff = self.query(" ")
         if buff == 'F':
             self._logger.debug("Triax is reset")
@@ -321,10 +321,10 @@ class Triax(VisaInstrument):
     def setup(self):
         self._logger.info("Initiating motor. This will take some time...")
         self.write("A")
-        time.sleep(60)
-        self.waitTillReady()
-        self.Grating(1)
-        self.Grating_Number = self.Grating()
+        # time.sleep(60)
+        # self.waitTillReady()
+        # self.Grating(1)
+        # self.Grating_Number = self.Grating()
 
     def exitLateral(self):
         self.write("e0\r")

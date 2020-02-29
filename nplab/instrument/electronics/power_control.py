@@ -48,8 +48,6 @@ class PowerControl(Instrument):
         if isinstance(self.pc, Aom):
             self.min_param = 0
             self.max_param = 1
-
-        self._set_to_midpoint()
         self.maxpower = None 
         self.minpower = None
         self.measured_power = None
