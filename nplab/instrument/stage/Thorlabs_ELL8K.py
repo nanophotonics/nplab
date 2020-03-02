@@ -376,12 +376,10 @@ class Thorlabs_ELL8K(SerialInstrument,Stage):
             None
 
         """
-        print(angle)
         if -360>angle or angle>360:
             angle %= 360
         if angle<0:
-            angle = 360+angle
-        print(angle)    
+            angle = 360+angle    
         pulses_hex = self.__angle_to_hex_pulses(angle)
         response = self.query_device("ma{0}".format(pulses_hex))
         
