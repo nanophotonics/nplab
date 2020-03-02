@@ -60,7 +60,6 @@ def int_to_twos_complement(integer, padded_length=16,debug = 0):
         binary = format(integer,"0{}b".format(padded_length+2)).replace("0b","")
         ones_complement = [str(1-int(b)) for b in str(binary)]
         ones_complement = int("".join(ones_complement))
-        print(ones_complement)
         twos_complement = int("0b"+str(ones_complement),base=2) + 1
         twos_complement = format(twos_complement,"034b").replace("0b","")
         if debug > 0:
@@ -174,7 +173,7 @@ class Thorlabs_ELL8K(SerialInstrument,Stage):
 
         Method used when reading data received from stage
         '''
-        return old_div((float(self.TRAVEL)*pulse_count),self.PULSES_PER_REVOLUTION)
+        return float(self.TRAVEL)*pulse_count/self.PULSES_PER_REVOLUTION
 
     def __angle_to_hex_pulses(self,angle):
         '''
@@ -268,9 +267,9 @@ class Thorlabs_ELL8K(SerialInstrument,Stage):
         relative: whether motion is relative to current position or relative to global home
         This method overrides the Stage class' method
         '''
-        if relative == True:
+        if relative:
             self.move_relative(pos)
-        elif relative == False:
+        else:
             self.move_absolute(pos)
 
 
@@ -353,13 +352,13 @@ class Thorlabs_ELL8K(SerialInstrument,Stage):
         Move stage to factory default home location. 
         Note: Thorlabs API allows resetting stages home but this not implemented as it isnt' advised 
         '''
-        if clockwise == True:
+        if clockwise:
             direction = 0
-        elif clockwise == False:
+        else:
             direction = 1
         response = self.query_device("ho{0}".format(direction))
 
-        if blocking == True:
+        if blocking:
             self.__block_until_stopped()
         return self.__decode_position_response(response)
         
@@ -377,12 +376,18 @@ class Thorlabs_ELL8K(SerialInstrument,Stage):
             None
 
         """
+        print(angle)
+        if -360>angle or angle>360:
+            angle %= 360
+        if angle<0:
+            angle = 360+angle
+        print(angle)    
         pulses_hex = self.__angle_to_hex_pulses(angle)
         response = self.query_device("ma{0}".format(pulses_hex))
         
         header  = response[0:3]
 
-        if blocking == True:
+        if blocking:
             self.__block_until_stopped()
         return self.__decode_position_response(response)
         
@@ -403,7 +408,7 @@ class Thorlabs_ELL8K(SerialInstrument,Stage):
         """
         pulses_hex = self.__angle_to_hex_pulses(angle)
         response = self.query_device("mr{0}".format(pulses_hex))
-        if blocking == True:
+        if blocking:
             self.__block_until_stopped()
         return self.__decode_position_response(response)
 
@@ -423,9 +428,7 @@ class Thorlabs_ELL8K_UI(QtWidgets.QWidget, UiTools):
         self.move_absolute_btn.clicked.connect(self.move_absolute)
         self.move_home_btn.clicked.connect(self.move_home)
         self.current_angle_btn.clicked.connect(self.update_current_angle)
-    
-        
-        
+   
     def move_relative(self):
         try:
             angle = float(self.move_relative_textbox.text())
@@ -453,12 +456,12 @@ class Thorlabs_ELL8K_UI(QtWidgets.QWidget, UiTools):
 
 
 
-def test_stage():
+def test_stage(s):
     '''
     Run from main to test stage
     '''
     debug = False
-    s = Thorlabs_ELL8K("COM8",debug=debug)
+    
     print("Status",s.get_device_status())
     print("Info",s.get_device_info())
     print("Homing",s.move_home())
@@ -468,7 +471,7 @@ def test_stage():
     print("30==",s.get_position())
     angle = -30
     s.move(angle,relative=True)
-    print("0==",s.get_position())
+    print("-30==",s.get_position())
 
     angle = 150
     s.move(angle,relative=False)
@@ -482,13 +485,15 @@ def test_ui():
     '''
     Run from main to test ui + stage
     '''
-    s = Thorlabs_ELL8K("COM18")
+    s = Thorlabs_ELL8K("COM14")
     app = get_qt_app()
     ui = Thorlabs_ELL8K_UI(stage=s)
     ui.show()
     sys.exit(app.exec_())
 
 if __name__ == "__main__":
-    test_ui()
+    stage = Thorlabs_ELL8K("COM14",debug=False)
+    test_stage(stage)
+    # test_ui()
 
     
