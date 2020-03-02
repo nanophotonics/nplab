@@ -409,6 +409,23 @@ class Thorlabs_ELL8K(SerialInstrument,Stage):
         if blocking:
             self.__block_until_stopped()
         return self.__decode_position_response(response)
+    def optimize_motors(self, save_new_params = False):
+        '''Due to load, build tolerances and other mechanical variances, the
+default resonating frequency of a particular motor may not be that
+which delivers best performance.
+This message fine tunes the frequency search performed by the
+SEARCHFREQ messages. When this message is called, the
+SEARCHFREQ message is called first automatically to optimize the
+operating frequency. After completion, another frequency search is
+performed and the mechanical performance is monitored to further
+optimize the operating frequencies for backward and forward
+movement. The values then need to be saved
+'''
+        self.query_device('om')
+        if save_new_params:
+            self.save_new_parameters()
+    def save_new_parameters(self):
+        self.query_device('us')
 
 class Thorlabs_ELL8K_UI(QtWidgets.QWidget, UiTools):
 
