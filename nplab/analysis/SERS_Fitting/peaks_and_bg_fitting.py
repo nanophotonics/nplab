@@ -98,7 +98,7 @@ from scipy.interpolate import interp1d as interp
 from scipy.optimize import curve_fit
 import pywt
 from nplab.analysis import Auto_Gaussian_Smooth as sm
-from nplab.analysis import smoothing as sm2
+# from nplab.analysis import smoothing as sm2
 from scipy.signal import argrelextrema
 
 
@@ -139,12 +139,12 @@ def find_closest(value_to_match, array):
     return array[np.argmin(residual)], np.argmin(residual), min(residual) # value, index, residual
 
 def Grad(Array):
-	"""
-	Returns something prop to the grad of 1D array Array. Does central difference method with mirroring.
-	"""
-	A=np.array(Array.tolist()+[Array[-1],Array[-2]])
-	B=np.array([Array[1],Array[0]]+Array.tolist())
-	return (A-B)[1:-1]
+    """
+    Returns something prop to the grad of 1D array Array. Does central difference method with mirroring.
+    """
+    A=np.array(Array.tolist()+[Array[-1],Array[-2]])
+    B=np.array([Array[1],Array[0]]+Array.tolist())
+    return (A-B)[1:-1]
 
 def cm_to_omega(cm):
     '''
@@ -188,9 +188,9 @@ class fullfit(object):
         
     @classmethod
     def L(cls, x, H, C, W): # height centre width
-    	"""
-    	Defines a lorentzian
-    	"""
+        """
+        Defines a lorentzian
+        """
 
         return old_div(H,(1.+((old_div((x-C),W))**2)))
     @classmethod
@@ -201,15 +201,15 @@ class fullfit(object):
         return H*np.exp(-(old_div((x-C),W))**2)
     
     def multi_line(self,x,Params):
-    	"""
-    	returns a sum of Lorenzians/Gaussians. Params goes Height1,Centre1, Width1,Height2.....
-    	"""
-    	Output=np.zeros(len(x))
-    	n=0
+        """
+        returns a sum of Lorenzians/Gaussians. Params goes Height1,Centre1, Width1,Height2.....
+        """
+        Output=np.zeros(len(x))
+        n=0
         while n<len(Params):
-    		Output+=self.line(x,*Params[n:n+3])
-    		n+=3
-    	return Output
+            Output+=self.line(x,*Params[n:n+3])
+            n+=3
+        return Output
     
     def exponential(self, x, A, T, bg):
         '''
@@ -262,25 +262,25 @@ class fullfit(object):
         lifted from Iterative_Raman_Fitting
         '''
         #-----Calc. size of x_axis regions-------
-    	sectionsize=(np.max(self.shifts)-np.min(self.shifts))/float(self.regions)
-    	Start=np.min(self.shifts)
+        sectionsize=(np.max(self.shifts)-np.min(self.shifts))/float(self.regions)
+        Start=np.min(self.shifts)
     
-    	Results=[]
-    	Loss_Results=[]
+        Results=[]
+        Loss_Results=[]
     
-    	#-------What does the curve look like with the current peaks?-------
+        #-------What does the curve look like with the current peaks?-------
         if len(self.peaks)==0:
-    		Current=np.array(self.shifts)*0
-    	else:
+            Current=np.array(self.shifts)*0
+        else:
             Current=self.multi_line(self.shifts, self.peaks)
     
-    	#-------Set up Loss function--------	
-    	def Loss(Vector):
-    		return np.sum(np.abs(Current+self.line(self.shifts,*Vector)-self.signal))#*self.multi_L(self.shifts,*self.peaks))# if this overlaps with another lorentzian it's biased against it
-    	
-    	#-----Minimise loss in each region--------- 
+        #-------Set up Loss function--------    
+        def Loss(Vector):
+            return np.sum(np.abs(Current+self.line(self.shifts,*Vector)-self.signal))#*self.multi_L(self.shifts,*self.peaks))# if this overlaps with another lorentzian it's biased against it
+        
+        #-----Minimise loss in each region--------- 
     
-    	for i in range(int(self.regions)):
+        for i in range(int(self.regions)):
             Bounds=[(0,np.inf),(i*sectionsize+Start,(i+1)*sectionsize+Start),(0,max(self.shifts)-min(self.shifts))]
             Centre=(i+np.random.rand())*sectionsize+Start
             try: Height= max(truncate(self.signal, self.shifts, i*sectionsize+Start,(i+1)*sectionsize+Start)[0])-min(self.signal)
@@ -323,17 +323,17 @@ class fullfit(object):
             if self.verbose == True: print('peak added')
         if self.peak_added == False and self.verbose == True: print('no suitable peaks to add')
     def Wavelet_Estimate_Width(self,Smooth_Loss_Function=2):
-    	#Uses the CWT to estimate the typical peak FWHM in the signal
-    	#First, intepolates the signal onto a linear x_scale with the smallest spacing present in the signal
-    	#Completes CWT and sums over the position coordinate, leaving scale
-    	#Does minor smooth, and takes scale at maximum as FWHM
-      	Int=scint.splrep(self.shifts,self.spec)
-    	Step=np.min(np.abs(np.diff(self.shifts)))        
-    	New=scint.splev(np.arange(self.shifts[0],self.shifts[-1],Step),Int)                         
-    	Scales=np.arange(1,np.ceil(old_div(self.maxwidth,Step)),1)        
-    	Score=np.diff(np.sum(pywt.cwt(New,Scales,'gaus1')[0],axis=1))        
-    	Score=ndimf.gaussian_filter(Score,Smooth_Loss_Function)        
-    	Scale=Scales[np.argmax(Score)]*Step
+        #Uses the CWT to estimate the typical peak FWHM in the signal
+        #First, intepolates the signal onto a linear x_scale with the smallest spacing present in the signal
+        #Completes CWT and sums over the position coordinate, leaving scale
+        #Does minor smooth, and takes scale at maximum as FWHM
+        Int=scint.splrep(self.shifts,self.spec)
+        Step=np.min(np.abs(np.diff(self.shifts)))        
+        New=scint.splev(np.arange(self.shifts[0],self.shifts[-1],Step),Int)                         
+        Scales=np.arange(1,np.ceil(old_div(self.maxwidth,Step)),1)        
+        Score=np.diff(np.sum(pywt.cwt(New,Scales,'gaus1')[0],axis=1))        
+        Score=ndimf.gaussian_filter(Score,Smooth_Loss_Function)        
+        Scale=Scales[np.argmax(Score)]*Step
         return Scale
 
     def initial_bg_poly(self):
@@ -346,7 +346,7 @@ class fullfit(object):
         
 
         try: smoothed = sm.Run(self.spec)
-        except: smoothed = sm2.convex_smooth(self.spec, 25)[0]
+        except:smoothed = self.spec# smoothed = sm2.convex_smooth(self.spec, 25)[0]
         self.bg_indices = argrelextrema(smoothed, np.less)[0]
         self.bg_vals = smoothed[self.bg_indices]
         
@@ -469,8 +469,8 @@ class fullfit(object):
         
         def multi_line_centres_and_widths(x,centres_and_widths):
             """
-        	Defines a sum of Lorentzians. Params goes Height1,Centre1, Width1,Height2.....
-        	"""
+            Defines a sum of Lorentzians. Params goes Height1,Centre1, Width1,Height2.....
+            """
             n = 0
             params = []
             while n<len(centres_and_widths):
@@ -666,8 +666,8 @@ class fullfit(object):
 #            self.optimize_heights
 #            #self.optimize_centre_and_width()
 
-        try: smoothed = sm.Run(self.signal)
-        except: smoothed = sm2.convex_smooth(self.spec, 25)[0]
+        try: smoothed = np.array(sm.Run(self.signal))
+        except: smoothed = np.array(self.signal)#sm2.convex_smooth(self.spec, 25)[0]
         maxima = argrelextrema(smoothed, np.greater)[0]
         heights = smoothed[maxima]
         maxima = maxima[np.argsort(heights)[-5:]]
@@ -693,7 +693,7 @@ class fullfit(object):
             min_peak_spacing = 3.1, 
             comparison_thresh = 0.01, 
             verbose = False):    
-    	'''
+        '''
         described at the top
         '''
         if self.lineshape == 'L': 
@@ -706,9 +706,9 @@ class fullfit(object):
         self.min_peak_spacing = min_peak_spacing
         self.width = 4*self.Wavelet_Estimate_Width() # a guess for the peak width
         self.regions = regions # number of regions the spectrum will be split into to add a new peak
-        if self.regions>len(self.spec):	self.regions = old_div(len(self.spec),2) # can't be have more regions than points in spectrum
-    	
-    	self.noise_threshold = noise_factor*np.std(Grad(self.spec)) # peaks must be above this to be accepted
+        if self.regions>len(self.spec):    self.regions = old_div(len(self.spec),2) # can't be have more regions than points in spectrum
+        
+        self.noise_threshold = noise_factor*np.std(Grad(self.spec)) # peaks must be above this to be accepted
         self.initial_bg_poly() # takes a guess at the background
         if initial_fit is not None:
             self.peaks = initial_fit
@@ -739,7 +739,7 @@ class fullfit(object):
 #            self.optimize_centre_and_width()
             self.optimize_peaks_and_bg() # optimizes 
             new_loss_score = self.loss_function()
-    		
+            
             #---Check to increase regions
             
             if new_loss_score >= existing_loss_score: #if fit has worsened, delete last peak
