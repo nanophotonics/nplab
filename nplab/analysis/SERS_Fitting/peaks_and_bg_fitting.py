@@ -142,7 +142,8 @@ def Grad(Array):
     """
     Returns something prop to the grad of 1D array Array. Does central difference method with mirroring.
     """
-    A=np.array(Array.tolist()+[Array[-1],Array[-2]])
+    
+    A=np.array(list(Array)+[Array[-1],Array[-2]])
     B=np.array([Array[1],Array[0]]+Array.tolist())
     return (A-B)[1:-1]
 
@@ -346,7 +347,7 @@ class fullfit(object):
         
 
         try: smoothed = sm.Run(self.spec)
-        except:smoothed = self.spec# smoothed = sm2.convex_smooth(self.spec, 25)[0]
+        except:smoothed = np.array(self.spec)# smoothed = sm2.convex_smooth(self.spec, 25)[0]
         self.bg_indices = argrelextrema(smoothed, np.less)[0]
         self.bg_vals = smoothed[self.bg_indices]
         
@@ -766,7 +767,7 @@ class fullfit(object):
                         new_height = old_div(New[new_peak][0],old_height)
                         new_pos = old_div(New[new_peak][1],self.width) # normalise the height and position parameters to add them into one comparison score
                         residual.append(np.linalg.norm(np.array([1,old_pos])-np.array([new_height,new_pos]))) # the difference between old and new for each peak
-                comparison = residual>comparison_thresh
+                comparison = np.array(residual)>comparison_thresh
                 if type(comparison) == bool: # happens if only 1 peak
                     if comparison ==False:
                         self.regions*=5
