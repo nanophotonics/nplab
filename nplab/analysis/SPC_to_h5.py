@@ -113,7 +113,10 @@ def extractRamanSpc(path, bg_path = False, combine_statics = False):
         except:
             integrationTime = float(f.log_dict[' Exposure_time'][6:])
 
-        accumulations = f.log_dict['Accumulations'].split(': ')[1]
+        try:
+            accumulations = f.log_dict['Accumulations'].split(': ')[1]
+        except:
+            accumulations = f.log_dict[' Accumulations'].split(': ')[1]
 
         wavenumbers = f.x #Pulls x data from spc file
         nScans = int(f.__dict__['fnsub']) #Number of Raman spectra contained within the spc file (>1 if file contains a kinetic scan)
