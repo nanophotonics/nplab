@@ -7,12 +7,20 @@ This base class
 
 @author: Richard Bowman
 """
+from __future__ import print_function
 #from traits.api import HasTraits, Bool, Int, Str, Button, Array, Enum, List
 #import nplab
+from past.builtins import basestring
+from builtins import str
+from builtins import zip
+from builtins import map
+from builtins import object
 import re
 import nplab.instrument
 from functools import partial
 import threading
+import numpy as np
+import types
 
 
 class MessageBusInstrument(nplab.instrument.Instrument):
@@ -52,6 +60,7 @@ class MessageBusInstrument(nplab.instrument.Instrument):
     acquiring it twice.
     """
     termination_character = "\n" #: All messages to or from the instrument end with this character.
+    termination_read = None  #: Can be used if the writing and reading termination characters are different. Currently implemented in serial_instrument
     termination_line = None #: If multi-line responses are recieved, they must end with this string
     ignore_echo = False
 
@@ -92,7 +101,16 @@ class MessageBusInstrument(nplab.instrument.Instrument):
         with self.communications_lock:
             if termination_line is None:
                 termination_line = self.termination_line
-            assert isinstance(termination_line, str), "If you perform a multiline query, you must specify a termination line either through the termination_line keyword argument or the termination_line property of the NPSerialInstrument."
+            
+            # assert isinstance(termination_line, basestring), "If you perform a multiline query, you must specify a termination line either through the termination_line keyword argument or the termination_line property of the NPSerialInstrument."
+           
+            # assert type(termination_line) == types.StringType , "If you perform a multiline query, you must specify a termination line either through the termination_line keyword argument or the termination_line property of the NPSerialInstrument."        
+            try:
+                assert isinstance(termination_line, basestring), "If you perform a multiline query, you must specify a termination line either through the termination_line keyword argument or the termination_line property of the NPSerialInstrument."
+            except NameError:
+                assert isinstance(termination_line, str), "If you perform a multiline query, you must specify a termination line either through the termination_line keyword argument or the termination_line property of the NPSerialInstrument."
+            
+            
             response = ""
             last_line = "dummy"
             while termination_line not in last_line and len(last_line) > 0: #read until we get the termination line.
@@ -110,20 +128,19 @@ class MessageBusInstrument(nplab.instrument.Instrument):
         with self.communications_lock:
             self.flush_input_buffer()
             self.write(queryString)
-            if self.ignore_echo == True: # Needs Implementing for a multiline read!
-                first_line = self.readline(timeout).strip()
-                if first_line == queryString:
-                    return self.readline(timeout).strip()
-                else:
-                    print 'This command did not echo!!!'
-                    return first_line
-    
+            if self.ignore_echo:
+                echo_line = self.readline(timeout).strip()
+                if echo_line != queryString:
+                    self._logger.warn('Command did not echo: %s' % queryString)
+                    return echo_line
+
             if termination_line is not None:
                 multiline = True
             if multiline:
                 return self.read_multiline(termination_line)
             else:
                 return self.readline(timeout).strip() #question: should we strip the final newline?
+    
     def parsed_query_old(self, query_string, response_string=r"(\d+)", re_flags=0, parse_function=int, **kwargs):
         """
         Perform a query, then parse the result.
@@ -143,7 +160,7 @@ class MessageBusInstrument(nplab.instrument.Instrument):
             if len(res.groups()) == 1:
                 return parse_function(res.groups()[0])
             else:
-                return map(parse_function,res.groups())
+                return list(map(parse_function,res.groups()))
         except ValueError:
             raise ValueError("Stage response to %s ('%s') couldn't be parsed by the supplied function" % (query_string, reply))
     def parsed_query(self, query_string, response_string=r"%d", re_flags=0, parse_function=None, **kwargs):
@@ -168,14 +185,17 @@ class MessageBusInstrument(nplab.instrument.Instrument):
         noop = lambda x: x #placeholder null parse function
         placeholders = [ #tuples of (regex matching placeholder, regex to replace it with, parse function)
             (r"%c",r".", noop),
-            (r"%(\d+)c",r".{\1}", noop), #TODO support %cn where n is a number of chars
-            (r"%d",r"[-+]?\d+", int),
-            (r"%[eEfg]",r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?", float),
-            (r"%i",r"[-+]?(?:0[xX][\dA-Fa-f]+|0[0-7]*|\d+)", lambda x: int(x, 0)), #0=autodetect base
+            (r"%(\\d+)c",r".{\1}", noop), #TODO support %cn where n is a number of chars
+            (r"%d",r"[-+]?\\d+", int),
+            (r"%[eEfg]",r"[-+]?(?:\\d+(?:\.\\d*)?|\.\\d+)(?:[eE][-+]?\\d+)?", float),
+            # (r"%(\\d+)c",r".{\\1}", noop), #TODO support %cn where n is a number of chars
+            # (r"%d",r"[-+]?\\d+", int),
+            # (r"%[eEfg]",r"[-+]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?", float),
+            (r"%i",r"[-+]?(?:0[xX][\\dA-Fa-f]+|0[0-7]*|\\d+)", lambda x: int(x, 0)), #0=autodetect base
             (r"%o",r"[-+]?[0-7]+", lambda x: int(x, 8)), #8 means octal
-            (r"%s",r"\S+",noop),
-            (r"%u",r"\d+",int),
-            (r"%[xX]",r"[-+]?(?:0[xX])?[\dA-Fa-f]+",lambda x: int(x, 16)), #16 forces hexadecimal
+            (r"%s",r"\\S+",noop),
+            (r"%u",r"\\d+",int),
+            (r"%[xX]",r"[-+]?(?:0[xX])?[\\dA-Fa-f]+",lambda x: int(x, 16)), #16 forces hexadecimal
         ]
         matched_placeholders = []
         for placeholder, regex, parse_fun in placeholders:
@@ -197,9 +217,9 @@ class MessageBusInstrument(nplab.instrument.Instrument):
             else:
                 return parsed_result
         except ValueError:
-            print "Parsing Error"
-            print "Matched Groups:", res.groups()
-            print "Parsing Functions:", parse_function
+            print("Parsing Error")
+            print("Matched Groups:", res.groups())
+            print("Parsing Functions:", parse_function)
             raise ValueError("Stage response to %s ('%s') couldn't be parsed by the supplied function" % (query_string, reply))
     def int_query(self, query_string, **kwargs):
         """Perform a query and return the result(s) as integer(s) (see parsedQuery)"""
@@ -342,13 +362,13 @@ def wrap_with_echo_to_console(obj):
     obj._original_readline = obj.readline
 
     def write(self, q, *args, **kwargs):
-        print "Sent: "+str(q)
+        print("Sent: "+str(q))
         return self._original_write(q, *args, **kwargs)
     obj.write = functools.partial(write, obj)
 
     def readline(self, *args, **kwargs):
         ret = self._original_readline(*args, **kwargs)
-        print "Recv: "+str(ret)
+        print("Recv: "+str(ret))
         return ret
     obj.readline = functools.partial(readline, obj)
 
@@ -358,8 +378,8 @@ if __name__ == '__main__':
         x = queried_property('gx', 'sx {0}', dtype='str')
 
     instr = DummyInstrument()
-    print instr.x
+    print(instr.x)
     instr.x = 'y'
-    print instr.x
+    print(instr.x)
     instr.x = 'x'
-    print instr.x
+    print(instr.x)

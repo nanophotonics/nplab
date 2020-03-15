@@ -7,9 +7,13 @@ Condenses particle tracking output file into summary file.
 Uses functions from Analyse_Z_Scan code (Jack Griffiths).
 Output (summary) is directly compatible with Igor (Bart de Nijs) and Python (Charlie Readman) multipeakfit codes.
 """
+from __future__ import division
+from __future__ import print_function
 
+from builtins import range
+from past.utils import old_div
 if __name__ == '__main__':
-    print 'Importing modules'
+    print('Importing modules')
 
 import os
 import re
@@ -22,8 +26,8 @@ import matplotlib.pyplot as plt
 import scipy.optimize as spo
 
 if __name__ == '__main__':
-    print 'Modules imported\n'
-    print 'Initialising...'
+    print('Modules imported\n')
+    print('Initialising...')
 
 def findH5File(rootDir, mostRecent = True, nameFormat = 'date'):
     '''
@@ -49,13 +53,13 @@ def findH5File(rootDir, mostRecent = True, nameFormat = 'date'):
                         key = lambda i: os.path.getmtime(i))
 
     if len(h5Files) == 0:
-        print '\nNo H5 file found'
+        print('\nNo H5 file found')
         return None
 
     else:
         h5File = h5Files[n]
 
-    print '\tH5 file %s found' % h5File
+    print('\tH5 file %s found' % h5File)
 
     return h5File
 
@@ -63,34 +67,34 @@ def createOutputFile(filename):
 
     '''Auto-increments new filename if file exists. Outputs name of file to be created as a string'''
 
-    print '\nCreating output file...'
+    print('\nCreating output file...')
 
     outputFile = '%s.h5' % filename
 
     if outputFile in os.listdir('.'):
-        print '\n%s already exists' % outputFile
+        print('\n%s already exists' % outputFile)
         n = 0
         outputFile = '%s_%s.h5' % (filename, n)
 
         while outputFile in os.listdir('.'):
-            print '%s already exists' % outputFile
+            print('%s already exists' % outputFile)
             n += 1
             outputFile = '%s_%s.h5' % (filename, n)
 
-    print '\tOutput file %s created' % outputFile
+    print('\tOutput file %s created' % outputFile)
 
     return outputFile
 
 def printEnd():
-    print '%s%s%sv gud' % ('\t' * randint(0, 12), '\n' * randint(0, 5), ' ' * randint(0, 4))
-    print '%s%swow' % ('\n' * randint(2, 5), ' ' * randint(5, 55))
-    print '%s%ssuch python' % ('\n' * randint(0, 5), ' ' * randint(0, 55))
-    print '%s%swow' % ('\n' * randint(2, 5), ' ' * randint(5, 55))
-    print '%s%smany spectra' % ('\n' * randint(0, 5), ' ' * randint(10, 55))
-    print '%s%swow' % ('\n' * randint(2, 5), ' ' * randint(5, 55))
-    print '%s%smuch calculation' % ('\n' * randint(0, 5), ' ' * randint(8, 55))
-    print '%s%swow' % ('\n' * randint(2, 5), ' ' * randint(5, 55))
-    print '\n' * randint(0, 7)
+    print('%s%s%sv gud' % ('\t' * randint(0, 12), '\n' * randint(0, 5), ' ' * randint(0, 4)))
+    print('%s%swow' % ('\n' * randint(2, 5), ' ' * randint(5, 55)))
+    print('%s%ssuch python' % ('\n' * randint(0, 5), ' ' * randint(0, 55)))
+    print('%s%swow' % ('\n' * randint(2, 5), ' ' * randint(5, 55)))
+    print('%s%smany spectra' % ('\n' * randint(0, 5), ' ' * randint(10, 55)))
+    print('%s%swow' % ('\n' * randint(2, 5), ' ' * randint(5, 55)))
+    print('%s%smuch calculation' % ('\n' * randint(0, 5), ' ' * randint(8, 55)))
+    print('%s%swow' % ('\n' * randint(2, 5), ' ' * randint(5, 55)))
+    print('\n' * randint(0, 7))
 
 def detectMinima(array):
     '''
@@ -102,7 +106,7 @@ def detectMinima(array):
     if (len(array) < 3):
         return mIndices
 
-    neutral, rising, falling = range(3)
+    neutral, rising, falling = list(range(3))
 
     def getState(a, b):
         if a < b: return rising
@@ -134,13 +138,13 @@ def butterLowpassFiltFilt(data, cutoff = 2000, fs = 20000, order=5):
 
     if len(data) < 18:
         padded = True
-        pad = 18 - len(data)/2
+        pad = 18 - old_div(len(data),2)
         startPad = np.array([data[0]] * (int(pad) + 1))
         endPad = np.array([data[0]] * (int(pad) + 1))
         data = np.concatenate((startPad, data, endPad))
 
     nyq = 0.5 * fs
-    normalCutoff = cutoff / nyq
+    normalCutoff = old_div(cutoff, nyq)
     b, a = butter(order, normalCutoff, btype='low', analog=False)
     yFiltered = filtfilt(b, a, data)
 
@@ -218,7 +222,7 @@ def checkCentering(zScan, pl = False):
         scanMaxsSmooth = butterLowpassFiltFilt(scanMaxs, cutoff = 1500, fs = fs)
         maxWlIndices = detectMinima(-scanMaxsSmooth) + startDex
 
-    maxWlIndices = np.array([range(i - 2, i + 3) for i in maxWlIndices]).flatten()
+    maxWlIndices = np.array([list(range(i - 2, i + 3)) for i in maxWlIndices]).flatten()
     #adds a few either side of each peak for luck
 
     brightScansRaw = np.array([scan[1:] for scan in zScanTransposed[maxWlIndices]])
@@ -268,7 +272,7 @@ def checkCentering(zScan, pl = False):
         else:
             centered.append(True)
 
-    if centered.count(False) > len(centered)/3:
+    if centered.count(False) > old_div(len(centered),3):
         return False
         #if this happens more than a handful of times, the particle is probably off centre
 
@@ -285,13 +289,13 @@ def condenseZscan(zScan):
 
 def consoliData(rootDir):
     os.chdir(rootDir)
-    print 'Consolidating data'
-    print 'Searching for raw data file...'
+    print('Consolidating data')
+    print('Searching for raw data file...')
 
     try:
         inputFile = findH5File(rootDir, nameFormat = 'date')
     except:
-        print 'File not found'
+        print('File not found')
 
     with h5py.File(inputFile, 'a') as ipf:
         if 'particleScans' in ipf.keys():
@@ -301,7 +305,7 @@ def consoliData(rootDir):
             fileType = 'post-2018'
 
         else:
-            print 'File format not recognised'
+            print('File format not recognised')
             return
 
         if fileType == 'pre-2018':
@@ -313,18 +317,18 @@ def consoliData(rootDir):
             gScanFormat = 'ParticleScannerScan_'
             gParticleFormat = 'Particle_'
 
-        print 'Sorting scans by size...'
+        print('Sorting scans by size...')
 
         allScans = sorted([groupName for groupName in ipf.keys() if groupName.startswith(gScanFormat) and '%s0' % gParticleFormat in ipf[groupName].keys()],
                               key = lambda groupName: len(ipf[groupName].keys()))[::-1]
 
         if len(allScans) <= 1:
-            print 'No extra scans to consolidate'
+            print(() 'No extra scans to consolidate')
             return
 
         for scanName in allScans:
             if len([i for i in ipf[scanName].keys() if i.startswith('Tiles')]) > 1:
-                print 'Data already consolidated'
+                print('Data already consolidated')
                 return
 
         finalScanNo = sorted([groupName for groupName in ipf.keys() if groupName.startswith(gScanFormat)],
@@ -335,10 +339,10 @@ def consoliData(rootDir):
         for n, scanName in enumerate(allScans):
             if scanName == '%s%s' % (gScanFormat, newScanNo):
                 continue
-            print 'Looking for data in %s...' % scanName
+            print('Looking for data in %s...' % scanName)
             if '%s0' % gParticleFormat in ipf[scanName].keys():
                 particleGroups = [i for i in ipf[scanName].keys() if i.startswith(gParticleFormat)]
-                print '\tData found for %s particles' % len(particleGroups)
+                print('\tData found for %s particles' % len(particleGroups))
                 scanN = scanName.split('_')[-1]
                 gTiles = consolidatedScan.create_group('Tiles_%s' % scanN)
                 for tileName in ipf[scanName]['Tiles'].keys():
@@ -373,14 +377,14 @@ def extractAllSpectra(rootDir, returnIndividual = False, pl = False, dodgyThresh
 
     os.chdir(rootDir)
 
-    print 'Searching for raw data file...'
+    print('Searching for raw data file...')
 
     try:
         inputFile = findH5File(rootDir, nameFormat = 'date')
     except:
-        print 'File not found'
+        print('File not found')
 
-    print 'About to extract data from %s' % inputFile
+    print('About to extract data from %s' % inputFile)
     outputFile = createOutputFile('summary')
 
     with h5py.File(inputFile, 'a') as ipf:
@@ -391,7 +395,7 @@ def extractAllSpectra(rootDir, returnIndividual = False, pl = False, dodgyThresh
             fileType = 'post-2018'
 
         else:
-            print 'File format not recognised'
+            print('File format not recognised')
             return
 
         with h5py.File(outputFile, 'a') as opf:
@@ -411,11 +415,11 @@ def extractAllSpectra(rootDir, returnIndividual = False, pl = False, dodgyThresh
                 gScanFormat = 'ParticleScannerScan_'
                 gParticleFormat = 'Particle_'
 
-            allScans = sorted([groupName for groupName in ipf.keys() if groupName.startswith(gScanFormat)],
-                              key = lambda groupName: len(ipf[groupName].keys()))[::-1]
+            allScans = sorted([groupName for groupName in list(ipf.keys()) if groupName.startswith(gScanFormat)],
+                              key = lambda groupName: len(list(ipf[groupName].keys())))[::-1]
 
             if fileType == 'post-2018':
-                for dSetName in ipf[allScans[0]]['Particle_0'].keys():
+                for dSetName in list(ipf[allScans[0]]['Particle_0'].keys()):
                     if dSetName.startswith('alinger.z_scan') or dSetName.startswith('zScan'):
                         dParticleFormat = dSetName
 
@@ -427,7 +431,7 @@ def extractAllSpectra(rootDir, returnIndividual = False, pl = False, dodgyThresh
                 if consolidated == True and n > 0:
                     continue
 
-                nummers = range(10, 101, 10)
+                nummers = list(range(10, 101, 10))
                 scanStart = time.time()
 
                 dodgyParticles = []
@@ -441,11 +445,11 @@ def extractAllSpectra(rootDir, returnIndividual = False, pl = False, dodgyThresh
                 spectra = []
                 attrs = {}
                 scan = ipf[scanName]
-                particleGroups = sorted([groupName for groupName in scan.keys() if groupName.startswith(gParticleFormat)],
-                                key = lambda groupName: int(groupName.split('_')[-1]))
+                particleGroups = sorted([groupName for groupName in list(scan.keys()) if groupName.startswith(gParticleFormat)],
+                                         key = lambda groupName: int(groupName.split('_')[-1]))
 
-                print '%s particles found in %s' % (len(particleGroups), scanName)
-                print '\n0% complete'
+                print('%s particles found in %s' % (len(particleGroups), scanName))
+                print('\n0% complete')
 
                 if finish == 0:
                     particleGroups = particleGroups[start:]
@@ -460,11 +464,11 @@ def extractAllSpectra(rootDir, returnIndividual = False, pl = False, dodgyThresh
                 for nn, groupName in enumerate(particleGroups):
                     nn += cancelled
 
-                    if int(100 * nn / len(particleGroups)) in nummers:
+                    if int(old_div(100 * nn, len(particleGroups))) in nummers:
                         currentTime = time.time() - scanStart
-                        mins = int(currentTime / 60)
-                        secs = (np.round((currentTime % 60)*100))/100
-                        print '%s%% (%s particles) complete in %s min %s sec' % (nummers[0], nn, mins, secs)
+                        mins = int(old_div(currentTime, 60))
+                        secs = old_div((np.round((currentTime % 60)*100)),100)
+                        print('%s%% (%s particles) complete in %s min %s sec' % (nummers[0], nn, mins, secs))
                         nummers = nummers[1:]
 
                     particleGroup = scan[groupName]
@@ -473,13 +477,13 @@ def extractAllSpectra(rootDir, returnIndividual = False, pl = False, dodgyThresh
                         zScan = particleGroup[dParticleFormat]
 
                     except:
-                        print 'Z-Stack not found in %s' % (groupName)
+                        print('Z-Stack not found in %s' % (groupName))
                         cancelled += 1
                         continue
 
                     if referenced == False:
 
-                        for key in zScan.attrs.keys():
+                        for key in list(zScan.attrs.keys()):
                             attrs[key] = zScan.attrs[key]
 
                         x = zScan.attrs['wavelengths']
@@ -499,7 +503,7 @@ def extractAllSpectra(rootDir, returnIndividual = False, pl = False, dodgyThresh
                             centered = checkCentering(z, pl = pl)
 
                         except Exception as e:
-                            print 'Alignment check failed for Particle %s because %s' % (nn, e)
+                            print('Alignment check failed for Particle %s because %s' % (nn, e))
                             centered = False
 
                     y = condenseZscan(z)
@@ -509,27 +513,28 @@ def extractAllSpectra(rootDir, returnIndividual = False, pl = False, dodgyThresh
                         dodgyCount += 1
 
                         if 0 < dodgyCount < 50:
-                            print 'Particle %s not centred properly or too close to another' % nn
+                            print('Particle %s not centred properly or too close to another' % nn)
 
                         elif dodgyCount == 50:
-                            print '\nMore than 50 dodgy Z scans found. I\'ll stop clogging up your screen. Assume there are more.\n'
+                            print('\nMore than 50 dodgy Z scans found. I\'ll stop clogging up your screen. Assume there are more.\n')
 
                     spectra.append(y)
 
                 currentTime = time.time() - scanStart
-                mins = int(currentTime / 60)
-                secs = (np.round((currentTime % 60)*100))/100
-                print '100%% (%s particles) complete in %s min %s sec' % (nn, mins, secs)
-                percentDefocused = 100 * len(dodgyParticles) / len(spectra)
 
-                if percentDefocused / 100 > dodgyThreshold:
+                mins = int(old_div(currentTime, 60))
+                secs = old_div((np.round((currentTime % 60)*100)),100)
+                print('100%% (%s particles) complete in %s min %s sec' % (nn, mins, secs))
+                percentDefocused = old_div(100 * len(dodgyParticles), len(spectra))
+
+                if old_div(percentDefocused, 100) > dodgyThreshold:
                     alignment = 'Poor'
-                    print '\n\n***Warning: lots of messy spectra (~%s%%). Data may not be reliable. Check nanoparticle alignment***\n' % percentDefocused
+                    print('\n\n***Warning: lots of messy spectra (~%s%%). Data may not be reliable. Check nanoparticle alignment***\n' % percentDefocused)
 
                 else:
                     alignment = 'Good'
 
-                print 'Adding condensed spectra to %s/spectra...' % scanName
+                print('Adding condensed spectra to %s/spectra...' % scanName)
 
                 spectra = np.array(spectra)
                 dScan = gScan.create_dataset('spectra', data = spectra)
@@ -546,10 +551,10 @@ def extractAllSpectra(rootDir, returnIndividual = False, pl = False, dodgyThresh
                         gSpectrum.attrs['wavelengths'] = x
                         gSpectrum.attrs['Properly centred?'] = centered
 
-                for key in attrs.keys():
+                for key in list(attrs.keys()):
                     dScan.attrs[key] = attrs[key]
 
-    print '\nAll spectra condensed and added to summary file\n'
+    print('\nAll spectra condensed and added to summary file\n')
 
     return outputFile #String of output file name for easy identification later
 
@@ -561,16 +566,16 @@ def collectPlBackgrounds(inputFile):
     powerDict = {}
     freqDict = {}
 
-    for key in gPlBg.keys():
+    for key in list(gPlBg.keys()):
         dPlBg = gPlBg[key]
 
-        if 'laser_power' in dPlBg.attrs.keys():
+        if 'laser_power' in list(dPlBg.attrs.keys()):
             laserPower = dPlBg.attrs['laser_power']
 
         else:
             laserPower = int(key.split(' ')[1].split('_')[0])
 
-        if laserPower in powerDict.keys():
+        if laserPower in list(powerDict.keys()):
             freqDict[laserPower] += 1
             powerDict[laserPower] += dPlBg[()]
 
@@ -578,7 +583,7 @@ def collectPlBackgrounds(inputFile):
             freqDict[laserPower] = 1
             powerDict[laserPower] = dPlBg[()]
 
-    for key in powerDict.keys():
+    for key in list(powerDict.keys()):
         powerDict[laserPower] /= freqDict[laserPower]
 
     return powerDict
@@ -604,7 +609,7 @@ def getFWHM(x, y, fwhmFactor = 1.1, smooth = False, peakpos = 0):
             return None, None, None
 
     yMax = y[maxdices].max()
-    halfMax = yMax/2
+    halfMax = old_div(yMax,2)
     maxdex = maxdices[y[maxdices].argmax()]
     xMax = x[maxdex]
 
@@ -637,7 +642,7 @@ def gaussian(x, height, center, fwhm, offset = 0):
 
     N = 4*np.log(2)*(x - b)**2
     D = c**2
-    F = -(N / D)
+    F = -(old_div(N, D))
     E = np.exp(F)
     y = a*E
     y += offset
@@ -654,7 +659,7 @@ def trapInt(x, y):
         h = x[n + 1] - x[n]
         a = y[n]
         b = y[n + 1]
-        area += h*(a + b)/2
+        area += old_div(h*(a + b),2)
 
     return area
 
@@ -670,12 +675,12 @@ def subtractPlBg(xPl, yPl, plBg, xDf, yDf, remove0 = False, returnArea = True):
     bgScaled = plBg - bgMin
     ySub = yPl - yMin
 
-    bgScale = ySub[0]/bgScaled[0]
+    bgScale = old_div(ySub[0],bgScaled[0])
 
     bgScaled *= bgScale
     bgScaled += yMin
     ySub = yPl - bgScaled
-    yRef = ySub/np.sqrt(yDf/yDf.max())
+    yRef = old_div(ySub,np.sqrt(old_div(yDf,yDf.max())))
 
     if remove0 == True:
         ySmooth = butterLowpassFiltFilt(yRef, cutoff = 1000, fs = 90000)
@@ -695,7 +700,7 @@ def subtractPlBg(xPl, yPl, plBg, xDf, yDf, remove0 = False, returnArea = True):
 def exponential(x, amp, shift, decay, const):
     '''y = const + amp when x = 0'''
     '''stepth of curve inversely proportional to decay'''
-    return const + (amp*np.exp(-(x-shift)/decay))
+    return const + (amp*np.exp(old_div(-(x-shift),decay)))
 
 def approximateLaserBg(x, y, decays = [50, 50, 50], plRange = [580, 850], optimise = False, plot = False):
     xRaw = x
@@ -812,16 +817,16 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
     try:
         inputFile = findH5File(rootDir, nameFormat = 'date')
     except:
-        print 'File not found'
+        print('File not found')
         return
 
-    print '\nAbout to extract PL data from %s' % inputFile
-    print '\tLooking for summary file...'
+    print('\nAbout to extract PL data from %s' % inputFile)
+    print('\tLooking for summary file...')
 
     outputFile = findH5File(rootDir, nameFormat = 'summary')
 
     if outputFile == None:
-        print '\tNo summary file exists; creating a new one'
+        print('\tNo summary file exists; creating a new one')
         outputFile = createOutputFile('summary')
 
     with h5py.File(inputFile, 'a') as ipf:
@@ -829,12 +834,16 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
         if 'particleScans' in ipf.keys():
             fileType = 'pre-2018'
 
-        elif 'nplab.log' in ipf.keys():
+        elif 'nplab.log' in list(ipf.keys()):
             fileType = 'post-2018'
+
+        else:
+            print('File format not recognised')
+            return
 
         with h5py.File(outputFile, 'a') as opf:
 
-            if 'NPoM PL Spectra' not in opf.keys():
+            if 'NPoM PL Spectra' not in list(opf.keys()):
                 opf.create_group('NPoM PL Spectra')
 
             gPl = opf['NPoM PL Spectra']
@@ -851,11 +860,11 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
 
             plGroupName = 'dark field with irradiation'
 
-            allScans = sorted([groupName for groupName in ipf.keys() if groupName.startswith(gScanFormat)],
-                              key = lambda groupName: len(ipf[groupName].keys()))[::-1]
+            allScans = sorted([groupName for groupName in list(ipf.keys()) if groupName.startswith(gScanFormat)],
+                              key = lambda groupName: len(list(ipf[groupName].keys())))[::-1]
 
             if fileType == 'post-2018':
-                for dSetName in ipf[allScans[0]]['Particle_0'].keys():
+                for dSetName in list(ipf[allScans[0]]['Particle_0'].keys()):
                     if dSetName.startswith('alinger.z_scan') or dSetName.startswith('zScan'):
                         dParticleFormat = dSetName
 
@@ -864,21 +873,21 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
                 if len(ipf[scanName]) < 15:
                     continue
 
-                if 'scan%s' % n not in gPl.keys():
+                if 'scan%s' % n not in list(gPl.keys()):
                     gPl.create_group('scan%s' % n)
 
                 gPlScan = gPl['scan%s' % n]
 
-                if 'scan%s' % n not in gAllPl.keys():
+                if 'scan%s' % n not in list(gAllPl.keys()):
                     gPl.create_group('scan%s' % n)
 
                 gAllPlScan = gAllPl['scan%s' % n]
 
                 scan = ipf[scanName]
-                particleGroups = sorted([groupName for groupName in scan.keys() if groupName.startswith(gParticleFormat)],
+                particleGroups = sorted([groupName for groupName in list(scan.keys()) if groupName.startswith(gParticleFormat)],
                                 key = lambda groupName: int(groupName.split('_')[-1]))
 
-                print '%s particles found in %s' % (len(particleGroups), scanName)
+                print('%s particles found in %s' % (len(particleGroups), scanName))
 
                 if finish == 0:
                     particleGroups = particleGroups[start:]
@@ -886,7 +895,7 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
                 else:
                     particleGroups = particleGroups[start:finish]
 
-                nummers = range(10, 101, 10)
+                nummers = list(range(10, 101, 10))
                 scanStart = time.time()
 
                 plSpectra = []
@@ -897,35 +906,35 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
                     bg = particleGroup[dParticleFormat].attrs['background']
                     ref = particleGroup[dParticleFormat].attrs['reference']
 
-                    if int(100 * nn / len(particleGroups)) in nummers:
+                    if int(old_div(100 * nn, len(particleGroups))) in nummers:
                         currentTime = time.time() - scanStart
-                        mins = int(currentTime / 60)
-                        secs = (np.round((currentTime % 60)*100))/100
-                        print '%s%% (%s spectra) transferred in %s min %s sec' % (nummers[0], nn, mins, secs)
+                        mins = int(old_div(currentTime, 60))
+                        secs = old_div((np.round((currentTime % 60)*100)),100)
+                        print('%s%% (%s spectra) transferred in %s min %s sec' % (nummers[0], nn, mins, secs))
                         nummers = nummers[1:]
 
-                    if plGroupName not in particleGroup.keys():
-                        print 'No PL spectra in %s' % (groupName)
+                    if plGroupName not in list(particleGroup.keys()):
+                        print('No PL spectra in %s' % (groupName))
                         continue
 
                     plGroup = particleGroup[plGroupName]
 
                     maxDict = {}
-                    plSpecNames = [i for i in plGroup.keys() if i.startswith('PL')]
+                    plSpecNames = [i for i in list(plGroup.keys()) if i.startswith('PL')]
 
                     if len(plSpecNames) == 0:
-                        print 'No PL spectrum found for %s' % groupName
+                        print('No PL spectrum found for %s' % groupName)
                         continue
 
                     for specName in plSpecNames:
                         plData = plGroup[specName]
 
-                        if 'wavelengths' not in plData.attrs.keys():
+                        if 'wavelengths' not in list(plData.attrs.keys()):
                             try:
                                 plData.attrs['wavelengths'] = scan['Particle_0/%s' % dParticleFormat].attrs['wavelengths']
 
                             except Exception as e:
-                                print 'Unable to find wavelength data (%s)' % e
+                                print('Unable to find wavelength data (%s)' % e)
 
                         x = plData.attrs['wavelengths']
                         y = plData[()]
@@ -940,10 +949,10 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
                         yAvg = np.average(ySmooth[maxima])
                         maxDict[yAvg] = specName
 
-                    if len(maxDict.keys()) > 0:
+                    if len(list(maxDict.keys())) > 0:
                         maxPlName = maxDict[max(maxDict.keys())]
                     else:
-                        print groupName, plGroup.keys()
+                        print(groupName, list(plGroup.keys()))
                         maxPlName = plSpecNames[0]
 
                     plData = plGroup[maxPlName]
@@ -951,7 +960,7 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
                     timeStamp = plData.attrs['creation_timestamp']
                     plSpecName = 'PL Spectrum %s' % nn
 
-                    if 'PL Background' not in ipf.keys():
+                    if 'PL Background' not in list(ipf.keys()):
                         rootDir = os.getcwd()
                         powerDir = r'C:\Users\car72\University Of Cambridge\OneDrive - University Of Cambridge\Documents\PhD\Data\NP\Porphyrins\NPoM\DF\2019-09-18 Zn-MTPP Cl 48 h 80 nm + PL'
                         os.chdir(powerDir)
@@ -985,7 +994,7 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
                     xPl, yRef, area, bgScale = subtractPlBg(xPl, y, plBg, xDf, yDf, remove0 = False, returnArea = True)
                     plSpectra.append(yRef)
 
-                    if plSpecName not in gPlScan.keys():
+                    if plSpecName not in list(gPlScan.keys()):
                         gPlScan.create_dataset(plSpecName, data = yRef)
 
                     dPl = gPlScan[plSpecName]
@@ -999,15 +1008,16 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
                     for attrName in attrNames:
                         dPl.attrs[attrName] = plData.attrs[attrName]
 
-                    if dParticleFormat in particleGroup.keys():
+                    if dParticleFormat in list(particleGroup.keys()):
                         dfData = particleGroup[dParticleFormat]
+
                         x = dfData.attrs['wavelengths']
                         z = dfData - bg
                         z /= ref
                         dfData = condenseZscan(z)
 
                     else:
-                        dfSpecNames = [specName for specName in plGroup.keys() if specName.startswith('DF') and
+                        dfSpecNames = [specName for specName in list(plGroup.keys()) if specName.startswith('DF') and
                                        plGroup[specName].attrs['creation_timestamp'] > timeStamp]
 
                         if len(dfSpecNames) > 0:
@@ -1030,11 +1040,11 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
                 dAll.attrs['wavelengths'] = xPl
 
     currentTime = time.time() - scanStart
-    mins = int(currentTime / 60)
-    secs = (np.round((currentTime % 60)*100))/100
-    print '100%% complete in %s min %s sec' % (mins, secs)
+    mins = int(old_div(currentTime, 60))
+    secs = old_div((np.round((currentTime % 60)*100)),100)
+    print('100%% complete in %s min %s sec' % (mins, secs))
 
-    print '\tAll PL data transferred to summary file'
+    print('\tAll PL data transferred to summary file')
 
     return outputFile #String of output file name for easy identification later
 
@@ -1047,5 +1057,5 @@ if __name__ == '__main__':
     extractAllSpectra(os.getcwd(), pl = pl, returnIndividual = True, start = start, finish = finish)
     transferPlSpectra(os.getcwd(), start = start, finish = finish)
 
-    print '\nAll done'
+    print('\nAll done')
     printEnd()

@@ -8,8 +8,14 @@ Contains all necessary functions for analysis of NPoM darkfield and photolumines
 Best used in conjunction with Condense_Fit_DF or script
 
 """
+from __future__ import division
+from __future__ import print_function
+from builtins import zip
+from builtins import str
+from builtins import range
+from past.utils import old_div
 if __name__ == '__main__':
-    print 'Importing modules...'
+    print('Importing modules...')
 
 import h5py
 import numpy as np
@@ -25,8 +31,8 @@ from scipy.signal import savgol_filter as sgFilt
 
 if __name__ == '__main__':
     absoluteStartTime = time.time()
-    print '\tModules imported\n'
-    print 'Initialising functions...'
+    print('\tModules imported\n')
+    print('Initialising functions...')
 
 def findH5File(rootDir, mostRecent = True, nameFormat = 'date'):
     '''
@@ -45,10 +51,10 @@ def findH5File(rootDir, mostRecent = True, nameFormat = 'date'):
     if nameFormat == 'date':
 
         if mostRecent == True:
-            print 'Searching for most recent instance of yyyy-mm-dd.h5 or similar...'
+            print('Searching for most recent instance of yyyy-mm-dd.h5 or similar...')
 
         else:
-            print 'Searching for oldest instance of yyyy-mm-dd.h5 or similar...'
+            print('Searching for oldest instance of yyyy-mm-dd.h5 or similar...')
 
         h5File = sorted([i for i in os.listdir('.') if re.match('\d\d\d\d-[01]\d-[0123]\d', i[:10])
                          and (i.endswith('.h5') or i.endswith('.hdf5'))],#finds list of filenames with yyyy-mm-dd(...).h(df)5 format
@@ -57,16 +63,16 @@ def findH5File(rootDir, mostRecent = True, nameFormat = 'date'):
     else:
 
         if mostRecent == True:
-            print 'Searching for most recent instance of %s.h5 or similar...' % nameFormat
+            print('Searching for most recent instance of %s.h5 or similar...' % nameFormat)
 
         else:
-            print 'Searching for oldest instance of %s.h5 or similar...' % nameFormat
+            print('Searching for oldest instance of %s.h5 or similar...' % nameFormat)
 
         h5File = sorted([i for i in os.listdir('.') if i.startswith(nameFormat)#finds list of filenames with (nameFormat)(...).h(df)5 format
                          and (i.endswith('.h5') or i.endswith('.hdf5'))],
                         key = lambda i: os.path.getmtime(i))[n]#sorts them by date and picks either oldest or newest depending on value of 'mostRecent'
 
-    print '\tH5 file %s found\n' % h5File
+    print('\tH5 file %s found\n' % h5File)
 
     return h5File
 
@@ -139,7 +145,7 @@ def removeCosmicRays(x, y, reference = 1, factor = 15):
         d1 = abs(d1)#takes magnitude of first derivative
         d1Med = np.median(d1)#finds median gradient -> dy/dx should be larger than this for a cosmic ray
 
-        if max(d1)/d1Med > factor:#if the maximum dy/dx value is more than a certain mutliple of the median, a cosmic ray exists
+        if old_div(max(d1),d1Med) > factor:#if the maximum dy/dx value is more than a certain mutliple of the median, a cosmic ray exists
             oldRayDex = rayDex
             rayDex = d1.argmax() - 1#cosmic ray spike happens just before largest |dy/dx| value
 
@@ -230,22 +236,22 @@ def retrieveData(directory, summaryNameFormat = 'summary', first = 0, last = 0, 
     summaryFile = findH5File(directory, nameFormat = summaryNameFormat)#looks for most recent file titled 'summary(...).h(df)5 in current directory
 
     if attrsOnly == False:
-        print 'Retrieving data...'
+        print('Retrieving data...')
 
     else:
-        print 'Retrieving sample attributes...'
+        print('Retrieving sample attributes...')
 
     with h5py.File(summaryFile) as f:#opens summary file
 
-        mainDatasetName = sorted([scan for scan in f['particleScanSummaries/'].keys()],
+        mainDatasetName = sorted([scan for scan in list(f['particleScanSummaries/'].keys())],
                            key = lambda scan: len(f['particleScanSummaries/'][scan]['spectra']))[-1]#finds largest datset. Useful if you had to stop and start your particle tracking before leaving it overnight
 
         mainDataset = f['particleScanSummaries/'][mainDatasetName]['spectra']#opens dataset object
-        summaryAttrs = {key : mainDataset.attrs[key] for key in mainDataset.attrs.keys()}#creates python dictionary from dataset attributes/metadata
+        summaryAttrs = {key : mainDataset.attrs[key] for key in list(mainDataset.attrs.keys())}#creates python dictionary from dataset attributes/metadata
 
         if attrsOnly == True:#If you only want the metadata to update your main output file
-            print '\tInfo retrieved from %s' % mainDatasetName
-            print '\t\t%s spectra in total\n' % len(mainDataset)
+            print('\tInfo retrieved from %s' % mainDatasetName)
+            print('\t\t%s spectra in total\n' % len(mainDataset))
             return summaryAttrs
 
         if last == 0:
@@ -254,9 +260,9 @@ def retrieveData(directory, summaryNameFormat = 'summary', first = 0, last = 0, 
         spectra = mainDataset[()][first:last]#truncates dataset, if specified
         wavelengths = summaryAttrs['wavelengths'][()]#x axis
 
-        print '\t%s spectra retrieved from %s\n' % (len(spectra), mainDatasetName)
+        print('\t%s spectra retrieved from %s\n' % (len(spectra), mainDatasetName))
 
-        print 'Removing cosmic ray events...'
+        print('Removing cosmic ray events...')
 
         prepStart = time.time()
 
@@ -272,18 +278,18 @@ def retrieveData(directory, summaryNameFormat = 'summary', first = 0, last = 0, 
                     spectra[n] = newSpectrum#replaces spectrum with cleaned up version
 
                 else:
-                    print 'Cosmic ray removal failed for spectrum %s' % n
+                    print('Cosmic ray removal failed for spectrum %s' % n)
 
             except Exception as e:
-                print 'Cosmic ray removal failed for spectrum %s because %s' % (n, e)
+                print('Cosmic ray removal failed for spectrum %s because %s' % (n, e))
                 pass
 
         prepEnd = time.time()
         prepTime = prepEnd - prepStart
 
-        print '\tAll cosmic rays removed in %.2f seconds\n' % (prepTime)
+        print('\tAll cosmic rays removed in %.2f seconds\n' % (prepTime))
 
-        print 'Cleaning up NaN values...'
+        print('Cleaning up NaN values...')
 
         prepStart = time.time()
 
@@ -292,7 +298,7 @@ def retrieveData(directory, summaryNameFormat = 'summary', first = 0, last = 0, 
         prepEnd = time.time()
         prepTime = prepEnd - prepStart#time elapsed
 
-        print '\tAll spectra cleared of NaNs in %.2f seconds\n' % (prepTime)
+        print('\tAll spectra cleared of NaNs in %.2f seconds\n' % (prepTime))
 
         return wavelengths, spectra, summaryAttrs
 
@@ -303,22 +309,22 @@ def retrievePlData(directory, summaryNameFormat = 'summary', first = 0, last = 0
     '''
     summaryFile = findH5File(directory, nameFormat = summaryNameFormat) #looks for most recent file titled 'summary(...).h(df)5 in current directory
 
-    print 'Retrieving PL data...'
+    print('Retrieving PL data...')
 
     with h5py.File(summaryFile) as f:#Opens summary file
 
-        gPlName = sorted([scan for scan in f['particleScanSummaries/'].keys()],
+        gPlName = sorted([scan for scan in list(f['particleScanSummaries/'].keys())],
                            key = lambda scan: len(f['particleScanSummaries/'][scan]['spectra']))[-1]#finds largest datset. Useful if you had to stop and start your particle tracking before leaving it overnight
         reference = f['particleScanSummaries/%s/spectra' % gPlName].attrs['reference'][()]#gets reference from DF spectra metadata
 
         gPl = f['NPoM PL Spectra/%s' % gPlName]#opens dataset object
 
         if last == 0:
-            last = len(gPl.keys())#last = 0 -> last = (end of dataset)
+            last = len(list(gPl.keys()))#last = 0 -> last = (end of dataset)
 
-        dPlNames = sorted(gPl.keys(), key = lambda dPlName: int(dPlName.split(' ')[-1]))[first:last]#creates list of PL spectrum names within specified bounds
-        print '\t%s PL spectra retrieved from %s\n' % (len(dPlNames), gPlName)
-        print 'Removing cosmic ray events...'
+        dPlNames = sorted(list(gPl.keys()), key = lambda dPlName: int(dPlName.split(' ')[-1]))[first:last]#creates list of PL spectrum names within specified bounds
+        print('\t%s PL spectra retrieved from %s\n' % (len(dPlNames), gPlName))
+        print('Removing cosmic ray events...')
         prepStart = time.time()
 
         xPl = gPl[dPlNames[0]].attrs['wavelengths']#x axis
@@ -341,7 +347,7 @@ def retrievePlData(directory, summaryNameFormat = 'summary', first = 0, last = 0
                     plData[n] = plSpectrum#replaces PL spectrum with cleaned up version
 
                 else:
-                    print 'Cosmic ray removal failed for PL spectrum spectrum %s' % n
+                    print('Cosmic ray removal failed for PL spectrum spectrum %s' % n)
 
             except:
                 pass
@@ -353,7 +359,7 @@ def retrievePlData(directory, summaryNameFormat = 'summary', first = 0, last = 0
                     dfAfter[n] = dfAfterSpec#replaces DF spectrum with cleaned up version
 
                 else:
-                    print 'Cosmic ray removal failed for post-PL DF spectrum spectrum %s' % n
+                    print('Cosmic ray removal failed for post-PL DF spectrum spectrum %s' % n)
 
             except:
                 pass
@@ -361,8 +367,8 @@ def retrievePlData(directory, summaryNameFormat = 'summary', first = 0, last = 0
         prepEnd = time.time()
         prepTime = prepEnd - prepStart#time elapsed
 
-        print '\tAll cosmic rays removed in %.2f seconds\n' % (prepTime)
-        print 'Cleaning up NaN values...'
+        print('\tAll cosmic rays removed in %.2f seconds\n' % (prepTime))
+        print('Cleaning up NaN values...')
 
         prepStart = time.time()
         plData = np.array([removeNaNs(plSpec) for plSpec in plData])#Extra NaN removal in case removeCosmicRays failed
@@ -370,7 +376,7 @@ def retrievePlData(directory, summaryNameFormat = 'summary', first = 0, last = 0
         prepEnd = time.time()
         prepTime = prepEnd - prepStart#time elapsed
 
-        print '\tAll spectra cleared of NaNs in %.2f seconds\n' % (prepTime)
+        print('\tAll spectra cleared of NaNs in %.2f seconds\n' % (prepTime))
 
         return xPl, plData, dfAfter, areas, bgScales
 
@@ -411,7 +417,7 @@ def plotStackedMap(x, yData, imgName = 'Stack', plotTitle = 'Stack', closeFigure
     '''
 
     if init == True:
-        print 'Plotting %s...' % imgName
+        print('Plotting %s...' % imgName)
         stackStartTime = time.time()
 
     elif init == False:
@@ -421,7 +427,7 @@ def plotStackedMap(x, yData, imgName = 'Stack', plotTitle = 'Stack', closeFigure
 
     #try:
     xStack = x # Wavelength range
-    yStack = range(len(yData)) # Number of spectra
+    yStack = list(range(len(yData))) # Number of spectra
     zStack = np.vstack(yData) # Spectral data
 
     #vmin, vmax = determineVLims(zStack, threshold = vThresh)
@@ -458,7 +464,7 @@ def plotStackedMap(x, yData, imgName = 'Stack', plotTitle = 'Stack', closeFigure
         stackEndTime = time.time()
         timeElapsed = stackEndTime - stackStartTime
 
-        print '\tInitial stack plotted in %s seconds\n' % timeElapsed
+        print('\tInitial stack plotted in %s seconds\n' % timeElapsed)
 
 
 def plotInitStack(x, yData, imgName = 'Initial Stack', closeFigures = True, vThresh = 2e-4):
@@ -468,7 +474,7 @@ def plotInitStack(x, yData, imgName = 'Initial Stack', closeFigures = True, vThr
     xStack = truncateSpectrum(x, yData[0])[0]#x axis
 
     transIndex = abs(xStack - 533).argmin()
-    yDataTrunc = np.array([spectrum / spectrum[transIndex] for spectrum in yDataTrunc])#normalise to ~transverse mode
+    yDataTrunc = np.array([old_div(spectrum, spectrum[transIndex]) for spectrum in yDataTrunc])#normalise to ~transverse mode
 
     plotStackedMap(xStack, yDataTrunc, imgName = imgName, plotTitle = imgName, closeFigures = closeFigures, init = True, vThresh = vThresh)
 
@@ -477,14 +483,14 @@ def plotInitPlStack(xPl, plData, imgName = 'Initial PL Stack', closeFigures = Tr
 
     yDataTrunc = np.array([truncateSpectrum(xPl, plSpectrum, startWl = 580)[1] for plSpectrum in plData])# truncate to remove laser leak
     xStack = truncateSpectrum(xPl, plData[0], startWl = 580)[0] # x axis
-    yDataTrunc = np.array([plSpectrum / plSpectrum[0] for plSpectrum in yDataTrunc])# normalise to 580 nm value
+    yDataTrunc = np.array([old_div(plSpectrum, plSpectrum[0]) for plSpectrum in yDataTrunc])# normalise to 580 nm value
     plotStackedMap(xStack, yDataTrunc, imgName = imgName, plotTitle = imgName, closeFigures = closeFigures, vThresh = vThresh, init = True, xLims = (580, 900))
 
 def createOutputFile(filename):
 
     '''Auto-increments new filename if file exists'''
 
-    print 'Creating output file...'
+    print('Creating output file...')
 
     outputFile = filename
 
@@ -492,16 +498,16 @@ def createOutputFile(filename):
         outputFile = '%s.h5' % filename
 
     if outputFile in os.listdir('.'):
-        print '\t%s already exists' % outputFile
+        print('\t%s already exists' % outputFile)
         n = 0
         outputFile = '%s_%s.h5' % (filename, n)
 
         while outputFile in os.listdir('.'):
-            print '\t%s already exists' % outputFile
+            print('\t%s already exists' % outputFile)
             n += 1
             outputFile = '%s_%s.h5' % (filename, n)
 
-    print '\tOutput file %s created\n' % outputFile
+    print('\tOutput file %s created\n' % outputFile)
     return outputFile
 
 def butterLowpassFiltFilt(data, cutoff = 1500, fs = 60000, order=5):
@@ -510,7 +516,7 @@ def butterLowpassFiltFilt(data, cutoff = 1500, fs = 60000, order=5):
     Increase cutoff/decrease fs for more wibbles
     '''
     nyq = 0.5 * fs
-    normalCutoff = cutoff / nyq
+    normalCutoff = old_div(cutoff, nyq)
     b, a = butter(order, normalCutoff, btype='low', analog=False)
     yFiltered = filtfilt(b, a, data)
     return yFiltered
@@ -518,12 +524,12 @@ def butterLowpassFiltFilt(data, cutoff = 1500, fs = 60000, order=5):
 def printEnd():
     '''Some Doge approval for when you finish'''
 
-    print '%s%s%sv gud' % ('\t' * randint(0, 12), '\n' * randint(0, 5), ' ' * randint(0, 4))
-    print '%s%ssuch python' % ('\n' * randint(0, 5), ' ' * randint(0, 55))
-    print '%s%smany spectra' % ('\n' * randint(0, 5), ' ' * randint(10, 55))
-    print '%s%smuch fitting' % ('\n' * randint(0, 5), ' ' * randint(8, 55))
-    print '%s%swow' % ('\n' * randint(2, 5), ' ' * randint(5, 55))
-    print '\n' * randint(0, 7)
+    print('%s%s%sv gud' % ('\t' * randint(0, 12), '\n' * randint(0, 5), ' ' * randint(0, 4)))
+    print('%s%ssuch python' % ('\n' * randint(0, 5), ' ' * randint(0, 55)))
+    print('%s%smany spectra' % ('\n' * randint(0, 5), ' ' * randint(10, 55)))
+    print('%s%smuch fitting' % ('\n' * randint(0, 5), ' ' * randint(8, 55)))
+    print('%s%swow' % ('\n' * randint(2, 5), ' ' * randint(5, 55)))
+    print('\n' * randint(0, 7))
 
 def detectMinima(array, threshold = 0):
     '''
@@ -535,7 +541,7 @@ def detectMinima(array, threshold = 0):
     if (len(array) < 3):
         return mIndices
 
-    neutral, rising, falling = range(3)
+    neutral, rising, falling = list(range(3))
 
     def getState(a, b):
         if a < b: return rising
@@ -553,7 +559,7 @@ def detectMinima(array, threshold = 0):
             if ps != neutral and ps != s:
 
                 if s != falling:
-                    mIndices.append((begin + i - 1) / 2)
+                    mIndices.append(old_div((begin + i - 1), 2))
 
             begin = i
             ps = s
@@ -576,7 +582,7 @@ def testIfNpom(x, y, lower = 0.05, upper = 2.5, NpomThreshold = 1.5):
         yTrunc -= yTrunc.min()
 
     except Exception as e:
-        print 'NPoM test failed because %s' % e
+        print('NPoM test failed because %s' % e)
         return False
 
     '''Trial the first: do you have a reasonable signal?'''
@@ -591,8 +597,8 @@ def testIfNpom(x, y, lower = 0.05, upper = 2.5, NpomThreshold = 1.5):
 
         '''Trial the second: do you slant in the correct direction?'''
 
-        firstHalf = yTrunc[:int(len(yTrunc)/3)]
-        secondHalf = yTrunc[int(len(yTrunc)/3):]
+        firstHalf = yTrunc[:int(old_div(len(yTrunc),3))]
+        secondHalf = yTrunc[int(old_div(len(yTrunc),3)):]
 
         if np.sum(firstHalf) < np.sum(secondHalf) * NpomThreshold:
             #NPoM spectra generally have greater total signal at longer wavelengths due to coupled mode
@@ -601,7 +607,7 @@ def testIfNpom(x, y, lower = 0.05, upper = 2.5, NpomThreshold = 1.5):
 
             '''Trial the third: are you more than just noise?'''
 
-            if np.sum(yTrunc)*3 > np.sum(yUpper) / NpomThreshold:
+            if np.sum(yTrunc)*3 > old_div(np.sum(yUpper), NpomThreshold):
                 #If the sum of the noise after 900 nm is greater than that of the spectrum itself, it's probably crap
 
                 YuNoNpom = 'Too few peaks detected'
@@ -657,7 +663,7 @@ def testIfDouble(x, y, doublesThreshold = 2, lowerLimit = 600, plot = False, rai
                 pass
 
             else:
-                print e
+                print(e)
                 return False
 
         maxsSortedY = sorted(maxs, key = lambda maximum: maximum[1])
@@ -669,7 +675,7 @@ def testIfDouble(x, y, doublesThreshold = 2, lowerLimit = 600, plot = False, rai
 
             yMax2 = maxsSortedY[-2][1]
 
-            if yMax2 > yMax / doublesThreshold:
+            if yMax2 > old_div(yMax, doublesThreshold):
                 isDouble = True
 
         except:
@@ -722,7 +728,7 @@ def centDiff(x, y):
     if 0 in dx:
         dx = removeNaNs(np.where(dx == 0, dx, np.nan))
 
-    d = (dy/dx)
+    d = (old_div(dy,dx))
     d /= 2
 
     return d
@@ -743,7 +749,7 @@ def normToTrans(x, y, transNorm = 1, troughNorm = 0.61, transInit = 533):
     if len(mIndices) > 0:
         yMins = ySmooth[mIndices]
         xMins = xTrunc[mIndices]
-        mins = np.array(zip(*[xMins, yMins]))#Corresponding (x, y) values
+        mins = np.array(list(zip(*[xMins, yMins])))#Corresponding (x, y) values
 
         d1 = centDiff(xTrunc, ySmooth)
         d2 = centDiff(xTrunc, d1)
@@ -758,12 +764,12 @@ def normToTrans(x, y, transNorm = 1, troughNorm = 0.61, transInit = 533):
             d2Maxdices = detectMinima(-d2)
             yMins = ySmooth[d2Maxdices]
             xMins = xTrunc[d2Maxdices]
-            mins = np.array(zip(*[xMins, yMins]))
+            mins = np.array(list(zip(*[xMins, yMins])))
 
             initMins = [minimum for minimum in mins if minimum[0] < transWl]
 
-        initMinWls = np.array(zip(*mins)[0])
-        initMinHeights = np.array(zip(*mins)[1])
+        initMinWls = np.array(list(zip(*mins))[0])
+        initMinHeights = np.array(list(zip(*mins))[1])
         initMindex = abs(initMinWls - transInit).argmin()
         initMinWl = initMinWls[initMindex]
 
@@ -771,7 +777,7 @@ def normToTrans(x, y, transNorm = 1, troughNorm = 0.61, transInit = 533):
         t0 = ySmooth[trandex]
         tInit = ySmooth[abs(xTrunc - transInit).argmin()]
 
-        if tInit/ySmooth[trandex] > 2:
+        if old_div(tInit,ySmooth[trandex]) > 2:
             t0 = tInit
             transWl = transInit
 
@@ -867,7 +873,7 @@ def getFWHM(x, y, fwhmFactor = 1.1, smooth = False, peakpos = 0):
             return None, None, None
 
     yMax = y[maxdices].max()
-    halfMax = yMax/2
+    halfMax = old_div(yMax,2)
     maxdex = maxdices[y[maxdices].argmax()]
     xMax = x[maxdex]
 
@@ -900,7 +906,7 @@ def gaussian(x, height, center, fwhm, offset = 0):
 
     N = 4*np.log(2)*(x - b)**2
     D = c**2
-    F = -(N / D)
+    F = -(old_div(N, D))
     E = np.exp(F)
     y = a*E
     y += offset
@@ -910,7 +916,7 @@ def gaussian(x, height, center, fwhm, offset = 0):
 def gaussArea(height, fwhm):
     h = height
     c = fwhm
-    area = h*np.sqrt((np.pi*c**2)/(4*np.log(2)))
+    area = h*np.sqrt(old_div((np.pi*c**2),(4*np.log(2))))
 
     return area
 
@@ -985,10 +991,10 @@ def findMainPeaks(x, y, fwhmFactor = 1.1, plot = False, midpoint = 680, weirdPea
         cmWl = peakFindMetadata['Coupled mode wavelength']
         cmFwhm = peakFindMetadata['Coupled mode FWHM']
 
-        weirdFwhmHorizX = np.linspace(weirdWl - weirdFwhm/2, weirdWl + weirdFwhm/2, 2)
-        weirdFwhmHorizY = np.array([weirdHeight/2] * 2)
-        cmFwhmHorizX = np.linspace(cmWl - cmFwhm/2, cmWl + cmFwhm/2, 2)
-        cmFwhmHorizY = np.array([cmHeight/2] * 2)
+        weirdFwhmHorizX = np.linspace(weirdWl - old_div(weirdFwhm,2), weirdWl + old_div(weirdFwhm,2), 2)
+        weirdFwhmHorizY = np.array([old_div(weirdHeight,2)] * 2)
+        cmFwhmHorizX = np.linspace(cmWl - old_div(cmFwhm,2), cmWl + old_div(cmFwhm,2), 2)
+        cmFwhmHorizY = np.array([old_div(cmHeight,2)] * 2)
 
         plt.plot(x, y, 'purple', lw = 0.3, label = 'Raw')
         plt.xlabel('Wavelength (nm)', fontsize = 14)
@@ -1092,8 +1098,8 @@ def analyseNpomSpectrum(x, y, cutoff = 1500, fs = 60000, doublesThreshold = 2, c
             metadata['Coupled mode FWHM'] = 'N/A'
             metadata['Coupled mode FWHM (raw)'] = 'N/A'
 
-        normIntensityRatio = metadata['Coupled mode intensity (normalised)'] / metadata['Transverse mode intensity (normalised)']
-        rawIntensityRatio = metadata['Coupled mode intensity (raw)'] / metadata['Transverse mode intensity (raw)']
+        normIntensityRatio = old_div(metadata['Coupled mode intensity (normalised)'], metadata['Transverse mode intensity (normalised)'])
+        rawIntensityRatio = old_div(metadata['Coupled mode intensity (raw)'], metadata['Transverse mode intensity (raw)'])
 
         metadata['Intensity ratio (normalised)'] = normIntensityRatio
         metadata['Intensity ratio (raw)'] = rawIntensityRatio
@@ -1108,7 +1114,7 @@ def calcNoise(y, ySmooth, windowSize = 5):
         windowSize += 1
 
     noise = y - ySmooth
-    newNoise = np.concatenate((noise[:windowSize/2][::-1], noise, noise[-windowSize/2:][::-1]))
+    newNoise = np.concatenate((noise[:old_div(windowSize,2)][::-1], noise, noise[old_div(-windowSize,2):][::-1]))
     noiseLevel = np.array([np.std(newNoise[n:n + windowSize]) for n, i in enumerate(noise)])
 
     return noiseLevel
@@ -1229,7 +1235,7 @@ def gaussMinimize(x, y, fwhmFactor = 1.8, regStart = 505, regEnd = 630, initPeak
 
         return diff
 
-    peaks = sorted(peakMetadata.keys(), key = lambda peak: int(peak.split('_')[1]))
+    peaks = sorted(list(peakMetadata.keys()), key = lambda peak: int(peak.split('_')[1]))
     bounds = []
     parsGuess = []
 
@@ -1238,7 +1244,7 @@ def gaussMinimize(x, y, fwhmFactor = 1.8, regStart = 505, regEnd = 630, initPeak
         center = peakMetadata[peak]['Center']
         fwhm = peakMetadata[peak]['FWHM']
 
-        heightBound = (height/2, height*2)
+        heightBound = (old_div(height,2), height*2)
 
         if n == 0 and n < len(peaks) - 1:
             center1 = peakMetadata[peaks[n + 1]]['Center']
@@ -1274,7 +1280,7 @@ def gaussMinimize(x, y, fwhmFactor = 1.8, regStart = 505, regEnd = 630, initPeak
 
     peakMetadata = makeGausses(x, newPars)
 
-    peaks = sorted(peakMetadata.keys(), key = lambda peak: peakMetadata[peak]['Center'])
+    peaks = sorted(list(peakMetadata.keys()), key = lambda peak: peakMetadata[peak]['Center'])
 
     #print 'Heights : %s' % [peakMetadata[i]['Height'] for i in peaks]
     #print 'FWHMs : %s' % [peakMetadata[i]['FWHM'] for i in peaks]
@@ -1307,7 +1313,7 @@ def analysePlSpectrum(x, y, windowLength = 221, polyorder = 7, cutoff = 1000, fs
         plt.plot(x, fit, 'k')
         plt.show()
 
-    peaks = sorted(peakMetadata.keys(), key = lambda k: int(k.split('_')[1]))
+    peaks = sorted(list(peakMetadata.keys()), key = lambda k: int(k.split('_')[1]))
 
     plMetadata['Peak Heights'] = [peakMetadata[peak]['Height'] for peak in peaks]
 
@@ -1325,18 +1331,18 @@ def analysePlSpectrum(x, y, windowLength = 221, polyorder = 7, cutoff = 1000, fs
 def plotAllStacks(outputFileName, fullSort = False, closeFigures = True, vThresh = 2e-4):
     stackStart = time.time()
 
-    print 'Plotting stacked spectral maps...'
+    print('Plotting stacked spectral maps...')
 
     with h5py.File(outputFileName) as opf:
         date = opf['All Spectra (Raw)'].attrs['Date measured']
 
-        for groupName in opf['NPoMs'].keys():
+        for groupName in list(opf['NPoMs'].keys()):
             gSpectra = opf['NPoMs/%s/Normalised' % groupName]
-            spectraNames = sorted(gSpectra.keys(), key = lambda spectrumName: int(spectrumName[9:]))
+            spectraNames = sorted(list(gSpectra.keys()), key = lambda spectrumName: int(spectrumName[9:]))
             try:
                 x = gSpectra[spectraNames[0]].attrs['wavelengths']
             except:
-                print 'No data for %s' % groupName
+                print('No data for %s' % groupName)
                 continue
             yData = [gSpectra[spectrumName][()] for spectrumName in spectraNames]
 
@@ -1355,7 +1361,7 @@ def plotAllStacks(outputFileName, fullSort = False, closeFigures = True, vThresh
 
     stackEnd = time.time()
     timeElapsed = stackEnd - stackStart
-    print '\tStacks plotted in %s seconds\n' % timeElapsed
+    print('\tStacks plotted in %s seconds\n' % timeElapsed)
 
 def histyFit(frequencies, bins, nPeaks = 1, xMaxs = [], yMaxs = []):
 
@@ -1369,8 +1375,8 @@ def histyFit(frequencies, bins, nPeaks = 1, xMaxs = [], yMaxs = []):
         sigma = out.params['sigma'].value
         fit = out.best_fit
 
-        print '\t\tAverage peakpos: %s +/- %s nm' % (resonance, stderr)
-        print '\t\tFWHM: %s nm\n' % fwhm
+        print('\t\tAverage peakpos: %s +/- %s nm' % (resonance, stderr))
+        print('\t\tFWHM: %s nm\n' % fwhm)
 
     else:
         gMod = GaussianModel(prefix = 'g0_')
@@ -1379,7 +1385,7 @@ def histyFit(frequencies, bins, nPeaks = 1, xMaxs = [], yMaxs = []):
         center = xMaxs[0]
         height = yMaxs[0]
 
-        pars['g0_center'].set(center, min = bins.min(), max = (xMaxs[1] + xMaxs[0])/2)
+        pars['g0_center'].set(center, min = bins.min(), max = old_div((xMaxs[1] + xMaxs[0]),2))
         pars['g0_height'].set(height, min = 0)
 
         for n in range(nPeaks)[1:]:
@@ -1388,9 +1394,9 @@ def histyFit(frequencies, bins, nPeaks = 1, xMaxs = [], yMaxs = []):
                 cMax = bins.max()
 
             else:
-                cMax = (xMaxs[n] + xMaxs[n + 1])/2
+                cMax = old_div((xMaxs[n] + xMaxs[n + 1]),2)
 
-            cMin = (xMaxs[n] + xMaxs[n - 1])/2
+            cMin = old_div((xMaxs[n] + xMaxs[n - 1]),2)
 
             center = xMaxs[n]
             height = yMaxs[n]
@@ -1417,18 +1423,16 @@ def histyFit(frequencies, bins, nPeaks = 1, xMaxs = [], yMaxs = []):
             sigma.append(out.params['g%s_sigma' % n].value)
 
         try:
-            print '\t\tAverage peak positions: %s' % [float('%.03f' % i) for i in resonance]
-            print '\t\tStdErrs: %s' % [float('%.03f' % i) for i in stderr]
-            print '\t\tFWHMs: %s nm\n' % [float('%.03f' % i) for i in fwhm]
+            print('\t\tAverage peak positions: %s' % [float('%.03f' % i) for i in resonance])
+            print('\t\tStdErrs: %s' % [float('%.03f' % i) for i in stderr])
+            print('\t\tFWHMs: %s nm\n' % [float('%.03f' % i) for i in fwhm])
 
         except:
             stderr = [0] * len(stderr)
-            print '\t\tAverage peak positions: %s' % resonance
-            print '\t\tStdErrs: %s' % stderr
-            print '\t\tFWHMs: %s nm\n' % fwhm
-
+            print('\t\tAverage peak positions: %s' % resonance)
+            print('\t\tStdErrs: %s' % stderr)
+            print('\t\tFWHMs: %s nm\n' % fwhm)
     return resonance, stderr, fwhm, sigma, fit
-
 
 def reduceNoise(y, factor = 10, cutoff = 1500, fs = 60000, pl = False):
 
@@ -1449,14 +1453,14 @@ def plotHistogram(outputFileName, npomType = 'All NPoMs', startWl = 450, endWl =
     if 'Histograms' not in os.listdir('.'):
         os.mkdir('Histograms')
 
-    print 'Preparing to create DF histogram...'
-    print '\tFilter: %s' % npomType
+    print('Preparing to create DF histogram...')
+    print('\tFilter: %s' % npomType)
 
     with h5py.File(outputFileName) as opf:
         date = opf['All Spectra (Raw)'].attrs['Date measured']
         gSpectra = opf['NPoMs/%s/Normalised' % npomType]
         gSpecRaw = opf['NPoMs/%s/Raw' % npomType]
-        spectraNames = sorted([i for i in gSpectra.keys()
+        spectraNames = sorted([i for i in list(gSpectra.keys())
                                if gSpectra[i].attrs['Coupled mode wavelength'] != 'N/A'
                                and cmLowLim < gSpectra[i].attrs['Coupled mode wavelength'] < endWl],
                               key = lambda i: int(i[9:]))
@@ -1468,21 +1472,21 @@ def plotHistogram(outputFileName, npomType = 'All NPoMs', startWl = 450, endWl =
 
         frequencies, bins = np.histogram(peakPositions, bins = 80, range = (450., 900.), density = density)
         binSize = bins[1] - bins[0]
-        print '\tFrequency distribution created for %s DF spectra' % len(spectraNames)
+        print('\tFrequency distribution created for %s DF spectra' % len(spectraNames))
 
-        print '\tPerforming Gaussian fit'
+        print('\tPerforming Gaussian fit')
 
         try:
             resonance, stderr, fwhm, sigma, fit = histyFit(frequencies, bins[:-1])
 
         except Exception as e:
-            print e
+            print(e)
             resonance = 'N/A'
             stderr = 'N/A'
             fwhm = 'N/A'
             sigma = 'N/A'
 
-        print '\tCollecting and averaging spectra for plot...'
+        print('\tCollecting and averaging spectra for plot...')
 
         yDataBinned = []
         yDataRawBinned = []
@@ -1497,8 +1501,8 @@ def plotHistogram(outputFileName, npomType = 'All NPoMs', startWl = 450, endWl =
             binnedSpectraList[binEdge] = binSpecNames
 
             if len(binSpecNames) > 0:
-                avgSpec = np.sum(np.array([gSpectra[i][()] for i in binSpecNames]), 0) / len(binSpecNames)
-                avgSpecRaw = np.sum(np.array([gSpecRaw[i][()] for i in binSpecNames]), 0) / len(binSpecNames)
+                avgSpec = old_div(np.sum(np.array([gSpectra[i][()] for i in binSpecNames]), 0), len(binSpecNames))
+                avgSpecRaw = old_div(np.sum(np.array([gSpecRaw[i][()] for i in binSpecNames]), 0), len(binSpecNames))
 
             else:
                 avgSpec = np.zeros(len(x))
@@ -1514,10 +1518,10 @@ def plotHistogram(outputFileName, npomType = 'All NPoMs', startWl = 450, endWl =
             minBin = 0
 
         else:
-            minBin = max(frequencies)/minBinFactor
+            minBin = old_div(max(frequencies),minBinFactor)
 
         if plot == True:
-            print '\tPlotting Histogram...'
+            print('\tPlotting Histogram...')
             fig = plt.figure(figsize = (8, 6))
 
             cmap = plt.get_cmap('jet')
@@ -1545,7 +1549,7 @@ def plotHistogram(outputFileName, npomType = 'All NPoMs', startWl = 450, endWl =
             freqsPlot = np.array(freqsPlot)
             binsPlot = np.array(binsPlot)
 
-            colors = [cmap(256 - n*(256/len(yDataPlot))) for n, yDataSum in enumerate(yDataPlot)][::-1]
+            colors = [cmap(256 - n*(old_div(256,len(yDataPlot)))) for n, yDataSum in enumerate(yDataPlot)][::-1]
 
             for n, yDataSum in enumerate(yDataPlot):
 
@@ -1591,7 +1595,7 @@ def plotHistogram(outputFileName, npomType = 'All NPoMs', startWl = 450, endWl =
 
             plotEnd = time.time()
             plotTime = plotEnd - plotStart
-            print '\tHistogram plotted in %.02f seconds\n' % plotTime
+            print('\tHistogram plotted in %.02f seconds\n' % plotTime)
 
     return frequencies, bins, yDataBinned, yDataRawBinned, binnedSpectraList, x, resonance, stderr, fwhm, sigma, fit
 
@@ -1675,8 +1679,8 @@ def plotPlHistogram(outputFileName, npomType = 'All NPoMs', startWl = 504, endWl
     if 'Histograms' not in os.listdir('.'):
         os.mkdir('Histograms')
 
-    print 'Preparing to create PL histogram...'
-    print '\tFilter: %s' % npomType
+    print('Preparing to create PL histogram...')
+    print('\tFilter: %s' % npomType)
 
     with h5py.File(outputFileName) as opf:
         date = opf['All Spectra (Raw)'].attrs['Date measured']
@@ -1689,7 +1693,7 @@ def plotPlHistogram(outputFileName, npomType = 'All NPoMs', startWl = 504, endWl
         else:
             nPeaks = peak
 
-        spectraNames = sorted([i for i in gSpectra.keys() if len(gSpectra[i].attrs['Peak Centers']) > nPeaks and gSpectra[i][()].max() < 10],
+        spectraNames = sorted([i for i in list(gSpectra.keys()) if len(gSpectra[i].attrs['Peak Centers']) > nPeaks and gSpectra[i][()].max() < 10],
                                key = lambda i: int(i.split(' ')[-1]))
 
         x = gSpectra[spectraNames[0]].attrs['wavelengths']
@@ -1712,16 +1716,16 @@ def plotPlHistogram(outputFileName, npomType = 'All NPoMs', startWl = 504, endWl
 
         frequencies, bins = np.histogram(peakPositions, bins = binNumber, range = (startWl, endWl), density = density, weights = weights)
         binSize = bins[1] - bins[0]
-        print '\tFrequency distribution created for %s PL spectra' % len(spectraNames)
+        print('\tFrequency distribution created for %s PL spectra' % len(spectraNames))
 
         if peak.lower() == 'all':
-            print '\tPerforming Gaussian fits'
+            print('\tPerforming Gaussian fits')
 
             #try:
             freqInterp = np.interp(x, bins[:-1], frequencies)
             freqSmooth = butterLowpassFiltFilt(freqInterp, cutoff = 1200, fs = 85000)
             peaks = detectMinima(-freqSmooth)
-            peaks = np.array([i for i in peaks if freqSmooth.max()/freqSmooth[i] < minBinFactor])
+            peaks = np.array([i for i in peaks if old_div(freqSmooth.max(),freqSmooth[i]) < minBinFactor])
             xMaxs = x[peaks]
             yMaxs = freqSmooth[peaks]
             #plt.plot(x, freqSmooth)
@@ -1749,18 +1753,18 @@ def plotPlHistogram(outputFileName, npomType = 'All NPoMs', startWl = 504, endWl
             #    sigma = 'N/A'
 
         else:
-            print '\tPerforming Gaussian fit'
+            print('\tPerforming Gaussian fit')
 
             try:
                 resonance, stderr, fwhm, sigma, fit = histyFit(frequencies, bins[:-1])
 
             except Exception as e:
-                print 'Gaussfit for histogram failed because %s' % e
+                print('Gaussfit for histogram failed because %s' % e)
                 resonance = 'N/A'
                 stderr = 'N/A'
                 fwhm = 'N/A'
 
-        print '\tCollecting and averaging spectra for plot...'
+        print('\tCollecting and averaging spectra for plot...')
 
         yDataBinned = []
         yDataRawBinned = []
@@ -1780,23 +1784,23 @@ def plotPlHistogram(outputFileName, npomType = 'All NPoMs', startWl = 504, endWl
             binnedSpectraList[binEdge] = binSpecNames #list of names added to the bin's entry in a dictionary
 
             if len(binSpecNames) > 0:#if there are spectra that fit this criteria
-                avgSpec = np.sum(np.array([gSpectra[i][()] for i in binSpecNames]), 0) / len(binSpecNames)#take the average
+                avgSpec = old_div(np.sum(np.array([gSpectra[i][()] for i in binSpecNames]), 0), len(binSpecNames))#take the average
 
                 if avgSpec.max() > 100: #this means something has gone wrong with initial analysis
-                    print '\n\tAnomaly detected in bin %s (%s nm)' % (n, binEdge)
-                    print '\tSearching for offending spectra...'
+                    print('\n\tAnomaly detected in bin %s (%s nm)' % (n, binEdge))
+                    print('\tSearching for offending spectra...')
                     specFound = False
 
                     for binSpecName in binSpecNames:
                         if gSpectra[binSpecName][()].max() > 100:
-                            print '\t%s looks dodgy. Max point = %s' % (binSpecName, gSpectra[binSpecName][()].max())
+                            print('\t%s looks dodgy. Max point = %s' % (binSpecName, gSpectra[binSpecName][()].max()))
                             specFound = True
 
                     if specFound == False:
-                        print '\tCulprit not found. Please investigate the following spectra:'
-                        print [i for i in binSpecNames]
+                        print('\tCulprit not found. Please investigate the following spectra:')
+                        print([i for i in binSpecNames])
 
-                avgSpecRaw = np.sum(np.array([gSpecRaw[i][()] for i in binSpecNames]), 0) / len(binSpecNames)
+                avgSpecRaw = old_div(np.sum(np.array([gSpecRaw[i][()] for i in binSpecNames]), 0), len(binSpecNames))
 
             else:
                 avgSpec = np.zeros(len(x))
@@ -1808,13 +1812,13 @@ def plotPlHistogram(outputFileName, npomType = 'All NPoMs', startWl = 504, endWl
         yDataBinned = np.array(yDataBinned)
         yDataRawBinned = np.array(yDataRawBinned)
 
-        print '\tPlotting Histogram...'
+        print('\tPlotting Histogram...')
 
         if minBinFactor == 0:
             minBin = 0
 
         else:
-            minBin = max(frequencies)/minBinFactor
+            minBin = old_div(max(frequencies),minBinFactor)
 
         if plot == True:
             fig = plt.figure(figsize = (8, 6))
@@ -1848,7 +1852,7 @@ def plotPlHistogram(outputFileName, npomType = 'All NPoMs', startWl = 504, endWl
             freqsPlot = np.array(freqsPlot)
             binsPlot = np.array(binsPlot)
 
-            colors = [cmap(256 - n*(256/len(yDataPlot))) for n, yDataSum in enumerate(yDataPlot)][::-1]
+            colors = [cmap(256 - n*(old_div(256,len(yDataPlot)))) for n, yDataSum in enumerate(yDataPlot)][::-1]
 
             if peak.lower() != 'all':
 
@@ -1906,7 +1910,7 @@ def plotPlHistogram(outputFileName, npomType = 'All NPoMs', startWl = 504, endWl
 
             plotEnd = time.time()
             plotTime = plotEnd - plotStart
-            print '\tHistogram plotted in %.02f seconds\n' % plotTime
+            print('\tHistogram plotted in %.02f seconds\n' % plotTime)
 
     return frequencies, bins, yDataBinned, yDataRawBinned, binnedSpectraList, x, resonance, stderr, fwhm, sigma, fit
 
@@ -1989,7 +1993,7 @@ def plotHistComb1D(outputFileName, npomType = 'All NPoMs', dfStartWl = 450, dfEn
     with h5py.File(outputFileName) as opf:
         date = opf['All Spectra (Raw)'].attrs['Date measured']
 
-        print 'Collecting DF Histogram data...'
+        print('Collecting DF Histogram data...')
 
         gDfHist = opf['NPoMs/%s/Histogram data' % npomType]
         dfFrequencies = gDfHist['Frequencies'][()]
@@ -2000,7 +2004,7 @@ def plotHistComb1D(outputFileName, npomType = 'All NPoMs', dfStartWl = 450, dfEn
 
         for n in np.arange(binNumber):
 
-            if 'Bin %s' % n in gDfHist['Binned y data'].keys():
+            if 'Bin %s' % n in list(gDfHist['Binned y data'].keys()):
                 yDataBinned.append(gDfHist['Binned y data/Bin %s/Sum' % n][()])
             else:
                 yDataBinned.append(np.zeros(len(dfX)))
@@ -2011,16 +2015,16 @@ def plotHistComb1D(outputFileName, npomType = 'All NPoMs', dfStartWl = 450, dfEn
         dfStdErr = gDfHist.attrs['Error']
         dfFwhm = gDfHist.attrs['FWHM']
 
-        print '\tCollected\n'
+        print('\tCollected\n')
 
-        print 'Collecting PL Histogram data...'
+        print('Collecting PL Histogram data...')
         gPlHist = opf['NPoMs/%s/PL Histogram data' % npomType]
         plFrequencies = gPlHist['Frequencies'][()]
         plBins = gPlHist['Bins'][()]
         plX = gPlHist.attrs['wavelengths'][()]
         plFit = gPlHist.attrs['Gaussian Fit'][()]
         plResonance = gPlHist.attrs['Average resonance'][()]
-        print plResonance
+        print(plResonance)
         nPeaks = len(plResonance)
 
         dfFrequencies = np.array([float(i) for i in dfFrequencies])
@@ -2039,15 +2043,15 @@ def plotHistComb1D(outputFileName, npomType = 'All NPoMs', dfStartWl = 450, dfEn
         plFit -= plFit.min()
         plFit /= plFit.max()
 
-        print '\tCollected\n'
+        print('\tCollected\n')
 
-    print '\tPlotting Combined Histogram...'
+    print('\tPlotting Combined Histogram...')
 
     if minBinFactor == 0:
         dfMinBin = 0
 
     else:
-        dfMinBin = dfFrequencies.max()/minBinFactor
+        dfMinBin = old_div(dfFrequencies.max(),minBinFactor)
 
     fig = plt.figure(figsize = (8, 6))
 
@@ -2081,7 +2085,7 @@ def plotHistComb1D(outputFileName, npomType = 'All NPoMs', dfStartWl = 450, dfEn
     plFreqsPlot = np.array(plFreqsPlot)
     plBinsPlot = np.array(plBinsPlot)
 
-    colors = [cmap(256 - n*(256/len(yDataPlot))) for n, yDataSum in enumerate(yDataPlot)][::-1]
+    colors = [cmap(256 - n*(old_div(256,len(yDataPlot)))) for n, yDataSum in enumerate(yDataPlot)][::-1]
 
     for n, yDataSum in enumerate(yDataPlot):
 
@@ -2135,7 +2139,7 @@ def plotHistComb1D(outputFileName, npomType = 'All NPoMs', dfStartWl = 450, dfEn
     else:
         plt.show()
 
-    print '\tHistogram plotted\n'
+    print('\tHistogram plotted\n')
 
 def plotAllHists(outputFileName, closeFigures = True, irThreshold = 8, minBinFactor = 5, plotAll = True, pl = False,
                  npomTypes = 'all'):
@@ -2154,7 +2158,7 @@ def plotAllHists(outputFileName, closeFigures = True, irThreshold = 8, minBinFac
 
     histPlotEnd = time.time()
     histTimeElapsed = histPlotEnd - histPlotStart
-    print '\tAll histograa plotted in %.02f seconds\n' % histTimeElapsed
+    print('\tAll histograa plotted in %.02f seconds\n' % histTimeElapsed)
 
 def plotHistComb2D(outputFileName, npomType = 'All NPoMs', dfStartWl = 450, dfEndWl = 987, plStartWl = 504,
                    plEndWl = 900, binNumber = 80, plot = True, minBinFactor = 5, closeFigures = False,
@@ -2167,12 +2171,12 @@ def plotHistComb2D(outputFileName, npomType = 'All NPoMs', dfStartWl = 450, dfEn
 
         scatterKeys = np.concatenate([['%s vs %s' % (dfKey, plKey) for dfKey in dfKeys] for plKey in plKeys]).ravel()
 
-        print scatterKeys
+        print(scatterKeys)
         scatterDict = {key : [] for key in scatterKeys}
 
         gDf = opf['NPoMs/%s/Raw' % npomType]
         gPl = opf['NPoMs/%s/PL Data' % npomType]
-        spectraNames = sorted(gDf.keys(), key = lambda i: int(i.split(' ')[-1]))
+        spectraNames = sorted(list(gDf.keys()), key = lambda i: int(i.split(' ')[-1]))
 
         for spectrumName in spectraNames:
             dfSpectrum = gDf[spectrumName]
@@ -2205,7 +2209,7 @@ def plotHistComb2D(outputFileName, npomType = 'All NPoMs', dfStartWl = 450, dfEn
                     scatterDict['Weird peak wavelength vs PL Peaks'].append(np.array([wrdWl, wl]))
 
 
-        for key in scatterDict.keys():
+        for key in list(scatterDict.keys()):
             scatterDict[key] = np.transpose(np.array(scatterDict[key]))
             x = scatterDict[key][0]
             y = scatterDict[key][1]
@@ -2222,16 +2226,16 @@ def plotIntensityRatios(outputFileName, plotName = 'All NPoMs', dataType = 'Raw'
         os.mkdir('Intensity ratios')
 
     if plot == True:
-        print 'Plotting intensity ratios for %s, %s...' % (plotName, dataType)
+        print('Plotting intensity ratios for %s, %s...' % (plotName, dataType))
 
     else:
-        print 'Gathering intensity ratiosfor %s, %s...' % (plotName, dataType)
+        print('Gathering intensity ratiosfor %s, %s...' % (plotName, dataType))
 
     with h5py.File(outputFileName) as opf:
         date = opf['All Spectra (Raw)'].attrs['Date measured']
         gSpectra = opf['NPoMs/%s/%s' % (plotName, dataType)]
         dataType = dataType.lower()
-        spectraNames = sorted(gSpectra.keys(), key = lambda spectrumName: int(spectrumName[9:]))
+        spectraNames = sorted(list(gSpectra.keys()), key = lambda spectrumName: int(spectrumName[9:]))
 
         x = np.array([gSpectra[spectrumName].attrs['Coupled mode wavelength'] for spectrumName in spectraNames])
         y = np.array([gSpectra[spectrumName].attrs['Intensity ratio (%s)' % dataType] for spectrumName in spectraNames])
@@ -2242,8 +2246,8 @@ def plotIntensityRatios(outputFileName, plotName = 'All NPoMs', dataType = 'Raw'
             sns.set_style('white')
 
             xy = np.array([[x[n], i] for n, i in enumerate(y) if 0 < i < 10 and x[n] < 848])
-            x = np.array(zip(*xy)[0])
-            y = np.array(zip(*xy)[1])
+            x = np.array(list(zip(*xy))[0])
+            y = np.array(list(zip(*xy))[1])
 
             fig, ax1 = plt.subplots(figsize = (9, 9))
             cmap = plt.get_cmap('Greys')
@@ -2257,7 +2261,7 @@ def plotIntensityRatios(outputFileName, plotName = 'All NPoMs', dataType = 'Raw'
                 for n, line in enumerate(ax1Colls):
                     total = len(ax1Colls)
 
-                    if n == int(np.round(total/2)):
+                    if n == int(np.round(old_div(total,2))):
 
                         line.set_linestyle('--')
                         line.set_edgecolor(cmap(256))
@@ -2276,12 +2280,12 @@ def plotIntensityRatios(outputFileName, plotName = 'All NPoMs', dataType = 'Raw'
                 ax.plot([0], [0], color = 'k', label = '1 Layer')
 
             except Exception as e:
-                print 'Intensity ratio plot failed because %s' % str(e)
+                print('Intensity ratio plot failed because %s' % str(e))
 
                 if len(x) < 100:
-                    print '\t(probably because dataset was too small)'
+                    print('\t(probably because dataset was too small)')
 
-                print '\nAttempting simple scatter plot instead...'
+                print('\nAttempting simple scatter plot instead...')
 
             ax1.set_ylim(1, 7)
             ax1.set_ylabel('Intensity Ratio', fontsize = 18)
@@ -2297,20 +2301,20 @@ def plotIntensityRatios(outputFileName, plotName = 'All NPoMs', dataType = 'Raw'
             if closeFigures == True:
                 plt.close('all')
 
-            print '\tIntensity ratios plotted\n'
+            print('\tIntensity ratios plotted\n')
 
         else:
-            print '\tIntensity ratios gathered\n'
+            print('\tIntensity ratios gathered\n')
 
     return x, y
 
 def plotAllIntensityRatios(outputFileName, closeFigures = True, plot = True):
 
-    print 'Plotting all intensity ratios...\n'
+    print('Plotting all intensity ratios...\n')
     irStart = time.time()
 
     with h5py.File(outputFileName) as opf:
-        plotNames = opf['NPoMs'].keys()
+        plotNames = list(opf['NPoMs'].keys())
 
     for plotName in plotNames:
         for dataType in ['Raw', 'Normalised']:
@@ -2319,7 +2323,7 @@ def plotAllIntensityRatios(outputFileName, closeFigures = True, plot = True):
     irEnd = time.time()
     timeElapsed = irEnd - irStart
 
-    print '\tAll intensity ratios plotted in %s seconds\n' % timeElapsed
+    print('\tAll intensity ratios plotted in %s seconds\n' % timeElapsed)
 
 def visualiseIntensityRatios(outputFileName):
 
@@ -2328,12 +2332,12 @@ def visualiseIntensityRatios(outputFileName):
 
     irVisStart = time.time()
 
-    print 'Visualising intensity ratios for individual spectra...'
+    print('Visualising intensity ratios for individual spectra...')
 
     with h5py.File(outputFileName) as opf:
         gNPoMs = opf['NPoMs/All NPoMs/Raw']
 
-        if 'Intensity ratio measurements' in opf['NPoMs/All NPoMs'].keys():
+        if 'Intensity ratio measurements' in list(opf['NPoMs/All NPoMs'].keys()):
             overWrite = True
             gIrVis = opf['NPoMs/All NPoMs/Intensity ratio measurements']
 
@@ -2341,7 +2345,7 @@ def visualiseIntensityRatios(outputFileName):
             overWrite = False
             gIrVis = opf['NPoMs/All NPoMs'].create_group('Intensity ratio measurements')
 
-        spectraNames = sorted(gNPoMs.keys(), key = lambda spectrumName: int(spectrumName[9:]))
+        spectraNames = sorted(list(gNPoMs.keys()), key = lambda spectrumName: int(spectrumName[9:]))
 
         for n, spectrumName in enumerate(spectraNames):
             spectrum = gNPoMs[spectrumName]
@@ -2393,30 +2397,30 @@ def visualiseIntensityRatios(outputFileName):
 
     irVisEnd = time.time()
     timeElapsed = irVisEnd - irVisStart
-    print '\tIntensity ratios visualised in %s seconds\n' % timeElapsed
+    print('\tIntensity ratios visualised in %s seconds\n' % timeElapsed)
 
 def calcGroupAttrAvgs(group):
     '''group must be instance of (open) hdf5 group object'''
 
-    spectraNames = sorted([spectrumName for spectrumName in group.keys() if spectrumName != 'Sum'],
+    spectraNames = sorted([spectrumName for spectrumName in list(group.keys()) if spectrumName != 'Sum'],
                                            key = lambda spectrumName: int(spectrumName[9:]))
     attrAvgs = {}
 
     for spectrumName in spectraNames:
         spectrum = group[spectrumName]
 
-        for attrName in spectrum.attrs.keys():
+        for attrName in list(spectrum.attrs.keys()):
             attrVal = spectrum.attrs[attrName]
 
             if type(attrVal) in [int, float]:
 
-                if attrName in attrAvgs.keys():
+                if attrName in list(attrAvgs.keys()):
                     attrAvgs[attrName].append(attrVal)
 
                 else:
                     attrAvgs[attrName] = [attrVal]
 
-    for attrName in attrAvgs.keys():
+    for attrName in list(attrAvgs.keys()):
         attrAvgs[attrName] = np.average(np.array(attrAvgs[attrName]))
 
     group.attrs.update(attrAvgs)
@@ -2427,7 +2431,7 @@ def calcAllPeakAverages(outputFileName, groupAvgs = True, histAvgs = True, singl
 
     peakAvgStart = time.time()
 
-    print 'Collecting peak averages...'
+    print('Collecting peak averages...')
 
     with h5py.File(outputFileName) as opf:
 
@@ -2441,7 +2445,7 @@ def calcAllPeakAverages(outputFileName, groupAvgs = True, histAvgs = True, singl
                 if histAvgs == True:
 
                     histBins = gNPoMs['%s/Histogram data/Binned y data' % npType]
-                    binNames = sorted(histBins.keys(), key = lambda binName: int(binName[4:]))
+                    binNames = sorted(list(histBins.keys()), key = lambda binName: int(binName[4:]))
 
                     if singleBin == False:
 
@@ -2463,16 +2467,16 @@ def calcAllPeakAverages(outputFileName, groupAvgs = True, histAvgs = True, singl
                     calcGroupAttrAvgs(gSpectra)
 
             except Exception as e:
-                print 'Peak data collection failed for %s because %s' % (npType, e)
+                print('Peak data collection failed for %s because %s' % (npType, e))
 
 
     peakAvgEnd = time.time()
     timeElapsed = peakAvgEnd - peakAvgStart
 
-    print '\tPeak averages collected in %s seconds\n' % timeElapsed
+    print('\tPeak averages collected in %s seconds\n' % timeElapsed)
 
 def analyseRepresentative(outputFileName, peakFindMidpoint = 680, npTypes = 'all'):
-    print 'Collecting representative spectrum info...'
+    print('Collecting representative spectrum info...')
 
     with h5py.File(outputFileName) as opf:
 
@@ -2486,18 +2490,18 @@ def analyseRepresentative(outputFileName, peakFindMidpoint = 680, npTypes = 'all
                 gHist = gNPoMs['%s/Histogram data' % npType]
 
             except:
-                print 'Data not found for %s' % npType
+                print('Data not found for %s' % npType)
                 continue
 
             cmPeakPos = gHist.attrs['Average resonance']
             histBins = gHist['Binned y data']
-            binNames = histBins.keys()
+            binNames = list(histBins.keys())
             biggestBinName = binNames[np.array([len(histBins[binName]) for binName in binNames]).argmax()]
             avgBinNames = [binName for binName in binNames if
                            histBins[binName].attrs['Bin start (nm)'] < cmPeakPos < histBins[binName].attrs['Bin end (nm)']]
 
-            print '\t%s' % npType
-            print '\t\tBin with largest population:', biggestBinName
+            print('\t%s' % npType)
+            print('\t\tBin with largest population:', biggestBinName)
 
             for binName in binNames:
 
@@ -2512,12 +2516,12 @@ def analyseRepresentative(outputFileName, peakFindMidpoint = 680, npTypes = 'all
                 except Exception as e:
 
                     if str(e) == 'arrays used as indices must be of integer (or boolean) type':
-                          print '\t\t%s empty; analysis failed' % binName
+                          print('\t\t%s empty; analysis failed' % binName)
 
                     else:
-                        print '\t\t%s analysis failed because %s' % (binName, e)
+                        print('\t\t%s analysis failed because %s' % (binName, e))
 
-            if 'Modal representative spectrum' in gHist.keys():
+            if 'Modal representative spectrum' in list(gHist.keys()):
                 del gHist['Modal representative spectrum']
 
             gHist['Modal representative spectrum'] = histBins[biggestBinName]['Sum']
@@ -2531,13 +2535,13 @@ def analyseRepresentative(outputFileName, peakFindMidpoint = 680, npTypes = 'all
                 else:
                     n = ' %s' % n
 
-                if 'Average representative spectrum%s' % n in gHist.keys():
+                if 'Average representative spectrum%s' % n in list(gHist.keys()):
                     del gHist['Average representative spectrum%s' % n]
 
                 gHist['Average representative spectrum%s' % n] = histBins[binName]['Sum']
                 gHist['Average representative spectrum%s' % n].attrs.update(histBins[binName]['Sum'].attrs)
 
-    print '\n\tRepresentative spectrum info collected\n'
+    print('\n\tRepresentative spectrum info collected\n')
 
 def doStats(outputFileName, closeFigures = True, stacks = True, hist = True, allHists = True, irThreshold = 8,
             minBinFactor = 5, intensityRatios = False, npomTypes = 'all', peakAvgs = True, analRep = True,
@@ -2581,9 +2585,9 @@ def fitAllSpectra(rootDir, outputFileName, npSize = 80, summaryAttrs = False, fi
     #if last == 0:
     #    last = len(yData)
 
-    print 'Beginning fit procedure...'
+    print('Beginning fit procedure...')
     if pl == True:
-        print '\tPL Fit uses spo.minimize, so this will take a while'
+        print('\tPL Fit uses spo.minimize, so this will take a while')
 
     with h5py.File(outputFileName, 'a') as opf:
         gAllRaw = opf.create_group('All Spectra (Raw)')
@@ -2649,26 +2653,26 @@ def fitAllSpectra(rootDir, outputFileName, npSize = 80, summaryAttrs = False, fi
                     gAlignedRaw = gAligned.create_group('Raw')
                     gAlignedNorm = gAligned.create_group('Normalised')
             except:
-                print 'Misaligned particles not recorded'
+                print('Misaligned particles not recorded')
 
         if len(yData) > 2500:
-            print '\tAbout to fit %s spectra. This may take a while...' % len(yData)
+            print('\tAbout to fit %s spectra. This may take a while...' % len(yData))
 
-        nummers = range(5, 101, 5)
+        nummers = list(range(5, 101, 5))
         totalFitStart = time.time()
-        print '\n0% complete'
+        print('\n0% complete')
 
 
         for n, spectrum in enumerate(yData):
             nn = n # Keeps track of our progress through our list of spectra
             n = n + first # For correlation with particle groups in original dataset
-            #print nn, n
+            #print(nn, n)
 
-            if int(100 * nn / len(yData[:])) in nummers:
+            if int(old_div(100 * nn, len(yData[:]))) in nummers:
                 currentTime = time.time() - totalFitStart
-                mins = int(currentTime / 60)
-                secs = (np.round((currentTime % 60)*100))/100
-                print '%s%% (%s spectra) analysed in %s min %s sec' % (nummers[0], nn, mins, secs)
+                mins = int(old_div(currentTime, 60))
+                secs = old_div((np.round((currentTime % 60)*100)),100)
+                print('%s%% (%s spectra) analysed in %s min %s sec' % (nummers[0], nn, mins, secs))
                 nummers = nummers[1:]
 
             spectrumName = 'Spectrum %s' % n
@@ -2717,7 +2721,7 @@ def fitAllSpectra(rootDir, outputFileName, npSize = 80, summaryAttrs = False, fi
 
                 except Exception as e:
 
-                    print 'DF %s failed because %s' % (spectrumName, e)
+                    print('DF %s failed because %s' % (spectrumName, e))
                     gAllRaw[spectrumName].attrs['Failure reason'] = str(e)
                     gAllRaw[spectrumName].attrs['wavelengths'] = gAllRaw['Spectrum %s' % first].attrs['wavelengths']
                     gFailed[spectrumName] = gAllRaw[spectrumName]
@@ -2736,7 +2740,7 @@ def fitAllSpectra(rootDir, outputFileName, npSize = 80, summaryAttrs = False, fi
 
                     except Exception as e:
 
-                        print '%s failed because %s' % (plSpecName, e)
+                        print('%s failed because %s' % (plSpecName, e))
                         gAllPl[plSpecName].attrs['Failure reason'] = str(e)
                         gAllPl[plSpecName].attrs['wavelengths'] = gAllPl['PL Spectrum %s' % first].attrs['wavelengths']
                         gFailedPl[plSpecName] = gAllRaw[plSpecName]
@@ -2746,7 +2750,7 @@ def fitAllSpectra(rootDir, outputFileName, npSize = 80, summaryAttrs = False, fi
                         plSpecAttrs = {key : 'N/A' for key in plMetadataKeys}
                         continue
 
-            if ['Raw data'] in specAttrs.keys():
+            if ['Raw data'] in list(specAttrs.keys()):
                 del specAttrs['Raw data']
 
             gAllRaw[spectrumName].attrs.update(specAttrs)
@@ -2755,25 +2759,25 @@ def fitAllSpectra(rootDir, outputFileName, npSize = 80, summaryAttrs = False, fi
                 gAllPl[plSpecName].attrs.update(plSpecAttrs)
 
             if summaryAttrs:
-                if 'Misaligned particle numbers' in summaryAttrs.keys():
+                if 'Misaligned particle numbers' in list(summaryAttrs.keys()):
                     if n in summaryAttrs['Misaligned particle numbers']:
                         gMisaligned[spectrumName] = gAllRaw[spectrumName]
                         gMisaligned[spectrumName].attrs.update(gAllRaw[spectrumName].attrs)
 
                     else:
-                        if 'Aligned NPoMs' in gNPoMs.keys() and 'Spectrum %s' % n in gAllNPoMsNorm.keys():
+                        if 'Aligned NPoMs' in list(gNPoMs.keys()) and 'Spectrum %s' % n in list(gAllNPoMsNorm.keys()):
                             gAlignedRaw[spectrumName] = gAllRaw[spectrumName]
                             gAlignedRaw[spectrumName].attrs.update(gAllRaw[spectrumName].attrs)
 
                             gAlignedNorm[spectrumName] = gAllNPoMsNorm[spectrumName]
                             gAlignedNorm[spectrumName].attrs.update(gAllNPoMsNorm[spectrumName].attrs)
                 else:
-                        if 'Aligned NPoMs' in gNPoMs.keys() and 'Spectrum %s' % n in gAllNPoMsNorm.keys():
-                            gAlignedRaw[spectrumName] = gAllRaw[spectrumName]
-                            gAlignedRaw[spectrumName].attrs.update(gAllRaw[spectrumName].attrs)
+                    if 'Aligned NPoMs' in list(gNPoMs.keys()) and 'Spectrum %s' % n in list(gAllNPoMsNorm.keys()):
+                        gAlignedRaw[spectrumName] = gAllRaw[spectrumName]
+                        gAlignedRaw[spectrumName].attrs.update(gAllRaw[spectrumName].attrs)
 
-                            gAlignedNorm[spectrumName] = gAllNPoMsNorm[spectrumName]
-                            gAlignedNorm[spectrumName].attrs.update(gAllNPoMsNorm[spectrumName].attrs)
+                        gAlignedNorm[spectrumName] = gAllNPoMsNorm[spectrumName]
+                        gAlignedNorm[spectrumName].attrs.update(gAllNPoMsNorm[spectrumName].attrs)
 
             if False in [specAttrs['NPoM?'], plSpecAttrs['NPoM?']]:
                 gNonPoms[spectrumName] = gAllRaw[spectrumName]
@@ -2797,14 +2801,14 @@ def fitAllSpectra(rootDir, outputFileName, npSize = 80, summaryAttrs = False, fi
                     gAllNPoMsPl[plSpecName].attrs.update(gAllPl[plSpecName].attrs)
 
                     if gAllPl[plSpecName].attrs['Fit'] != 'N/A' and abs(gAllPl[plSpecName].attrs['Fit'].max()) > 1:
-                        gAllNPoMsPlNorm[plSpecName] = gAllPl[plSpecName][()] / gAllPl[plSpecName].attrs['Fit'][()].max()
+                        gAllNPoMsPlNorm[plSpecName] = old_div(gAllPl[plSpecName][()], gAllPl[plSpecName].attrs['Fit'][()].max())
                         gAllNPoMsPlNorm[plSpecName].attrs.update(gAllPl[plSpecName].attrs)
-                        gAllNPoMsPlNorm[plSpecName].attrs['Peak Heights'] = gAllPl[plSpecName].attrs['Peak Heights'][()] / gAllPl[plSpecName].attrs['Fit'][()].max()
+                        gAllNPoMsPlNorm[plSpecName].attrs['Peak Heights'] = old_div(gAllPl[plSpecName].attrs['Peak Heights'][()], gAllPl[plSpecName].attrs['Fit'][()].max())
 
                     else:
-                        gAllNPoMsPlNorm[plSpecName] = gAllPl[plSpecName][()] / gAllPl[plSpecName][()].max()
+                        gAllNPoMsPlNorm[plSpecName] = old_div(gAllPl[plSpecName][()], gAllPl[plSpecName][()].max())
                         gAllNPoMsPlNorm[plSpecName].attrs.update(gAllPl[plSpecName].attrs)
-                        gAllNPoMsPlNorm[plSpecName].attrs['Peak Heights'] = gAllPl[plSpecName].attrs['Peak Heights'][()] / gAllPl[plSpecName][()].max()
+                        gAllNPoMsPlNorm[plSpecName].attrs['Peak Heights'] = old_div(gAllPl[plSpecName].attrs['Peak Heights'][()], gAllPl[plSpecName][()].max())
 
                 if specAttrs['Double Peak?'] == True:
                     gDoublesRaw[spectrumName] = gAllNPoMsRaw[spectrumName]
@@ -2878,16 +2882,16 @@ def fitAllSpectra(rootDir, outputFileName, npSize = 80, summaryAttrs = False, fi
                         gIdealPlNorm[plSpecName].attrs.update(gAllNPoMsPlNorm[plSpecName].attrs)
 
     currentTime = time.time() - totalFitStart
-    mins = int(currentTime / 60)
-    secs = (np.round((currentTime % 60)*100))/100
-    print '100%% (%s spectra) analysed in %s min %s sec\n' % (last, mins, secs)
+    mins = int(old_div(currentTime, 60))
+    secs = old_div((np.round((currentTime % 60)*100)),100)
+    print('100%% (%s spectra) analysed in %s min %s sec\n' % (last, mins, secs))
 
     if stats == True:
         doStats(outputFileName, closeFigures = closeFigures, peakFindMidpoint = peakFindMidpoint, pl = pl, npomTypes = npomTypes)
 
     absoluteEndTime = time.time()
     timeElapsed = absoluteEndTime - absoluteStartTime
-    mins = int(timeElapsed / 60)
+    mins = int(old_div(timeElapsed, 60))
     secs = int(np.round(timeElapsed % 60))
 
     printEnd()
@@ -2897,24 +2901,24 @@ def fitAllSpectra(rootDir, outputFileName, npSize = 80, summaryAttrs = False, fi
             gFailed = opf['Failed Spectra']
 
             if len(gFailed) == 1:
-                print '\nPhew... finished in %s min %s sec with only %s failure' % (mins, secs, len(gFailed))
+                print('\nPhew... finished in %s min %s sec with only %s failure' % (mins, secs, len(gFailed)))
 
             elif len(gFailed) > len(gAllRaw) * 2:
-                print '\nHmmm... finished in %s min %s sec but with %s failures and only %s successful fits' % (mins, secs, len(gFailed),
-                                                                                                                len(gAllRaw) - len(gFailed))
+                print('\nHmmm... finished in %s min %s sec but with %s failures and only %s successful fits' % (mins, secs, len(gFailed),
+                                                                                                                len(gAllRaw) - len(gFailed)))
             elif mins > 30:
-                print '\nM8 that took ages. %s min %s sec' % (mins, secs)
+                print('\nM8 that took ages. %s min %s sec' % (mins, secs))
 
             else:
-                print '\nPhew... finished in %s min %s sec with only %s failures' % (mins, secs, len(gFailed))
+                print('\nPhew... finished in %s min %s sec with only %s failures' % (mins, secs, len(gFailed)))
 
         else:
-            print '\nFinished in %s min %s sec. Smooth sailing.' % (mins, secs)
+            print('\nFinished in %s min %s sec. Smooth sailing.' % (mins, secs))
 
-        print ''
+        print('')
 
 if __name__ == '__main__':
-    print '\tFunctions initialised'
+    print('\tFunctions initialised')
     #x, yData, summaryAttrs = retrieveData(os.getcwd())
     #initImg = plotInitStack(x, yData, imgName = 'Initial Stack', closeFigures = True)
     outputFileName = createOutputFile('MultiPeakFitOutput')

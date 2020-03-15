@@ -4,7 +4,9 @@ Created on Wed Jun 11 12:28:18 2014
 
 @author: Richard
 """
+from __future__ import print_function
 
+from builtins import range
 import sys
 try:
     import cv2
@@ -22,13 +24,12 @@ We are using Python %d.%d, so get the corresponding package.
         import traitsui.message
         traitsui.message.error(explanation,"OpenCV Missing", buttons=["OK"])
     except Exception as e:
-        print "uh oh, problem with the message..."
-        print e
+        print("uh oh, problem with the message...")
+        print(e)
         pass
     finally:
         raise ImportError(explanation) 
     
-import cv2.cv
 from nplab.instrument.camera import Camera, CameraParameter
     
 class OpenCVCamera(Camera):
@@ -51,12 +52,12 @@ class OpenCVCamera(Camera):
                     ret, frame = self.cap.read()
                     assert ret, "OpenCV's capture.read() returned False :("
                     if len(frame.shape) == 3:
-                        frame = cv2.cvtColor(frame, cv2.cv.CV_BGR2RGB)
+                        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     return ret, frame
                 except Exception as e:
-                    print "Attempt number {0} failed to capture a frame from the camera!".format(i)
-                    print e
-        print "Camera.raw_snapshot() has failed to capture a frame."
+                    print("Attempt number {0} failed to capture a frame from the camera!".format(i))
+                    print(e)
+        print("Camera.raw_snapshot() has failed to capture a frame.")
         if not suppress_errors:
             raise IOError("Dropped too many frames from camera :(")
         else:
@@ -64,16 +65,16 @@ class OpenCVCamera(Camera):
         
     def get_camera_parameter(self, parameter_name):
         """Get the value of a camera parameter (though you should really use the property)"""
-        return self.cap.get(getattr(cv2.cv,parameter_name))
+        return self.cap.get(getattr(cv2,parameter_name))
     def set_camera_parameter(self, parameter_name, value):
         """Set the value of a camera parameter (though you should really use the property)"""
-        return self.cap.set(getattr(cv2.cv,parameter_name), value)
+        return self.cap.set(getattr(cv2,parameter_name), value)
 
 # Add properties to change the camera parameters, based on OpenCV's parameters.
 # It may be wise not to do this, and to filter them instead...
-for cvname in dir(cv2.cv):
-    if "CV_CAP_PROP_" in cvname:
-        name = cvname.replace("CV_CAP_PROP_","").lower()
+for cvname in dir(cv2):
+    if cvname.startswith("CAP_PROP_"):
+        name = cvname.replace("CAP_PROP_","").lower()
         setattr(OpenCVCamera, 
                 name, 
                 CameraParameter(cvname, doc="the camera property %s" % name))

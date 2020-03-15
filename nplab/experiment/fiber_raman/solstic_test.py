@@ -1,3 +1,4 @@
+from __future__ import print_function
 from nplab.instrument.light_sources.SolsTiS import SolsTiS
 import time
 import numpy as np 
@@ -22,6 +23,6 @@ if __name__ == "__main__":
 		
 		tune(wl,laser)
 		measured = get_wavelength(laser)
-		print wl, measured
+		print(wl, measured)
 
 	# laser.show_gui()

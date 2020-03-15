@@ -11,6 +11,7 @@ There's also some support mechanisms for metadata creation, and the bundling
 of metadata in ArrayWithAttrs objects that include both data and metadata.
 """
 
+from builtins import str
 from nplab.utils.thread_utils import locked_action_decorator, background_action_decorator
 import nplab
 from weakref import WeakSet
@@ -26,7 +27,7 @@ import datetime
 LOGGER = create_logger('Instrument')
 LOGGER.setLevel('INFO')
 
-class Instrument(object, ShowGUIMixin):
+class Instrument(ShowGUIMixin):
     """Base class for all instrument-control classes.
 
     This class takes care of management of instruments, saving data, etc.
@@ -193,9 +194,10 @@ class Instrument(object, ShowGUIMixin):
         data for the spectrometer, including reference/background.  This
         function allows values to be stored in that file."""
         f = self.config_file
-        if name not in f:
-            f.create_dataset(name, data=data ,attrs = attrs)
+        if name in f:
+            try: del f[name]
+            except: 
+                f[name][...] = data
+                f.flush()    
         else:
-            dset = f[name]
-            dset[...] = data
-            f.flush()
+            f.create_dataset(name, data=data ,attrs = attrs)

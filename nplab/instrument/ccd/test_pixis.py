@@ -1,5 +1,7 @@
+from __future__ import print_function
+from __future__ import absolute_import
 
-from pixis import Pixis256EQt
+from .pixis import Pixis256EQt
 import pyqtgraph as pg
 from PyQt5 import QtGui
 import numpy as np 
@@ -13,9 +15,9 @@ def initialize_measurement():
 	return p
 
 def make_app(pixis, refresh_time):
-	print "one"
+	print("one")
 	app = QtGui.QApplication([])
-	print "two"
+	print("two")
 
 	w = QtGui.QWidget()
 	plot = pg.ImageView()

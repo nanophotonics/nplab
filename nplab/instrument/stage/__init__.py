@@ -1,7 +1,13 @@
 """
 Base class and interface for Stages.
 """
+from __future__ import division
+from __future__ import print_function
 
+from builtins import str
+from builtins import zip
+from builtins import range
+from past.utils import old_div
 __author__ = 'alansanders, richardbowman'
 
 import numpy as np
@@ -91,10 +97,16 @@ class Stage(Instrument):
             time.sleep(0.01)
 
     def get_qt_ui(self):
-        if self.unit =='m':
+        if self.unit == 'm':
             return StageUI(self)
-        if self.unit == 'u':
-            return StageUI(self,stage_step_min = 1E-3,stage_step_max = 1000.0,default_step = 1.0)
+        elif self.unit == 'u':
+            return StageUI(self, stage_step_min=1E-3, stage_step_max=1000.0, default_step=1.0)
+        elif self.unit == 'step':
+            return StageUI(self, stage_step_min=1, stage_step_max=1000.0, default_step=1.0)
+        elif self.unit == 'deg':
+            return StageUI(self, stage_step_min=0.1, stage_step_max=360, default_step=1.0)
+        else:
+            self._logger.warn('Tried displaying a GUI for an unrecognised unit: %s' % self.unit)
 
     def get_axis_param(self, get_func, axis=None):
         if axis is None:
@@ -170,7 +182,7 @@ class StageUI(QtWidgets.QWidget, UiTools):
         self.stage = stage
         #self.setupUi(self)
         self.step_size_values = step_size_dict(stage_step_min, stage_step_max,unit = self.stage.unit)
-        self.step_size = [self.step_size_values[self.step_size_values.keys()[0]] for axis in stage.axis_names]
+        self.step_size = [self.step_size_values[list(self.step_size_values.keys())[0]] for axis in stage.axis_names]
         self.update_ui[int].connect(self.update_positions)
         self.update_ui[str].connect(self.update_positions)
         self.create_axes_layout(default_step)
@@ -196,7 +208,18 @@ class StageUI(QtWidgets.QWidget, UiTools):
 #        for axis in axes:
 #            self.move_axis_absolute(0, axis)
 
-    def create_axes_layout(self, default_step=1e-6, stack_multiple_stages='horizontal'):
+    def create_axes_layout(self, default_step=1e-6, arrange_buttons='cross', rows=None):
+        """Layout of the PyQt widgets for absolute and relative movement of all axis
+
+        :param default_step:
+        :param arrange_buttons: either 'cross' or 'stack'. If 'cross', assumes the stages axes are x,y,z movement,
+        placing the arrows in an intuitive cross pattern
+        :param rows: number of rows per column when distributing the QtWidgets
+        :return:
+        """
+        if rows is None:
+            rows = np.ceil(np.sqrt(len(self.stage.axis_names)))
+        rows = int(rows)  # int is needed for the old_div and the modulo operations
 
         uic.loadUi(os.path.join(os.path.dirname(__file__), 'stage.ui'), self)
         self.update_pos_button.clicked.connect(partial(self.update_positions, None))
@@ -206,7 +229,7 @@ class StageUI(QtWidgets.QWidget, UiTools):
         self.set_positions = []
         self.set_position_buttons = []
         for i, ax in enumerate(self.stage.axis_names):
-            col = 4 * (i / 3)
+            col = 4 * (old_div(i, rows))
             position = QtWidgets.QLineEdit('', self)
             position.setReadOnly(True)
             self.positions.append(position)
@@ -221,56 +244,63 @@ class StageUI(QtWidgets.QWidget, UiTools):
             self.set_position_buttons.append(set_position_button)
             # for each stage axis add a label, a field for the current position,
             # a field to set a new position and a button to set a new position ..
-            self.info_layout.addWidget(QtWidgets.QLabel(str(ax), self), i % 3, col)
-            self.info_layout.addWidget(position, i % 3, col + 1)
-            self.info_layout.addWidget(set_position, i % 3, col + 2)
-            self.info_layout.addWidget(set_position_button, i % 3, col + 3)
+            self.info_layout.addWidget(QtWidgets.QLabel(str(ax), self), i % rows, col)
+            self.info_layout.addWidget(position, i % rows, col + 1)
+            self.info_layout.addWidget(set_position, i % rows, col + 2)
+            self.info_layout.addWidget(set_position_button, i % rows, col + 3)
 
-            if i % 3 == 0:
-                group = QtWidgets.QGroupBox('axes {0}'.format(1 + (i / 3)), self)
-                layout = QtWidgets.QGridLayout()
-                layout.setSpacing(3)
-                group.setLayout(layout)
-                self.axes_layout.addWidget(group, 0, i / 3)
-                zero_button = QtWidgets.QPushButton('', self)
-                zero_button.setIcon(QtGui.QIcon(os.path.join(path, 'zero.png')))
-                zero_button.setIconSize(icon_size)
-                zero_button.resize(icon_size)
-                n = len(self.stage.axis_names) - i if len(self.stage.axis_names) - i < 3 else 3
-                axes_set = self.stage.axis_names[i:i + n]
-#                zero_button.clicked.connect(partial(self.zero_all_axes, axes_set))
-                layout.addWidget(zero_button, 1, 1)
+            if i % rows == 0:
+                if arrange_buttons == 'cross':
+                    group = QtWidgets.QGroupBox('axes {0}'.format(1 + (old_div(i, rows))), self)
+                    layout = QtWidgets.QGridLayout()
+                    layout.setSpacing(3)
+                    group.setLayout(layout)
+                    self.axes_layout.addWidget(group, 0, old_div(i, rows))
+                    offset = 0
+                elif arrange_buttons == 'stack':
+                    layout = self.axes_layout
+                    offset = 7 * old_div(i, rows)
+                else:
+                    raise ValueError('Unrecognised arrangment: %s' % arrange_buttons)
 
             step_size_select = QtWidgets.QComboBox(self)
-            step_size_select.addItems(self.step_size_values.keys())
+            step_size_select.addItems(list(self.step_size_values.keys()))
             step_size_select.activated[str].connect(partial(self.on_activated, i))
             step_str = engineering_format(default_step, self.stage.unit)
-            step_index = self.step_size_values.keys().index(step_str)
+            step_index = list(self.step_size_values.keys()).index(step_str)
             step_size_select.setCurrentIndex(step_index)
-            layout.addWidget(QtWidgets.QLabel(str(ax), self), i % 3, 5)
-            layout.addWidget(step_size_select, i % 3, 6)
-            if i % 3 == 0:
+            layout.addWidget(QtWidgets.QLabel(str(ax), self), i % rows, 5 + offset)
+            layout.addWidget(step_size_select, i % rows, 6 + offset)
+            if i % 3 == 0 and arrange_buttons == 'cross':
                 layout.addItem(QtWidgets.QSpacerItem(12, 0), 0, 4)
 
             plus_button = QtWidgets.QPushButton('', self)
             plus_button.clicked.connect(partial(self.move_axis_relative, i, ax, 1))
             minus_button = QtWidgets.QPushButton('', self)
             minus_button.clicked.connect(partial(self.move_axis_relative, i, ax, -1))
-            if i % 3 == 0:
+            if arrange_buttons == 'cross':
+                if i % rows == 0:
+                    plus_button.setIcon(QtGui.QIcon(os.path.join(path, 'right.png')))
+                    minus_button.setIcon(QtGui.QIcon(os.path.join(path, 'left.png')))
+                    layout.addWidget(minus_button, 1, 0)
+                    layout.addWidget(plus_button, 1, 2)
+                elif i % rows == 1:
+                    plus_button.setIcon(QtGui.QIcon(os.path.join(path, 'up.png')))
+                    minus_button.setIcon(QtGui.QIcon(os.path.join(path, 'down.png')))
+                    layout.addWidget(plus_button, 0, 1)
+                    layout.addWidget(minus_button, 2, 1)
+                elif i % rows == 2:
+                    plus_button.setIcon(QtGui.QIcon(os.path.join(path, 'up.png')))
+                    minus_button.setIcon(QtGui.QIcon(os.path.join(path, 'down.png')))
+                    layout.addWidget(plus_button, 0, 3)
+                    layout.addWidget(minus_button, 2, 3)
+            elif arrange_buttons == 'stack':
                 plus_button.setIcon(QtGui.QIcon(os.path.join(path, 'right.png')))
                 minus_button.setIcon(QtGui.QIcon(os.path.join(path, 'left.png')))
-                layout.addWidget(minus_button, 1, 0)
-                layout.addWidget(plus_button, 1, 2)
-            elif i % 3 == 1:
-                plus_button.setIcon(QtGui.QIcon(os.path.join(path, 'up.png')))
-                minus_button.setIcon(QtGui.QIcon(os.path.join(path, 'down.png')))
-                layout.addWidget(plus_button, 0, 1)
-                layout.addWidget(minus_button, 2, 1)
-            elif i % 3 == 2:
-                plus_button.setIcon(QtGui.QIcon(os.path.join(path, 'up.png')))
-                minus_button.setIcon(QtGui.QIcon(os.path.join(path, 'down.png')))
-                layout.addWidget(plus_button, 0, 3)
-                layout.addWidget(minus_button, 2, 3)
+                layout.addWidget(minus_button, i % rows, 0 + offset)
+                layout.addWidget(plus_button, i % rows, 1 + offset)
+            else:
+                raise ValueError('Unrecognised arrangment: %s' % arrange_buttons)
             plus_button.setIconSize(icon_size)
             plus_button.resize(icon_size)
             minus_button.setIconSize(icon_size)
@@ -333,12 +363,12 @@ class PiezoStageUI(StageUI):
         self.set_positions = []
         self.set_position_buttons = []
         for i, ax in enumerate(self.stage.axis_names):
-            col = 4 * (i / 3)
+            col = 4 * (old_div(i, 3))
             if i % 3 == 0:
                 # absolute position for different stages consisting of 3 axes
-                position_widget = XYZPositionWidget(self.stage.max_voltage_levels[i/3],
-                                                    self.stage.max_voltage_levels[i/3+1],
-                                                    self.stage.max_voltage_levels[i/3+2],
+                position_widget = XYZPositionWidget(self.stage.max_voltage_levels[old_div(i,3)],
+                                                    self.stage.max_voltage_levels[old_div(i,3)+1],
+                                                    self.stage.max_voltage_levels[old_div(i,3)+2],
                                                     show_xy_pos=self.show_xy_pos,
                                                     show_z_pos=self.show_z_pos)
                 if self.show_xy_pos:
@@ -351,11 +381,11 @@ class PiezoStageUI(StageUI):
                 self.info_layout.addWidget(position_widget, 0, col,3,1)
 
                 # position control elements for different stages consisting of 3 axes, arranged in a grid layout
-                group = QtWidgets.QGroupBox('stage {0}'.format(1 + (i / 3)), self)
+                group = QtWidgets.QGroupBox('stage {0}'.format(1 + (old_div(i, 3))), self)
                 layout = QtWidgets.QGridLayout()
                 layout.setSpacing(3)
                 group.setLayout(layout)
-                self.axes_layout.addWidget(group, 0, i / 3)
+                self.axes_layout.addWidget(group, 0, old_div(i, 3))
                 zero_button = QtWidgets.QPushButton('', self)
                 zero_button.setIcon(QtGui.QIcon(os.path.join(path, 'zero.png')))
                 zero_button.setIconSize(icon_size)
@@ -382,10 +412,10 @@ class PiezoStageUI(StageUI):
             self.info_layout.addWidget(set_position_button, i % 3, col + 3)
 
             step_size_select = QtWidgets.QComboBox(self)
-            step_size_select.addItems(self.step_size_values.keys())
+            step_size_select.addItems(list(self.step_size_values.keys()))
             step_size_select.activated[str].connect(partial(self.on_activated, i))
             step_str = engineering_format(default_step, self.stage.unit)
-            step_index = self.step_size_values.keys().index(step_str)
+            step_index = list(self.step_size_values.keys()).index(step_str)
             step_size_select.setCurrentIndex(step_index)
             layout.addWidget(QtWidgets.QLabel(str(ax), self), i % 3, 5)
             layout.addWidget(step_size_select, i % 3, 6)
@@ -439,11 +469,11 @@ class PiezoStageUI(StageUI):
         else:
             if self.show_xy_pos:
                 if axis % 3 == 0:
-                    self.position_widgets[axis/3].xy_widget.setValue(piezo_levels[axis],piezo_levels[axis+1])
+                    self.position_widgets[old_div(axis,3)].xy_widget.setValue(piezo_levels[axis],piezo_levels[axis+1])
                 elif axis % 3 == 1:
-                    self.position_widgets[axis/3].xy_widget.setValue(piezo_levels[axis-1],piezo_levels[axis])
+                    self.position_widgets[old_div(axis,3)].xy_widget.setValue(piezo_levels[axis-1],piezo_levels[axis])
             if self.show_z_pos and axis % 3 == 2:
-                self.position_widgets[axis/3].z_bar.setValue(piezo_levels[axis])
+                self.position_widgets[old_div(axis,3)].z_bar.setValue(piezo_levels[axis])
 
 
 
@@ -593,10 +623,10 @@ if __name__ == '__main__':
     from nplab.utils.gui import get_qt_app
 
     stage = DummyStage()
-    print stage.move(2e-6, axis=('x1', 'x2'))
-    print stage.get_position()
-    print stage.get_position('x1')
-    print stage.get_position(['x1', 'y1'])
+    print(stage.move(2e-6, axis=('x1', 'x2')))
+    print(stage.get_position())
+    print(stage.get_position('x1'))
+    print(stage.get_position(['x1', 'y1']))
 
     app = get_qt_app()
     ui = stage.get_qt_ui()

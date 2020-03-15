@@ -1,3 +1,8 @@
+from __future__ import division
+from __future__ import print_function
+from builtins import range
+from builtins import object
+from past.utils import old_div
 __author__ = 'alansanders'
 
 import os
@@ -48,7 +53,7 @@ class HyperspectralImage(object):
         # Other attributes
         self.attrs = dict(scan.attrs)
         if 'num_spectrometers' not in self.attrs:
-            self.attrs['num_spectrometers'] = len([s for s in scan.keys() if 'spectra' in s])
+            self.attrs['num_spectrometers'] = len([s for s in list(scan.keys()) if 'spectra' in s])
 
     # ROI properties
     @property
@@ -83,7 +88,7 @@ class HyperspectralImage(object):
             a = (a - (a.min()+a.max())/2.0)
             self._z_roi = get_roi(a, value[0], value[1])
         else:
-            print 'There is no z dataset'
+            print('There is no z dataset')
     @property
     def wavelength_lims(self):
         return self._wavelength_lims
@@ -102,7 +107,7 @@ class HyperspectralImage(object):
             self._wavelength2_lims = value
             self._wavelength2_roi = get_roi(self.scan['wavelength2'][()], value[0], value[1])
         else:
-            print 'There is no wavelength2 dataset'
+            print('There is no wavelength2 dataset')
     # Axes data properties
     @property
     def x(self):
@@ -130,23 +135,23 @@ class HyperspectralImage(object):
                 a = (a - (a.min()+a.max())/2.0)
             return a
         else:
-            print 'There is no z dataset'
+            print('There is no z dataset')
     @property
     def wavelength(self): return self.scan['wavelength'][self._wavelength_roi]
     @property
-    def energy(self): return 1e9*(h*c/self.wavelength)/e
+    def energy(self): return old_div(1e9*(old_div(h*c,self.wavelength)),e)
     @property
     def wavelength2(self):
         if 'wavelength2' in self.scan:
             return self.scan['wavelength2'][self._wavelength2_roi]
         else:
-            print 'There is no wavelength2 dataset'
+            print('There is no wavelength2 dataset')
     @property
     def energy2(self):
         if 'wavelength2' in self.scan:
-            return 1e9*(h*c/self.wavelength2)/e
+            return old_div(1e9*(old_div(h*c,self.wavelength2)),e)
         else:
-            print 'There is no wavelength2 dataset so cannot return energy2'
+            print('There is no wavelength2 dataset so cannot return energy2')
     # Data properties
     @property
     def spectra(self):
@@ -170,7 +175,7 @@ class HyperspectralImage(object):
             a = np.where(np.isfinite(a), a, 0.0)
             return a
         else:
-            print 'There is no hs_image2 dataset'
+            print('There is no hs_image2 dataset')
 
     def _load_calibrations(self):
         self.fitfunc = lambda x,a,b,c: a*x**2 + b*x + c
@@ -224,7 +229,7 @@ class HyperspectralImage(object):
         spectrum = np.mean(spectra, axis=(0,1))
         if return_patch:
             x, y = (self.x[x_roi], self.y[y_roi])
-            print 'averaged over a %dx%d grid' % (len(x), len(y))
+            print('averaged over a %dx%d grid' % (len(x), len(y)))
             patch = np.array([x.min(), y.min(), x.max()-x.min(), y.max()-y.min()])
             return wavelength, spectrum, patch
         else:
@@ -254,7 +259,7 @@ class HyperspectralImage(object):
             spectra = spectra[axslice,:,:,:]
         h, w, s = spectra.shape
         img = np.zeros((h,w))
-        for pos in product(range(h), range(w)):
+        for pos in product(list(range(h)), list(range(w))):
             i,j = pos
             spectrum = spectra[i,j,:]
             threshold = spectrum < 0.01*spectrum.max()
@@ -345,9 +350,9 @@ class HyperspectralImage(object):
         xo, yo = self._get_offset(wavelength, unit='pixel')
         s = spectra.shape
         #print 'starting data shape:', s
-        s11 = s[0]/2
+        s11 = old_div(s[0],2)
         s12 = s11 + s[0]
-        s21 = s[1]/2
+        s21 = old_div(s[1],2)
         s22 = s21 + s[1]
         # a 1.6 factor is used to go just beyond the physical maximum shift of
         # 50% of the current view
@@ -358,10 +363,10 @@ class HyperspectralImage(object):
         big_img[:] = np.nan
         x_step = self.x[1] - self.x[0]
         x = x_step * np.arange(big_img.shape[0])
-        x -= x[x.size/2]
+        x -= x[old_div(x.size,2)]
         y_step = self.y[1] - self.y[0]
         y = y_step * np.arange(big_img.shape[1])
-        y -= y[y.size/2]
+        y -= y[old_div(y.size,2)]
         for i in range(s[-1]): # for each wavelength (last dimension)
             dx = int(round(xo[i]))
             dy = int(round(yo[i]))

@@ -14,6 +14,8 @@ V1.1
 Michael Leung
 mcleung@stanford.edu
 """
+from __future__ import print_function
+from builtins import object
 DEBUG = False
 
 
@@ -38,11 +40,11 @@ from ctypes import c_long, c_buffer, c_float, windll, pointer
 
 PARENT_DIR = os.path.dirname(os.path.abspath(__file__))
 if DEBUG: 
-    print "Current working directory: ",os.getcwd()
-    print "PyAPT.py file parent directory: ", PARENT_DIR
+    print("Current working directory: ",os.getcwd())
+    print("PyAPT.py file parent directory: ", PARENT_DIR)
     #determine system type by looking at python executable
     #source: https://docs.python.org/2/library/platform.html
-    print "Platform architecture: ",platform.architecture() 
+    print("Platform architecture: ",platform.architecture()) 
         
 
 OS_TYPE = platform.architecture()[0]
@@ -50,10 +52,10 @@ assert(OS_TYPE in ["32bit","64bit"]),"Cannot determine type of operating system 
 DLL_PATH = os.path.normpath('{0}/DLL/{1}/APT.dll'.format(PARENT_DIR,OS_TYPE))
 
 if DEBUG:
-    print "Word length of OS [32/64bit]", OS_TYPE
-    print "APT DLL path:", DLL_PATH
+    print("Word length of OS [32/64bit]", OS_TYPE)
+    print("APT DLL path:", DLL_PATH)
 
-class APTMotor():
+class APTMotor(object):
     def __init__(self, SerialNum=None, HWTYPE=31,blacklash_correction=0.10,minimum_velocity=0.0,acceleration=5.0,max_velocity=10.0):
         '''
         HWTYPE_BSC001		11	// 1 Ch benchtop stepper driver
@@ -81,7 +83,7 @@ class APTMotor():
         self.HWType = c_long(HWTYPE)
         self.blCorr = blacklash_correction #100um backlash correction
         if SerialNum is not None:
-            if DEBUG: print("Serial is", SerialNum)
+            if DEBUG: print(("Serial is", SerialNum))
             self.SerialNum = c_long(SerialNum)
             self.initializeHardwareDevice()
         # TODO : Error reporting to know if initialisation went sucessfully or not.
@@ -113,7 +115,7 @@ class APTMotor():
         '''
         Sets the Serial Number of the specified index
         '''
-        if DEBUG: print("Serial is", SerialNum)
+        if DEBUG: print(("Serial is", SerialNum))
         self.SerialNum = c_long(SerialNum)
         return self.SerialNum.value
 
@@ -123,7 +125,7 @@ class APTMotor():
         You can only get the position of the motor and move the motor after it has been initialised.
         Once initiallised, it will not respond to other objects trying to control it, until released.
         '''
-        if DEBUG: print('initializeHardwareDevice serial', self.SerialNum)
+        if DEBUG: print(('initializeHardwareDevice serial', self.SerialNum))
         result = self.aptdll.InitHWDevice(self.SerialNum)
 
         if result == 0:
@@ -191,7 +193,7 @@ class APTMotor():
         return True
 
     def setVel(self, maxVel):
-        if DEBUG: print('setVel', maxVel)
+        if DEBUG: print(('setVel', maxVel))
         minVel, acc, oldVel = self.getVelocityParameters()
         self.setVelocityParameters(minVel, acc, maxVel)
         return True
@@ -222,7 +224,7 @@ class APTMotor():
 
         position = c_float()
         self.aptdll.MOT_GetPosition(self.SerialNum, pointer(position))
-        if DEBUG: print('getPos ', position.value)
+        if DEBUG: print(('getPos ', position.value))
         return position.value
 
     def mRel(self, relDistance):
@@ -230,7 +232,7 @@ class APTMotor():
         Moves the motor a relative distance specified
         relDistance    float     Relative position desired
         '''
-        if DEBUG: print('mRel ', relDistance, c_float(relDistance))
+        if DEBUG: print(('mRel ', relDistance, c_float(relDistance)))
         if not self.Connected:
             print('Please connect first! Use initializeHardwareDevice')
             #raise Exception('Please connect first! Use initializeHardwareDevice')
@@ -244,7 +246,7 @@ class APTMotor():
         Moves the motor to the Absolute position specified
         absPosition    float     Position desired
         '''
-        if DEBUG: print('mAbs ', absPosition, c_float(absPosition))
+        if DEBUG: print(('mAbs ', absPosition, c_float(absPosition)))
         if not self.Connected:
             raise Exception('Please connect first! Use initializeHardwareDevice')
         absolutePosition = c_float(absPosition)
@@ -258,7 +260,7 @@ class APTMotor():
         relDistance    float     Relative position desired
         moveVel        float     Motor velocity, mm/sec
         '''
-        if DEBUG: print('mcRel ', relDistance, c_float(relDistance), 'mVel', moveVel)
+        if DEBUG: print(('mcRel ', relDistance, c_float(relDistance), 'mVel', moveVel))
         if not self.Connected:
             raise Exception('Please connect first! Use initializeHardwareDevice')
         # Save velocities to reset after move
@@ -276,7 +278,7 @@ class APTMotor():
         absPosition    float     Position desired
         moveVel        float     Motor velocity, mm/sec
         '''
-        if DEBUG: print('mcAbs ', absPosition, c_float(absPosition), 'mVel', moveVel)
+        if DEBUG: print(('mcAbs ', absPosition, c_float(absPosition), 'mVel', moveVel))
         if not self.Connected:
             raise Exception('Please connect first! Use initializeHardwareDevice')
         # Save velocities to reset after move
@@ -293,7 +295,7 @@ class APTMotor():
         Moves the motor a relative distance specified
         relDistance    float     Relative position desired
         '''
-        if DEBUG: print('mbRel ', relDistance, c_float(relDistance))
+        if DEBUG: print(('mbRel ', relDistance, c_float(relDistance)))
         if not self.Connected:
             print('Please connect first! Use initializeHardwareDevice')
             #raise Exception('Please connect first! Use initializeHardwareDevice')
@@ -307,11 +309,11 @@ class APTMotor():
         Moves the motor to the Absolute position specified
         absPosition    float     Position desired
         '''
-        if DEBUG: print('mbAbs ', absPosition, c_float(absPosition))
+        if DEBUG: print(('mbAbs ', absPosition, c_float(absPosition)))
         if not self.Connected:
             raise Exception('Please connect first! Use initializeHardwareDevice')
         if (absPosition < self.getPos()):
-            if DEBUG: print('backlash mAbs', absPosition - self.blCorr)
+            if DEBUG: print(('backlash mAbs', absPosition - self.blCorr))
             self.mAbs(absPosition-self.blCorr)
         self.mAbs(absPosition)
         if DEBUG: print('mbAbs SUCCESS')
@@ -336,7 +338,7 @@ class APTMotor():
 
 
     def stopMove(self):
-        if DEBUG: print("Stopping stage:{}".format(self.SerialNum))
+        if DEBUG: print(("Stopping stage:{}".format(self.SerialNum)))
         if not self.Connected:
             raise Exception("Not connected to the stage")
         else:

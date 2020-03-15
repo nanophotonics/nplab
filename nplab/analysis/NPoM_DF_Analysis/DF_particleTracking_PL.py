@@ -4,7 +4,10 @@ Created on Fri May 05 09:57:21 2017
 
 @author: wmd22
 """
+from __future__ import print_function
 
+from builtins import str
+from builtins import range
 from nplab.instrument.camera.lumenera import LumeneraCamera
 from nplab.instrument.stage.prior import ProScan
 from nplab.instrument.spectrometer.seabreeze import OceanOpticsSpectrometer
@@ -49,12 +52,12 @@ def recenter_particle():
     CWL.move_to_feature(feature, ignore_z_pos = True)
     
 def takePlBg(laserPower):
-    print 'Taking PL Background...'
+    print('Taking PL Background...')
     cube = CubeLaser('COM4')
     shutter = Uniblitz('COM9')
     shutter.open_shutter()
     
-    if 'PL Background' not in wizard.data_file.keys():
+    if 'PL Background' not in list(wizard.data_file.keys()):
         wizard.data_file.create_group('PL Background')
         
     gPlBg = wizard.data_file['PL Background']
@@ -71,7 +74,7 @@ def takePlBg(laserPower):
     shutter.close_shutter()
     cube.close()
     shutter.close()
-    print '\tPL Background successfully measured'
+    print('\tPL Background successfully measured')
 
 def laserOn(laserPower):
     cube = CubeLaser('COM4')
@@ -97,14 +100,14 @@ def df_pl_with_laser_scan(power_iter=1, number_of_iter=1, laser_power=3, number_
     irad_group = wizard.particle_group.create_group('dark field with irradiation')
     
     log = wizard.data_file['nplab_log']
-    lastEventName = sorted(log.keys(), key = lambda event: log[event].attrs['creation_timestamp'])[-1]
+    lastEventName = sorted(list(log.keys()), key = lambda event: log[event].attrs['creation_timestamp'])[-1]
     lastEvent = str(log[lastEventName])
     
     if 'error centering on feature' in lastEvent.lower():
-        print 'Readjusting camera exposure and gain'
+        print('Readjusting camera exposure and gain')
         CWL.camera.exposure = cam_exposure
         CWL.camera.gain = cam_gain
-        print 'Exposure set to %s, gain to %s' % (cam_exposure, cam_gain)
+        print('Exposure set to %s, gain to %s' % (cam_exposure, cam_gain))
         shutter = Uniblitz('COM9')
         shutter.open_shutter()
         shutter.close_shutter()
@@ -120,16 +123,16 @@ def df_pl_with_laser_scan(power_iter=1, number_of_iter=1, laser_power=3, number_
             try:
                 shutter.open_shutter()
             except Exception as e:
-                print e,
-                print 'shutter operation failure'
+                print(e, end=' ')
+                print('shutter operation failure')
         
             try:
                 cube.set_power(laser_power)
                 time.sleep(1.0)
             except Exception as e:
-                print e,
-                print 'laser power write fail'
-            print laser_power
+                print(e, end=' ')
+                print('laser power write fail')
+            print(laser_power)
             for i in range(number_of_spec):
                 dIrad = irad_group.create_dataset(name = 'PL_%s_%s' % (laser_power, i),
                                                   data = spec.read_spectrum(),
@@ -141,9 +144,9 @@ def df_pl_with_laser_scan(power_iter=1, number_of_iter=1, laser_power=3, number_
                 cube.set_power(0)
                 shutter.close_shutter()
             except Exception as e:
-                print e,
-                print 'laser power write fail'
-            print laser_power
+                print(e, end=' ')
+                print('laser power write fail')
+            print(laser_power)
             time.sleep(1) 
         laser_power=laser_power+Increment
     cube.close()

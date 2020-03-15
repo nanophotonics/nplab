@@ -7,7 +7,12 @@ Created on Tue Jul 03 13:04:50 2018
 Gathers Raman data and attributes from directory full of .spc files and turns it into an h5 file'''
 Put this script in the same folder as a list of .spc files (must be exported directly from WiRE at time of measurement), set cwd and run
 """
+from __future__ import division
+from __future__ import print_function
 
+from builtins import range
+from past.utils import old_div
+from builtins import object
 import os
 import spc
 import h5py
@@ -37,7 +42,7 @@ def extractRamanSpc(path, bg_path = False, combine_statics = False):
 
     '''Actual power values for each % laser power in μW. Measured on 09/05/2017.'''
 
-    print '\nGathering .spc (meta)data...\n'
+    print('\nGathering .spc (meta)data...\n')
 
     p532 = { 0.0001 :    0.01,
              0.05   :    4.75,
@@ -84,7 +89,7 @@ def extractRamanSpc(path, bg_path = False, combine_statics = False):
 
         for laserWlKey in laserWlKeys:
 
-            if laserWlKey in f.log_dict.keys():
+            if laserWlKey in list(f.log_dict.keys()):
                 break
 
         laserWl = int(f.log_dict[laserWlKey][7:10]) #Grabs appropriate part of laser wavelength entry from log and converts to integer (must be 3 characters long)
@@ -93,7 +98,7 @@ def extractRamanSpc(path, bg_path = False, combine_statics = False):
 
         for lpKey in lpKeys:
 
-            if lpKey in f.log_dict.keys():
+            if lpKey in list(f.log_dict.keys()):
                 break
 
         try:
@@ -125,7 +130,7 @@ def extractRamanSpc(path, bg_path = False, combine_statics = False):
         metadata = f.__dict__ #Pulls metadata dictionary from spc file for easy access
 
         if absLaserPower != 'Undefined':
-            absRamanIntensities = [(spectrum * 1000) / (absLaserPower * integrationTime * float(accumulations)) for spectrum in ramanIntensities]
+            absRamanIntensities = [old_div((spectrum * 1000), (absLaserPower * integrationTime * float(accumulations))) for spectrum in ramanIntensities]
 
         else:
             absRamanIntensities = ['N/A'] * nScans
@@ -146,7 +151,7 @@ def extractRamanSpc(path, bg_path = False, combine_statics = False):
 
 def populateH5(spectra, h5File):
 
-    print '\nPopulating h5 file...'
+    print('\nPopulating h5 file...')
 
     with h5py.File(h5File) as f:
         gSpectra = f.create_group('Spectra')
@@ -176,10 +181,10 @@ def populateH5(spectra, h5File):
             yAbs = spectrum.absRamanIntensities
 
             if spectrum.nScans == 1:
-                yNorm = spectrum.ramanIntensities / spectrum.ramanIntensities.max()
+                yNorm = old_div(spectrum.ramanIntensities, spectrum.ramanIntensities.max())
 
             else:
-                yNorm = np.array([yData/yData.max() for yData in spectrum.ramanIntensities])
+                yNorm = np.array([old_div(yData,yData.max()) for yData in spectrum.ramanIntensities])
 
             dRaw = gSpectrum.create_dataset('Raman (cts)', data = yRaw)
             dRaw.attrs['wavelengths'] = x
@@ -193,7 +198,7 @@ def populateH5(spectra, h5File):
         gAbs = f.create_group('All Abs')
         gNorm = f.create_group('All Norm')
 
-        spectraNames = sorted(f['Spectra'].keys(), key = lambda spectrumName: int(spectrumName.split(':')[0][9:]))
+        spectraNames = sorted(list(f['Spectra'].keys()), key = lambda spectrumName: int(spectrumName.split(':')[0][9:]))
 
         for spectrumName in spectraNames:
             dRaw = f['Spectra'][spectrumName]['Raman (cts)']
@@ -211,33 +216,33 @@ def populateH5(spectra, h5File):
             dNorm.attrs.update(f['Spectra'][spectrumName].attrs)
             dNorm.attrs.update(f['Spectra'][spectrumName]['Raman (normalised)'].attrs)
 
-    print '\th5 file populated'
+    print('\th5 file populated')
 
 def createOutputFile(filename):
 
     '''Auto-increments new filename if file exists'''
 
-    print '\nCreating output file...'
+    print('\nCreating output file...')
 
     outputFile = '%s.h5' % filename
 
     if outputFile in os.listdir('.'):
-        print '\n%s already exists' % outputFile
+        print('\n%s already exists' % outputFile)
         n = 0
         outputFile = '%s_%s.h5' % (filename, n)
 
         while outputFile in os.listdir('.'):
-            print '%s already exists' % outputFile
+            print('%s already exists' % outputFile)
             n += 1
             outputFile = '%s_%s.h5' % (filename, n)
 
-    print '\tOutput file %s created' % outputFile
+    print('\tOutput file %s created' % outputFile)
     return outputFile
 
 if __name__ == '__main__':
 
     rootDir = os.getcwd()
-    print 'Extracting data from %s' % rootDir
+    print('Extracting data from %s' % rootDir)
     spectra = extractRamanSpc(rootDir)
     dirName = '%s Raman Data' % rootDir.split('\\')[-1]
     h5FileName = createOutputFile(dirName)

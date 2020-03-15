@@ -12,9 +12,13 @@ Just place in the same folder as hdf5 data and run - it will auto-detect files w
 Output summary file should be identical to output of old view_spectra code - can be used directly with usual Igor multipeakfitBeta05d code.
 
 """
+from __future__ import division
+from __future__ import print_function
 
+from builtins import range
+from past.utils import old_div
 if __name__ == '__main__':
-    print 'Importing modules'
+    print('Importing modules')
 
 import traits
 from traits.api import HasTraits, Property, Instance, Float, Range, Array, Int, String, Button, Bool, on_trait_change
@@ -35,8 +39,8 @@ import os
 import re
 
 if __name__ == '__main__':
-    print 'Modules imported\n'
-    print 'Initialising...\n'
+    print('Modules imported\n')
+    print('Initialising...\n')
 
 class OverviewViewer(HasTraits):
     figure = Instance(Figure, ())
@@ -77,7 +81,7 @@ class OverviewViewer(HasTraits):
                 g = self._hdf5file["ParticleScannerScan_%d/" % (self.group_number)]
             
             except Exception as e:
-                print "error switching to ParticleScannerScan_%d/\n" % (self.group_number)
+                print("error switching to ParticleScannerScan_%d/\n" % (self.group_number))
                 raise e
             
             image = g["reconstructed_tiles" % self.scan_number]
@@ -85,7 +89,7 @@ class OverviewViewer(HasTraits):
             self.replot(image)#, image2)
         
         except:
-            print "out of range :("
+            print("out of range :(")
     
     def replot(self, image):  #, image2):
         #plot the image on the left
@@ -144,14 +148,14 @@ class ScanViewer(HasTraits):
     @on_trait_change("use_reference,background_subtract,scan_number,group_number")
     
     def refresh_data(self):
-        print "switching to scan %d" % self.scan_number
+        print("switching to scan %d" % self.scan_number)
         
         try:
             g = self._hdf5file["ParticleScannerScan_%d/Particle_%d" % (self.group_number,self.scan_number)]
         
         except Exception as e:
-            print "Error switching to ParticleScannerScan_%d/Particle_%d\n" % (self.group_number,self.scan_number)
-            print e
+            print("Error switching to ParticleScannerScan_%d/Particle_%d\n" % (self.group_number,self.scan_number))
+            print(e)
             return False
         
         image = g['CWL.thumb_image_0']
@@ -172,7 +176,7 @@ class ScanViewer(HasTraits):
             background = np.ma.masked_array(background, mask=mask)
             spectrum /= abs(reference - background)+0.001
         
-        self.replot(image[image.shape[0]/2-50:image.shape[0]/2+50,image.shape[1]/2-50:image.shape[1]/2+50,], zscan, wavelengths, spectrum)
+        self.replot(image[old_div(image.shape[0],2)-50:old_div(image.shape[0],2)+50,old_div(image.shape[1],2)-50:old_div(image.shape[1],2)+50,], zscan, wavelengths, spectrum)
     
     def replot(self, image, zscan, wavelengths, spectrum):
         fig = self.figure
@@ -232,8 +236,8 @@ def fit_gaussians_to_z_scan(z_scan, z=None, background=None, threshold=0.2, smoo
             z = z_scan.attrs.get('dz') #this should work for datasets in an HDF5 file
         
         except:
-            print "Warning: no valid z positions were found, using indices instead"
-            z = range(z_scan.shape[0]) #fall back to indices
+            print("Warning: no valid z positions were found, using indices instead")
+            z = list(range(z_scan.shape[0])) #fall back to indices
     
     if background is None: #similarly, get a head-start on the background from metadata
         
@@ -246,22 +250,22 @@ def fit_gaussians_to_z_scan(z_scan, z=None, background=None, threshold=0.2, smoo
     Particle_array = np.array(z_scan, dtype = np.float) - background #first prepare background-subtracted, thresholded arrays
     scan_s = scipy.ndimage.filters.gaussian_filter1d(Particle_array, smoothing_width, axis = 0, mode = 'nearest')
     scan_s[scan_s < 0.] = 0. #smooth and remove negative points so that we don't get NaNs
-    scan_t = (scan_s - scan_s.min(axis = 0)) / (scan_s.max(axis = 0)-scan_s.min(axis = 0)) - threshold
+    scan_t = old_div((scan_s - scan_s.min(axis = 0)), (scan_s.max(axis = 0)-scan_s.min(axis = 0))) - threshold
     scan_t[scan_t < 0.] = 0. #background-subtracted, thresholded version of Particle_array - used for finding the peak
     #Now the fitting starts: find the centroid and width of the distribution in Z (the threshold helps avoid bias from background):
-    peak_z = np.sum(scan_t * z[:, np.newaxis], axis = 0) / np.sum(scan_t, axis = 0)#the z[np.newaxis,:] is "numpy broadcasting", google it!
-    standard_deviation = np.sqrt(np.sum(scan_s * (z[:, np.newaxis] - peak_z) ** 2, axis = 0) / np.sum(scan_s, axis = 0)) 
+    peak_z = old_div(np.sum(scan_t * z[:, np.newaxis], axis = 0), np.sum(scan_t, axis = 0))#the z[np.newaxis,:] is "numpy broadcasting", google it!
+    standard_deviation = np.sqrt(old_div(np.sum(scan_s * (z[:, np.newaxis] - peak_z) ** 2, axis = 0), np.sum(scan_s, axis = 0))) 
     #Next, construct a Gaussian in Z with the right parameters and use linear least squares to fit offset/peak to the data
-    gaussians = np.exp(-(z[:, np.newaxis] - peak_z[np.newaxis, :]) ** 2 / (2 * standard_deviation ** 2))
+    gaussians = np.exp(old_div(-(z[:, np.newaxis] - peak_z[np.newaxis, :]) ** 2, (2 * standard_deviation ** 2)))
     var_x = np.var(gaussians, axis = 0)
     mean_x = np.mean(gaussians, axis = 0)
     var_y = np.var(Particle_array, axis = 0)
     mean_y = np.mean(Particle_array, axis = 0)
     covariance = np.mean((gaussians - mean_x) * (Particle_array - mean_y), axis = 0)
-    slopes = covariance / var_x
+    slopes = old_div(covariance, var_x)
     intercepts = mean_y - slopes * mean_x
     peak_height = slopes
-    r = covariance / np.sqrt(var_x * var_y)
+    r = old_div(covariance, np.sqrt(var_x * var_y))
     return peak_height, peak_z, standard_deviation, background + intercepts, r
 
 def extract_all_spectra(datafile, outputfile):
@@ -273,14 +277,14 @@ def extract_all_spectra(datafile, outputfile):
     for n, group_name in enumerate(group_names):
         data_group = datafile[group_name]
         save_group = outputfile.require_group('particleScanSummaries/scan%s' % n)
-        Particle_groups = [group for key, group in data_group.iteritems() if "Particle_" in key] #filter out scan groups from overview images, etc.
-                      
+        Particle_groups = [group for key, group in list(data_group.items()) if "Particle_" in key] #filter out scan groups from overview images, etc.
+
         if len(Particle_groups) > 0:
             shape = (len(Particle_groups), Particle_groups[0]['alinger.z_scan_0'].attrs.get('wavelengths').shape[0])
             #these datasets will save the fit parameters to each spectrum in the current scan
             spectra = save_group.create_dataset("spectra", shape)
             
-            for name, value in Particle_groups[0]['alinger.z_scan_0'].attrs.iteritems():
+            for name, value in list(Particle_groups[0]['alinger.z_scan_0'].attrs.items()):
                 spectra.attrs.create(name, value)
             
             peak_z = save_group.create_dataset("peak_z", shape)
@@ -294,7 +298,7 @@ def extract_all_spectra(datafile, outputfile):
                     spectra[i, :], peak_z[i, :], standard_deviation[i, :], fitted_background[i, :], correlation_coefficient[i, :] = fit_gaussians_to_z_scan(data_group['Particle_%d/alinger.z_scan_0' % i])
                 
                 except Exception as e:
-                    print "Failed to get alinger.z_scan_0 in group %s." % group_name
+                    print("Failed to get alinger.z_scan_0 in group %s." % group_name)
                     raise e
 
 if __name__ == "__main__":
@@ -304,7 +308,7 @@ if __name__ == "__main__":
         if re.match('\d\d\d\d-[01]\d-[0123]\d.h5', filename):#Finds first instance of file with name in "yyyy-mm-dd.h5" format
             break
     
-    print 'About to extract data from %s\n' % filename
+    print('About to extract data from %s\n' % filename)
     
     file = h5py.File(filename, mode = "r")
     sv = ScanViewer(file)
@@ -315,4 +319,4 @@ if __name__ == "__main__":
     extract_all_spectra(file, output_file)
     output_file.close()
     
-    print '\nData extracted successfully (ignore the sad face)'
+    print('\nData extracted successfully (ignore the sad face)')

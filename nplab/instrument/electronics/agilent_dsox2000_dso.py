@@ -1,3 +1,5 @@
+from __future__ import print_function
+from builtins import object
 __author__ = 'alansanders'
 
 from nplab.instrument.visa_instrument import VisaInstrument, queried_property, queried_channel_property
@@ -180,8 +182,8 @@ class AgilentDsoUI(QtWidgets.QWidget, UiTools):
 if __name__ == '__main__':
     dso = AgilentDSO()
     dso.trigger_sweep = 'auto'
-    print dso.time_range
-    print dso.channel1.range
+    print(dso.time_range)
+    print(dso.channel1.range)
     dso.capture()
     t,v = dso.read_trace(1)
 
@@ -189,9 +191,9 @@ if __name__ == '__main__':
     #plt.plot(1e3*t,v)
     #plt.show()
 
-    print dso.check_trigger(force=True)
+    print(dso.check_trigger(force=True))
     dso.single_shot()
-    print dso.check_trigger(force=False)
+    print(dso.check_trigger(force=False))
     while not dso.check_trigger(force=False):
         continue
-    print 'triggered'
+    print('triggered')
