@@ -323,7 +323,7 @@ def consoliData(rootDir):
                               key = lambda groupName: len(ipf[groupName].keys()))[::-1]
 
         if len(allScans) <= 1:
-            print(() 'No extra scans to consolidate')
+            print('No extra scans to consolidate')
             return
 
         for scanName in allScans:
