@@ -965,7 +965,7 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
                         powerDir = r'C:\Users\car72\University Of Cambridge\OneDrive - University Of Cambridge\Documents\PhD\Data\NP\Porphyrins\NPoM\DF\2019-09-18 Zn-MTPP Cl 48 h 80 nm + PL'
                         os.chdir(powerDir)
                         h5File = '2019-09-18.h5'
-                        with h5py.File(h5File) as powerFile:
+                        with h5py.File(h5File, 'r') as powerFile:
                             plBgDict = collectPlBackgrounds(powerFile)
 
                         os.chdir(rootDir)

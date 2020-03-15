@@ -241,7 +241,7 @@ def retrieveData(directory, summaryNameFormat = 'summary', first = 0, last = 0, 
     else:
         print('Retrieving sample attributes...')
 
-    with h5py.File(summaryFile) as f:#opens summary file
+    with h5py.File(summaryFile, 'a') as f:#opens summary file
 
         mainDatasetName = sorted([scan for scan in list(f['particleScanSummaries/'].keys())],
                            key = lambda scan: len(f['particleScanSummaries/'][scan]['spectra']))[-1]#finds largest datset. Useful if you had to stop and start your particle tracking before leaving it overnight
@@ -311,7 +311,7 @@ def retrievePlData(directory, summaryNameFormat = 'summary', first = 0, last = 0
 
     print('Retrieving PL data...')
 
-    with h5py.File(summaryFile) as f:#Opens summary file
+    with h5py.File(summaryFile, 'a') as f:#Opens summary file
 
         gPlName = sorted([scan for scan in list(f['particleScanSummaries/'].keys())],
                            key = lambda scan: len(f['particleScanSummaries/'][scan]['spectra']))[-1]#finds largest datset. Useful if you had to stop and start your particle tracking before leaving it overnight
@@ -1333,7 +1333,7 @@ def plotAllStacks(outputFileName, fullSort = False, closeFigures = True, vThresh
 
     print('Plotting stacked spectral maps...')
 
-    with h5py.File(outputFileName) as opf:
+    with h5py.File(outputFileName, 'a') as opf:
         date = opf['All Spectra (Raw)'].attrs['Date measured']
 
         for groupName in list(opf['NPoMs'].keys()):
@@ -1456,7 +1456,7 @@ def plotHistogram(outputFileName, npomType = 'All NPoMs', startWl = 450, endWl =
     print('Preparing to create DF histogram...')
     print('\tFilter: %s' % npomType)
 
-    with h5py.File(outputFileName) as opf:
+    with h5py.File(outputFileName, 'a') as opf:
         date = opf['All Spectra (Raw)'].attrs['Date measured']
         gSpectra = opf['NPoMs/%s/Normalised' % npomType]
         gSpecRaw = opf['NPoMs/%s/Raw' % npomType]
@@ -1584,7 +1584,7 @@ def plotHistogram(outputFileName, npomType = 'All NPoMs', startWl = 450, endWl =
 
             if not npomType.endswith('.png'):
                 npomType += '.png'
-
+            
             fig.savefig('Histograms/DF %s' % (npomType), bbox_inches = 'tight')
 
             if closeFigures == True:
@@ -1621,7 +1621,7 @@ def plotHistAndFit(outputFileName, npomType = 'All NPoMs', startWl = 450, endWl 
     #    print '\tHistogram plot failed for %s' % npomType
     #    return
 
-    with h5py.File(outputFileName) as opf:
+    with h5py.File(outputFileName, 'a') as opf:
 
         if 'Histogram data' in opf['NPoMs/%s' % npomType]:
             del opf['NPoMs/%s/Histogram data' % npomType]
@@ -1682,7 +1682,7 @@ def plotPlHistogram(outputFileName, npomType = 'All NPoMs', startWl = 504, endWl
     print('Preparing to create PL histogram...')
     print('\tFilter: %s' % npomType)
 
-    with h5py.File(outputFileName) as opf:
+    with h5py.File(outputFileName, 'a') as opf:
         date = opf['All Spectra (Raw)'].attrs['Date measured']
         gSpectra = opf['NPoMs/%s/PL Data (Normalised)' % npomType]
         gSpecRaw = opf['NPoMs/%s/PL Data' % npomType]
@@ -1935,7 +1935,7 @@ def plotPlHistAndFit(outputFileName, npomType = 'All NPoMs', startWl = 504, endW
     #    print '\tHistogram plot failed for %s' % npomType
     #    return
 
-    with h5py.File(outputFileName) as opf:
+    with h5py.File(outputFileName, 'a') as opf:
 
         if 'PL Histogram data' in opf['NPoMs/%s' % npomType]:
             del opf['NPoMs/%s/PL Histogram data' % npomType]
@@ -1990,7 +1990,7 @@ def plotHistComb1D(outputFileName, npomType = 'All NPoMs', dfStartWl = 450, dfEn
                    plEndWl = 900, binNumber = 80, plot = True, minBinFactor = 5, closeFigures = False,
                    irThreshold = 8, cmLowLim = 600):
 
-    with h5py.File(outputFileName) as opf:
+    with h5py.File(outputFileName, 'a') as opf:
         date = opf['All Spectra (Raw)'].attrs['Date measured']
 
         print('Collecting DF Histogram data...')
@@ -2164,7 +2164,7 @@ def plotHistComb2D(outputFileName, npomType = 'All NPoMs', dfStartWl = 450, dfEn
                    plEndWl = 900, binNumber = 80, plot = True, minBinFactor = 5, closeFigures = False,
                    irThreshold = 8, cmLowLim = 600):
 
-    with h5py.File(outputFileName) as opf:
+    with h5py.File(outputFileName, 'a') as opf:
 
         dfKeys = ['Coupled Mode', 'Coupled Mode Intensity', 'Weird peak wavelength', 'Weird peak intensity']
         plKeys = ['PL Peaks', 'PL Signal']
@@ -2231,7 +2231,7 @@ def plotIntensityRatios(outputFileName, plotName = 'All NPoMs', dataType = 'Raw'
     else:
         print('Gathering intensity ratiosfor %s, %s...' % (plotName, dataType))
 
-    with h5py.File(outputFileName) as opf:
+    with h5py.File(outputFileName, 'a') as opf:
         date = opf['All Spectra (Raw)'].attrs['Date measured']
         gSpectra = opf['NPoMs/%s/%s' % (plotName, dataType)]
         dataType = dataType.lower()
@@ -2313,7 +2313,7 @@ def plotAllIntensityRatios(outputFileName, closeFigures = True, plot = True):
     print('Plotting all intensity ratios...\n')
     irStart = time.time()
 
-    with h5py.File(outputFileName) as opf:
+    with h5py.File(outputFileName, 'a') as opf:
         plotNames = list(opf['NPoMs'].keys())
 
     for plotName in plotNames:
@@ -2334,7 +2334,7 @@ def visualiseIntensityRatios(outputFileName):
 
     print('Visualising intensity ratios for individual spectra...')
 
-    with h5py.File(outputFileName) as opf:
+    with h5py.File(outputFileName, 'a') as opf:
         gNPoMs = opf['NPoMs/All NPoMs/Raw']
 
         if 'Intensity ratio measurements' in list(opf['NPoMs/All NPoMs'].keys()):
@@ -2433,7 +2433,7 @@ def calcAllPeakAverages(outputFileName, groupAvgs = True, histAvgs = True, singl
 
     print('Collecting peak averages...')
 
-    with h5py.File(outputFileName) as opf:
+    with h5py.File(outputFileName, 'a') as opf:
 
         gNPoMs = opf['NPoMs']
         if npTypes == 'all':
@@ -2478,7 +2478,7 @@ def calcAllPeakAverages(outputFileName, groupAvgs = True, histAvgs = True, singl
 def analyseRepresentative(outputFileName, peakFindMidpoint = 680, npTypes = 'all'):
     print('Collecting representative spectrum info...')
 
-    with h5py.File(outputFileName) as opf:
+    with h5py.File(outputFileName, 'a') as opf:
 
         gNPoMs = opf['NPoMs']
         if npTypes == 'all':
@@ -2896,7 +2896,7 @@ def fitAllSpectra(rootDir, outputFileName, npSize = 80, summaryAttrs = False, fi
 
     printEnd()
 
-    with h5py.File(outputFileName) as opf:
+    with h5py.File(outputFileName, 'a') as opf:
         if 'Failed Spectra' in opf.keys():
             gFailed = opf['Failed Spectra']
 
