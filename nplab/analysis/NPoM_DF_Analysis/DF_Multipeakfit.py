@@ -1429,6 +1429,7 @@ def histyFit(frequencies, bins, nPeaks = 1, xMaxs = [], yMaxs = []):
 
     return resonance, stderr, fwhm, sigma, fit
 
+
 def reduceNoise(y, factor = 10, cutoff = 1500, fs = 60000, pl = False):
 
     if pl == True:
@@ -2892,22 +2893,23 @@ def fitAllSpectra(rootDir, outputFileName, npSize = 80, summaryAttrs = False, fi
     printEnd()
 
     with h5py.File(outputFileName) as opf:
-        gFailed = opf['Failed Spectra']
+        if 'Failed Spectra' in opf.keys():
+            gFailed = opf['Failed Spectra']
 
-        if len(gFailed) == 0:
-            print '\nFinished in %s min %s sec. Smooth sailing.' % (mins, secs)
+            if len(gFailed) == 1:
+                print '\nPhew... finished in %s min %s sec with only %s failure' % (mins, secs, len(gFailed))
 
-        elif len(gFailed) == 1:
-            print '\nPhew... finished in %s min %s sec with only %s failure' % (mins, secs, len(gFailed))
+            elif len(gFailed) > len(gAllRaw) * 2:
+                print '\nHmmm... finished in %s min %s sec but with %s failures and only %s successful fits' % (mins, secs, len(gFailed),
+                                                                                                                len(gAllRaw) - len(gFailed))
+            elif mins > 30:
+                print '\nM8 that took ages. %s min %s sec' % (mins, secs)
 
-        elif len(gFailed) > len(gAllRaw) * 2:
-            print '\nHmmm... finished in %s min %s sec but with %s failures and only %s successful fits' % (mins, secs, len(gFailed),
-                                                                                                            len(gAllRaw) - len(gFailed))
-        elif mins > 30:
-            print '\nM8 that took ages. %s min %s sec' % (mins, secs)
+            else:
+                print '\nPhew... finished in %s min %s sec with only %s failures' % (mins, secs, len(gFailed))
 
         else:
-            print '\nPhew... finished in %s min %s sec with only %s failures' % (mins, secs, len(gFailed))
+            print '\nFinished in %s min %s sec. Smooth sailing.' % (mins, secs)
 
         print ''
 

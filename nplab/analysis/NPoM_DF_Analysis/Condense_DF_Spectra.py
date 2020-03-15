@@ -519,7 +519,7 @@ def extractAllSpectra(rootDir, returnIndividual = False, pl = False, dodgyThresh
                 currentTime = time.time() - scanStart
                 mins = int(currentTime / 60)
                 secs = (np.round((currentTime % 60)*100))/100
-                print '100%% (%s particles) complete in %s min %s sec' % (len(particleGroups), mins, secs)
+                print '100%% (%s particles) complete in %s min %s sec' % (nn, mins, secs)
                 percentDefocused = 100 * len(dodgyParticles) / len(spectra)
 
                 if percentDefocused / 100 > dodgyThreshold:
