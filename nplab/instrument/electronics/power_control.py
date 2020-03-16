@@ -70,9 +70,8 @@ class PowerControl(Instrument):
        self.param = self.max_param
     def _initiate_pometer(self):
         if isinstance(self.pometer, 'Thorlabs_powermeter'):      
-            self.pometer.system.beeper.immediate()
-            if self._785: self.pometer.sense.correction.wavelength = 785   
-            if self._633: self.pometer.sense.correction.wavelength = 633              
+            if self._785: self.pometer.wavelength = 785   
+            if self._633: self.pometer.wavelength = 633              
         else: print('wavelength not corrected for')
     @property
     def param(self):
@@ -93,9 +92,11 @@ class PowerControl(Instrument):
 
     @property
     def points(self):
-        if isinstance(self.pc, RStage):        
-            return np.logspace(0,np.log10(self.max_param-self.min_param),self.number_points)+self.min_param
-        if isinstance(self.pc, Aom):
+        if isinstance(self.pc, RStage): 
+            if self.min_param<self.max_param:
+                return np.logspace(0,np.log10(self.max_param-self.min_param),self.number_points)+self.min_param
+            return  self.min_param- np.logspace(0,np.log10(self.min_param-self.max_param),self.number_points)
+        else:# isinstance(self.pc, Aom):
             return np.linspace(self.min_param,self.max_param,num = self.number_points, endpoint = True) 
             
     def Calibrate_Power(self, update_progress=lambda p:p):
@@ -119,10 +120,9 @@ class PowerControl(Instrument):
         self.wutter.close_shutter()    
         self.lutter.open_shutter() 
         self.pometer.live = False# if there's a gui turn off live mode 
-        [self.pometer.power for _ in range(10)]# flush the powermeter
         for counter, point in enumerate(self.points):          
             self.param = point
-            time.sleep(0.01)
+            time.sleep(.2)
             powers = np.append(powers,self.pometer.power)
             update_progress(counter)
         group = self.create_data_group('Power_Calibration{}_%d'.format(self.laser), attrs = attrs)

@@ -22,6 +22,7 @@ class Uniblitz(ShutterWithEmulatedRead, SerialInstrument):
                         }
         self.termination_character = "\r"
         SerialInstrument.__init__(self, port=port)
+        ShutterWithEmulatedRead.__init__(self)
         self.shutter_state = 0
     
     def set_state(self,state):

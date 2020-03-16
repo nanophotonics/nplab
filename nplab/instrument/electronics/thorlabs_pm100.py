@@ -40,7 +40,16 @@ class Thorlabs_powermeter(PowerMeter, VisaInstrument):
         self.live = False
         if num_averages is None:
             num_averages = self.num_averages
-        average = np.mean([self._read() for _ in range(num_averages)])*1000#mW
+        powers = []
+        failures = 0
+        while failures<20 and len(powers)<num_averages:
+            try: 
+                powers.append(self.power)
+                failures = 0
+            except:
+                failures+=1
+        # average = np.mean([self.power for _ in range(num_averages)])
+        average = np.mean(powers)
         self.live = live
         return average
     def read_power(self):
