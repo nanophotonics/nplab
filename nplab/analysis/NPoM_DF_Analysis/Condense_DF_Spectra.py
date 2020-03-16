@@ -475,6 +475,9 @@ def extractAllSpectra(rootDir, returnIndividual = False, pl = False, dodgyThresh
 
                     try:
                         zScan = particleGroup[dParticleFormat]
+                        x = zScan.attrs['wavelengths']
+                        zScan.attrs['background']
+                        ref = zScan.attrs['reference']
 
                     except:
                         print('Z-Stack not found in %s' % (groupName))
