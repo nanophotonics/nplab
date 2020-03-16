@@ -17,7 +17,18 @@ class SuperChrome(Instrument):
 #        self.dll.InitialiseDll(windll.kernel32._handle)
 #        self.dll = windll
 
-        self.dll = cdll.LoadLibrary(r'C:\Users\Hera\Documents\GitHub\nplab\nplab\instrument\filters' + "\\SuperChromeSDK.dll")
+        self.dll = cdll.LoadLibrary(r'C:\Users\hera.NP-BROMINE2\Documents\GitHub\nplab\nplab\instrument\filters' + "\\SuperChromeSDK.dll")
+        self.init();
     def init(self):
         self.dll.InitialiseDll(windll.kernel32._handle)
-        self.dll = windll
+        self.dll.Initialise();
+        self.MoveSyncWaveAndBw(633, 10)
+        self.wvl = 633;
+        self.bw = 10;
+    def MoveWvl(self, centWvl, bwWvl):
+        """ centWvl and bwWvl are in nm
+        """
+        print("Moving")
+        self.MoveSyncWaveAndBw(centWvl, bwWvl)
+        self.wvl = centWvl;
+        self.bw = bwWvl;
