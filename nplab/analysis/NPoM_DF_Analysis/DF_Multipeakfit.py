@@ -34,7 +34,7 @@ if __name__ == '__main__':
     print('\tModules imported\n')
     print('Initialising functions...')
 
-def findH5File(rootDir, mostRecent = True, nameFormat = 'date'):
+def findH5File(rootDir, mostRecent = True, nameFormat = 'date', printProgress = True):
     '''
     Finds either oldest or most recent .h5 file in a folder whose name begins with a specified string
     Default name format ('date') is yyyy-mm-dd
@@ -51,10 +51,12 @@ def findH5File(rootDir, mostRecent = True, nameFormat = 'date'):
     if nameFormat == 'date':
 
         if mostRecent == True:
-            print('Searching for most recent instance of yyyy-mm-dd.h5 or similar...')
+            if printProgress == True:
+                print('Searching for most recent instance of yyyy-mm-dd.h5 or similar...')
 
         else:
-            print('Searching for oldest instance of yyyy-mm-dd.h5 or similar...')
+            if printProgress == True:
+                print('Searching for oldest instance of yyyy-mm-dd.h5 or similar...')
 
         h5File = sorted([i for i in os.listdir('.') if re.match('\d\d\d\d-[01]\d-[0123]\d', i[:10])
                          and (i.endswith('.h5') or i.endswith('.hdf5'))],#finds list of filenames with yyyy-mm-dd(...).h(df)5 format
@@ -63,20 +65,23 @@ def findH5File(rootDir, mostRecent = True, nameFormat = 'date'):
     else:
 
         if mostRecent == True:
-            print('Searching for most recent instance of %s.h5 or similar...' % nameFormat)
+            if printProgress == True:
+                print('Searching for most recent instance of %s.h5 or similar...' % nameFormat)
 
         else:
-            print('Searching for oldest instance of %s.h5 or similar...' % nameFormat)
+            if printProgress == True:
+                print('Searching for oldest instance of %s.h5 or similar...' % nameFormat)
 
         h5File = sorted([i for i in os.listdir('.') if i.startswith(nameFormat)#finds list of filenames with (nameFormat)(...).h(df)5 format
                          and (i.endswith('.h5') or i.endswith('.hdf5'))],
                         key = lambda i: os.path.getmtime(i))[n]#sorts them by date and picks either oldest or newest depending on value of 'mostRecent'
 
-    print('\tH5 file %s found\n' % h5File)
+    if printProgress == True:
+        print('\tH5 file %s found\n' % h5File)
 
     return h5File
 
-def removeNaNs(array):
+def removeNaNs(array, nBuff = 4):
     '''
     Converts NaN values to numbers via linear interpolation between adjacent finite elements.
     Input = 1D array or list.
@@ -95,7 +100,7 @@ def removeNaNs(array):
         if np.isfinite(i):#finds index of first finite value in array
             break
 
-    newArray[:n] = np.average(newArray[n:n+3])#turns any initial missing values into a flat line
+    newArray[:n] = np.average(newArray[n:n+nBuff])#turns any initial missing values into a flat line
 
     for n, i in enumerate(newArray[::-1]):#checks for NaNs at end of array
 
@@ -103,7 +108,7 @@ def removeNaNs(array):
             break
 
     if n > 0:
-        newArray[-n:] = np.average(newArray[-(n+4):-(n + 1)])#turns any final missing values into a flat line
+        newArray[-n:] = np.average(newArray[-(n+nBuff):-(n + 1)])#turns any final missing values into a flat line
 
     nandices = np.array([n for n, i in enumerate(newArray) if not np.isfinite(i)])#locates indices of remaining NaN values
 
@@ -116,8 +121,8 @@ def removeNaNs(array):
             if np.isfinite(i):#finds length of NaN sequence
                 break
 
-        interpInit = np.average([i for i in newArray[nandex - 4:nandex] if np.isfinite(i)])#start point for linear interpolation; corrects for noise by averaging a few values
-        interpEnd = np.average([i for i in newArray[nandex + n :nandex + n + 4] if np.isfinite(i)])#interpolation end point; also de-noised
+        interpInit = np.average([i for i in newArray[nandex - nBuff:nandex] if np.isfinite(i)])#start point for linear interpolation; corrects for noise by averaging a few values
+        interpEnd = np.average([i for i in newArray[nandex + n :nandex + n + nBuff] if np.isfinite(i)])#interpolation end point; also de-noised
         interPlump = np.linspace(interpInit, interpEnd, n + 2)#linearly interpolates between the finite values either side of the NaN sequence
         newArray[nandex:nandex+n] = interPlump[1:-1]#replaces NaNs with the new data points
 
@@ -486,11 +491,12 @@ def plotInitPlStack(xPl, plData, imgName = 'Initial PL Stack', closeFigures = Tr
     yDataTrunc = np.array([old_div(plSpectrum, plSpectrum[0]) for plSpectrum in yDataTrunc])# normalise to 580 nm value
     plotStackedMap(xStack, yDataTrunc, imgName = imgName, plotTitle = imgName, closeFigures = closeFigures, vThresh = vThresh, init = True, xLims = (580, 900))
 
-def createOutputFile(filename):
+def createOutputFile(filename, printProgress = True):
 
     '''Auto-increments new filename if file exists'''
 
-    print('Creating output file...')
+    if printProgress == True:
+        print('Creating output file...')
 
     outputFile = filename
 
@@ -498,16 +504,19 @@ def createOutputFile(filename):
         outputFile = '%s.h5' % filename
 
     if outputFile in os.listdir('.'):
-        print('\t%s already exists' % outputFile)
+        if printProgress == True:
+            print('\t%s already exists' % outputFile)
         n = 0
         outputFile = '%s_%s.h5' % (filename, n)
 
         while outputFile in os.listdir('.'):
-            print('\t%s already exists' % outputFile)
+            if printProgress == True:
+                print('\t%s already exists' % outputFile)
             n += 1
             outputFile = '%s_%s.h5' % (filename, n)
 
-    print('\tOutput file %s created\n' % outputFile)
+    if printProgress == True:
+        print('\tOutput file %s created\n' % outputFile)
     return outputFile
 
 def butterLowpassFiltFilt(data, cutoff = 1500, fs = 60000, order=5):
@@ -3032,7 +3041,7 @@ def fitAllSpectra(rootDir, outputFileName, npSize = 80, summaryAttrs = False, fi
     currentTime = time.time() - totalFitStart
     mins = int(old_div(currentTime, 60))
     secs = old_div((np.round((currentTime % 60)*100)),100)
-    print('100%% (%s spectra) analysed in %s min %s sec\n' % (last, mins, secs))
+    print('100%% (%s spectra) analysed in %s min %s sec\n' % (nn, mins, secs))
 
     if stats == True:
         doStats(outputFileName, closeFigures = closeFigures, peakFindMidpoint = peakFindMidpoint, pl = pl, npomTypes = npomTypes)

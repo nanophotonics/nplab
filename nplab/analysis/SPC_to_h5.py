@@ -81,30 +81,43 @@ def extractRamanSpc(path, bg_path = False, combine_statics = False):
     spectra = []
 
     for n, spcFile in enumerate(spcFiles):
-        #try:
         filename = spcFile[:-4] #Removes extension from filename string
-        f = spc.File(spcFile) #Create File object from .spc file
+        #print(filename)
+        f = spc.File(spcFile)
+        #try:
+        #    f = spc.File(spcFile) #Create File object from .spc file
+        #except:
+        #    print(filename)
+        #    f = spc.File(spcFile) #Create File object from .spc file
+        
 
-        laserWlKeys = ['Laser', ' Laser']
-
-        for laserWlKey in laserWlKeys:
-
-            if laserWlKey in list(f.log_dict.keys()):
-                break
-
-        laserWl = int(f.log_dict[laserWlKey][7:10]) #Grabs appropriate part of laser wavelength entry from log and converts to integer (must be 3 characters long)
-
-        lpKeys = ['Laser_power', ' Laser_power']
-
-        for lpKey in lpKeys:
-
-            if lpKey in list(f.log_dict.keys()):
-                break
-
-        try:
-            laserPower = float(f.log_dict[lpKey][13:-1]) #Grabs numeric part of string containing laser power info and converts to float
-
-        except:
+        metadata = {}
+        fLogDict = {}
+        
+        fDicts = [f.__dict__, f.log_dict]
+        newFDicts = [metadata, fLogDict]
+        
+        for dictN, fDict in enumerate(fDicts):
+            for k in list(fDict.keys()):
+                i = fDict[k]
+                #print('%s (%s) = %s (%s)' % (k, type(k), i, type(i)))
+                if type(k) == bytes:
+                    k = k.decode()
+                if type(i) == bytes:
+                    try:
+                        i = i.decode()
+                    except Exception as e:
+                        #print(e)
+                        continue
+            
+                newFDicts[dictN][k] = i
+            
+            #print('%s (%s) = %s (%s)' % (k, type(k), i, type(i)))        
+        laserWl = int(fLogDict['Laser'][7:10]) #Grabs appropriate part of laser wavelength entry from log and converts to integer (must be 3 characters long)
+        
+        if 'Laser_power' in list(fLogDict.keys()):
+            laserPower = float(fLogDict['Laser_power'][13:-1]) #Grabs numeric part of string containing laser power info and converts to float
+        else:
             laserPower = 'Undefined'
 
         if laserPower in [0.0001, 0.05, 0.1, 0.5, 1.0, 5.0, 10.0, 50.0, 100.0]:
@@ -113,21 +126,13 @@ def extractRamanSpc(path, bg_path = False, combine_statics = False):
         else:
             absLaserPower = 'Undefined' #To avoid errors if laser power is not recorded correctly
 
-        try:
-            integrationTime = float(f.log_dict['Exposure_time'][6:])
-        except:
-            integrationTime = float(f.log_dict[' Exposure_time'][6:])
+        integrationTime = float(fLogDict['Exposure_time'][6:])
 
-        try:
-            accumulations = f.log_dict['Accumulations'].split(': ')[1]
-        except:
-            accumulations = f.log_dict[' Accumulations'].split(': ')[1]
-
+        accumulations = fLogDict['Accumulations'].split(': ')[1]
+        
         wavenumbers = f.x #Pulls x data from spc file
-        nScans = int(f.__dict__['fnsub']) #Number of Raman spectra contained within the spc file (>1 if file contains a kinetic scan)
+        nScans = int(metadata['fnsub']) #Number of Raman spectra contained within the spc file (>1 if file contains a kinetic scan)
         ramanIntensities = np.array([f.sub[i].y for i in range(nScans)]) #Builds list of y data arrays
-
-        metadata = f.__dict__ #Pulls metadata dictionary from spc file for easy access
 
         if absLaserPower != 'Undefined':
             absRamanIntensities = [old_div((spectrum * 1000), (absLaserPower * integrationTime * float(accumulations))) for spectrum in ramanIntensities]
@@ -153,7 +158,7 @@ def populateH5(spectra, h5File):
 
     print('\nPopulating h5 file...')
 
-    with h5py.File(h5File) as f:
+    with h5py.File(h5File, 'a') as f:
         gSpectra = f.create_group('Spectra')
 
         for n, spectrum in enumerate(spectra):
@@ -179,6 +184,9 @@ def populateH5(spectra, h5File):
             x = spectrum.wavenumbers
             yRaw = spectrum.ramanIntensities
             yAbs = spectrum.absRamanIntensities
+            
+            if type(yAbs) == str or type(yAbs[0]) == str:
+                yAbs = np.zeros(len(x))
 
             if spectrum.nScans == 1:
                 yNorm = old_div(spectrum.ramanIntensities, spectrum.ramanIntensities.max())
@@ -188,7 +196,7 @@ def populateH5(spectra, h5File):
 
             dRaw = gSpectrum.create_dataset('Raman (cts)', data = yRaw)
             dRaw.attrs['wavelengths'] = x
-            dAbs = gSpectrum.create_dataset('Raman (cts mw^-1 s^-1)', data = yAbs)
+            dAbs = gSpectrum.create_dataset('Raman (cts mw^-1 s^-1)', data = np.array(yAbs))
             dAbs.attrs['wavelengths'] = x
             dNorm = gSpectrum.create_dataset('Raman (normalised)', data = yNorm)
             dNorm.attrs['wavelengths'] = x
@@ -239,11 +247,13 @@ def createOutputFile(filename):
     print('\tOutput file %s created' % outputFile)
     return outputFile
 
-if __name__ == '__main__':
-
+def run():
     rootDir = os.getcwd()
     print('Extracting data from %s' % rootDir)
     spectra = extractRamanSpc(rootDir)
     dirName = '%s Raman Data' % rootDir.split('\\')[-1]
     h5FileName = createOutputFile(dirName)
     populateH5(spectra, h5FileName)
+
+if __name__ == '__main__':
+    run()
