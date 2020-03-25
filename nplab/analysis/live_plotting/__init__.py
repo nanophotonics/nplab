@@ -180,9 +180,9 @@ class LivePlotWindow(QtWidgets.QMainWindow):
         layout = QtWidgets.QVBoxLayout()
         self.resize(1500,1500)
         layout.addWidget(graphing_group)
-        export_button = QtGui.QPushButton('Export values')
-        export_button.clicked.connect(self.export)
-        layout.addWidget(export_button)
+        # export_button = QtGui.QPushButton('Export values')
+        # export_button.clicked.connect(self.export)
+        # layout.addWidget(export_button)
         layout.addWidget(parameter_widget)
 
         self.graphing_group = graphing_group
@@ -219,10 +219,12 @@ if __name__ == '__main__':
         return A**np.sin(C*x)/D*x
     def eq4(x):
         return (np.sin(A*x)/B*x) +D
+    def eq5(x):
+        return eq3(x)[::-1]#reversed
     
     graph1 = GraphWidget(equation1, equation2, title='1st')
     graph2 = GraphWidget(equation2, xlim=(-5,5), title='2nd')
-    g3 = GraphWidget(eq3, title='etc,', xlabel = ':)')
+    g3 = GraphWidget(eq3, eq5, title='etc,', xlabel = ':)')
     g4 = GraphWidget(eq4, title='etc.')
     graphs = GraphGroup([graph1,graph2, g3, g4])
 
