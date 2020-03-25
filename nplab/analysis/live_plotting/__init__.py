@@ -1,12 +1,18 @@
 # -*- coding: utf-8 -*-
+__author__ = 'Eoin Elliott'
 """
-Plotting qn modes.
+A utility for adding any number of graphs,
+plotting any number of equations each, and varying
+any number of parameters in these equations through
+a gui.
 """
 
 import numpy as np
 import pyqtgraph as pg
-from PyQt5 import QtGui, QtWidgets, QtCore
-
+from qtpy import QtGui, QtWidgets, QtCore
+def remove_inf_and_nan(array_to_test, array_to_remove_from=None):
+    if array_to_remove_from is None: array_to_remove_from = array_to_test
+    return np.array(array_to_remove_from)[~np.logical_or(np.isnan(list(array_to_test)),np.isinf(list(array_to_test)))]
 class GraphWidget(pg.PlotWidget):
     '''
     template for an interactive graph
@@ -15,7 +21,7 @@ class GraphWidget(pg.PlotWidget):
         equation: should be a function of only 1 variable (x). 
             Parameters to be varied should be a Parameter object.
         xlim: interval over which the function will be plotted
-        ylin: currently does nothing
+        ylim: currently does nothing
         
     make use of xlabel and ylabel methods!
         
@@ -36,12 +42,14 @@ class GraphWidget(pg.PlotWidget):
         self.hasLegend=False
         self.addLegend()
     @property
+    def xs(self):
+        return [remove_inf_and_nan(y, self.x) for y in self.ys]
+    @property
     def x(self):
         return np.linspace(*self.xlim, num=100)
-    
     @property
     def ys(self):
-        return [equation(self.x) for equation in self.equations]
+        return [remove_inf_and_nan(equation(self.x)) for equation in self.equations]
         
     def update(self):
         def name(eq): # takes the name of the function the first time,
@@ -50,8 +58,9 @@ class GraphWidget(pg.PlotWidget):
             return str(eq).split(' ')[1]
             
         self.clearPlots() 
-        for i,(y,eq) in enumerate(zip(self.ys, self.equations)): 
-            self.plot(self.x, y, pen=(i,len(self.ys)),name=name(eq))
+        for i,(x, y, eq) in enumerate(zip(self.xs, self.ys, self.equations)): 
+            
+            self.plot(x, y, pen=(i,len(self.ys)),name=name(eq))
 
     def xlabel(self, label):
         self.setLabel('bottom', label)
@@ -81,12 +90,14 @@ class GraphGroup(QtGui.QGroupBox):
             g.hasLegend = True
     def export(self):
         for g in self.graphs:
-            print('Graph: ', g._title)
+            print('Graph:', g._title)
             g.export()
             
             
 class FloatMathMixin():
-    
+    '''allows any class to be used like a float,
+    assuming it has a __float__ method.
+    '''
     def __add__(self, other):
         return float(self) + np.array(other)
     def __sub__(self, other):
@@ -116,31 +127,32 @@ class Parameter(QtWidgets.QWidget, FloatMathMixin):
     Supports basic array math.
     
     Inputs:
-        name: the label the paramter will have in the gui
-        Default: it's initial value
+        name: the label the parameter will have in the gui
+        Default: its initial value
         Min: minimum value allowed to be entered in the gui
         Max: maximum...
         
     '''
     
-    param_changed = QtCore.pyqtSignal(int)
-    def __init__(self, name, Default=1,Min=0,Max=100):
+    param_changed = QtCore.Signal(int)
+    def __init__(self, name, Default=1,Min=0,Max=100,units=None):
         super().__init__()
         self.name = name
+        self.units = f' ({units})' if units is not None else ''
         self.setLayout(QtWidgets.QFormLayout())
-        self.layout().addWidget(QtGui.QLabel(self.name))
+        self.layout().addWidget(QtGui.QLabel(self.name+self.units))
         self.box = QtGui.QDoubleSpinBox()
         self.layout().addWidget(self.box)
         self.box.setValue(Default)
         self.box.valueChanged.connect(self.param_changed.emit)
-    def __repr__(self):
-        return self.box.value()
-    def __str__(self):
-        return f'Parameter {self.name}: {self.box.value()}'
-    def __int__(self):
-        return int(self.box.value())
     def __float__(self):
         return float(self.box.value())
+    def __repr__(self):
+        return str(float(self))
+    def __str__(self):
+        return f'Parameter {self.name}: {float(self)} {self.units}'
+    
+    
     
        
 class ParameterWidget(QtGui.QGroupBox):
@@ -148,7 +160,7 @@ class ParameterWidget(QtGui.QGroupBox):
     feed me parameters and i'll add spinBoxes for them, and 
     emit a signal when they're changed to update the graphs. 
     '''
-    param_changed = QtCore.pyqtSignal(int)
+    param_changed = QtCore.Signal(int)
     def __init__(self, parameters):
         super().__init__('Parameter controls')
         self.parameters = parameters
@@ -175,7 +187,7 @@ class LivePlotWindow(QtWidgets.QMainWindow):
 
         self.graphing_group = graphing_group
         self.parameter_widget = parameter_widget
-        self.setWindowTitle('Quasi-Normal Modes')
+        self.setWindowTitle('Live Plotting')
         # self.setWindowIcon(QtGui.QIcon('bessel.png'))
         self.setWindowIcon(QtGui.QIcon('maxwell.png'))
         self.widget = QtGui.QWidget()
@@ -193,7 +205,7 @@ class LivePlotWindow(QtWidgets.QMainWindow):
 
 if __name__ == '__main__':
     #Initialize all parameters
-    A = Parameter('A', 15, Min=0, Max=10)
+    A = Parameter('A', 15, Min=0, Max=10, units= 'm')
     B =  Parameter('B', 6)
     C = Parameter('C',15)
     D = Parameter('D',6)
@@ -209,12 +221,13 @@ if __name__ == '__main__':
         return (np.sin(A*x)/B*x) +D
     
     graph1 = GraphWidget(equation1, equation2, title='1st')
-    graph2 = GraphWidget(equation2, title='2nd')
-    g3 = GraphWidget(eq3, title='etc,')
+    graph2 = GraphWidget(equation2, xlim=(-5,5), title='2nd')
+    g3 = GraphWidget(eq3, title='etc,', xlabel = ':)')
     g4 = GraphWidget(eq4, title='etc.')
     graphs = GraphGroup([graph1,graph2, g3, g4])
 
     live_plot_window = LivePlotWindow(graphs, parameter_widget)
     live_plot_window.show() 
    
+
 
