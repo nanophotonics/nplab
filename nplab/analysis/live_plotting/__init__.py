@@ -2,7 +2,7 @@
 __author__ = 'Eoin Elliott'
 """
 A utility for adding any number of graphs,
-plotting any number of equations each, and varying
+plotting any number of equations on each, and varying
 any number of parameters in these equations through
 a gui.
 """
@@ -10,6 +10,7 @@ a gui.
 import numpy as np
 import pyqtgraph as pg
 from qtpy import QtGui, QtWidgets, QtCore
+
 pg.setConfigOption('background', 'w')
 pg.setConfigOption('foreground', 'k')
 
@@ -145,19 +146,26 @@ class Parameter(QtWidgets.QWidget, FloatMathMixin):
     '''
     
     param_changed = QtCore.Signal(int)
-    def __init__(self, name, Default=1, Min=-100_000, Max=100_000,units=None):
+    def __init__(self, name, Default=1, Min=-100_000, Max=100_000,units=None, slider=False):
         super().__init__()
         self.name = name
+        self.slider = slider
         self.units = f' ({units})' if units is not None else ''
         self.setLayout(QtWidgets.QFormLayout())
-        self.layout().addWidget(QtGui.QLabel(self.name+self.units))
-        self.box = QtGui.QDoubleSpinBox()
+        self.box =  QtGui.QSlider(QtCore.Qt.Horizontal) if slider else QtGui.QDoubleSpinBox()
+        self.label = QtGui.QLabel(self.name+self.units)
+        self.layout().addWidget(self.label)
         self.box.setMinimum(Min)
         self.box.setMaximum(Max)
         self.layout().addWidget(self.box)
         self.box.setValue(Default)
-        self.box.valueChanged.connect(self.param_changed.emit)
+        self.box.valueChanged.connect(self.changed)
+        self.changed()
         Parameters.append(self)
+    def changed(self):
+        if self.slider:
+            self.label.setText(' '.join(str(self).split(' ')[1:]))
+        self.param_changed.emit(1)
     def __float__(self):
         return float(self.box.value())
     def __repr__(self):
@@ -184,7 +192,7 @@ class ParameterWidget(QtGui.QGroupBox):
             
 class LivePlotWindow(QtWidgets.QMainWindow):
     '''Puts the graphing and parameter widgets together'''
-    def __init__(self, style='Fusion'):#, graphing_group, parameter_widget):  
+    def __init__(self, style='Fusion'):
         app = QtGui.QApplication.instance()
         if app is None: app = QtGui.QApplication([])
         app.setStyle(style)
@@ -219,7 +227,7 @@ if __name__ == '__main__':
 
     #Initialize all parameters
     A = Parameter('Alpha', 15, Min=0, Max=10, units= 'm')
-    B =  Parameter('Bravo', 6)
+    B =  Parameter('Bravo', 6, slider=True, Min=-10, Max=10)
     C = Parameter('Charlie', 15)
     D = Parameter('Demelza', 6)
     
