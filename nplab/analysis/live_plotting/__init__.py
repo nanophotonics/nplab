@@ -10,7 +10,11 @@ a gui.
 import numpy as np
 import pyqtgraph as pg
 from qtpy import QtGui, QtWidgets, QtCore
+pg.setConfigOption('background', 'w')
+pg.setConfigOption('foreground', 'k')
+
 def remove_inf_and_nan(array_to_test, array_to_remove_from=None):
+    '''removes inf and nans from an array'''
     if array_to_remove_from is None: array_to_remove_from = array_to_test
     return np.array(array_to_remove_from)[~np.logical_or(np.isnan(list(array_to_test)),np.isinf(list(array_to_test)))]
 
@@ -83,10 +87,12 @@ class GraphGroup(QtGui.QGroupBox):
     '''
     def __init__(self, graphs):
         super().__init__('Graphs')
-        self.setLayout(QtWidgets.QHBoxLayout())
+        self.setLayout(QtWidgets.QGridLayout())
         self.graphs = graphs
-        for g in graphs:
-            self.layout().addWidget(g)
+        graphs_per_row = 5 if len(graphs)>12 else 4
+        for i,g in enumerate(graphs):    
+            self.layout().addWidget(graphs[i], i//graphs_per_row, i%graphs_per_row)
+
     def update_graphs(self):
         for g in self.graphs:
             g.update()
@@ -139,7 +145,7 @@ class Parameter(QtWidgets.QWidget, FloatMathMixin):
     '''
     
     param_changed = QtCore.Signal(int)
-    def __init__(self, name, Default=1,Min=-100_000,Max=100_000,units=None):
+    def __init__(self, name, Default=1, Min=-100_000, Max=100_000,units=None):
         super().__init__()
         self.name = name
         self.units = f' ({units})' if units is not None else ''
@@ -178,9 +184,11 @@ class ParameterWidget(QtGui.QGroupBox):
             
 class LivePlotWindow(QtWidgets.QMainWindow):
     '''Puts the graphing and parameter widgets together'''
-    def __init__(self):#, graphing_group, parameter_widget):  
+    def __init__(self, style='Fusion'):#, graphing_group, parameter_widget):  
+        app = QtGui.QApplication.instance()
+        if app is None: app = QtGui.QApplication([])
+        app.setStyle(style)
         super().__init__()
-        QtGui.QApplication.setPalette(QtGui.QApplication.style().standardPalette())
         layout = QtWidgets.QVBoxLayout()
         self.resize(1500,1500)
         self.graphing_group = GraphGroup(Graphs)#graphing_group
@@ -190,8 +198,6 @@ class LivePlotWindow(QtWidgets.QMainWindow):
         # export_button.clicked.connect(self.export)
         # layout.addWidget(export_button)
         layout.addWidget(self.parameter_widget)
-
-        
         self.setWindowTitle('Live Plotting')
         # self.setWindowIcon(QtGui.QIcon('bessel.png'))
         self.setWindowIcon(QtGui.QIcon('maxwell.png'))
@@ -200,6 +206,7 @@ class LivePlotWindow(QtWidgets.QMainWindow):
         self.setCentralWidget(self.widget)
         self.parameter_widget.param_changed.connect(self.update_graphs)
         self.update_graphs()
+        self.show()
     
     def update_graphs(self):
         self.graphing_group.update_graphs()        
@@ -209,13 +216,14 @@ class LivePlotWindow(QtWidgets.QMainWindow):
         self.parameter_widget.export()
 
 if __name__ == '__main__':
+
     #Initialize all parameters
     A = Parameter('Alpha', 15, Min=0, Max=10, units= 'm')
     B =  Parameter('Bravo', 6)
     C = Parameter('Charlie', 15)
-    D = Parameter('Delta', 6)
+    D = Parameter('Demelza', 6)
     
-    #define the equations for each plot
+    #define the equations to be plotted
     def equation1(x):
         return A*x**2 + B*x**2 - C*x + D
     def equation2(x):
@@ -228,13 +236,23 @@ if __name__ == '__main__':
         return eq3(x)[::-1]#reversed
     
     #create the graphs
-    graph1 = GraphWidget(equation1, equation2, title='1st')
-    graph2 = GraphWidget(equation2, xlim=(-5,5), title='2nd')
-    g3 = GraphWidget(eq3, eq5, title='etc,', xlabel = ':)')
-    g4 = GraphWidget(eq4, title='etc.')
-
-    live_plot_window = LivePlotWindow()
-    live_plot_window.show() 
+    GraphWidget(equation1, equation2, title='1st')
+    GraphWidget(equation2, xlim=(-5,5), title='2nd')
+    GraphWidget(eq3, eq5, title='etc,', xlabel = ':)')
+    GraphWidget(eq4, title='etc.')
+    #x2 more of the same
+    GraphWidget(equation1, equation2, title='1st')
+    GraphWidget(equation2, xlim=(-5,5), title='2nd')
+    GraphWidget(eq3, eq5, title='etc,', xlabel = ':)')
+    GraphWidget(eq4, title='etc.')
+    
+    GraphWidget(equation1, equation2, title='1st')
+    GraphWidget(equation2, xlim=(-5,5), title='2nd')
+    GraphWidget(eq3, eq5, title='etc,', xlabel = ':)')
+    GraphWidget(eq4, title='etc.')
+ 
+    #and then the window!
+    live_plotter = LivePlotWindow()
    
 
 
