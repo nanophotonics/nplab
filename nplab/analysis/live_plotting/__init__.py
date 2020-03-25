@@ -139,13 +139,15 @@ class Parameter(QtWidgets.QWidget, FloatMathMixin):
     '''
     
     param_changed = QtCore.Signal(int)
-    def __init__(self, name, Default=1,Min=0,Max=100,units=None):
+    def __init__(self, name, Default=1,Min=-100_000,Max=100_000,units=None):
         super().__init__()
         self.name = name
         self.units = f' ({units})' if units is not None else ''
         self.setLayout(QtWidgets.QFormLayout())
         self.layout().addWidget(QtGui.QLabel(self.name+self.units))
         self.box = QtGui.QDoubleSpinBox()
+        self.box.setMinimum(Min)
+        self.box.setMaximum(Max)
         self.layout().addWidget(self.box)
         self.box.setValue(Default)
         self.box.valueChanged.connect(self.param_changed.emit)
@@ -208,10 +210,10 @@ class LivePlotWindow(QtWidgets.QMainWindow):
 
 if __name__ == '__main__':
     #Initialize all parameters
-    A = Parameter('A', 15, Min=0, Max=10, units= 'm')
-    B =  Parameter('B', 6)
-    C = Parameter('C', 15)
-    D = Parameter('D', 6)
+    A = Parameter('Alpha', 15, Min=0, Max=10, units= 'm')
+    B =  Parameter('Bravo', 6)
+    C = Parameter('Charlie', 15)
+    D = Parameter('Delta', 6)
     
     #define the equations for each plot
     def equation1(x):
