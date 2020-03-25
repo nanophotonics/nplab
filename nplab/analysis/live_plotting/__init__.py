@@ -13,6 +13,8 @@ from qtpy import QtGui, QtWidgets, QtCore
 def remove_inf_and_nan(array_to_test, array_to_remove_from=None):
     if array_to_remove_from is None: array_to_remove_from = array_to_test
     return np.array(array_to_remove_from)[~np.logical_or(np.isnan(list(array_to_test)),np.isinf(list(array_to_test)))]
+
+Graphs = []
 class GraphWidget(pg.PlotWidget):
     '''
     template for an interactive graph
@@ -41,6 +43,7 @@ class GraphWidget(pg.PlotWidget):
         self.ylabel(ylabel)
         self.hasLegend=False
         self.addLegend()
+        Graphs.append(self)
     @property
     def xs(self):
         return [remove_inf_and_nan(y, self.x) for y in self.ys]
@@ -119,7 +122,8 @@ class FloatMathMixin():
         return self.__truediv__(other)
     def __rpow__(self, other):
         return self.__pow__(other)
-                
+    
+Parameters = []                
 class Parameter(QtWidgets.QWidget, FloatMathMixin):
     '''
     Representation of a parameter to be varied in an equation.
@@ -145,16 +149,14 @@ class Parameter(QtWidgets.QWidget, FloatMathMixin):
         self.layout().addWidget(self.box)
         self.box.setValue(Default)
         self.box.valueChanged.connect(self.param_changed.emit)
+        Parameters.append(self)
     def __float__(self):
         return float(self.box.value())
     def __repr__(self):
         return str(float(self))
     def __str__(self):
         return f'Parameter {self.name}: {float(self)} {self.units}'
-    
-    
-    
-       
+      
 class ParameterWidget(QtGui.QGroupBox):
     '''
     feed me parameters and i'll add spinBoxes for them, and 
@@ -174,19 +176,20 @@ class ParameterWidget(QtGui.QGroupBox):
             
 class LivePlotWindow(QtWidgets.QMainWindow):
     '''Puts the graphing and parameter widgets together'''
-    def __init__(self, graphing_group, parameter_widget):  
+    def __init__(self):#, graphing_group, parameter_widget):  
         super().__init__()
         QtGui.QApplication.setPalette(QtGui.QApplication.style().standardPalette())
         layout = QtWidgets.QVBoxLayout()
         self.resize(1500,1500)
-        layout.addWidget(graphing_group)
+        self.graphing_group = GraphGroup(Graphs)#graphing_group
+        self.parameter_widget = ParameterWidget(Parameters)
+        layout.addWidget(self.graphing_group)
         # export_button = QtGui.QPushButton('Export values')
         # export_button.clicked.connect(self.export)
         # layout.addWidget(export_button)
-        layout.addWidget(parameter_widget)
+        layout.addWidget(self.parameter_widget)
 
-        self.graphing_group = graphing_group
-        self.parameter_widget = parameter_widget
+        
         self.setWindowTitle('Live Plotting')
         # self.setWindowIcon(QtGui.QIcon('bessel.png'))
         self.setWindowIcon(QtGui.QIcon('maxwell.png'))
@@ -207,9 +210,9 @@ if __name__ == '__main__':
     #Initialize all parameters
     A = Parameter('A', 15, Min=0, Max=10, units= 'm')
     B =  Parameter('B', 6)
-    C = Parameter('C',15)
-    D = Parameter('D',6)
-    parameter_widget = ParameterWidget([A,B,C,D])
+    C = Parameter('C', 15)
+    D = Parameter('D', 6)
+    
     #define the equations for each plot
     def equation1(x):
         return A*x**2 + B*x**2 - C*x + D
@@ -222,13 +225,13 @@ if __name__ == '__main__':
     def eq5(x):
         return eq3(x)[::-1]#reversed
     
+    #create the graphs
     graph1 = GraphWidget(equation1, equation2, title='1st')
     graph2 = GraphWidget(equation2, xlim=(-5,5), title='2nd')
     g3 = GraphWidget(eq3, eq5, title='etc,', xlabel = ':)')
     g4 = GraphWidget(eq4, title='etc.')
-    graphs = GraphGroup([graph1,graph2, g3, g4])
 
-    live_plot_window = LivePlotWindow(graphs, parameter_widget)
+    live_plot_window = LivePlotWindow()
     live_plot_window.show() 
    
 
