@@ -67,7 +67,6 @@ class GraphWidget(pg.PlotWidget):
             
         self.clearPlots() 
         for i,(x, y, eq) in enumerate(zip(self.xs, self.ys, self.equations)): 
-            
             self.plot(x, y, pen=(i,len(self.ys)),name=name(eq))
 
     def xlabel(self, label):
@@ -162,18 +161,20 @@ class Parameter(QtWidgets.QWidget, FloatMathMixin):
         self.box.valueChanged.connect(self.changed)
         self.changed()
         Parameters.append(self)
+        
     def changed(self):
         if self.slider:
-            self.label.setText(' '.join(str(self).split(' ')[1:]))
+            self.label.setText(str(self))
         self.param_changed.emit(1)
+        
     def __float__(self):
         return float(self.box.value())
     def __repr__(self):
         return str(float(self))
     def __str__(self):
-        return f'Parameter {self.name}: {float(self)} {self.units}'
+        return f'{self.name}: {float(self)} {self.units}'
       
-class ParameterWidget(QtGui.QGroupBox):
+class ParameterGroupBox(QtGui.QGroupBox):
     '''
     feed me parameters and i'll add spinBoxes for them, and 
     emit a signal when they're changed to update the graphs. 
@@ -200,7 +201,7 @@ class LivePlotWindow(QtWidgets.QMainWindow):
         layout = QtWidgets.QVBoxLayout()
         self.resize(1500,1500)
         self.graphing_group = GraphGroup(Graphs)#graphing_group
-        self.parameter_widget = ParameterWidget(Parameters)
+        self.parameter_widget = ParameterGroupBox(Parameters)
         layout.addWidget(self.graphing_group)
         # export_button = QtGui.QPushButton('Export values')
         # export_button.clicked.connect(self.export)
@@ -230,6 +231,7 @@ if __name__ == '__main__':
     B =  Parameter('Bravo', 6, slider=True, Min=-10, Max=10)
     C = Parameter('Charlie', 15)
     D = Parameter('Demelza', 6)
+
     
     #define the equations to be plotted
     def equation1(x):
