@@ -185,7 +185,7 @@ class ExtendedImageView(pg.ImageView):
     # Percentile functions
     def getProcessedImage(self):
         """Checks if we want to autolevel for each image and does it"""
-        image = super(ExtendedImageView, self).getProcessedImage()
+        image = super().getProcessedImage()
         if self.levelGroup.checkbox_singleimagelevel.isChecked() and self.hasTimeAxis():
             cur_image = image[self.currentIndex]
             self.levelMin, self.levelMax = self.quickMinMax(cur_image)
