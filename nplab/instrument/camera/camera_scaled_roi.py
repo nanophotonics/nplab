@@ -256,9 +256,9 @@ class DummyCameraRoiScale(CameraRoiScale):
         """Returns a True, stating a succesful snapshot, followed by a (100,100)
         picture randomly generated image"""
         if self.data == 'spectrum':
-            ran = 100 * ArrayWithAttrs(np.random.random(100))
+            ran = 100 * ArrayWithAttrs(np.random.random(1600))
         else:
-            ran = 100 * np.random.random((1600, 200))
+            ran = 100 * np.random.random((200, 1600))
         self._latest_raw_frame = ran
         return True, ran
 
@@ -272,7 +272,7 @@ class DummyCameraRoiScale(CameraRoiScale):
 
     @property
     def x_axis(self):
-        return np.arange(100) + 1
+        return np.arange(1600) + 1
 
     @x_axis.setter
     def x_axis(self, value):
@@ -283,3 +283,4 @@ if __name__ == '__main__':
 
     dcrd = DummyCameraRoiScale()
     dcrd.show_gui(blocking=False)
+
