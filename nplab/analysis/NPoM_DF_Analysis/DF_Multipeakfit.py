@@ -89,6 +89,7 @@ def removeNaNs(array, nBuff = 4):
     '''
 
     numNaNs = len([i for i in array if not np.isfinite(i)])#checks for NaN values
+    #print(numNaNs)
 
     if numNaNs == 0:
         return array#returns original array if no NaNs
@@ -100,15 +101,16 @@ def removeNaNs(array, nBuff = 4):
         if np.isfinite(i):#finds index of first finite value in array
             break
 
-    newArray[:n] = np.average(newArray[n:n+nBuff])#turns any initial missing values into a flat line
+    newChunk = newArray[n:n+nBuff]
+    newArray[:n] = np.average(newChunk[np.isfinite(newChunk)])#turns any initial missing values into a flat line
 
     for n, i in enumerate(newArray[::-1]):#checks for NaNs at end of array
-
         if np.isfinite(i):#finds index of last finite value in array
             break
 
     if n > 0:
-        newArray[-n:] = np.average(newArray[-(n+nBuff):-(n + 1)])#turns any final missing values into a flat line
+        newChunk = newArray[-(n+nBuff):-(n + 1)]
+        newArray[-n:] = np.average(newChunk[np.isfinite(newChunk)])#turns any final missing values into a flat line
 
     nandices = np.array([n for n, i in enumerate(newArray) if not np.isfinite(i)])#locates indices of remaining NaN values
 
@@ -121,8 +123,10 @@ def removeNaNs(array, nBuff = 4):
             if np.isfinite(i):#finds length of NaN sequence
                 break
 
-        interpInit = np.average([i for i in newArray[nandex - nBuff:nandex] if np.isfinite(i)])#start point for linear interpolation; corrects for noise by averaging a few values
-        interpEnd = np.average([i for i in newArray[nandex + n :nandex + n + nBuff] if np.isfinite(i)])#interpolation end point; also de-noised
+        interpInit = newArray[nandex - nBuff:nandex]
+        interpInit = np.average(interpInit[np.isfinite(interpInit)])#start point for linear interpolation; corrects for noise by averaging a few values
+        interpEnd = newArray[nandex + n :nandex + n + nBuff]
+        interpEnd = np.average(interpEnd[np.isfinite(interpEnd)])#interpolation end point; also de-noised
         interPlump = np.linspace(interpInit, interpEnd, n + 2)#linearly interpolates between the finite values either side of the NaN sequence
         newArray[nandex:nandex+n] = interPlump[1:-1]#replaces NaNs with the new data points
 
@@ -132,7 +136,7 @@ def removeCosmicRays(x, y, reference = 1, factor = 15):
 
     '''
     Looks for large sharp spikes in spectrum via 1st derivative
-    Threshold of "large" determined by 'factor'
+    Threshold of "large" determined by 'factor'; smaller factor picks up more peaks but also more false positives
     If correecting a referenced DF spectrum (or similar), reference = reference spectrum (1D array). Otherwise, reference= 1
     Erases a small window around each spike and replaces it with a straight line via the removeNaNs function
     '''
@@ -573,6 +577,14 @@ def detectMinima(array, threshold = 0):
             begin = i
             ps = s
 
+    if threshold > 0:
+        yRange = array.max() - array.min()
+        threshold = array.max() - threshold*yRange
+        mIndices = [i for i in mIndices if array[i] < threshold]
+
+    if len(mIndices) == 0:
+        return False
+
     return np.array(mIndices)
 
 def testIfNpom(x, y, lower = 0.05, upper = 2.5, NpomThreshold = 1.5):
@@ -864,27 +876,37 @@ def testIfWeirdPeak(x, y, factor = 1.4, transWl = 533, upperLimit = 670, plot = 
     else:
         return weird
 
-def getFWHM(x, y, fwhmFactor = 1.1, smooth = False, peakpos = 0):
-    '''Estimates FWHM of largest peak in a given dataset'''
+def getFWHM(x, y, maxdex = None, fwhmFactor = 1.1, smooth = False, peakpos = 0):
+    '''Estimates FWHM of largest peak in a given dataset if maxdex == None'''
+    '''If maxdex is specified, estimates FWHM of peak centred at that point'''
     '''Also returns xy coords of peak'''
 
     if smooth == True:
         y = butterLowpassFiltFilt(y)
 
+    if maxdex != None:
+        upperMindex = detectMinima(y[maxdex:])[0] + maxdex
+        lowerMindex = maxdex - detectMinima(y[:maxdex][::-1])[0]
+        x = x[lowerMindex:upperMindex]
+        y = y[lowerMindex:upperMindex]
+        # maxdex -= lowerMindex
+
     maxdices = detectMinima(-y)
 
-    if len(maxdices) == 0:
+    if type(maxdices) == bool:
 
         if peakpos != 0:
             maxdices = np.array([abs(x - peakpos).argmin()])
 
         else:
             return None, None, None
-
-    yMax = y[maxdices].max()
-    halfMax = old_div(yMax,2)
-    maxdex = maxdices[y[maxdices].argmax()]
+    
+    maxdex = maxdices[y[maxdices].argmax()]    
+        
+    yMax = y[maxdex]
     xMax = x[maxdex]
+    
+    halfMax = old_div(yMax,2)
 
     halfDex1 = abs(y[:maxdex][::-1] - halfMax).argmin()
     halfDex2 = abs(y[maxdex:] - halfMax).argmin()
@@ -1020,7 +1042,7 @@ def findMainPeaks(x, y, fwhmFactor = 1.1, plot = False, midpoint = 680, weirdPea
     return peakFindMetadata, weirdGauss, cmGauss
 
 def analyseNpomSpectrum(x, y, cutoff = 1500, fs = 60000, doublesThreshold = 2, cmLowLim = 600, raiseExceptions = False, plot = False,
-                     weirdFactor = 1.4, transPeakPos = 533, peakFindMidpoint = 680, avg = False):
+                        weirdFactor = 1.4, transPeakPos = 533, peakFindMidpoint = 680, avg = False):
     yRaw = np.array(y)
     xRaw = np.array(x)
 
@@ -2558,27 +2580,62 @@ def analyseRepresentative(outputFileName, peakFindMidpoint = 680, npTypes = 'all
 
 def doStats(outputFileName, closeFigures = True, stacks = True, hist = True, allHists = True, irThreshold = 8,
             minBinFactor = 5, intensityRatios = False, npomTypes = 'all', peakAvgs = True, analRep = True,
-            peakFindMidpoint = 680, pl = False):
+            peakFindMidpoint = 680, pl = False, groupAvgs = True, histAvgs = True, raiseExceptions = True):
 
     if stacks == True:
-        plotAllStacks(outputFileName, closeFigures = closeFigures)
+        if raiseExceptions == True:
+            plotAllStacks(outputFileName, closeFigures = closeFigures)
+        else:
+            try:
+                plotAllStacks(outputFileName, closeFigures = closeFigures)
+            except Exception as e:
+                print('Stacks plotting failed becuse %s' % e)
 
     if hist == True:
         plotAll = allHists
-        plotAllHists(outputFileName, closeFigures = closeFigures, irThreshold = irThreshold, minBinFactor = minBinFactor,
-                     plotAll = plotAll, pl = pl, npomTypes = npomTypes)
+        if raiseExceptions == True:
+            plotAllHists(outputFileName, closeFigures = closeFigures, irThreshold = irThreshold, minBinFactor = minBinFactor,
+                         plotAll = plotAll, pl = pl, npomTypes = npomTypes)
+        else:
+            try:
+                plotAllHists(outputFileName, closeFigures = closeFigures, irThreshold = irThreshold, minBinFactor = minBinFactor,
+                         plotAll = plotAll, pl = pl, npomTypes = npomTypes)
+            except Exception as e:
+                print('Histogram plot failed becuse %s' % e)
 
     if intensityRatios == True:
-        plotAllIntensityRatios(outputFileName, closeFigures = closeFigures, plot = True)
-        visualiseIntensityRatios(outputFileName)
+        if raiseExceptions == True:
+            plotAllIntensityRatios(outputFileName, closeFigures = closeFigures, plot = True)
+            visualiseIntensityRatios(outputFileName)
+        else:
+            try:
+                plotAllIntensityRatios(outputFileName, closeFigures = closeFigures, plot = True)
+            except Exception as e:
+                print('Intensity ratio plots failed becuse %s' % e)
+            try:
+                visualiseIntensityRatios(outputFileName)
+            except Exception as e:
+                print('Intensity ratio visualisation failed becuse %s' % e)
 
     if peakAvgs == True:
-        calcAllPeakAverages(outputFileName, groupAvgs = True, histAvgs = True, singleBin = False, npTypes = npomTypes)
-
+        if raiseExceptions == True:
+            calcAllPeakAverages(outputFileName, groupAvgs = groupAvgs, histAvgs = histAvgs, singleBin = False, npTypes = npomTypes)
+        else:
+            try:
+                calcAllPeakAverages(outputFileName, groupAvgs = groupAvgs, histAvgs = histAvgs, singleBin = False, npTypes = npomTypes)
+            except Exception as e:
+                print('Peak average collection failed becuse %s' % e)
+                
     if analRep == True:
-        analyseRepresentative(outputFileName, peakFindMidpoint = peakFindMidpoint, npTypes = npomTypes)
-
-def sortSpectra(rootDir, outputFileName, stats = True, closeFigures = True, npSize = 80,):
+        if raiseExceptions == True:
+            analyseRepresentative(outputFileName, peakFindMidpoint = peakFindMidpoint, npTypes = npomTypes)
+        else:
+            try:
+                analyseRepresentative(outputFileName, peakFindMidpoint = peakFindMidpoint, npTypes = npomTypes)
+            except Exception as e:
+                print('Representative spectrum analysis failed because %s' % e)
+            
+def sortSpectra(rootDir, outputFileName, stats = True, closeFigures = True, npSize = 80, npomTypes = ['Perfect NPoMs']):
     
     summaryAttrs = retrieveData(rootDir, attrsOnly = True)
     
@@ -2588,17 +2645,18 @@ def sortSpectra(rootDir, outputFileName, stats = True, closeFigures = True, npSi
     peakFindMidpoint = peakFindMidpointDict[npSize]
                             
     with h5py.File(outputFileName, 'a') as opf:
-        gAllRaw = opf['All Spectra (Raw)']
-        gNPoMs = opf['NPoMs']
-        
+        try:
+            gAllRaw = opf['All Spectra (Raw)']
+        except Exception as e:
+            print(opf.keys())
+            raise(e)
+
+        gNPoMs = opf['NPoMs']        
         gAllNPoMs = gNPoMs['All NPoMs']
         gAllNPoMsNorm = gAllNPoMs['Normalised']
-             
-        gIdeal = gNPoMs['Ideal NPoMs']
-        gIdealRaw = gIdeal['Raw']
-        gIdealNorm = gIdeal['Normalised']
+            
         
-        if 'Aligned NPoMs' not in list(gNPoMs.keys()):
+        if 'Aligned NPoMs' not in gNPoMs.keys():
             gAligned = gNPoMs.create_group('Aligned NPoMs')
             gAlignedRaw = gAligned.create_group('Raw')
             gAlignedNorm = gAligned.create_group('Normalised')
@@ -2606,49 +2664,116 @@ def sortSpectra(rootDir, outputFileName, stats = True, closeFigures = True, npSi
         gAligned = gNPoMs['Aligned NPoMs']
         gAlignedRaw = gAligned['Raw']
         gAlignedNorm = gAligned['Normalised']
-          
-        if 'Perfect NPoMs' not in list(gNPoMs.keys()):
-            gPerfect = gNPoMs.create_group('Perfect NPoMs')
-            gPerfectRaw = gPerfect.create_group('Raw')
-            gPerfectNorm = gPerfect.create_group('Normalised')
-        
-        gPerfect = gNPoMs['Perfect NPoMs']
-        gPerfectRaw = gPerfect['Raw']
-        gPerfectNorm = gPerfect['Normalised']
-        
+
+        if 'Perfect NPoMs' in npomTypes:
+            gIdeal = gNPoMs['Ideal NPoMs']
+            gIdealRaw = gIdeal['Raw']
+            gIdealNorm = gIdeal['Normalised']   
+            if 'Perfect NPoMs' not in gNPoMs.keys():
+                gPerfect = gNPoMs.create_group('Perfect NPoMs')
+                gPerfectRaw = gPerfect.create_group('Raw')
+                gPerfectNorm = gPerfect.create_group('Normalised')
+            
+            gPerfect = gNPoMs['Perfect NPoMs']
+            gPerfectRaw = gPerfect['Raw']
+            gPerfectNorm = gPerfect['Normalised']
+
+        if 'Weird Peakers' in npomTypes:
+            if 'Weird Peakers' not in gNPoMs.keys():
+                gWeirds = gNPoMs.create_group('Weird Peakers')
+                gWeirds.create_group('Raw')
+                gWeirds.create_group('Normalised')
+
+            gWeirds = gNPoMs['Weird Peakers']
+            gWeirdsRaw = gWeirds['Raw']
+            gWeirdsNorm = gWeirds['Normalised']
+
+        if 'Non-Weird-Peakers' in npomTypes:
+            if 'Non-Weird-Peakers' not in gNPoMs.keys():
+                gNormal = gNPoMs.create_group('Non-Weird-Peakers')
+                gNormal.create_group('Raw')
+                gNormal.create_group('Normalised')
+
+            gNormal = gNPoMs['Non-Weird-Peakers']
+            gNormalRaw = gNormal['Raw']
+            gNormalNorm = gNormal['Normalised']
+
         totalFitStart = time.time()
         
         print('Sorting spectra...')
         
-        for spectrumName in list(gAllRaw.keys()):
-            n = int(spectrumName.split(' ')[-1])
-                        
-            if 'Misaligned particle numbers' in list(summaryAttrs.keys()):
-                if n not in summaryAttrs['Misaligned particle numbers']:
+        for n, spectrumName in enumerate(sorted(gAllRaw.keys(), key = lambda spectrumName: int(spectrumName.split(' ')[-1]))):
+            try:
 
-                    if 'Aligned NPoMs' in list(gNPoMs.keys()):
-                        gAlignedRaw[spectrumName] = gAllRaw[spectrumName]
-                        gAlignedRaw[spectrumName].attrs.update(gAllRaw[spectrumName].attrs)
-                        
-                    if 'Spectrum %s' % n in list(gAllNPoMsNorm.keys()):
-                        gAlignedNorm[spectrumName] = gAllNPoMsNorm[spectrumName]
-                        gAlignedNorm[spectrumName].attrs.update(gAllNPoMsNorm[spectrumName].attrs)
-            else:
-                if 'Aligned NPoMs' in list(gNPoMs.keys()) and 'Spectrum %s' % n in list(gAllNPoMsNorm.keys()):
-                    gAlignedRaw[spectrumName] = gAllRaw[spectrumName]
-                    gAlignedRaw[spectrumName].attrs.update(gAllRaw[spectrumName].attrs)
+                if 'Aligned NPoMs' in npomTypes:                            
+                    if 'Misaligned particle numbers' in summaryAttrs.keys():
+                        if n not in summaryAttrs['Misaligned particle numbers']:
 
-                    gAlignedNorm[spectrumName] = gAllNPoMsNorm[spectrumName]
-                    gAlignedNorm[spectrumName].attrs.update(gAllNPoMsNorm[spectrumName].attrs)
-            
-            if spectrumName in list(gAlignedRaw.keys()) and spectrumName in list(gIdealRaw.keys()):
-                gPerfectRaw[spectrumName] = gAllRaw[spectrumName]
-                gPerfectRaw[spectrumName].attrs.update(gAllRaw[spectrumName].attrs)
-            
-            if spectrumName in list(gAlignedNorm.keys()) and spectrumName in list(gIdealNorm.keys()):
-                gPerfectNorm[spectrumName] = gAllNPoMsNorm[spectrumName]
-                gPerfectNorm[spectrumName].attrs.update(gAllNPoMsNorm[spectrumName].attrs)
-        
+                            if 'Aligned NPoMs' in gNPoMs.keys():
+                                if spectrumName not in gAlignedRaw.keys():
+                                    gAlignedRaw[spectrumName] = gAllRaw[spectrumName]
+                                
+                                gAlignedRaw[spectrumName].attrs.update(gAllRaw[spectrumName].attrs)
+                                
+                            if 'Spectrum %s' % n in gAllNPoMsNorm.keys():
+                                if spectrumName not in gAlignedNorm.keys():
+                                    gAlignedNorm[spectrumName] = gAllNPoMsNorm[spectrumName]
+                                gAlignedNorm[spectrumName].attrs.update(gAllNPoMsNorm[spectrumName].attrs)
+                    else:
+                        if 'Aligned NPoMs' in gNPoMs.keys() and 'Spectrum %s' % n in gAllNPoMsNorm.keys():
+                            if spectrumName not in gAlignedRaw.keys():
+                                gAlignedRaw[spectrumName] = gAllRaw[spectrumName]
+                            gAlignedRaw[spectrumName].attrs.update(gAllRaw[spectrumName].attrs)
+
+                            if spectrumName not in gAlignedNorm.keys():
+                                gAlignedNorm[spectrumName] = gAllNPoMsNorm[spectrumName]
+                            gAlignedNorm[spectrumName].attrs.update(gAllNPoMsNorm[spectrumName].attrs)
+                
+                    if spectrumName in gAlignedRaw.keys() and spectrumName in gIdealRaw.keys():
+                        if spectrumName not in gPerfectRaw.keys():
+                            gPerfectRaw[spectrumName] = gAllRaw[spectrumName]
+                        gPerfectRaw[spectrumName].attrs.update(gAllRaw[spectrumName].attrs)
+                    
+                    if spectrumName in gAlignedNorm.keys() and spectrumName in gIdealNorm.keys():
+                        if spectrumName not in gPerfectNorm.keys():
+                            gPerfectNorm[spectrumName] = gAllNPoMsNorm[spectrumName]
+                        gPerfectNorm[spectrumName].attrs.update(gAllNPoMsNorm[spectrumName].attrs)
+
+                specAttrs = gAllRaw[spectrumName].attrs
+
+                if 'Weird Peakers' in npomTypes:
+
+                    if spectrumName in gAllNPoMsNorm.keys():
+                        if specAttrs['Weird Peak?'] == True:
+                            try:
+                                gWeirdsRaw[spectrumName] = gAllRaw[spectrumName]
+                            except:
+                                pass
+                            gWeirdsRaw[spectrumName].attrs.update(gAllRaw[spectrumName].attrs)
+
+                            try:
+                                gWeirdsNorm[spectrumName] = gAllRaw[spectrumName]
+                            except:
+                                pass
+                            gWeirdsNorm[spectrumName].attrs.update(gAllRaw[spectrumName].attrs)
+
+                        else:
+                            if 'Non-Weird-Peakers' in npomTypes:
+                                try:
+                                    gNormalRaw[spectrumName] = gAllRaw[spectrumName]
+                                except:
+                                    pass
+                                gNormalRaw[spectrumName].attrs.update(gAllRaw[spectrumName].attrs)
+                                try:
+                                    gNormalNorm[spectrumName] = gAllNPoMsNorm[spectrumName]
+                                except:
+                                    pass
+                                gNormalNorm[spectrumName].attrs.update(gAllRaw[spectrumName].attrs)
+
+            except Exception as e:
+                print('%s failed because %s' % (spectrumName, e))
+                raise(e)
+
     currentTime = time.time() - totalFitStart
     mins = int(old_div(currentTime, 60))
     secs = old_div((np.round((currentTime % 60)*100)),100)
@@ -2656,7 +2781,7 @@ def sortSpectra(rootDir, outputFileName, stats = True, closeFigures = True, npSi
     
     if stats == True:
         doStats(outputFileName, closeFigures = True, stacks = False, peakFindMidpoint = peakFindMidpoint,
-                pl = False, npomTypes = ['Perfect NPoMs'])
+                pl = False, npomTypes = npomTypes, groupAvgs = False)
     
     absoluteEndTime = time.time()
     timeElapsed = absoluteEndTime - absoluteStartTime
@@ -2699,7 +2824,7 @@ def fitAllSpectra(rootDir, outputFileName, npSize = 80, summaryAttrs = False, fi
                   raiseSpecExceptions = False, closeFigures = True, npomTypes = 'all', stacks = 'all', sortOnly = False):
     
     if sortOnly == True:
-        sortSpectra(rootDir, outputFileName, stats = stats)
+        sortSpectra(rootDir, outputFileName, stats = stats, npomTypes = npomTypes)
         return
 
     absoluteStartTime = time.time()
@@ -3044,7 +3169,7 @@ def fitAllSpectra(rootDir, outputFileName, npSize = 80, summaryAttrs = False, fi
     print('100%% (%s spectra) analysed in %s min %s sec\n' % (nn, mins, secs))
 
     if stats == True:
-        doStats(outputFileName, closeFigures = closeFigures, peakFindMidpoint = peakFindMidpoint, pl = pl, npomTypes = npomTypes)
+        doStats(outputFileName, closeFigures = closeFigures, peakFindMidpoint = peakFindMidpoint, pl = pl, npomTypes = npomTypes, raiseExceptions = raiseExceptions)
 
     absoluteEndTime = time.time()
     timeElapsed = absoluteEndTime - absoluteStartTime

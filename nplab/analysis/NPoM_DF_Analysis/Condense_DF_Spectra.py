@@ -472,9 +472,15 @@ def extractAllSpectra(rootDir, returnIndividual = False, pl = False, dodgyThresh
                         nummers = nummers[1:]
 
                     particleGroup = scan[groupName]
-
+                    
+                    if dParticleFormat not in particleGroup.keys():
+                        for dSetName in particleGroup.keys():
+                            if dSetName.startswith('alinger.z_scan') or dSetName.startswith('zScan'):
+                                dParticleFormat = dSetName
+                                
                     try:
                         zScan = particleGroup[dParticleFormat]
+                    
                         x = zScan.attrs['wavelengths']
                         zScan.attrs['background']
                         ref = zScan.attrs['reference']
