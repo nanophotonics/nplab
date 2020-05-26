@@ -6,8 +6,6 @@ Created on Thu Dec 19 16:24:49 2019
 """
 import numpy as np
 from nplab.instrument.electronics.power_meter import PowerMeter
-#from nplab.instrument.electronics.ThorlabPM100_powermeter import ThorlabsPM100
-from ThorlabsPM100 import ThorlabsPM100
 from nplab.instrument.visa_instrument import VisaInstrument
 import visa
 
@@ -18,10 +16,9 @@ class Thorlabs_powermeter(PowerMeter, VisaInstrument):
                              # 'timeout': 0.1,
                               'read_termination': '\n',
                               'write_termination': '\r\n',
-                             # 'send_end': True
                                 }):
      
-        VisaInstrument.__init__(self, address = address, settings = settings)
+        VisaInstrument.__init__(self, address=address, settings=settings)
         PowerMeter.__init__(self)
         self.address = address
         self.settings = settings
