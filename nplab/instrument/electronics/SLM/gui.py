@@ -37,6 +37,7 @@ class constantUi(BaseUi):
     def _connect(self):
         self.offset_slider.valueChanged.connect(self.update_offset_lineedit)
         self.offset_lineEdit.returnPressed.connect(self.update_offset_slider)
+        self.offset_slider.valueChanged.connect(self.slm_gui.make)
 
     def update_offset_lineedit(self):
         steps = self.offset_slider.value()
@@ -104,9 +105,13 @@ class gratingsUi(BaseUi):
             self.gratingx_lineEdit.setText('%g' % (grating_x - step))
 
     def get_params(self):
-        grating_x = float(self.gratingx_lineEdit.text())
-        grating_y = float(self.gratingy_lineEdit.text())
-        return grating_x, grating_y
+        grating_x = self.gratingx_lineEdit.text()
+        grating_y = self.gratingy_lineEdit.text()
+        if grating_x == '':
+            grating_x = 0
+        if grating_y == '':
+            grating_y = 0
+        return float(grating_x), float(grating_y)
 
 
 class astigmatismUi(BaseUi):
