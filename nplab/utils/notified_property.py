@@ -41,7 +41,7 @@ They can also have default values:
 ...         return 99
 ...     @c.setter
 ...     def c(self, val):
-...         print "discarding {0}".format(val)
+...         print("discarding {0}".format(val))
 >>>
 >>> f = foo()
 >>> f.c
@@ -54,7 +54,7 @@ discarding 10
 To register for notification, use register_for_property_changes
 
 >>> def a_changed(a):
-...     print "A changed to '{0}'".format(a)
+...     print("A changed to '{0}'".format(a))
 >>> register_for_property_changes(f, "a", a_changed)
 >>> f.a=6
 A changed to '6'
@@ -68,7 +68,7 @@ object to be passed in.
 from builtins import str
 from builtins import object
 import functools
-from weakref import WeakSet, WeakKeyDictionary
+from weakref import WeakKeyDictionary
 import numpy as np
 
 class Property(object):
@@ -166,7 +166,7 @@ class NotifiedProperty(Property):
         NB if the function raises an exception, it will not be called again.
         """
         if obj not in list(self.callbacks_by_object.keys()):
-            self.callbacks_by_object[obj] = WeakSet()
+            self.callbacks_by_object[obj] = set()
         self.callbacks_by_object[obj].add(callback)
         
     def deregister_callback(self, obj, callback):
@@ -252,3 +252,11 @@ class NotifiedPropertiesMixin(object):
 if __name__ == '__main__':
     import doctest
     doctest.testmod()
+    class foo():
+        a = DumbNotifiedProperty(10)
+    f = foo()
+    f.a = 11
+    def a_changed(new):
+        print('a changed to ' + str(new))
+    register_for_property_changes(f, 'a', a_changed)
+    f.a = 12

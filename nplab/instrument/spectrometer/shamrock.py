@@ -28,7 +28,7 @@ class Shamrock(Instrument):
         super(Shamrock,self).__init__()
         #for Windows
         architecture = platform.architecture()
-
+        
         if architecture[0] == "64bit":
             self.dll2 = CDLL("C:\\Program Files\\Andor SOLIS\\Drivers\\Shamrock64\\atshamrock")
             self.dll = CDLL("C:\\Program Files\\Andor SOLIS\\Drivers\\Shamrock64\\ShamrockCIF")
@@ -42,7 +42,7 @@ class Shamrock(Instrument):
             error = self.dll.ShamrockInitialize(tekst)
             
         self.current_shamrock = 0 #for more than one Shamrock this has to be varied, see ShamrockGetNumberDevices
-        self.center_wavelength = 0.0
+        self._logger.setLevel('WARN')
 
     def verbose(self, error, function=''):
         self.log( "[%s]: %s" %(function, error),level = 'info')
@@ -329,5 +329,7 @@ def main():
     sys.exit(app.exec_())
 
 if __name__ == "__main__":
-    main()
+    # main()
+    s = Shamrock()
+    s.show_gui(block = False)
     

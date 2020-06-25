@@ -70,6 +70,9 @@
      <height>22</height>
     </rect>
    </property>
+   <property name="minimum">
+    <double>-800.000000000000000</double>
+   </property>
    <property name="maximum">
     <double>800.000000000000000</double>
    </property>
@@ -112,8 +115,11 @@
    <property name="decimals">
     <number>1</number>
    </property>
+   <property name="minimum">
+    <double>-360.000000000000000</double>
+   </property>
    <property name="maximum">
-    <double>800.000000000000000</double>
+    <double>360.000000000000000</double>
    </property>
   </widget>
   <widget class="QDoubleSpinBox" name="doubleSpinBox_max_param">
@@ -127,6 +133,9 @@
    </property>
    <property name="decimals">
     <number>1</number>
+   </property>
+   <property name="minimum">
+    <double>-800.000000000000000</double>
    </property>
    <property name="maximum">
     <double>800.000000000000000</double>
@@ -222,17 +231,17 @@
     <string>points</string>
    </property>
   </widget>
+  <zorder>label_11</zorder>
+  <zorder>label_8</zorder>
   <zorder>label_9</zorder>
   <zorder>pushButton_calibrate_power</zorder>
   <zorder>doubleSpinBox_measured_power</zorder>
   <zorder>label_2</zorder>
   <zorder>doubleSpinBox_set_input_param</zorder>
-  <zorder>label_8</zorder>
   <zorder>pushButton_set_param</zorder>
   <zorder>doubleSpinBox_min_param</zorder>
   <zorder>doubleSpinBox_max_param</zorder>
   <zorder>laser_textBrowser</zorder>
-  <zorder>label_11</zorder>
   <zorder>doubleSpinBox_set_power</zorder>
   <zorder>pushButton_set_power</zorder>
   <zorder>number_points_spinBox</zorder>

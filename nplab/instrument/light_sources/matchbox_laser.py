@@ -77,7 +77,7 @@ class MatchboxLaser(SerialInstrument, LightSource):
         power = abs(int(power))
         print("Setting power:{} (min:0, max: 8191)".format(power))
         self.query("c 6 {}".format(power))
-        return self.readpower()
+        return self.get_power()
         
 if __name__ == "__main__":
     laser = MatchboxLaser("/dev/ttyUSB0")

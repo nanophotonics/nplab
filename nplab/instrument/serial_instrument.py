@@ -8,7 +8,6 @@ Serial Instrument interface
 from __future__ import print_function
 #from traits.api import HasTraits, Bool, Int, Str, Button, Array, Enum, List
 from builtins import str
-import nplab
 from nplab.instrument.message_bus_instrument import MessageBusInstrument
 import threading
 import serial
@@ -16,9 +15,9 @@ import serial.tools.list_ports
 from serial import FIVEBITS, SIXBITS, SEVENBITS, EIGHTBITS
 from serial import PARITY_NONE, PARITY_EVEN, PARITY_ODD, PARITY_MARK, PARITY_SPACE
 from serial import STOPBITS_ONE, STOPBITS_ONE_POINT_FIVE, STOPBITS_TWO
-import io
-import re
-import numpy as np
+
+
+import time
 
 class SerialInstrument(MessageBusInstrument):
     """
@@ -123,10 +122,13 @@ class SerialInstrument(MessageBusInstrument):
         
     def readline(self, timeout = None):
         with self.communications_lock:
+            if hasattr(self, 'timeout') and timeout is None: timeout = self.timeout
+            elif timeout is None: timeout = 10
             eol = str.encode(self.termination_character)
             leneol = len(eol)
             line = bytearray()
-            while True:
+            start = time.time()
+            while time.time()-start<timeout:
                 c = self.ser.read(1)
                 if c:
                     line += c
@@ -134,7 +136,7 @@ class SerialInstrument(MessageBusInstrument):
                         break
                 else:
                     break
-            return line.decode()
+            return line.decode().replace(self.termination_read, '\n')
     
     def test_communications(self):
         """Check if the device is available on the current port.

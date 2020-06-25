@@ -5,6 +5,7 @@ import nplab.datafile as df
 from nplab.utils.log import create_logger, ColoredFormatter
 
 import os
+import sys
 import inspect
 import numpy as np
 
@@ -23,7 +24,7 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
     """
 
     def __init__(self, instrument_dict, parent=None, dock_settings_path=None,
-                 scripts_path=None, working_directory=None, file_path=None):  #
+                 scripts_path=None, working_directory=None, file_path=None, terminal = False):  #
         """Args:
             instrument_dict(dict) :     This is a dictionary containing the
                                         instruments objects where the key is the 
@@ -40,6 +41,9 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
             file_path(str):             A path to the file for saving data. If None,
                                         a dialog will ask for one. Can be a relative
                                         path (from working_directory) or an absolute path
+            terminal(bool):             Specifies whether the generated gui has an ipython 
+                                        console. Sripts ran in an ipython console cannot 
+                                        generate another one.
                                 """
         super(GuiGenerator, self).__init__(parent)
         self._logger = LOGGER
@@ -78,15 +82,18 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
 
         for instr in self.instr_dict:
             self._open_one_gui(instr)
-
+            
         self.script_menu = None
         if scripts_path is not None:
             self.scripts_path = scripts_path
         else:
             self.scripts_path = 'scripts'
+        sys.path.append(self.scripts_path)
         self.terminalWindow = None
-        self.menuTerminal()
-        self._addActionViewMenu('Terminal')
+        self.terminal = terminal
+        if terminal:
+            self.menuTerminal()
+            self._addActionViewMenu('Terminal')
         self.makeScriptMenu()
 
         self.NightMode = 1
@@ -335,10 +342,14 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
 
     def menuScriptClicked(self, scriptname):
         """Runs the selected script """
-        if self.terminalWindow is None:
-            self.menuTerminal()
-        self.terminalWindow.run_script(scriptname)
-
+        if self.terminal:
+            if self.terminalWindow is None:
+                self.menuTerminal()
+                self.terminalWindow.run_script(scriptname)
+        else: 
+            print('Running',os.path.join(self.scripts_path, scriptname))
+            exec(open(os.path.join(self.scripts_path, scriptname)).read())
+            
     def VerboseChanged(self, action):
         """Automatically change the loggers 
         verbosity level across all instruments upon 

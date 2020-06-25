@@ -149,7 +149,7 @@ class DisplayWidgetRoiScale(ExtendedImageView):
         self._pxl_scale = scale
         self._pxl_offset = offset
 
-        self.LineDisplay = self.ui.roiPlot
+        self.LineDisplay = self.ui.roiPlot#creates a PlotWidget instance
         self.LineDisplay.showGrid(x=True, y=True)
         self.ui.splitter.setHandleWidth(10)
         self.getHistogramWidget().gradient.restoreState(list(Gradients.values())[1])
@@ -205,6 +205,7 @@ class DisplayWidgetRoiScale(ExtendedImageView):
         if boolean:
             self.LineDisplay.show()
             self.LineDisplay.showAxis('left')
+            self.LineDisplay.setMouseEnabled(True, True)
             self.ui.splitter.setSizes([0, self.height()-35, 35])
         else:
             self.ui.splitter.setSizes([self.height()-35, 0, 35])
@@ -257,7 +258,7 @@ class DummyCameraRoiScale(CameraRoiScale):
         if self.data == 'spectrum':
             ran = 100 * ArrayWithAttrs(np.random.random(100))
         else:
-            ran = 100 * np.random.random((100, 100))
+            ran = 100 * np.random.random((1600, 200))
         self._latest_raw_frame = ran
         return True, ran
 
@@ -279,5 +280,6 @@ class DummyCameraRoiScale(CameraRoiScale):
 
 
 if __name__ == '__main__':
+
     dcrd = DummyCameraRoiScale()
-    dcrd.show_gui(blocking=True)
+    dcrd.show_gui(blocking=False)
