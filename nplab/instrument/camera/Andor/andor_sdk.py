@@ -152,10 +152,10 @@ class AndorBase(object):
         """Ensures the DLL library is pointing to the correct instrument for any particular instances of this class"""
         camera_handle = c_uint()
         error = getattr(self.dll, 'GetCameraHandle')(c_uint(self.camera_index), byref(camera_handle))
-        self._error_handler(error)
+        self._error_handler(error, 'GetCameraHandle', c_uint(self.camera_index), byref(camera_handle))
 
         error = getattr(self.dll, 'SetCurrentCamera')(camera_handle)
-        self._error_handler(error)
+        self._error_handler(error, 'SetCameraHandle', camera_handle)
 
     '''Base functions'''
 
@@ -256,6 +256,7 @@ class AndorBase(object):
                             inputs = (inputs, )
                 else:
                     self._logger.warn(andor_warning)
+                    raise andor_warning
 
         if 'Get' not in list(self.parameters[param_loc].keys()):
             if len(inputs) == 1:
@@ -460,7 +461,10 @@ class AndorBase(object):
         self.set_andor_parameter('SetTemperature', -90)
         self.set_andor_parameter('CoolerMode', 0)
         self.set_andor_parameter('FanMode', 0)
-        self.set_andor_parameter('OutAmp', 1) # This means EMCCD off - this is the default mode
+        try:
+            self.set_andor_parameter('OutAmp', 1)  # This means EMCCD off - this is the default mode
+        except AndorWarning:
+            self.set_andor_parameter('OutAmp', 0)
         self.cooler = 1
 
     @locked_action
@@ -681,7 +685,7 @@ parameters = dict(
                 Get=dict(cmdName='GetEMCCDGain', Outputs=(c_int,)), value=None),
     EMAdvancedGain=dict(Set=dict(cmdName='SetEMAdvanced', Inputs=(c_int,)), value=None),
     EMMode=dict(Set=dict(cmdName='SetEMCCDGainMode', Inputs=(c_int,)), value=None),
-    EMGainRange=dict(Set=dict(cmdName='GetEMCCDGainRange', Outputs=(c_int,) * 2), value=None),
+    EMGainRange=dict(Get=dict(cmdName='GetEMCCDGainRange', Outputs=(c_int,) * 2), value=None),
     Shutter=dict(Set=dict(cmdName='SetShutter', Inputs=(c_int,) * 4), value=None),
     CoolerMode=dict(Set=dict(cmdName='SetCoolerMode', Inputs=(c_int,)), value=None),
     FanMode=dict(Set=dict(cmdName='SetFanMode', Inputs=(c_int,)), value=None),
