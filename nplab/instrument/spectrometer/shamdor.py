@@ -14,7 +14,13 @@ from nplab.instrument.shutter.BX51_uniblitz import Uniblitz
 class Shamdor(Andor):
     ''' Wrapper class for the shamrock and the andor
     '''
-    def __init__(self, pixel_number = 1600, pixel_width = 16, use_shifts = False, laser = '_633', white_shutter = None):
+    metadata_property_names += ('slit_width', 'wavelengths')
+    
+    def __init__(self, pixel_number=1600,
+                 pixel_width=16,
+                 use_shifts=False, 
+                 laser='_633', 
+                 white_shutter=None):
         self.shamrock = Shamrock()
         self.shamrock.pixel_number = pixel_number
         self.shamrock.pixel_width = pixel_width
@@ -23,7 +29,7 @@ class Shamdor(Andor):
         self.white_shutter = white_shutter
         super(Shamdor, self).__init__()
     
-    def get_x_axis(self, use_shifts = None):
+    def get_x_axis(self, use_shifts=None):
         if self.use_shifts and use_shifts in [None, False]:
             if self.laser == '_633': centre_wl = 632.8
             elif self.laser == '_785': centre_wl = 784.81
@@ -33,21 +39,21 @@ class Shamdor(Andor):
             return self.shamrock.GetCalibration()[::-1]
     x_axis = property(get_x_axis)
     @property
-    def Slit(self):
+    def slit_width(self):
         return self.shamrock.slit_width
     @property 
     def wavelengths(self):
-        return self.get_x_axis(use_shifts = False)
+        return self.get_x_axis(use_shifts=False)
 def Capture(_AndorUI):
     if _AndorUI.Andor.white_shutter is not None:
         isopen = _AndorUI.Andor.white_shutter.is_open()
         if isopen:
             _AndorUI.Andor.white_shutter.close_shutter()
-        _AndorUI.Andor.raw_image(update_latest_frame = True)
+        _AndorUI.Andor.raw_image(update_latest_frame=True)
         if isopen:
             _AndorUI.Andor.white_shutter.open_shutter()
     else:
-        _AndorUI.Andor.raw_image(update_latest_frame = True)
+        _AndorUI.Andor.raw_image(update_latest_frame=True)
 setattr(AndorUI, 'Capture', Capture)
 if __name__ == '__main__':
     # wutter = Uniblitz("COM10")
