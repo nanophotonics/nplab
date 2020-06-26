@@ -13,8 +13,10 @@ from nplab.ui.ui_tools import UiTools
 from weakref import WeakSet
 import time
 
+
 class Andor(CameraRoiScale, AndorBase):
     metadata_property_names = ('Exposure', 'x_axis', 'CurrentTemperature',)
+
     def __init__(self, settings_filepath=None, camera_index=None, **kwargs):
         super(Andor, self).__init__()
         self.start(camera_index)
@@ -55,7 +57,7 @@ class Andor(CameraRoiScale, AndorBase):
     def raw_snapshot(self):
         try:
             if self.keep_shutter_open:
-                i = self.Shutter # initial shutter settings
+                i = self.Shutter  # initial shutter settings
                 self.Shutter = (i[0], 1, i[2], i[3])
             imageArray, num_of_images, image_shape = self.capture()
             if self.keep_shutter_open:
@@ -73,9 +75,11 @@ class Andor(CameraRoiScale, AndorBase):
             return True, self.CurImage
         except Exception as e:
             self._logger.warn("Couldn't Capture because %s" % e)
+
     def Capture(self):
-        '''takes a spectrum, and displays it'''
-        return self.raw_image(update_latest_frame = True)
+        """takes a spectrum, and displays it"""
+        return self.raw_image(update_latest_frame=True)
+
     def filter_function(self, frame):
         if self.backgrounded:
             return frame - self.background
@@ -95,10 +99,6 @@ class Andor(CameraRoiScale, AndorBase):
     @property
     def roi(self):
         return tuple([x - 1 for x in self.Image[2:]])
-        #return tuple(map(lambda x: x - 1, self.Image[2:]))
-    def Initialize(self):
-        self.FastExp = 2E-6
-        self._dllWrapper('Initialize', outputs=(c_char(),))
 
     @roi.setter
     def roi(self, value):
@@ -157,6 +157,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
             c_row, n_rows = self.Andor.SingleTrack
             self.spinBoxCenterRow.setValue(c_row)
             self.spinBoxNumRows.setValue(n_rows)
+
     def __del__(self):
         self._stopTemperatureThread = True
         if self.DisplayWidget is not None:
@@ -217,10 +218,12 @@ class AndorUI(QtWidgets.QWidget, UiTools):
 
     def cooler(self):
         self.Andor.cooler = self.checkBoxCooler.isChecked()
-    def temperature_gui(self):    
+
+    def temperature_gui(self):
         if self.sender() == self.read_temperature_pushButton:
                 self.temperature_display_thread.single_shot = True
         self.temperature_display_thread.start()
+
     def update_temperature_display(self, temperature):
         self.temperature_lcdNumber.display(float(temperature))
     
@@ -433,14 +436,17 @@ class AndorUI(QtWidgets.QWidget, UiTools):
 
     def Abort(self):
         self.Andor.live_view = False
+
+
 class DisplayThread(QtCore.QThread):
-    '''for displaying the temperature'''
+    """for displaying the temperature"""
     ready = QtCore.Signal(float)
+
     def __init__(self, parent):
         super(DisplayThread, self).__init__()
         self.parent = parent
         self.single_shot = False
-        self.refresh_rate = 1. # every second
+        self.refresh_rate = 1.  # every second
 
     def run(self):
         t0 = time.time()
@@ -455,6 +461,7 @@ class DisplayThread(QtCore.QThread):
                 self.single_shot = False               
                 break
         self.finished.emit()
+
 
 if __name__ == '__main__':
     andor = Andor()
