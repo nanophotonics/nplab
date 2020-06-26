@@ -170,10 +170,12 @@ class fullfit(object):
         self.shifts = np.array(shifts)
         self.order = order
         self.peaks = []
+        
         self.peak_bounds = []
+       
         self.asymm_peaks = None
         self.transmission = np.ones(len(spec))
-        if transmission is not None: self.transmission*=transmission
+        if transmission is not None: self.transmission *= transmission
         if lineshape == 'L':
             self.line = lambda H, C, W: self.L(self.shifts, H, C, W)
         if lineshape == 'G':
@@ -312,10 +314,8 @@ class fullfit(object):
                 # print(peak_candidate[0], self.noise_threshold, self.maxwidth, peak_candidate[2],self.minwidth)
                 pass
         if self.peak_added:#TODO store these values
-            height_bound = (self.noise_threshold,max(self.signal))
-            pos_bound = (np.min(self.shifts),np.max(self.shifts))
-            width_bound = (self.minwidth,self.maxwidth)
-            self.peak_bounds.append([height_bound, pos_bound, width_bound])  # height, position, width
+            
+            self.peak_bounds.append(self.bound)  # height, position, width
             if self.verbose: print('peak added')
         if not self.peak_added and self.verbose: print('no suitable peaks to add')
         
@@ -395,7 +395,7 @@ class fullfit(object):
         residual = self.spec - self.peaks_evaluated - fit
         above = residual[residual>0]
         below = residual[residual<0]
-        obj = np.sum(np.absolute(above))+10*np.sum(np.array(below)**4)
+        obj = np.sum(np.absolute(above))+10*np.sum(np.array(below))**4
         
         return obj
 
@@ -676,24 +676,32 @@ class fullfit(object):
         self.verbose = verbose
         self.min_peak_spacing = min_peak_spacing
         self.width = 4*self.Wavelet_Estimate_Width() # a guess for the peak width
+        self.noise_threshold = noise_factor*np.std(Grad(self.spec)) # peaks must be above this to be accepted
+        
+        
         self.regions = regions # number of regions the spectrum will be split into to add a new peak
         if self.regions>len(self.spec):self.regions = len(self.spec)//2 # can't be have more regions than points in spectrum
-        self.noise_threshold = noise_factor*np.std(Grad(self.spec)) # peaks must be above this to be accepted
+        
         self.initial_bg_poly() # takes a guess at the background
+        height_bound = (self.noise_threshold,np.max(self.signal))
+        pos_bound = (np.min(self.shifts),np.max(self.shifts))
+        width_bound = (self.minwidth,self.maxwidth)
+        
+        self.bound = [height_bound, pos_bound, width_bound]
+        
         if initial_fit is not None:
             self.peaks = initial_fit
-            self.regions = len(self.spec)/20.
-            if add_peaks == False: self.regions*=21 # if regions is bigger than the spectrum length, then no peaks are added
+            if add_peaks == False: self.regions = len(self.spec)+1 # if regions is bigger than the spectrum length, then no peaks are added
             self.peaks_stack = self.peaks_to_matrix(self.peaks) # 2d array of peak parameters
             height_bound = (self.noise_threshold,max(self.signal)) # bounds for the peak parameters
             pos_bound = (np.min(self.shifts),np.max(self.shifts))
             width_bound = (self.minwidth,self.maxwidth)
-            self.peak_bounds = []
-            for _ in self.peaks:                          
-                self.peak_bounds.append([height_bound, pos_bound, width_bound]) # creates a bound for each peak
+            self.peak_bounds = [self.bound for _ in self.peaks]
+             # creates a bound for each peak
             self.optimize_heights() # see functions for descriptions
-            self.optimize_centre_and_width()            
-            #self.optimize_peaks()
+            self.optimize_centre_and_width()   
+            
+            self.optimize_peaks()
         while self.regions <= len(self.spec):
             if verbose == True: print('Region fraction: ', np.around(self.regions/float(len(self.spec)), decimals = 2))
             existing_loss_score = self.loss_function() # measure of fit 'goodness'
