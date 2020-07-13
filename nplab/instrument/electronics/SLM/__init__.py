@@ -97,7 +97,7 @@ class SlmDisplay(QtWidgets.QWidget):
 
         self.setWindowTitle('SLM Phase')
         if hide_border:
-            self.setWindowFlags(QtCore.Qt.CustomizeWindowHint | QtCore.Qt.FramelessWindowHint)
+            self.setWindowFlags(QtCore.Qt.CustomizeWindowHint | QtCore.Qt.FramelessWindowHint | QtCore.Qt.WindowStaysOnTopHint)
 
     def set_lut(self, *params):
         self.LUT = np.poly1d(params)
