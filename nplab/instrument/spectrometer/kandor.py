@@ -9,6 +9,7 @@ from nplab.instrument.spectrometer.Kymera import Kymera
 class Kandor(Andor):
     ''' Wrapper class for the shamrock and the andor
     '''
+    metadata_property_names += ('wavelenghts', 'slit_width')
     def __init__(self,pixel_number = 1600):
         self.kymera = Kymera()
         super(Kandor, self).__init__()
@@ -21,6 +22,9 @@ class Kandor(Andor):
             X = range(len(X))
         return X
     x_axis = property(get_xaxis)
+    wavelenghts = property(get_xaxis)
+    slit_width = property(self.kymera.GetSlit)
+
 if __name__ == '__main__':
     k = Kandor()
     k.show_gui(block = False)
