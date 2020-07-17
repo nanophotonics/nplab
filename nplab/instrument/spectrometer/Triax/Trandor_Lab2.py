@@ -49,7 +49,7 @@ class Trandor(Andor):#Andor
     
     ''' Wrapper class for the Triax and the andor
     ''' 
-    metadata_property_names += ('slit_width', 'wavelengths')
+    metadata_property_names = Andor.metadata_property_names + ('slit_width', 'wavelengths')
     def __init__(self,White_Shutter=None):
         
         # print '__________________'

@@ -14,7 +14,7 @@ from nplab.instrument.shutter.BX51_uniblitz import Uniblitz
 class Shamdor(Andor):
     ''' Wrapper class for the shamrock and the andor
     '''
-    metadata_property_names += ('slit_width', 'wavelengths')
+    metadata_property_names = Andor.metadata_property_names + ('slit_width', 'wavelengths')
     
     def __init__(self, pixel_number=1600,
                  pixel_width=16,
