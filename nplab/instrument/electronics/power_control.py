@@ -18,6 +18,7 @@ from nplab.instrument import Instrument
 from nplab.instrument.electronics.aom import AOM as Aom
 from nplab.instrument.stage.Thorlabs_ELL8K import Thorlabs_ELL8K as RStage
 from nplab.instrument.electronics.power_meter import PowerMeter
+from nplab.instrument.electronics.thorlabs_pm100 import ThorlabsPowermeter
 from nplab import datafile
 
 def isMonotonic(A): 
@@ -75,7 +76,7 @@ class PowerControl(Instrument):
     
     
     def _initiate_pometer(self):
-        if isinstance(self.pometer, 'ThorlabsPowermeter'):      
+        if isinstance(self.pometer, ThorlabsPowermeter):      
             if self._785: self.pometer.wavelength = 785   
             if self._633: self.pometer.wavelength = 633              
         else: print('wavelength not corrected for')
