@@ -41,13 +41,15 @@ class Shamdor(Andor):
 def Capture(_AndorUI):
     if _AndorUI.Andor.white_shutter is not None:
         isopen = _AndorUI.Andor.white_shutter.is_open()
+       
         if isopen:
             _AndorUI.Andor.white_shutter.close_shutter()
-        _AndorUI.Andor.raw_image(update_latest_frame = True)
+        data = _AndorUI.Andor.raw_image(update_latest_frame = True)
         if isopen:
             _AndorUI.Andor.white_shutter.open_shutter()
     else:
-        _AndorUI.Andor.raw_image(update_latest_frame = True)
+        data = _AndorUI.Andor.raw_image(update_latest_frame = True)
+    return data
 setattr(AndorUI, 'Capture', Capture)
 if __name__ == '__main__':
     # wutter = Uniblitz("COM10")
