@@ -14,8 +14,7 @@ from nplab.instrument.shutter.BX51_uniblitz import Uniblitz
 class Shamdor(Andor):
     ''' Wrapper class for the shamrock and the andor
     '''
-    metadata_property_names = Andor.metadata_property_names + ('slit_width', 'wavelengths')
-    
+
     def __init__(self, pixel_number=1600,
                  pixel_width=16,
                  use_shifts=False, 
@@ -28,6 +27,7 @@ class Shamdor(Andor):
         self.laser = laser
         self.white_shutter = white_shutter
         super(Shamdor, self).__init__()
+        self.metadata_property_names += ('slit_width', 'wavelengths')
     
     def get_x_axis(self, use_shifts=None):
         if self.use_shifts and use_shifts in [None, False]:
@@ -38,12 +38,15 @@ class Shamdor(Andor):
         else:
             return self.shamrock.GetCalibration()[::-1]
     x_axis = property(get_x_axis)
+    
     @property
     def slit_width(self):
         return self.shamrock.slit_width
+    
     @property 
     def wavelengths(self):
         return self.get_x_axis(use_shifts=False)
+    
 def Capture(_AndorUI):
     if _AndorUI.Andor.white_shutter is not None:
         isopen = _AndorUI.Andor.white_shutter.is_open()
@@ -56,6 +59,7 @@ def Capture(_AndorUI):
     else:
         _AndorUI.Andor.raw_image(update_latest_frame=True)
 setattr(AndorUI, 'Capture', Capture)
+
 if __name__ == '__main__':
     # wutter = Uniblitz("COM10")
     # wutter.close_shutter()

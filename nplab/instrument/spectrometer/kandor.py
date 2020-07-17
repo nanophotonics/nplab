@@ -9,10 +9,10 @@ from nplab.instrument.spectrometer.Kymera import Kymera
 class Kandor(Andor):
     ''' Wrapper class for the shamrock and the andor
     '''
-    metadata_property_names = Andor.metadata_property_names + ('slit_width', 'wavelengths')
     def __init__(self,pixel_number = 1600):
         self.kymera = Kymera()
         super(Kandor, self).__init__()
+        self.metadata_property_names += ('slit_width', 'wavelengths')
         self.kymera.pixel_number = pixel_number
         self.kymera.pixel_width = 16
         self.ImageFlip = 0

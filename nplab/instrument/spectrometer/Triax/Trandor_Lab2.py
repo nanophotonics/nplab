@@ -49,7 +49,6 @@ class Trandor(Andor):#Andor
     
     ''' Wrapper class for the Triax and the andor
     ''' 
-    metadata_property_names = Andor.metadata_property_names + ('slit_width', 'wavelengths')
     def __init__(self,White_Shutter=None):
         
         # print '__________________'
@@ -67,6 +66,7 @@ class Trandor(Andor):#Andor
         # print 'Current Slit Width:', self.triax.Slit(),'um'
         # print '______________________'
         self.Notch_Filters_Tested=True
+        self.metadata_property_names += ('slit_width', 'wavelengths')
         
 
     def Grating(self, Set_To=None):

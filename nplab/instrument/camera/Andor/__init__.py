@@ -267,14 +267,19 @@ class AndorUI(QtWidgets.QWidget, UiTools):
             self.labelNumRows.show()
             self.spinBoxCenterRow.show()
             self.labelCenterRow.show()
-        elif self.comboBoxAcqMode.currentText() != 'Fast Kinetic':
+            
+        if self.comboBoxAcqMode.currentText() == 'Fast Kinetic':
+            self.spinBoxNumRows.show()
+            self.labelNumRows.show()
+            self.spinBoxNumRows.hide()
+            self.labelNumRows.hide()    
+            
+        else:
             self.spinBoxNumRows.hide()
             self.labelNumRows.hide()
             self.spinBoxCenterRow.hide()
             self.labelCenterRow.hide()
-        else:
-            self.spinBoxCenterRow.hide()
-            self.labelCenterRow.hide()
+
 
     def update_ReadMode(self, index):
         self.comboBoxReadMode.setCurrentIndex(index)
@@ -466,4 +471,4 @@ class DisplayThread(QtCore.QThread):
 if __name__ == '__main__':
     andor = Andor()
     andor._logger.setLevel('DEBUG')
-    andor.show_gui()
+    gui = andor.show_gui(block=False)

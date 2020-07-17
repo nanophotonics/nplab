@@ -43,7 +43,6 @@ CCD_Size=1600 #Size of ccd in pixels
 # Andor_Capture_Function=types.FunctionType(Andor.capture.__code__, Andor.capture.__globals__, 'Unimportant_Name',Andor.capture.__defaults__, Andor.capture.__closure__)
 
 class Trandor(Andor):#Andor
-    metadata_property_names = Andor.metadata_property_names + ('slit_width', 'wavelengths', )
     ''' Wrapper class for the Triax and the andor
     ''' 
     def __init__(self, white_shutter=None, triax_address = 'GPIB0::1::INSTR', use_shifts = False, laser = '_633'):
@@ -57,6 +56,7 @@ class Trandor(Andor):#Andor
         
         print ('Current Grating:'+str(self.triax.Grating()))
         print ('Current Slit Width:'+str(self.triax.Slit())+'um')
+        self.metadata_property_names += ('slit_width', 'wavelengths')
         
     def Grating(self, Set_To=None):
         return self.triax.Grating(Set_To)
