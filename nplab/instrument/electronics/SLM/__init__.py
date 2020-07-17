@@ -62,12 +62,14 @@ class SlmDisplay(QtWidgets.QWidget):
     """Widget for displaying the greyscale holograms on the SLM
     It is simply a plain window with a QImage + QLabel.setPixmap combination for displaying phase arrays
     """
-    def __init__(self, shape=(1000, 1000), resolution=(1, 1), bitness=8, hide_border=True):
+    def __init__(self, shape=(1000, 1000), resolution=(1, 1), bitness=8, hide_border=True, lut=(256, 0)):
         """
         :param shape: 2-tuple of int. Width and height of the SLM panel in pixels
         :param resolution:
         :param bitness: int. Number of addressing levels of the SLM
         :param hide_border: bool. Whether to show the standard window border in your OS. Set to False only for debugging
+        :param lut: tuple. Parameters passed to set_lut. The default LUT assumes that the phase goes from 0 to 2 pi, and
+        we want to display it from 0 to 256
         """
         super(SlmDisplay, self).__init__()
 
@@ -79,8 +81,7 @@ class SlmDisplay(QtWidgets.QWidget):
         self._make_gui(hide_border)
 
         self.LUT = None
-        # The default LUT assumes that the phase goes from 0 to 2 pi, and we want to display it from 0 to 256
-        self.set_lut(old_div(256,(2*np.pi)), 0)
+        self.set_lut(*[old_div(x, (2*np.pi)) for x in lut])
 
     def _make_gui(self, hide_border=True):
         """Creates and sets the widget layout
@@ -96,7 +97,7 @@ class SlmDisplay(QtWidgets.QWidget):
 
         self.setWindowTitle('SLM Phase')
         if hide_border:
-            self.setWindowFlags(QtCore.Qt.CustomizeWindowHint | QtCore.Qt.FramelessWindowHint)
+            self.setWindowFlags(QtCore.Qt.CustomizeWindowHint | QtCore.Qt.FramelessWindowHint | QtCore.Qt.WindowStaysOnTopHint)
 
     def set_lut(self, *params):
         self.LUT = np.poly1d(params)
@@ -108,6 +109,7 @@ class SlmDisplay(QtWidgets.QWidget):
         :param slm_monitor: int. Optional. If given, it will move the SLM widget to the specified monitor
         :return:
         """
+        phase = phase % (2 * np.pi)
         phase = self.LUT(phase)
 
         img = phase.ravel()
@@ -122,10 +124,11 @@ class SlmDisplay(QtWidgets.QWidget):
             assert isinstance(slm_monitor, int)
             assert desktop.screenCount() > slm_monitor >= 0
             self.move(slm_screen.x(), slm_screen.y())
+        return phase
 
 
 class Slm(Instrument):
-    def __init__(self, options, slm_monitor, correction_phase=None, **kwargs):
+    def __init__(self, options, slm_monitor, correction_phase=None, display_kwargs=None, **kwargs):
         """
         :param options: list of strings. Names of the functionalities you want your SLM to have:
             - gratings
@@ -149,6 +152,10 @@ class Slm(Instrument):
 
         self.phase = None
         self.Display = None
+        if display_kwargs is None:
+            self.display_kwargs = dict()
+        else:
+            self.display_kwargs = display_kwargs
         self.options = options
 
     @staticmethod
@@ -159,6 +166,7 @@ class Slm(Instrument):
         """
         app = get_qt_app()
         desktop = app.desktop()
+        assert 0 <= monitor_index < desktop.screenCount(), 'monitor_index must be between 0 and the number of monitors'
         slm_screen = desktop.screen(monitor_index)
 
         return [slm_screen.width(), slm_screen.height()]
@@ -184,7 +192,7 @@ class Slm(Instrument):
         self._logger.debug('Finished making phases')
         return self.phase
 
-    def display_phase(self, phase, slm_monitor=None, **kwargs):
+    def display_phase(self, phase, slm_monitor=None):
         """Display a phase array, creating/displaying the appropriate widget if necessary
 
         :param phase: 2D array of phase values
@@ -193,14 +201,15 @@ class Slm(Instrument):
         :return:
         """
         if self.Display is None:
-            self.Display = SlmDisplay(self._shape, **kwargs)
+            self.Display = SlmDisplay(self._shape, **self.display_kwargs)
 
         self._logger.debug("Setting phase (min, max)=(%g, %g); shape=%s; monitor=%s" % (np.min(phase), np.max(phase),
                                                                                         np.shape(phase), slm_monitor))
-        self.Display.set_image(phase + self._correction, slm_monitor=slm_monitor)
+        phase = self.Display.set_image(phase + self._correction, slm_monitor=slm_monitor)
 
         if self.Display.isHidden():
             self.Display.show()
+        return phase
 
     def get_qt_ui(self):
         return SlmUi(self)
@@ -247,17 +256,17 @@ class SlmUi(QtWidgets.QWidget, UiTools):
         self.SLM._logger.debug('SlmUi.make called with args=%s' % (parameters, ))
         phase = self.SLM.make_phase(parameters)
 
-        # The data is transposed according to the pyqtgraph documentation for axis ordering
-        # http://www.pyqtgraph.org/documentation/widgets/imageview.html
-        self.PhaseDisplay.setImage(np.copy(phase).transpose())
-
         slm_monitor = self.slm_monitor_lineEdit.text()
         if slm_monitor == '':
             slm_monitor = None
         else:
             slm_monitor = int(slm_monitor)
 
-        self.SLM.display_phase(np.copy(phase), slm_monitor=slm_monitor)
+        phase = self.SLM.display_phase(np.copy(phase), slm_monitor=slm_monitor)
+
+        # The data is transposed according to the pyqtgraph documentation for axis ordering
+        # http://www.pyqtgraph.org/documentation/widgets/imageview.html
+        self.PhaseDisplay.setImage(np.copy(phase).transpose())
 
     def get_gui_phase_params(self):
         """Iterates over all widgets, calling get_params, and storing the returns in a dictionary

@@ -149,7 +149,7 @@ class DisplayWidgetRoiScale(ExtendedImageView):
         self._pxl_scale = scale
         self._pxl_offset = offset
 
-        self.LineDisplay = self.ui.roiPlot
+        self.LineDisplay = self.ui.roiPlot#creates a PlotWidget instance
         self.LineDisplay.showGrid(x=True, y=True)
         self.ui.splitter.setHandleWidth(10)
         self.getHistogramWidget().gradient.restoreState(list(Gradients.values())[1])
@@ -205,6 +205,7 @@ class DisplayWidgetRoiScale(ExtendedImageView):
         if boolean:
             self.LineDisplay.show()
             self.LineDisplay.showAxis('left')
+            self.LineDisplay.setMouseEnabled(True, True)
             self.ui.splitter.setSizes([0, self.height()-35, 35])
         else:
             self.ui.splitter.setSizes([self.height()-35, 0, 35])
@@ -255,9 +256,9 @@ class DummyCameraRoiScale(CameraRoiScale):
         """Returns a True, stating a succesful snapshot, followed by a (100,100)
         picture randomly generated image"""
         if self.data == 'spectrum':
-            ran = 100 * ArrayWithAttrs(np.random.random(100))
+            ran = 100 * ArrayWithAttrs(np.random.random(1600))
         else:
-            ran = 100 * np.random.random((100, 100))
+            ran = 100 * np.random.random((200, 1600))
         self._latest_raw_frame = ran
         return True, ran
 
@@ -271,7 +272,7 @@ class DummyCameraRoiScale(CameraRoiScale):
 
     @property
     def x_axis(self):
-        return np.arange(100) + 1
+        return np.arange(1600) + 1
 
     @x_axis.setter
     def x_axis(self, value):
@@ -279,5 +280,7 @@ class DummyCameraRoiScale(CameraRoiScale):
 
 
 if __name__ == '__main__':
+
     dcrd = DummyCameraRoiScale()
-    dcrd.show_gui(blocking=True)
+    dcrd.show_gui(blocking=False)
+

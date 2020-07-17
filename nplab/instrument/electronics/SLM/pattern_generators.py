@@ -118,7 +118,7 @@ def vortexbeam(input_phase, order, angle, center=None):
     y = np.arange(shape[0]) - center[0]
     x, y = np.meshgrid(x, y)
 
-    phase = order * (np.angle(x + y * 1j) + np.pi) + angle * np.pi / 180.
+    phase = order * (np.angle(x + y * 1j) + np.pi + angle * np.pi / 180.)
 
     return input_phase + phase
 
@@ -132,7 +132,7 @@ def linear_lut(input_phase, contrast, offset):
     :return:
     """
     out_phase = np.copy(input_phase)
-    out_phase -= out_phase.min()
+    # out_phase -= out_phase.min()
     out_phase %= 2 * np.pi - 0.000001
     out_phase *= contrast
     out_phase += offset * np.pi

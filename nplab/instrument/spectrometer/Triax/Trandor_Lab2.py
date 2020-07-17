@@ -49,6 +49,7 @@ class Trandor(Andor):#Andor
     
     ''' Wrapper class for the Triax and the andor
     ''' 
+    metadata_property_names += ('slit_width', 'wavelengths')
     def __init__(self,White_Shutter=None):
         
         # print '__________________'
@@ -120,4 +121,6 @@ class Trandor(Andor):#Andor
             else:
                 return Andor_Capture_Function(self)
 
-    x_axis=NotifiedProperty(Generate_Wavelength_Axis) #This is grabbed by the Andor code 
+    x_axis = property(Generate_Wavelength_Axis) #This is grabbed by the Andor code 
+    wavelengths = x_axis
+    slit_width = property(self.triax.Slit)
