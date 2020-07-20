@@ -114,6 +114,9 @@ def vortexbeam(input_phase, order, angle, center=None):
     shape = np.shape(input_phase)
     if center is None:
         center = [int(old_div(x, 2)) for x in shape]
+    elif any(np.array(center) < 1):
+        center = [int(old_div(x, 2) + y*x) for x, y in zip(shape, center)]
+
     x = np.arange(shape[1]) - center[1]
     y = np.arange(shape[0]) - center[0]
     x, y = np.meshgrid(x, y)
