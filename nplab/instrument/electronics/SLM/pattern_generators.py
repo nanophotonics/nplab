@@ -65,6 +65,32 @@ def gratings(input_phase, grating_const_x=0, grating_const_y=0):
     return input_phase + phase
 
 
+def multispot_grating(input_phase, grating_const, n_spot):
+    """
+
+    :param input_phase:
+    :param grating_const: float. Inverse period (in pixels) of the grating.
+    :param n_spot: int. Number of gratings to divide the SLM in.
+    :return:
+    """
+    shape = np.shape(input_phase)
+    x = np.arange(shape[1]) - int(old_div(shape[1], 2))
+    y = np.arange(shape[0]) - int(old_div(shape[0], 2))
+    x, y = np.meshgrid(x, y)
+    theta = np.arctan2(y, x) + np.pi
+
+    phase = np.zeros(shape)
+    if n_spot > 1:
+        for i in range(n_spot):
+            gx = grating_const * np.cos((i + 0.5) * 2 * np.pi / n_spot)
+            gy = grating_const * np.sin((i + 0.5) * 2 * np.pi / n_spot)
+            mask = np.zeros(shape)
+            mask[theta <= (i+1) * 2 * np.pi / n_spot] = 1
+            mask[theta <= i * 2 * np.pi / n_spot] = 0
+            phase += (x * gx + y * gy) * mask
+    return input_phase + phase
+
+
 def focus(input_phase, curvature=0):
     """Quadratic phase pattern corresponding to a perfect lens
 

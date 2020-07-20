@@ -214,6 +214,22 @@ class vortexbeamUi(BaseUi):
         return order, angle, (center_x, center_y)
 
 
+class multispot_gratingUi(BaseUi):
+    def __init__(self, slm_gui):
+        super(multispot_gratingUi, self).__init__(slm_gui, 'multispot_grating')
+
+    def _connect(self):
+        self.slider_grating.valueChanged.connect(lambda: self.lineEdit_grating.setText('%g' % (self.slider_grating.value()/100)))
+        self.lineEdit_grating.textChanged.connect(lambda: self.slider_grating.setValue(int(100*float(self.lineEdit_grating.text()))))
+
+        self.lineEdit_grating.textChanged.connect(self.slm_gui.make)
+        self.lineEdit_spots.textChanged.connect(self.slm_gui.make)
+
+    def get_params(self):
+        spots = int(float(self.lineEdit_spots.text()))
+        grating = float(self.lineEdit_grating.text())
+        return grating, spots
+
 
 class linear_lutUi(BaseUi):
     def __init__(self, slm_gui):
