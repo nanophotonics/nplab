@@ -186,10 +186,19 @@ class vortexbeamUi(BaseUi):
     def __init__(self, slm_gui):
         super(vortexbeamUi, self).__init__(slm_gui, 'vortexbeam')
 
+    def _connect(self):
+        self.pushButton_flip.clicked.connect(self.flip)
+        self.lineEdit_order.textChanged.connect(self.slm_gui.make)
+        self.lineEdit_angle.textChanged.connect(self.slm_gui.make)
+
     def get_params(self):
         order = int(float(self.lineEdit_order.text()))
         angle = float(self.lineEdit_angle.text())
         return order, angle
+
+    def flip(self):
+        order = int(float(self.lineEdit_order.text()))
+        self.lineEdit_order.setText(str(-order))
 
 
 class linear_lutUi(BaseUi):
