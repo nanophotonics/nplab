@@ -10,7 +10,7 @@ from nplab.instrument.visa_instrument import VisaInstrument
 import visa
 
 
-class Thorlabs_powermeter(PowerMeter, VisaInstrument):
+class ThorlabsPowermeter(PowerMeter, VisaInstrument):
     def __init__(self, address = 'USB0::0x1313::0x807B::17121118::INSTR',
                  settings = {
                              # 'timeout': 0.1,
@@ -56,5 +56,5 @@ class Thorlabs_powermeter(PowerMeter, VisaInstrument):
         
 
 if __name__ == '__main__':
-    pm = Thorlabs_powermeter(visa.ResourceManager().list_resources()[0])
+    pm = ThorlabsPowermeter(visa.ResourceManager().list_resources()[0])
     pm.show_gui(blocking = False)

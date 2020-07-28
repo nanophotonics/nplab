@@ -238,28 +238,42 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         currentMode = self.comboBoxAcqMode.currentText()
         self.Andor.set_camera_parameter('AcquisitionMode', available_modes.index(currentMode) + 1)
 
-        if currentMode == 'Fast Kinetic':
-            self.spinBoxNumRows.show()
-            self.labelNumRows.show()
-
-        elif currentMode != 'Single track':
-            self.spinBoxNumRows.hide()
-            self.labelNumRows.hide()
-        
+        if currentMode == 'Single':
+            self.spinBoxNumFrames.hide()
+            self.labelNumFrames.hide()
+            self.keep_shutter_open_checkBox.hide()
+        else:
+            self.keep_shutter_open_checkBox.show()
+            
         if currentMode == 'Accumulate':
             self.spinBoxNumAccum.show()
             self.labelNumAccum.show()
+            self.doubleSpinBoxCycleTime.show()
+            self.labelCycleTime.show()
         else:
             self.spinBoxNumAccum.hide()
-            self.labelNumAccum.hide()
-        
-        if (currentMode == 'Fast Kinetic') or (currentMode == 'Kinetic'):
-            self.keep_shutter_open_checkBox.show()
-        else:
-            self.keep_shutter_open_checkBox.hide()
+            self.labelNumAccum.hide()  
+            self.doubleSpinBoxCycleTime.hide()
+            self.labelCycleTime.hide()
+            
+        if currentMode == 'Kinetic':
+            self.spinBoxNumFrames.show()
+            self.labelNumFrames.show()
+            
+        if currentMode == 'Fast Kinetic':
+            self.spinBoxNumRows.show()
+            self.labelNumRows.show()
+            self.spinBoxNumFrames.show()
+            self.labelNumFrames.show()
+        elif self.comboBoxReadMode.currentText() != 'Single track':
+            self.spinBoxNumRows.hide()
+            self.labelNumRows.hide()
+
+ 
 
     def read_mode(self):
-        available_modes = ['FVB', 'Multi-track', 'Random track', 'Single track', 'Image']
+        available_modes = ['Full Vert Bin', 'Multi-track', 'Random track', 'Single track', 'Image']
+        #TODO implement multi and random track - need extra parameters so removed from GUI
         currentMode = self.comboBoxReadMode.currentText()
         self.Andor.set_camera_parameter('ReadMode', available_modes.index(currentMode))
         if currentMode == 'Single track':
@@ -267,14 +281,13 @@ class AndorUI(QtWidgets.QWidget, UiTools):
             self.labelNumRows.show()
             self.spinBoxCenterRow.show()
             self.labelCenterRow.show()
-        elif self.comboBoxAcqMode.currentText() != 'Fast Kinetic':
-            self.spinBoxNumRows.hide()
-            self.labelNumRows.hide()
-            self.spinBoxCenterRow.hide()
-            self.labelCenterRow.hide()
         else:
             self.spinBoxCenterRow.hide()
             self.labelCenterRow.hide()
+            if self.comboBoxAcqMode.currentText() != 'Fast Kinetic':
+                self.spinBoxNumRows.hide()
+                self.labelNumRows.hide()            
+
 
     def update_ReadMode(self, index):
         self.comboBoxReadMode.setCurrentIndex(index)
@@ -466,4 +479,4 @@ class DisplayThread(QtCore.QThread):
 if __name__ == '__main__':
     andor = Andor()
     andor._logger.setLevel('DEBUG')
-    andor.show_gui()
+    gui = andor.show_gui(block=False)
