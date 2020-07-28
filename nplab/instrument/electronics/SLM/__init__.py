@@ -15,7 +15,7 @@ from . import gui
 from . import pattern_generators
 
 
-def zernike_polynomial(array_size, n, m, beam_size=1):
+def zernike_polynomial(array_size, n, m, beam_size=1, unit_circle=True):
     """
     Creates an image of a Zernike polynomial of order n,m (https://en.wikipedia.org/wiki/Zernike_polynomials)
     Keep in mind that they are technically only defined inside the unit circle, but the output of this function is a
@@ -25,6 +25,7 @@ def zernike_polynomial(array_size, n, m, beam_size=1):
     :param n: int
     :param m: int
     :param beam_size: float
+    :param unit_circle: bool
     :return:
     """
     assert n >= 0
@@ -35,8 +36,16 @@ def zernike_polynomial(array_size, n, m, beam_size=1):
         odd = False
     assert n >= m
 
-    _x = np.linspace(-1, 1, array_size)
-    x, y = np.meshgrid(_x, _x)
+    if type(array_size) == int:
+        array_size = (array_size, array_size)
+    im_rat = array_size[1]/array_size[0]
+    if im_rat >= 1:
+        _x = np.linspace(-im_rat, im_rat, array_size[1])
+        _y = np.linspace(-1, 1, array_size[0])
+    else:
+        _x = np.linspace(-1, 1, array_size[1])
+        _y = np.linspace(-1/im_rat, 1/im_rat, array_size[0])
+    x, y = np.meshgrid(_x, _y)
     # By normalising the radius to the beamsize, we can make Zernike polynomials of different sizes
     rho = old_div(np.sqrt(x**2 + y**2), beam_size)
     phi = np.arctan2(x, y)
@@ -44,18 +53,22 @@ def zernike_polynomial(array_size, n, m, beam_size=1):
     summ = []
     for k in range(1 + old_div((n - m), 2)):
         summ += [old_div(((-1)**k * math.factorial(n - k) * (rho**(n-2*k))),
-                 (math.factorial(k) * math.factorial(old_div((n+m),2) - k) * math.factorial(old_div((n-m),2) - k)))]
+                 (math.factorial(k) * math.factorial(old_div((n+m), 2) - k) * math.factorial(old_div((n-m), 2) - k)))]
     r = np.sum(summ, 0)
     if (n-m) % 2:
         r = 0
 
     # Limiting the polynomial to the unit circle, where it is defined:
-    r[rho > 1] = 0
+    if unit_circle:
+        r[rho > 1] = 0
 
     if odd:
-        return r * np.sin(m * phi)
+        zernike = r * np.sin(m * phi)
     else:
-        return r * np.cos(m * phi)
+        zernike = r * np.cos(m * phi)
+
+    normalised = zernike / np.sqrt(np.sum(zernike[rho < 1] * zernike[rho < 1]))
+    return normalised
 
 
 class SlmDisplay(QtWidgets.QWidget):
