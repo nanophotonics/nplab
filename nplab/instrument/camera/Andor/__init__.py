@@ -239,8 +239,6 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         self.Andor.set_camera_parameter('AcquisitionMode', available_modes.index(currentMode) + 1)
 
         if currentMode == 'Single':
-            self.spinBoxNumFrames.hide()
-            self.labelNumFrames.hide()
             self.keep_shutter_open_checkBox.hide()
         else:
             self.keep_shutter_open_checkBox.show()
@@ -259,6 +257,9 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         if currentMode == 'Kinetic':
             self.spinBoxNumFrames.show()
             self.labelNumFrames.show()
+        else:
+            self.spinBoxNumFrames.hide()
+            self.labelNumFrames.hide()
             
         if currentMode == 'Fast Kinetic':
             self.spinBoxNumRows.show()
@@ -268,8 +269,6 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         elif self.comboBoxReadMode.currentText() != 'Single track':
             self.spinBoxNumRows.hide()
             self.labelNumRows.hide()
-
- 
 
     def read_mode(self):
         available_modes = ['Full Vert Bin', 'Multi-track', 'Random track', 'Single track', 'Image']
@@ -287,7 +286,6 @@ class AndorUI(QtWidgets.QWidget, UiTools):
             if self.comboBoxAcqMode.currentText() != 'Fast Kinetic':
                 self.spinBoxNumRows.hide()
                 self.labelNumRows.hide()            
-
 
     def update_ReadMode(self, index):
         self.comboBoxReadMode.setCurrentIndex(index)
