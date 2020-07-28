@@ -287,7 +287,93 @@ def condenseZscan(zScan):
 
     return output
 
-def extractAllSpectra(rootDir, returnIndividual = False, pl = False, dodgyThreshold = 0.4, start = 0, finish = 0, raiseExceptions = True):
+def consoliData(rootDir):
+    os.chdir(rootDir)
+    print('Consolidating data')
+    print('Searching for raw data file...')
+
+    try:
+        inputFile = findH5File(rootDir, nameFormat = 'date')
+    except:
+        print('File not found')
+
+    with h5py.File(inputFile, 'a') as ipf:
+        if 'particleScans' in ipf.keys():
+            fileType = 'pre-2018'
+
+        elif 'nplab_log' in ipf.keys():
+            fileType = 'post-2018'
+
+        else:
+            print('File format not recognised')
+            return
+
+        if fileType == 'pre-2018':
+            ipf = ipf['particleScans']
+            gScanFormat = 'scan'
+            gParticleFormat = 'z_scan_'
+
+        elif fileType == 'post-2018':
+            gScanFormat = 'ParticleScannerScan_'
+            gParticleFormat = 'Particle_'
+
+        print('Sorting scans by size...')
+
+        allScans = sorted([groupName for groupName in ipf.keys() if groupName.startswith(gScanFormat) and '%s0' % gParticleFormat in ipf[groupName].keys()],
+                              key = lambda groupName: len(ipf[groupName].keys()))[::-1]
+
+        if len(allScans) <= 1:
+            print('No extra scans to consolidate')
+            return
+
+        for scanName in allScans:
+            if len([i for i in ipf[scanName].keys() if i.startswith('Tiles')]) > 1:
+                print('Data already consolidated')
+                return
+
+        finalScanNo = sorted([groupName for groupName in ipf.keys() if groupName.startswith(gScanFormat)],
+                              key = lambda groupName: int(groupName.split('_')[-1]))[-1].split('_')[-1]
+        newScanNo = int(finalScanNo) + 1
+        consolidatedScan = ipf.create_group('%s%s' % (gScanFormat, newScanNo))
+
+        for n, scanName in enumerate(allScans):
+            if scanName == '%s%s' % (gScanFormat, newScanNo):
+                continue
+            print('Looking for data in %s...' % scanName)
+            if '%s0' % gParticleFormat in ipf[scanName].keys():
+                particleGroups = [i for i in ipf[scanName].keys() if i.startswith(gParticleFormat)]
+                print('\tData found for %s particles' % len(particleGroups))
+                scanN = scanName.split('_')[-1]
+                gTiles = consolidatedScan.create_group('Tiles_%s' % scanN)
+                for tileName in ipf[scanName]['Tiles'].keys():
+                    dTileOld = ipf[scanName]['Tiles'][tileName]
+                    dTileNew = gTiles.create_dataset(tileName, data = dTileOld)
+                    dTileNew.attrs.update(dTileOld.attrs)
+
+                dReconTilesOld = ipf[scanName]['reconstructed_tiles']
+                dReconTilesnew = consolidatedScan.create_dataset('reconstructed_tiles_%s' % scanN,
+                                                              data = dReconTilesOld)
+                dReconTilesnew.attrs.update(dReconTilesOld.attrs)
+
+                existingParticles = sorted([i for i in consolidatedScan.keys() if i.startswith(gParticleFormat)],
+                                                key = lambda i: int(i.split('_')[-1]))
+
+                for particleN, groupName in enumerate(particleGroups):
+                    gParticleOld = ipf[scanName][groupName]
+                    if groupName in consolidatedScan.keys():
+                        particleNNew = particleN + int(existingParticles[-1].split('_')[-1]) + 1
+                        newGroupName = '%s%s' % (gParticleFormat, particleNNew)
+                    else:
+                        newGroupName = groupName
+
+                    gParticleNew = consolidatedScan.create_group(newGroupName)
+                    gParticleNew.attrs.update(gParticleOld.attrs)
+                    for dataName in gParticleOld.keys():
+                        newDataset = gParticleNew.create_dataset(dataName, data = gParticleOld[dataName])
+                        newDataset.attrs.update(gParticleOld[dataName].attrs)
+
+def extractAllSpectra(rootDir, returnIndividual = False, pl = False, dodgyThreshold = 0.4, start = 0, finish = 0,
+                      raiseExceptions = True, consolidated = False):
 
     os.chdir(rootDir)
 
@@ -302,21 +388,15 @@ def extractAllSpectra(rootDir, returnIndividual = False, pl = False, dodgyThresh
     outputFile = createOutputFile('summary')
 
     with h5py.File(inputFile, 'a') as ipf:
+        if 'particleScans' in ipf.keys():
+            fileType = 'pre-2018'
 
-        try:
-            ipf['nplab_log']
-            fileType = '2018'
+        elif 'nplab_log' in ipf.keys():
+            fileType = 'post-2018'
 
-        except:
-
-            try:
-                ipf['particleScans']
-                fileType = 'pre-2018'
-
-            except Exception as e:
-                print(e)
-                print('File format not recognised')
-                return
+        else:
+            print('File format not recognised')
+            return
 
         with h5py.File(outputFile, 'a') as opf:
 
@@ -331,20 +411,25 @@ def extractAllSpectra(rootDir, returnIndividual = False, pl = False, dodgyThresh
                 gParticleFormat = 'z_scan_'
                 dParticleFormat = 'z_scan'
 
-            elif fileType == '2018':
+            elif fileType == 'post-2018':
                 gScanFormat = 'ParticleScannerScan_'
                 gParticleFormat = 'Particle_'
 
             allScans = sorted([groupName for groupName in list(ipf.keys()) if groupName.startswith(gScanFormat)],
                               key = lambda groupName: len(list(ipf[groupName].keys())))[::-1]
 
+            if fileType == 'post-2018':
+                for dSetName in list(ipf[allScans[0]]['Particle_0'].keys()):
+                    if dSetName.startswith('alinger.z_scan') or dSetName.startswith('zScan'):
+                        dParticleFormat = dSetName
+
             for n, scanName in enumerate(allScans):
 
                 if len(ipf[scanName]) < 15:
                     continue
 
-                if fileType == '2018':
-                    dParticleFormat = 'alinger.z_scan_0'
+                if consolidated == True and n > 0:
+                    continue
 
                 nummers = list(range(10, 101, 10))
                 scanStart = time.time()
@@ -361,7 +446,7 @@ def extractAllSpectra(rootDir, returnIndividual = False, pl = False, dodgyThresh
                 attrs = {}
                 scan = ipf[scanName]
                 particleGroups = sorted([groupName for groupName in list(scan.keys()) if groupName.startswith(gParticleFormat)],
-                                key = lambda groupName: int(groupName.split('_')[-1]))
+                                         key = lambda groupName: int(groupName.split('_')[-1]))
 
                 print('%s particles found in %s' % (len(particleGroups), scanName))
                 print('\n0% complete')
@@ -374,7 +459,10 @@ def extractAllSpectra(rootDir, returnIndividual = False, pl = False, dodgyThresh
 
                 referenced = False
 
+                cancelled = 0
+
                 for nn, groupName in enumerate(particleGroups):
+                    nn += cancelled
 
                     if int(old_div(100 * nn, len(particleGroups))) in nummers:
                         currentTime = time.time() - scanStart
@@ -384,12 +472,22 @@ def extractAllSpectra(rootDir, returnIndividual = False, pl = False, dodgyThresh
                         nummers = nummers[1:]
 
                     particleGroup = scan[groupName]
-
+                    
+                    if dParticleFormat not in particleGroup.keys():
+                        for dSetName in particleGroup.keys():
+                            if dSetName.startswith('alinger.z_scan') or dSetName.startswith('zScan'):
+                                dParticleFormat = dSetName
+                                
                     try:
                         zScan = particleGroup[dParticleFormat]
+                    
+                        x = zScan.attrs['wavelengths']
+                        zScan.attrs['background']
+                        ref = zScan.attrs['reference']
 
                     except:
                         print('Z-Stack not found in %s' % (groupName))
+                        cancelled += 1
                         continue
 
                     if referenced == False:
@@ -414,7 +512,7 @@ def extractAllSpectra(rootDir, returnIndividual = False, pl = False, dodgyThresh
                             centered = checkCentering(z, pl = pl)
 
                         except Exception as e:
-                            print('Alignment check failed because', e)
+                            print('Alignment check failed for Particle %s because %s' % (nn, e))
                             centered = False
 
                     y = condenseZscan(z)
@@ -432,9 +530,10 @@ def extractAllSpectra(rootDir, returnIndividual = False, pl = False, dodgyThresh
                     spectra.append(y)
 
                 currentTime = time.time() - scanStart
+
                 mins = int(old_div(currentTime, 60))
                 secs = old_div((np.round((currentTime % 60)*100)),100)
-                print('100%% (%s particles) complete in %s min %s sec' % (len(particleGroups), mins, secs))
+                print('100%% (%s particles) complete in %s min %s sec' % (nn, mins, secs))
                 percentDefocused = old_div(100 * len(dodgyParticles), len(spectra))
 
                 if old_div(percentDefocused, 100) > dodgyThreshold:
@@ -443,6 +542,8 @@ def extractAllSpectra(rootDir, returnIndividual = False, pl = False, dodgyThresh
 
                 else:
                     alignment = 'Good'
+
+                print('Adding condensed spectra to %s/spectra...' % scanName)
 
                 spectra = np.array(spectra)
                 dScan = gScan.create_dataset('spectra', data = spectra)
@@ -453,12 +554,16 @@ def extractAllSpectra(rootDir, returnIndividual = False, pl = False, dodgyThresh
                 if returnIndividual == True:
 
                     for nn, groupName in enumerate(particleGroups):
+                        if nn >= len(particleGroups) - cancelled:
+                            continue
                         gSpectrum = gIndScan.create_dataset('Spectrum %s' % nn, data = dScan[nn])
                         gSpectrum.attrs['wavelengths'] = x
                         gSpectrum.attrs['Properly centred?'] = centered
 
                 for key in list(attrs.keys()):
                     dScan.attrs[key] = attrs[key]
+
+    print('\nAll spectra condensed and added to summary file\n')
 
     return outputFile #String of output file name for easy identification later
 
@@ -735,20 +840,15 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
 
     with h5py.File(inputFile, 'a') as ipf:
 
-        try:
-            ipf['nplab_log']
-            fileType = '2018'
+        if 'particleScans' in ipf.keys():
+            fileType = 'pre-2018'
 
-        except:
+        elif 'nplab.log' in list(ipf.keys()):
+            fileType = 'post-2018'
 
-            try:
-                ipf['particleScans']
-                fileType = 'pre-2018'
-
-            except Exception as e:
-                print(e)
-                print('File format not recognised')
-                return
+        else:
+            print('File format not recognised')
+            return
 
         with h5py.File(outputFile, 'a') as opf:
 
@@ -763,7 +863,7 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
                 gScanFormat = 'scan'
                 gParticleFormat = 'z_scan_'
 
-            elif fileType == '2018':
+            elif fileType == 'post-2018':
                 gScanFormat = 'ParticleScannerScan_'
                 gParticleFormat = 'Particle_'
 
@@ -771,6 +871,11 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
 
             allScans = sorted([groupName for groupName in list(ipf.keys()) if groupName.startswith(gScanFormat)],
                               key = lambda groupName: len(list(ipf[groupName].keys())))[::-1]
+
+            if fileType == 'post-2018':
+                for dSetName in list(ipf[allScans[0]]['Particle_0'].keys()):
+                    if dSetName.startswith('alinger.z_scan') or dSetName.startswith('zScan'):
+                        dParticleFormat = dSetName
 
             for n, scanName in enumerate(allScans):
 
@@ -807,8 +912,8 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
                 for nn, groupName in enumerate(particleGroups):
 
                     particleGroup = scan[groupName]
-                    bg = particleGroup['alinger.z_scan_0'].attrs['background']
-                    ref = particleGroup['alinger.z_scan_0'].attrs['reference']
+                    bg = particleGroup[dParticleFormat].attrs['background']
+                    ref = particleGroup[dParticleFormat].attrs['reference']
 
                     if int(old_div(100 * nn, len(particleGroups))) in nummers:
                         currentTime = time.time() - scanStart
@@ -835,7 +940,7 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
 
                         if 'wavelengths' not in list(plData.attrs.keys()):
                             try:
-                                plData.attrs['wavelengths'] = scan['Particle_0/alinger.z_scan_0'].attrs['wavelengths']
+                                plData.attrs['wavelengths'] = scan['Particle_0/%s' % dParticleFormat].attrs['wavelengths']
 
                             except Exception as e:
                                 print('Unable to find wavelength data (%s)' % e)
@@ -869,7 +974,7 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
                         powerDir = r'C:\Users\car72\University Of Cambridge\OneDrive - University Of Cambridge\Documents\PhD\Data\NP\Porphyrins\NPoM\DF\2019-09-18 Zn-MTPP Cl 48 h 80 nm + PL'
                         os.chdir(powerDir)
                         h5File = '2019-09-18.h5'
-                        with h5py.File(h5File) as powerFile:
+                        with h5py.File(h5File, 'r') as powerFile:
                             plBgDict = collectPlBackgrounds(powerFile)
 
                         os.chdir(rootDir)
@@ -912,8 +1017,9 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
                     for attrName in attrNames:
                         dPl.attrs[attrName] = plData.attrs[attrName]
 
-                    if 'alinger.z_scan_1' in list(particleGroup.keys()):
-                        dfData = particleGroup['alinger.z_scan_1']
+                    if dParticleFormat in list(particleGroup.keys()):
+                        dfData = particleGroup[dParticleFormat]
+
                         x = dfData.attrs['wavelengths']
                         z = dfData - bg
                         z /= ref
