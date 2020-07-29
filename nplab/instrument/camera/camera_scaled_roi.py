@@ -138,6 +138,15 @@ class CameraRoiScale(Camera):
 
         super(CameraRoiScale, self).update_widgets()
 
+    def get_preview_widget(self):
+        self._logger.debug('Getting preview widget')
+        if self._preview_widgets is None:
+            self._preview_widgets = WeakSet()
+        new_widget = DisplayWidgetRoiScale()
+        self._preview_widgets.add(new_widget)
+
+        return new_widget
+
 
 class DisplayWidgetRoiScale(ExtendedImageView):
     _max_num_line_plots = 4
@@ -261,14 +270,6 @@ class DummyCameraRoiScale(CameraRoiScale):
             ran = 100 * np.random.random((200, 1600))
         self._latest_raw_frame = ran
         return True, ran
-
-    def get_preview_widget(self):
-        self._logger.debug('Getting preview widget')
-        if self._preview_widgets is None:
-            self._preview_widgets = WeakSet()
-        new_widget = DisplayWidgetRoiScale()
-        self._preview_widgets.add(new_widget)
-        return new_widget
 
     @property
     def x_axis(self):

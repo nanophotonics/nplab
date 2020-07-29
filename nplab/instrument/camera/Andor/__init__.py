@@ -2,7 +2,7 @@
 
 from builtins import str
 from nplab.utils.gui import QtWidgets, QtCore, uic, QtGui
-from nplab.instrument.camera.camera_scaled_roi import CameraRoiScale, DisplayWidgetRoiScale
+from nplab.instrument.camera.camera_scaled_roi import CameraRoiScale
 from nplab.instrument.camera.Andor.andor_sdk import AndorBase
 from nplab.utils.notified_property import register_for_property_changes
 import nplab.datafile as df
@@ -118,15 +118,6 @@ class Andor(CameraRoiScale, AndorBase):
 
     def get_control_widget(self):
         return AndorUI(self)
-
-    def get_preview_widget(self):
-        self._logger.debug('Getting preview widget')
-        if self._preview_widgets is None:
-            self._preview_widgets = WeakSet()
-        new_widget = DisplayWidgetRoiScale()
-        self._preview_widgets.add(new_widget)
-
-        return new_widget
     
 
 class AndorUI(QtWidgets.QWidget, UiTools):
