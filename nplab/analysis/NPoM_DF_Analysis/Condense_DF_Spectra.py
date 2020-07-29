@@ -24,6 +24,7 @@ import time
 from scipy.signal import butter, filtfilt
 import matplotlib.pyplot as plt
 import scipy.optimize as spo
+import nplab.analysis.NPoM_DF_Analysis.DF_Multipeakfit as mpf
 
 if __name__ == '__main__':
     print('Modules imported\n')
@@ -227,7 +228,7 @@ def checkCentering(zScan, pl = False):
 
     brightScansRaw = np.array([scan[1:] for scan in zScanTransposed[maxWlIndices]])
     #List of corresponding z-stacks
-    #1st data point is unreliable because of spectrometer memory cache quirks
+    #1st + 2nd data points unreliable because of spectrometer memory cache quirks
 
     for n, scan in enumerate(brightScansRaw):#The second point can also suffer from this
         if abs(scan[1] - scan[0]) >= (scan.max() - scan.min()) * 0.2:
@@ -279,13 +280,91 @@ def checkCentering(zScan, pl = False):
     else:
         return True
 
-def condenseZscan(zScan):
-    """
-    Here, the zScan is assumed to already be background subtracted and referenced.
-    """
-    output = np.array([scan.max() for scan in np.transpose(zScan)])
+def lInterp(Value1,Value2,Frac):
+    #Value 1 and 2 are two numbers. Frac is between 0 and 1 and tells you fractionally how far between the two values you want ot interpolate
 
-    return output
+    m=Value2-Value1
+    c=Value1
+
+    return (m*Frac)+c
+
+def condenseZscan(zScan, returnMaxs = False, dz = None, threshold = 0.2, Smoothing_width = 1.5, aligned = True):
+    """
+    
+    zScan is assumed to already be background subtracted and referenced.
+    """
+    if aligned == False:
+        '''
+        If NP and/or collection path off-centre, centroid method is inaccurate.
+        Alternative method just takes maximum value for each wavelength.
+        '''
+        centroids = np.array([scan[2:].argmax() + 2 for scan in np.transpose(zScan)])
+        centroids = np.where(centroids == 0, np.nan, centroids)
+        centroids = np.where(centroids == len(dz) - 1, np.nan, centroids).astype(np.float64)
+        centroids = mpf.removeNaNs(centroids, nBuff = 1)
+        #print(centroids)
+        centroidsSmuth = butterLowpassFiltFilt(centroids, cutoff = 900, fs = 80000)
+        #print(centroidsSmuth)
+
+        if True in np.isfinite(centroidsSmuth):
+            centroids = centroidsSmuth
+
+        centroids = mpf.removeNaNs(centroids)
+        #print(centroids)
+
+    else:
+        '''
+        Z Scan is threesholded and the centrod taken for each wavelength
+        '''
+        zThresh = np.nan_to_num(zScan)
+        zThresh = zThresh.astype(np.float64)
+        zThresh = old_div((zThresh - zThresh.min(axis = 0)), (zThresh.max(axis = 0) - zThresh.min(axis = 0)))
+        zThresh -= threshold
+        zThresh *= (zThresh > 0)       #Normalise and Threshold array
+
+        ones = np.zeros([zScan.shape[1]]) + 1
+        positions = np.array([ones*n for n in np.arange(zScan.shape[0])]).astype(np.float64)
+
+        centroids = np.sum((zThresh*positions), axis = 0)/np.sum(zThresh, axis = 0) #Find Z centroid position for each wavelength
+        centroids = mpf.removeNaNs(centroids)
+
+    zT = np.transpose(zScan)
+
+    output = []
+    zProfile = []
+
+    for n, centroid in enumerate(centroids):
+        if len(zT[n]) < len(dz):
+            print('Wl %s z stack too short' % n)
+        
+        if not np.isfinite(centroid):
+            if n == 0:
+                centroid = centroids[n + 1]
+            else:
+                centroid = centroids[n - 1]
+
+        try:
+            lower = int(centroid)
+        except:
+            print('aaaaaaa')
+            #print(centroids)
+
+        upper = lower + 1
+
+        frac = centroid - lower
+
+        if centroid == centroids[-1] or upper == len(dz):
+            upper -= 1
+            frac = 0
+
+        try:
+            output.append(lInterp(zT[n][lower], zT[n][upper], frac))
+            zProfile.append(lInterp(dz[lower], dz[upper], frac))
+        except Exception as e:
+            print(n, lower, upper, frac)
+            raise e
+
+    return np.array(output), np.array(zProfile)
 
 def consoliData(rootDir):
     os.chdir(rootDir)
@@ -372,8 +451,8 @@ def consoliData(rootDir):
                         newDataset = gParticleNew.create_dataset(dataName, data = gParticleOld[dataName])
                         newDataset.attrs.update(gParticleOld[dataName].attrs)
 
-def extractAllSpectra(rootDir, returnIndividual = False, pl = False, dodgyThreshold = 0.4, start = 0, finish = 0,
-                      raiseExceptions = True, consolidated = False):
+def extractAllSpectra(rootDir, returnIndividual = True, pl = False, dodgyThreshold = 0.4, start = 0, finish = 0,
+                      raiseExceptions = True, consolidated = False, extractZ = True):
 
     os.chdir(rootDir)
 
@@ -443,6 +522,8 @@ def extractAllSpectra(rootDir, returnIndividual = False, pl = False, dodgyThresh
                     gIndScan = gInd.create_group('scan%s' % n)
 
                 spectra = []
+                zProfiles = []
+                centereds = []
                 attrs = {}
                 scan = ipf[scanName]
                 particleGroups = sorted([groupName for groupName in list(scan.keys()) if groupName.startswith(gParticleFormat)],
@@ -482,7 +563,7 @@ def extractAllSpectra(rootDir, returnIndividual = False, pl = False, dodgyThresh
                         zScan = particleGroup[dParticleFormat]
                     
                         x = zScan.attrs['wavelengths']
-                        zScan.attrs['background']
+                        bg = zScan.attrs['background']
                         ref = zScan.attrs['reference']
 
                     except:
@@ -492,12 +573,13 @@ def extractAllSpectra(rootDir, returnIndividual = False, pl = False, dodgyThresh
 
                     if referenced == False:
 
-                        for key in list(zScan.attrs.keys()):
+                        for key in zScan.attrs.keys():
                             attrs[key] = zScan.attrs[key]
 
                         x = zScan.attrs['wavelengths']
                         bg = zScan.attrs['background']
                         ref = zScan.attrs['reference']
+                        dz = zScan.attrs['dz']
 
                         referenced = True
 
@@ -515,7 +597,9 @@ def extractAllSpectra(rootDir, returnIndividual = False, pl = False, dodgyThresh
                             print('Alignment check failed for Particle %s because %s' % (nn, e))
                             centered = False
 
-                    y = condenseZscan(z)
+                    y, zProfile = condenseZscan(z, returnMaxs = extractZ, dz = dz, aligned = centered)
+                    if extractZ == True:
+                        zProfiles.append(zProfile)
 
                     if centered == False:
                         dodgyParticles.append(nn)
@@ -528,6 +612,11 @@ def extractAllSpectra(rootDir, returnIndividual = False, pl = False, dodgyThresh
                             print('\nMore than 50 dodgy Z scans found. I\'ll stop clogging up your screen. Assume there are more.\n')
 
                     spectra.append(y)
+                    if returnIndividual == True:
+                        gSpectrum = gIndScan.create_dataset('Spectrum %s' % nn, data = y)
+                        gSpectrum.attrs['wavelengths'] = x
+                        gSpectrum.attrs['Properly centred?'] = centered
+                        gSpectrum.attrs['Z Profile'] = zProfile
 
                 currentTime = time.time() - scanStart
 
@@ -549,19 +638,9 @@ def extractAllSpectra(rootDir, returnIndividual = False, pl = False, dodgyThresh
                 dScan = gScan.create_dataset('spectra', data = spectra)
                 dScan.attrs['Collection spot alignment'] = alignment
                 dScan.attrs['Misaligned particle numbers'] = dodgyParticles
-                dScan.attrs['%% particles misaligned'] = percentDefocused
+                dScan.attrs['%% particles misaligned'] = percentDefocused       
 
-                if returnIndividual == True:
-
-                    for nn, groupName in enumerate(particleGroups):
-                        if nn >= len(particleGroups) - cancelled:
-                            continue
-                        gSpectrum = gIndScan.create_dataset('Spectrum %s' % nn, data = dScan[nn])
-                        gSpectrum.attrs['wavelengths'] = x
-                        gSpectrum.attrs['Properly centred?'] = centered
-
-                for key in list(attrs.keys()):
-                    dScan.attrs[key] = attrs[key]
+                dScan.attrs.update(attrs)
 
     print('\nAll spectra condensed and added to summary file\n')
 

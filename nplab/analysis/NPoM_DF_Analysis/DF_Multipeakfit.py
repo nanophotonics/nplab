@@ -34,51 +34,40 @@ if __name__ == '__main__':
     print('\tModules imported\n')
     print('Initialising functions...')
 
-def findH5File(rootDir, mostRecent = True, nameFormat = 'date', printProgress = True):
-    '''
-    Finds either oldest or most recent .h5 file in a folder whose name begins with a specified string
-    Default name format ('date') is yyyy-mm-dd
-    '''
+def forMatches(i, nameFormat, extension = ['h5', 'hdf5']):
+    '''Checks if a filename begins with a specified string and ends with specified extension(s)'''
+    if type(extension) == str:
+        extension = [extension]
+    if i.split('.')[-1] not in extension:
+        return False
+    if nameFormat == 'date':
+        return bool(re.match('\d\d\d\d-[01]\d-[0123]\d', i[:10]))
+    else:
+        return i.startswith(nameFormat)
 
+def findH5File(rootDir, mostRecent = True, nameFormat = 'date', printProgress = True, extension = 'h5'):
+    '''
+    Finds either oldest or most recent file in a folder using specified name format and extension, using forMatches() above
+    Default name format ('date') is yyyy-mm-dd, default extension is .h5
+    '''
     os.chdir(rootDir)
 
-    if mostRecent == True:
-        n = -1
-
-    else:
-        n = 0
-
-    if nameFormat == 'date':
-
-        if mostRecent == True:
-            if printProgress == True:
-                print('Searching for most recent instance of yyyy-mm-dd.h5 or similar...')
-
-        else:
-            if printProgress == True:
-                print('Searching for oldest instance of yyyy-mm-dd.h5 or similar...')
-
-        h5File = sorted([i for i in os.listdir('.') if re.match('\d\d\d\d-[01]\d-[0123]\d', i[:10])
-                         and (i.endswith('.h5') or i.endswith('.hdf5'))],#finds list of filenames with yyyy-mm-dd(...).h(df)5 format
-                        key = lambda i: os.path.getmtime(i))[n]#sorts them by date and picks either oldest or newest depending on value of 'mostRecent'
-
-    else:
-
-        if mostRecent == True:
-            if printProgress == True:
-                print('Searching for most recent instance of %s.h5 or similar...' % nameFormat)
-
-        else:
-            if printProgress == True:
-                print('Searching for oldest instance of %s.h5 or similar...' % nameFormat)
-
-        h5File = sorted([i for i in os.listdir('.') if i.startswith(nameFormat)#finds list of filenames with (nameFormat)(...).h(df)5 format
-                         and (i.endswith('.h5') or i.endswith('.hdf5'))],
-                        key = lambda i: os.path.getmtime(i))[n]#sorts them by date and picks either oldest or newest depending on value of 'mostRecent'
-
     if printProgress == True:
-        print('\tH5 file %s found\n' % h5File)
+        print(f'Searching for {"most recent" if mostRecent == True else "oldest"} instance of {"yyyy-mm-dd" if nameFormat == "date" else nameFormat}(...){extension}...')
 
+    h5Files = sorted([i for i in os.listdir() 
+                      if forMatches(i, nameFormat, extension = ['h5', 'hdf5'] if extension == 'h5' else extension)],#finds list of filenames with yyyy-mm-dd(...).h(df)5 format
+                      key = lambda i: os.path.getmtime(i))#sorts them by date and picks either oldest or newest depending on value of 'mostRecent'
+
+    if len(h5Files) > 0:
+        h5File = h5Files[-1 if mostRecent == True else 0]
+        if printProgress == True:
+            print(f'\tH5 file {h5File} found\n')
+    else:
+        h5File = None
+        if printProgress == True:
+            print(f'\tH5 file with name format "{nameFormat}" not found in {os.getcwd()}\n')
+    
     return h5File
 
 def removeNaNs(array, nBuff = 4):
@@ -89,7 +78,7 @@ def removeNaNs(array, nBuff = 4):
     '''
 
     numNaNs = len([i for i in array if not np.isfinite(i)])#checks for NaN values
-    #print(numNaNs)
+    #print(array, numNaNs)
 
     if numNaNs == 0:
         return array#returns original array if no NaNs
@@ -123,9 +112,10 @@ def removeNaNs(array, nBuff = 4):
             if np.isfinite(i):#finds length of NaN sequence
                 break
 
-        interpInit = newArray[nandex - nBuff:nandex]
+        interpInit = newArray[max(0, nandex - nBuff):nandex]
+        
         interpInit = np.average(interpInit[np.isfinite(interpInit)])#start point for linear interpolation; corrects for noise by averaging a few values
-        interpEnd = newArray[nandex + n :nandex + n + nBuff]
+        interpEnd = newArray[nandex + n :min(nandex + n + nBuff, len(newArray) - 1)]
         interpEnd = np.average(interpEnd[np.isfinite(interpEnd)])#interpolation end point; also de-noised
         interPlump = np.linspace(interpInit, interpEnd, n + 2)#linearly interpolates between the finite values either side of the NaN sequence
         newArray[nandex:nandex+n] = interPlump[1:-1]#replaces NaNs with the new data points
@@ -176,12 +166,14 @@ def removeCosmicRays(x, y, reference = 1, factor = 15):
 
     return newY
 
-def truncateSpectrum(x, y, startWl = 450, finishWl = 900, xOnly = False):
+def truncateSpectrum(x, y, startWl = 450, finishWl = 900, xOnly = False, buff = 0):
     '''
-    Truncates xy data spectrum within a specified wavelength range. Useful for removing high and low-end noise or analysing certain spectral regions.
-    x and y must be 1D arrays (or lists) of identical length
+    Truncates xy data spectrum within a specified wavelength range
+    Useful for removing high and low-end noise or analysing certain spectral regions
+    x and y must be 1D array-like objects of identical length
     Default range is 450-900 nm (good for lab 3)
     If y == None, (specifically, if type(y) == type(None)) or xOnly == True, function returns truncated x array only
+    Zeros added to start/end of arrays if startWl or finishWl lie outside the x range. Set buff = 1 to replace zero with initial/final y vals instead
     '''
     x = np.array(x)
 
@@ -200,13 +192,19 @@ def truncateSpectrum(x, y, startWl = 450, finishWl = 900, xOnly = False):
 
     if x[0] > startWl:#if truncation window extends below spectral range:
         xStart = np.arange(x[0], startWl - 2, x[0] - x[1])[1:][::-1]
-        yStart = np.array([np.average(y[:5])] * len(xStart))
+        if buff == 0:
+            yStart = np.zeros(len(xStart))
+        else:
+            yStart = np.array([np.average(y[:5])] * len(xStart))
         x = np.concatenate((xStart, x))
         y = np.concatenate((yStart, y))#Adds buffer to start of x and y to ensure the truncated length is still defined by startWl and finishWl
 
     if x[-1] < finishWl:#if truncation window extends above spectral range:
         xFin = np.arange(x[-1], finishWl + 2, x[1] - x[0])[1:]
-        yFin =  np.array([np.average(y[-5:])] * len(xFin))
+        if buff == 0:
+            yFin = np.zeros(len(xFin))
+        else:
+            yFin =  np.array([np.average(y[-5:])] * len(xFin))
         x = np.concatenate((x, xFin))
         y = np.concatenate((y, yFin))#Adds buffer to end of x and y to ensure the truncated length is still defined by startWl and finishWl
 
@@ -395,21 +393,10 @@ def determineVLims(zData, threshold = 1e-4):
     '''
 
     zFlat = zData.flatten()
-
     frequencies, bins = np.histogram(zFlat, bins = 100, density = False)
     freqThresh = frequencies.max()*threshold
-
     binCentres = np.array([np.average([bins[n], bins[n + 1]]) for n in range(len(bins) - 1)])
-
-    #plt.plot(binCentres, frequencies)
-    #plt.plot(binCentres, [freqThresh]*len(binCentres))
-    #plt.show()
-
     binsThreshed = binCentres[np.nonzero(np.where((frequencies > freqThresh), frequencies, 0))]
-
-    #plt.plot(binsThreshed, frequencies)
-    #plt.show()
-
     vMin = binsThreshed[0]
     vMax = binsThreshed[-1]
 
@@ -436,7 +423,7 @@ def plotStackedMap(x, yData, imgName = 'Stack', plotTitle = 'Stack', closeFigure
 
     #try:
     xStack = x # Wavelength range
-    yStack = list(range(len(yData))) # Number of spectra
+    yStack = np.arange(len(yData)) # Number of spectra
     zStack = np.vstack(yData) # Spectral data
 
     #vmin, vmax = determineVLims(zStack, threshold = vThresh)
@@ -544,7 +531,7 @@ def printEnd():
     print('%s%swow' % ('\n' * randint(2, 5), ' ' * randint(5, 55)))
     print('\n' * randint(0, 7))
 
-def detectMinima(array, threshold = 0):
+def detectMinima(array, threshold = 0, returnBool = False):
     '''
     detectMinima(array) -> mIndices
     Finds the turning points within a 1D array and returns the indices of the minima.
@@ -554,7 +541,7 @@ def detectMinima(array, threshold = 0):
     if (len(array) < 3):
         return mIndices
 
-    neutral, rising, falling = list(range(3))
+    neutral, rising, falling = np.arange(3)
 
     def getState(a, b):
         if a < b: return rising
@@ -582,7 +569,7 @@ def detectMinima(array, threshold = 0):
         threshold = array.max() - threshold*yRange
         mIndices = [i for i in mIndices if array[i] < threshold]
 
-    if len(mIndices) == 0:
+    if returnBool == True and len(mIndices) == 0:
         return False
 
     return np.array(mIndices)
@@ -663,23 +650,22 @@ def testIfDouble(x, y, doublesThreshold = 2, lowerLimit = 600, plot = False, rai
         return isNpom, isDouble
 
     xMins = xTrunc[mIndices]
-    yMins = yTrunc[mIndices]
+    yMins = ySmooth[mIndices]
+    mins = list(zip(xMins, yMins))
 
     xMaxs = xTrunc[maxdices]
-    yMaxs = yTrunc[maxdices]
-    maxs = [[xMax, yMaxs[n]] for n, xMax in enumerate(xMaxs)]
+    yMaxs = ySmooth[maxdices]
+    maxs = list(zip(xMaxs, yMaxs))
 
     if len(yMaxs) == 0:
         isNpom = False
         isDouble = 'N/A'
 
     else:
-
         try:
             yMax = max(yMaxs)
 
         except Exception as e:
-
             if raiseExceptions == True:
                 pass
 
@@ -687,19 +673,26 @@ def testIfDouble(x, y, doublesThreshold = 2, lowerLimit = 600, plot = False, rai
                 print(e)
                 return False
 
-        maxsSortedY = sorted(maxs, key = lambda maximum: maximum[1])
+        maxsSortedY = sorted([i for i in maxs if i[0] > lowerLimit], key = lambda maximum: maximum[1])
 
         yMax = maxsSortedY[-1][1]
         xMax = maxsSortedY[-1][0]
 
-        try:
 
-            yMax2 = maxsSortedY[-2][1]
+        if plot:
+            xTrough, yTrough = ([],[])
+            xMax2, yMax2 = ([], [])
 
-            if yMax2 > old_div(yMax, doublesThreshold):
+        if len(maxsSortedY) > 1:
+            xMax2, yMax2 = maxsSortedY[-2]                
+            xTrough, yTrough = sorted([i for i in mins if xMax2 < i[0] < xMax or xMax2 > i[0] > xMax], key = lambda i: i[1])[0]
+
+            if yMax2 - yTrough > (yMax - yTrough)/doublesThreshold and xMax2 > lowerLimit and abs(xMax - xMax2) > 30:
                 isDouble = True
 
-        except:
+            #except:
+            #    isDouble = False
+        else:
             isDouble = False
 
         if xMax < lowerLimit:
@@ -724,6 +717,9 @@ def testIfDouble(x, y, doublesThreshold = 2, lowerLimit = 600, plot = False, rai
         plt.plot(xTrunc, ySmooth, 'g', label = 'Smoothed')
         plt.plot(xMins, yMins, 'ko', label = 'Minima')
         plt.plot(xMaxs, yMaxs, 'go', label = 'Maxima')
+        plt.plot(xTrough, yTrough, 'bo', label = 'Trough')
+        plt.plot(xMax, yMax, 'ro', label = 'Max')
+        plt.plot(xMax2, yMax2, 'ro', label = 'Max2')
         plt.legend(loc = 0, ncol = 3, fontsize = 10)
         plt.ylim(0, ySmooth.max()*1.23)
         plt.xlim(450, 900)
@@ -876,7 +872,7 @@ def testIfWeirdPeak(x, y, factor = 1.4, transWl = 533, upperLimit = 670, plot = 
     else:
         return weird
 
-def getFWHM(x, y, maxdex = None, fwhmFactor = 1.1, smooth = False, peakpos = 0):
+def getFWHM(x, y, maxdex = None, fwhmFactor = 1.1, smooth = False, peakpos = 0, peakType = 'gaussian'):
     '''Estimates FWHM of largest peak in a given dataset if maxdex == None'''
     '''If maxdex is specified, estimates FWHM of peak centred at that point'''
     '''Also returns xy coords of peak'''
@@ -884,30 +880,18 @@ def getFWHM(x, y, maxdex = None, fwhmFactor = 1.1, smooth = False, peakpos = 0):
     if smooth == True:
         y = butterLowpassFiltFilt(y)
 
-    if maxdex != None:
-        upperMindex = detectMinima(y[maxdex:])[0] + maxdex
-        lowerMindex = maxdex - detectMinima(y[:maxdex][::-1])[0]
-        x = x[lowerMindex:upperMindex]
-        y = y[lowerMindex:upperMindex]
-        # maxdex -= lowerMindex
-
-    maxdices = detectMinima(-y)
-
-    if type(maxdices) == bool:
-
-        if peakpos != 0:
-            maxdices = np.array([abs(x - peakpos).argmin()])
-
-        else:
-            return None, None, None
-    
-    maxdex = maxdices[y[maxdices].argmax()]    
-        
+    if maxdex == None:
+        maxdex = y.argmax()
+        if maxdex == 0:
+            maxdex = 1
+        elif maxdex == len(y) - 1:
+            maxdex = len(y) - 2
+            
     yMax = y[maxdex]
     xMax = x[maxdex]
     
-    halfMax = old_div(yMax,2)
-
+    halfMax = yMax/2
+    
     halfDex1 = abs(y[:maxdex][::-1] - halfMax).argmin()
     halfDex2 = abs(y[maxdex:] - halfMax).argmin()
 
@@ -916,17 +900,35 @@ def getFWHM(x, y, maxdex = None, fwhmFactor = 1.1, smooth = False, peakpos = 0):
 
     hwhm1 = abs(xMax - xHalf1)
     hwhm2 = abs(xMax - xHalf2)
-    hwhms = [hwhm1, hwhm2]
+    hwhms = np.array([hwhm1, hwhm2])
+    halfDexs = np.array([maxdex - halfDex1, halfDex2 + maxdex])
 
-    hwhmMax, hwhmMin = max(hwhms), min(hwhms)
+    hwhmMax, hwhmMin = hwhms.max(), hwhms.min()
+    halfDexMax, halfDexMin =  halfDexs[hwhms.argmax()], halfDexs[hwhms.argmin()]
 
-    if hwhmMax > hwhmMin*fwhmFactor:
-        fwhm = hwhmMin * 2
+    if y[halfDexMin] < np.average(yMax * 0.55):
+        if hwhmMax > hwhmMin*fwhmFactor:
+            fwhm = hwhmMin * 2
 
+        else:
+            fwhm = sum(hwhms)
+        halfDex = halfDexMin
     else:
-        fwhm = sum(hwhms)
+        fwhm = hwhmMax * 2
+        halfDex = halfDexMax
 
     return fwhm, xMax, yMax
+
+def lorentzian(x, height, center, fwhm):
+    I = height
+    x0 = center
+    gamma = fwhm/2
+    numerator = gamma**2
+    denominator = (x - x0)**2 + gamma**2
+    quot = numerator/denominator
+    
+    y = I*quot
+    return y
 
 def gaussian(x, height, center, fwhm, offset = 0):
 
@@ -1149,6 +1151,24 @@ def calcNoise(y, ySmooth, windowSize = 5):
     noiseLevel = np.array([np.std(newNoise[n:n + windowSize]) for n, i in enumerate(noise)])
 
     return noiseLevel
+
+def evToNm(eV):
+    e = 1.60217662e-19
+    joules = eV * e
+    c = 299792458
+    h = 6.62607015e-34
+    wavelength = h*c/joules
+    nm = wavelength * 1e9
+    return nm
+
+def nmToEv(nm):
+    wavelength = nm*1e-9
+    c = 299792458
+    h = 6.62607015e-34
+    joules = h*c/wavelength
+    e = 1.60217662e-19
+    eV = joules / e
+    return eV
 
 def findGausses(x, y, fwhmFactor = 1.8, regStart = 505, regEnd = 600, initPeakPos = 545, noiseThresh = 1,
                 windowLength = 221, polyorder = 7, cutoff = 1000, fs = 80000, noiseWindow = 20, savGol = True):
@@ -1477,7 +1497,7 @@ def reduceNoise(y, factor = 10, cutoff = 1500, fs = 60000, pl = False):
     return y
 
 def plotHistogram(outputFileName, npomType = 'All NPoMs', startWl = 450, endWl = 987, binNumber = 80, plot = True, minBinFactor = 5, closeFigures = False,
-                  irThreshold = 8, cmLowLim = 600, density = False):
+                  irThreshold = 8, cmLowLim = 600, density = False, nPeaks = 1):
 
     plotStart = time.time()
 
@@ -1508,7 +1528,7 @@ def plotHistogram(outputFileName, npomType = 'All NPoMs', startWl = 450, endWl =
         print('\tPerforming Gaussian fit')
 
         try:
-            resonance, stderr, fwhm, sigma, fit = histyFit(frequencies, bins[:-1])
+            resonance, stderr, fwhm, sigma, fit = histyFit(frequencies, bins[:-1], nPeaks = nPeaks)
 
         except Exception as e:
             print(e)
@@ -1608,8 +1628,8 @@ def plotHistogram(outputFileName, npomType = 'All NPoMs', startWl = 450, endWl =
             ax2.set_ylabel('Frequency', fontsize = 18, rotation = 270)
             ax2.yaxis.set_label_coords(1.11, 0.5)
             ax2.set_yticks([int(tick) for tick in ax2.get_yticks() if tick > 0][:-1])
-            ax2.tick_params(labelsize = 15)
-            plt.title('%s: %s\nRes = %s $\pm$ %s\nFWHM = %s' % (str(date), npomType, str(resonance), str(stderr), str(fwhm)))
+            ax2.tick_params(labelsize = 15)            
+            plt.title('%s: %s\nRes = %s $\pm$ %s\nFWHM = %s' % (date.decode(), npomType, str(resonance), str(stderr), str(fwhm)))
 
             fig.tight_layout()
 
@@ -1631,11 +1651,12 @@ def plotHistogram(outputFileName, npomType = 'All NPoMs', startWl = 450, endWl =
     return frequencies, bins, yDataBinned, yDataRawBinned, binnedSpectraList, x, resonance, stderr, fwhm, sigma, fit
 
 def plotHistAndFit(outputFileName, npomType = 'All NPoMs', startWl = 450, endWl = 987, binNumber = 80, plot = True,
-                  minBinFactor = 5, closeFigures = False, irThreshold = 8):
+                  minBinFactor = 5, closeFigures = False, irThreshold = 8, nPeaks = 1):
 
     #try:
 
-    dfHistyBits = plotHistogram(outputFileName, npomType = npomType, minBinFactor = minBinFactor, closeFigures = closeFigures, irThreshold = irThreshold, plot = plot)
+    dfHistyBits = plotHistogram(outputFileName, npomType = npomType, minBinFactor = minBinFactor, closeFigures = closeFigures, 
+                                irThreshold = irThreshold, plot = plot, nPeaks = nPeaks)
     dfHistyBits = list(dfHistyBits)
     
     for n, val in enumerate(dfHistyBits):
@@ -2547,6 +2568,7 @@ def analyseRepresentative(outputFileName, peakFindMidpoint = 680, npTypes = 'all
                     y = dAvg[()]
                     avgMetadata = analyseNpomSpectrum(x, y, avg = True, peakFindMidpoint = peakFindMidpoint)
                     gBin.attrs.update(avgMetadata)
+                    dAvg.attrs.update(avgMetadata)
 
                 except Exception as e:
 
@@ -2561,10 +2583,11 @@ def analyseRepresentative(outputFileName, peakFindMidpoint = 680, npTypes = 'all
 
             gHist['Modal representative spectrum'] = histBins[biggestBinName]['Sum']
             gHist['Modal representative spectrum'].attrs.update(histBins[biggestBinName]['Sum'].attrs)
+            gHist['Modal representative spectrum'].attrs['Bin'] = biggestBinName
 
             for n, binName in enumerate(avgBinNames):
 
-                if len(avgBinNames) > 1:
+                if len(avgBinNames) <= 1:
                     n = ''
 
                 else:
@@ -2575,6 +2598,7 @@ def analyseRepresentative(outputFileName, peakFindMidpoint = 680, npTypes = 'all
 
                 gHist['Average representative spectrum%s' % n] = histBins[binName]['Sum']
                 gHist['Average representative spectrum%s' % n].attrs.update(histBins[binName]['Sum'].attrs)
+                gHist['Average representative spectrum%s' % n].attrs['Bin'] = binName
 
     print('\n\tRepresentative spectrum info collected\n')
 
@@ -2923,7 +2947,7 @@ def fitAllSpectra(rootDir, outputFileName, npSize = 80, summaryAttrs = False, fi
         if len(yData) > 2500:
             print('\tAbout to fit %s spectra. This may take a while...' % len(yData))
 
-        nummers = list(range(5, 101, 5))
+        nummers = np.arange(5, 101, 5)
         totalFitStart = time.time()
         print('\n0% complete')
 
