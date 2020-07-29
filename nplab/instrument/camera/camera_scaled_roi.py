@@ -174,6 +174,8 @@ class DisplayWidgetRoiScale(ExtendedImageView):
         self.checkbox_autorange = QtWidgets.QCheckBox('Autorange')
         self.tools.gridLayout.addWidget(self.checkbox_autorange, 0, 3, 1, 1)
 
+        self.update_data_signal.connect(self._update_image, type=QtCore.Qt.QueuedConnection)
+
     @property
     def x_axis(self):
         """Convenience wrapper for integration with spectrometer code"""
@@ -219,7 +221,7 @@ class DisplayWidgetRoiScale(ExtendedImageView):
         else:
             self.ui.splitter.setSizes([self.height()-35, 0, 35])
 
-    def update_image(self, newimage):
+    def _update_image(self, newimage):
         scale = self._pxl_scale
         offset = self._pxl_offset
 
@@ -230,7 +232,7 @@ class DisplayWidgetRoiScale(ExtendedImageView):
             if newimage.shape[0] > self._max_num_line_plots:
                 self.toggle_displays(False)
                 # levels = [np.percentile(newimage, x) for x in self.levels()]
-                self.setImage(newimage,
+                self.setImage(newimage.astype(float),
                               pos=offset,
                               autoRange=self.checkbox_autorange.isChecked(),
                               # levels=levels,
@@ -245,14 +247,17 @@ class DisplayWidgetRoiScale(ExtendedImageView):
             if newimage.shape[0] == 1:
                 newimage = newimage[0]
             # levels = [np.percentile(newimage, x) for x in self.levels()]
-            self.setImage(newimage, xvals=zvals,
+            self.setImage(newimage.astype(float), xvals=zvals,
                           pos=offset,
                           autoRange=self.checkbox_autorange.isChecked(),
                           # levels=levels,
                           scale=scale)
         else:
             raise ValueError('Cannot display. Array shape unrecognised')
-            
+
+    def update_image(self, newimage):
+        self.update_data_signal.emit(newimage)
+
 
 class DummyCameraRoiScale(CameraRoiScale):
     """A Dummy CameraRoiScale camera  """
