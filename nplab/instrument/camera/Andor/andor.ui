@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>436</width>
+    <width>461</width>
     <height>443</height>
    </rect>
   </property>
@@ -35,9 +35,15 @@
        <height>20</height>
       </size>
      </property>
+     <property name="editable">
+      <bool>false</bool>
+     </property>
+     <property name="currentText">
+      <string notr="true">Full Vert Bin</string>
+     </property>
      <item>
       <property name="text">
-       <string>FVB</string>
+       <string>Full Vert Bin</string>
       </property>
      </item>
      <item>
@@ -462,6 +468,32 @@
          <enum>QFrame::Raised</enum>
         </property>
         <layout class="QGridLayout" name="gridLayout_3">
+         <item row="4" column="1">
+          <widget class="QSpinBox" name="spinBoxNumFrames">
+           <property name="maximumSize">
+            <size>
+             <width>50</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="minimum">
+            <number>1</number>
+           </property>
+           <property name="maximum">
+            <number>999</number>
+           </property>
+          </widget>
+         </item>
+         <item row="7" column="1">
+          <widget class="QSpinBox" name="spinBoxCenterRow">
+           <property name="minimum">
+            <number>1</number>
+           </property>
+           <property name="maximum">
+            <number>400</number>
+           </property>
+          </widget>
+         </item>
          <item row="4" column="0">
           <widget class="QLabel" name="labelNumFrames">
            <property name="maximumSize">
@@ -472,6 +504,29 @@
            </property>
            <property name="text">
             <string>Frames</string>
+           </property>
+          </widget>
+         </item>
+         <item row="10" column="1">
+          <widget class="QDoubleSpinBox" name="doubleSpinBoxCycleTime"/>
+         </item>
+         <item row="0" column="0">
+          <spacer name="verticalSpacer_2">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>40</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item row="10" column="0">
+          <widget class="QLabel" name="labelCycleTime">
+           <property name="text">
+            <string>Cycle time</string>
            </property>
           </widget>
          </item>
@@ -504,33 +559,14 @@
            </property>
           </widget>
          </item>
-         <item row="5" column="0">
-          <widget class="QLabel" name="labelNumAccum">
-           <property name="maximumSize">
-            <size>
-             <width>40</width>
-             <height>16777215</height>
-            </size>
-           </property>
+         <item row="7" column="0">
+          <widget class="QLabel" name="labelCenterRow">
            <property name="text">
-            <string>Accum</string>
+            <string>Center</string>
            </property>
           </widget>
          </item>
-         <item row="8" column="0">
-          <spacer name="verticalSpacer">
-           <property name="orientation">
-            <enum>Qt::Vertical</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>20</width>
-             <height>40</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-         <item row="5" column="1">
+         <item row="9" column="1">
           <widget class="QSpinBox" name="spinBoxNumAccum">
            <property name="maximumSize">
             <size>
@@ -543,63 +579,31 @@
            </property>
           </widget>
          </item>
-         <item row="4" column="1">
-          <widget class="QSpinBox" name="spinBoxNumFrames">
+         <item row="9" column="0">
+          <widget class="QLabel" name="labelNumAccum">
            <property name="maximumSize">
             <size>
-             <width>50</width>
+             <width>40</width>
              <height>16777215</height>
             </size>
            </property>
-           <property name="minimum">
-            <number>1</number>
-           </property>
-           <property name="maximum">
-            <number>999</number>
-           </property>
-          </widget>
-         </item>
-         <item row="7" column="0">
-          <widget class="QLabel" name="labelCenterRow">
            <property name="text">
-            <string>Center</string>
+            <string>Accum</string>
            </property>
           </widget>
-         </item>
-         <item row="7" column="1">
-          <widget class="QSpinBox" name="spinBoxCenterRow">
-           <property name="minimum">
-            <number>1</number>
-           </property>
-           <property name="maximum">
-            <number>400</number>
-           </property>
-          </widget>
-         </item>
-         <item row="0" column="0">
-          <spacer name="verticalSpacer_2">
-           <property name="orientation">
-            <enum>Qt::Vertical</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>20</width>
-             <height>40</height>
-            </size>
-           </property>
-          </spacer>
          </item>
         </layout>
-        <zorder>labelNumAccum</zorder>
-        <zorder>spinBoxNumAccum</zorder>
         <zorder>spinBoxNumFrames</zorder>
         <zorder>labelNumFrames</zorder>
-        <zorder>verticalSpacer</zorder>
         <zorder>labelNumRows</zorder>
         <zorder>spinBoxNumRows</zorder>
         <zorder>labelCenterRow</zorder>
         <zorder>spinBoxCenterRow</zorder>
         <zorder>verticalSpacer_2</zorder>
+        <zorder>labelCycleTime</zorder>
+        <zorder>doubleSpinBoxCycleTime</zorder>
+        <zorder>spinBoxNumAccum</zorder>
+        <zorder>labelNumAccum</zorder>
        </widget>
       </item>
      </layout>

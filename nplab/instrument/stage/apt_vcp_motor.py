@@ -125,12 +125,12 @@ class APT_VCP_motor(APT_VCP, Stage):
             destination_ids = [axis]
         for dest in destination_ids:
             status = self.get_status_update(axis = dest)
-            if debug > 0 or DEBUG == True:
+            if debug > 0 or DEBUG:
                 print(status)
+            
             while any(['in motion' in x[1] for x in status]):
                 time.sleep(0.1)
                 status = self.get_status_update(axis = dest)
-          #      print status
 
     def home(self,axis = None):
         """Rehome the stage with an axis input """
@@ -394,8 +394,7 @@ class DC_APT(APT_VCP_motor):
                 self.EncCnt = None
                 self._logger.warn('The stage type suggested is not listed and therefore a calibration cannot be set')
         else:
-            self.EncCnt = None
-                
+            self.EncCnt = None    
             
     def convert(self, value, from_, to_):
         if None in (self.EncCnt,self.t_constant):
@@ -425,7 +424,30 @@ class DC_APT(APT_VCP_motor):
         return old_div(self.EncCnt*self.t_constant**2*65536*acc,1E3)
     def move_step(self,axis,direction):
         self.move_rel(self.stepsize*direction,axis)
-        
+    def _waitFinishMove(self,axis = None,debug=False):
+        """A simple function to force movement to block the console """
+        if axis == None:
+            destination_ids = list(self.destination.keys())
+        else:
+            destination_ids = [axis]
+        for dest in destination_ids:
+            status = self.get_status_update(axis = dest)# \ # and all([not x[1].endswith('homing') for x in status])\
+            while any(['in motion' in x[1] for x in status]):
+ 
+                time.sleep(0.1)
+                status = self.get_status_update(axis = dest)
+                if debug > 0 or DEBUG:
+                    print(status)
+    def home(self,axis = None):
+        """Rehome the stage with an axis input """
+        if axis == None:
+            destination_ids = self.axis_names
+        else:
+            destination_ids = tuple(axis)
+        for dest in destination_ids:
+            self.write(0x0443,destination_id = dest)
+            self._waitForReply()
+            self._waitFinishMove()
     counts_to = {'position' : counts_to_pos,
                  'velocity' : counts_to_vel,
                  'acceleration' : counts_to_acc}
@@ -547,11 +569,13 @@ class Stepper_APT_trinamics(APT_VCP_motor):
 if __name__ == '__main__':
     print("pass")
     # microscope_stage = APT_VCP_motor(port='COM12', source=0x01, destination=0x21)
+    r = DC_APT(port = 'COM13', destination = 0x01, stage_type = 'PRM' )
+    DEBUG = True
 
-    tdc_cube = Stepper_APT_trinamics(port='/dev/ttyUSB1', source=0x01, destination=0x50)
-    # tdc_cube2 = APT_VCP_motor(port='COM20', source=0x01, destination=0x50)
+    # tdc_cube = Stepper_APT_trinamics(port='/dev/ttyUSB1', source=0x01, destination=0x50)
+    # # tdc_cube2 = APT_VCP_motor(port='COM20', source=0x01, destination=0x50)
 
-    tdc_cube.show_gui()
+    # tdc_cube.show_gui()
     # print tdc_cube.position
     # tdc_cube.home()
     # delattr(tdc_cube, 'get_qt_ui')

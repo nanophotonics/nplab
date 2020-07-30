@@ -137,6 +137,7 @@ class ShutterWithEmulatedRead(Shutter):
     """
     def __init__(self):
         """Initialise the shutter to the closed position."""
+        self._last_set_state = 'Closed'
         self.state = "Closed"
     
     def get_state(self):

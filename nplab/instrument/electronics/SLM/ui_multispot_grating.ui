@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>190</width>
-    <height>59</height>
+    <width>213</width>
+    <height>101</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -26,18 +26,12 @@
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="1" column="0">
-    <widget class="QLabel" name="label_6">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
+   <item row="0" column="0">
+    <widget class="QLabel" name="label_4">
      <property name="minimumSize">
       <size>
        <width>0</width>
-       <height>20</height>
+       <height>25</height>
       </size>
      </property>
      <property name="font">
@@ -47,52 +41,100 @@
       </font>
      </property>
      <property name="text">
-      <string>Offset (pi)</string>
+      <string>Grating</string>
      </property>
     </widget>
    </item>
-   <item row="1" column="1">
-    <widget class="QLineEdit" name="offset_lineEdit">
+   <item row="0" column="1">
+    <widget class="QLabel" name="label_2">
      <property name="minimumSize">
       <size>
-       <width>50</width>
+       <width>0</width>
        <height>20</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>grating</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="2">
+    <widget class="QLineEdit" name="lineEdit_grating">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>20</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>16777215</height>
       </size>
      </property>
      <property name="text">
       <string>0</string>
      </property>
-     <property name="placeholderText">
-      <string>Offset</string>
+    </widget>
+   </item>
+   <item row="2" column="2">
+    <widget class="QLineEdit" name="lineEdit_spots">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>20</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="text">
+      <string>0</string>
      </property>
     </widget>
    </item>
    <item row="2" column="1">
-    <widget class="QSlider" name="offset_slider">
+    <widget class="QLabel" name="label_3">
      <property name="minimumSize">
       <size>
        <width>0</width>
-       <height>10</height>
+       <height>20</height>
       </size>
      </property>
-     <property name="minimum">
-      <number>0</number>
+     <property name="text">
+      <string>spots</string>
      </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="1" colspan="2">
+    <widget class="QSlider" name="slider_grating">
      <property name="maximum">
       <number>100</number>
+     </property>
+     <property name="pageStep">
+      <number>5</number>
      </property>
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>
      <property name="tickPosition">
-      <enum>QSlider::TicksBelow</enum>
+      <enum>QSlider::TicksAbove</enum>
      </property>
      <property name="tickInterval">
       <number>10</number>
      </property>
     </widget>
    </item>
-   <item row="1" column="2" rowspan="2">
+   <item row="0" column="3" rowspan="3">
     <spacer name="horizontalSpacer">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>

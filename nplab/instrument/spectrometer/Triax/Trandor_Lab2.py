@@ -66,6 +66,7 @@ class Trandor(Andor):#Andor
         # print 'Current Slit Width:', self.triax.Slit(),'um'
         # print '______________________'
         self.Notch_Filters_Tested=True
+        self.metadata_property_names += ('slit_width', 'wavelengths')
         
 
     def Grating(self, Set_To=None):
@@ -120,4 +121,6 @@ class Trandor(Andor):#Andor
             else:
                 return Andor_Capture_Function(self)
 
-    x_axis=NotifiedProperty(Generate_Wavelength_Axis) #This is grabbed by the Andor code 
+    x_axis = property(Generate_Wavelength_Axis) #This is grabbed by the Andor code 
+    wavelengths = x_axis
+    slit_width = property(self.triax.Slit)
