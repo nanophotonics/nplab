@@ -108,12 +108,12 @@ def focus(input_phase, curvature=0):
     return input_phase + phase
 
 
-def astigmatism(input_phase, horizontal=0, diagonal=0):
+def astigmatism(input_phase, amplitude=0, angle=0):
     """Cylindrical phase pattern corresponding to astigmatism
 
     :param input_phase:
-    :param horizontal: float. curvature between the x and y axis
-    :param diagonal: float. curvature between the axes at 45deg and 135deg
+    :param amplitude: float. cylindrical curvature
+    :param angle: float. angle between the cylindrical curvature and the input axes
     :return:
     """
     shape = np.shape(input_phase)
@@ -123,7 +123,10 @@ def astigmatism(input_phase, horizontal=0, diagonal=0):
     rho = np.sqrt(x ** 2 + y ** 2)
     phi = np.arctan2(x, y)
 
-    phase = (horizontal * np.sin(2 * phi) + diagonal * np.cos(2 * phi)) * rho ** 2
+    horizontal = amplitude * np.cos(angle * np.pi / 180)
+    diagonal = amplitude * np.sin(angle * np.pi / 180)
+
+    phase = (horizontal * np.cos(2 * phi) + diagonal * np.sin(2 * phi)) * rho ** 2
 
     return input_phase + phase
 
