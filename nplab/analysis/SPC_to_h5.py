@@ -38,8 +38,7 @@ class Raman_Spectrum(object):
 
 def extractRamanSpc(path, bg_path = False, combine_statics = False):
     '''Takes all .spc files from a directory and creates Raman_Spectrum object for each and also background subtracts, if specified
-       .spc files must be directly exported at time of measurement. If .wdf file was re-opened with WiRE and then saved as .spc, use old code ('2017-04-14_Spectra_Class')
-       Plots ASCII table with relevant metadata. Set table=False to omit this
+       .spc files must be directly exported at time of measurement. 
        Also plots table for background files if user specifies bg_table = True'''
 
     '''Actual power values for each % laser power in μW. Measured on 09/05/2017.'''
@@ -123,7 +122,6 @@ def extractRamanSpc(path, bg_path = False, combine_statics = False):
             #print('%s (%s) = %s (%s)' % (k, type(k), i, type(i)))
 
         metadata.update(fLogDict)
-
         tStamp = []
 
         for unit in ['year', 'month', 'day', 'hour', 'minute']:#the timestamp values are actually arbitrary, so this is obsolete
@@ -142,13 +140,17 @@ def extractRamanSpc(path, bg_path = False, combine_statics = False):
         except:
             timestamp = 'N/A'
 
-        laserWl = int(fLogDict['Laser'][7:10]) #Grabs appropriate part of laser wavelength entry from log and converts to integer (must be 3 characters long)
+        try:
+            laserWl = int(fLogDict['Laser'][7:10]) #Grabs appropriate part of laser wavelength entry from log and converts to integer (must be 3 characters long)
+        except:
+            laserWl = 'N/A'
 
         if 'Laser_power' in list(fLogDict.keys()):
             laserPower = float(fLogDict['Laser_power'][13:-1]) #Grabs numeric part of string containing laser power info and converts to float
         elif 'ND Transmission' in list(fLogDict.keys()):
             laserPower = float(('').join([char for char in fLogDict['ND Transmission'].split(' ')[1] if char == '.' or char.isdigit()]))
         else:
+            print(fLogDict.keys())
             laserPower = 'Undefined'
 
         if laserPower in [0.0001, 0.05, 0.1, 0.5, 1.0, 5.0, 10.0, 50.0, 100.0]:
@@ -164,10 +166,9 @@ def extractRamanSpc(path, bg_path = False, combine_statics = False):
         wavenumbers = f.x #Pulls x data from spc file
         nScans = int(metadata['fnsub']) #Number of Raman spectra contained within the spc file (>1 if file contains a kinetic scan)
         ramanIntensities = np.array([f.sub[i].y for i in range(nScans)]) #Builds list of y data arrays
-
-
         if absLaserPower != 'Undefined':
-            absRamanIntensities = [old_div((spectrum * 1000), (absLaserPower * integrationTime * float(accumulations/1000))) for spectrum in ramanIntensities]
+            #print(filename, absLaserPower)
+            absRamanIntensities = np.array([spectrum*1000/(absLaserPower*integrationTime*float(accumulations/1000)) for spectrum in ramanIntensities])
 
         else:
             absRamanIntensities = ['N/A'] * nScans
