@@ -76,7 +76,7 @@ class SlmDisplay(QtWidgets.QWidget):
     """Widget for displaying the greyscale holograms on the SLM
     It is simply a plain window with a QImage + QLabel.setPixmap combination for displaying phase arrays
     """
-    update_image = QtCore.Signal(np.ndarray, int)
+    update_image = QtCore.Signal(np.ndarray)
 
     def __init__(self, shape=(1000, 1000), resolution=(1, 1), bitness=8, hide_border=True, lut=None):
         """
@@ -137,7 +137,7 @@ class SlmDisplay(QtWidgets.QWidget):
         phase = phase % (2 * np.pi)
         phase = self.LUT(phase)
 
-        self.update_image.emit(phase, slm_monitor)
+        self.update_image.emit(phase)
 
         if slm_monitor is not None:
             app = get_qt_app()
@@ -148,7 +148,7 @@ class SlmDisplay(QtWidgets.QWidget):
             self.move(slm_screen.x(), slm_screen.y())
         return phase
 
-    def _set_image(self, phase, slm_monitor=None):
+    def _set_image(self, phase):
         """Sets an array on the QLabel.Pixmap
 
         :param phase: np.array from 0 to 2 pi
