@@ -37,6 +37,7 @@ class constantUi(BaseUi):
     def _connect(self):
         self.offset_slider.valueChanged.connect(self.update_offset_lineedit)
         self.offset_lineEdit.returnPressed.connect(self.update_offset_slider)
+        self.offset_slider.valueChanged.connect(self.slm_gui.make)
 
     def update_offset_lineedit(self):
         steps = self.offset_slider.value()
@@ -104,9 +105,13 @@ class gratingsUi(BaseUi):
             self.gratingx_lineEdit.setText('%g' % (grating_x - step))
 
     def get_params(self):
-        grating_x = float(self.gratingx_lineEdit.text())
-        grating_y = float(self.gratingy_lineEdit.text())
-        return grating_x, grating_y
+        grating_x = self.gratingx_lineEdit.text()
+        grating_y = self.gratingy_lineEdit.text()
+        if grating_x == '':
+            grating_x = 0
+        if grating_y == '':
+            grating_y = 0
+        return float(grating_x), float(grating_y)
 
 
 class astigmatismUi(BaseUi):
@@ -181,10 +186,49 @@ class vortexbeamUi(BaseUi):
     def __init__(self, slm_gui):
         super(vortexbeamUi, self).__init__(slm_gui, 'vortexbeam')
 
+    def _connect(self):
+        self.pushButton_flip.clicked.connect(self.flip)
+
+        self.slider_angle.valueChanged.connect(lambda: self.lineEdit_angle.setText('%g' % self.slider_angle.value()))
+        self.lineEdit_angle.textChanged.connect(lambda: self.slider_angle.setValue(int(float(self.lineEdit_angle.text()))))
+
+        self.slider_center_x.valueChanged.connect(lambda: self.lineEdit_center_x.setText('%g' % (self.slider_center_x.value()/100)))
+        self.slider_center_y.valueChanged.connect(lambda: self.lineEdit_center_y.setText('%g' % (self.slider_center_y.value()/100)))
+        self.lineEdit_center_x.textChanged.connect(lambda: self.slider_center_x.setValue(int(100*float(self.lineEdit_center_x.text()))))
+        self.lineEdit_center_y.textChanged.connect(lambda: self.slider_center_y.setValue(int(100*float(self.lineEdit_center_y.text()))))
+
+        self.lineEdit_order.textChanged.connect(self.slm_gui.make)
+        self.lineEdit_angle.textChanged.connect(self.slm_gui.make)
+        self.lineEdit_center_x.textChanged.connect(self.slm_gui.make)
+        self.lineEdit_center_y.textChanged.connect(self.slm_gui.make)
+
+    def flip(self):
+        order = int(float(self.lineEdit_order.text()))
+        self.lineEdit_order.setText(str(-order))
+
     def get_params(self):
         order = int(float(self.lineEdit_order.text()))
         angle = float(self.lineEdit_angle.text())
-        return order, angle
+        center_x = float(self.lineEdit_center_x.text())
+        center_y = float(self.lineEdit_center_y.text())
+        return order, angle, (center_x, center_y)
+
+
+class multispot_gratingUi(BaseUi):
+    def __init__(self, slm_gui):
+        super(multispot_gratingUi, self).__init__(slm_gui, 'multispot_grating')
+
+    def _connect(self):
+        self.slider_grating.valueChanged.connect(lambda: self.lineEdit_grating.setText('%g' % (self.slider_grating.value()/100)))
+        self.lineEdit_grating.textChanged.connect(lambda: self.slider_grating.setValue(int(100*float(self.lineEdit_grating.text()))))
+
+        self.lineEdit_grating.textChanged.connect(self.slm_gui.make)
+        self.lineEdit_spots.textChanged.connect(self.slm_gui.make)
+
+    def get_params(self):
+        spots = int(float(self.lineEdit_spots.text()))
+        grating = float(self.lineEdit_grating.text())
+        return grating, spots
 
 
 class linear_lutUi(BaseUi):

@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>238</width>
+    <width>301</width>
     <height>50</height>
    </rect>
   </property>
@@ -18,7 +18,7 @@
     <rect>
      <x>10</x>
      <y>10</y>
-     <width>221</width>
+     <width>271</width>
      <height>31</height>
     </rect>
    </property>
@@ -42,7 +42,7 @@
       <property name="frameShadow">
        <enum>QFrame::Plain</enum>
       </property>
-      <property name="numDigits">
+      <property name="digitCount">
        <number>8</number>
       </property>
       <property name="segmentStyle">
@@ -61,6 +61,13 @@
      <widget class="QCheckBox" name="live_button">
       <property name="text">
        <string>Live</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QCheckBox" name="beep_button">
+      <property name="text">
+       <string>beep</string>
       </property>
      </widget>
     </item>

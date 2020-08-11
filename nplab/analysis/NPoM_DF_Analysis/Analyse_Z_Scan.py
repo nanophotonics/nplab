@@ -39,11 +39,12 @@ def Run(Z_Scan,Threshold=0.2, Smoothing_width=1.5):
         Positions.append(Ones*len(Positions))
     Positions=np.array(Positions).astype(np.float64)
 
-    Centroids=old_div(np.sum((Thresholded*Positions),axis=0),np.sum(Thresholded,axis=0)) #Find Z centroid position for each wavelength
-
+    Centroids=np.sum((Thresholded*Positions),axis=0)/np.sum(Thresholded,axis=0) #Find Z centroid position for each wavelength
+    
     Centroids=np.nan_to_num(Centroids)
-
+    
     Rotated=np.transpose(Z_Scan)
+    print('Zt = ', Rotated[20])
 
     Output=[]
     n=0
@@ -64,7 +65,7 @@ def Run(Z_Scan,Threshold=0.2, Smoothing_width=1.5):
 
         n+=1
 
-    return np.array(Output)
+    return np.array(Output), np.array(Centroids)
 
 
 

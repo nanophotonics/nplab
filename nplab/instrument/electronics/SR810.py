@@ -286,6 +286,13 @@ class Lockin_SR810(vi.VisaInstrument):
         return self.float_query('PHAS?')
 
     phase = property(get_phase, set_phase)
+    
+    def set_harmonic(self, harmonic):
+        self.write('HARM' + str(harmonic))
+        print('HARM' + str(harmonic))
+    def get_harmonic(self, harmonic):
+        return self.int_query('HARM?')
+    harmonic = property(get_harmonic, set_harmonic)
 
     def autosens(self):
         """checks measurement is with range and auto changes sensitivty and reserve respectively

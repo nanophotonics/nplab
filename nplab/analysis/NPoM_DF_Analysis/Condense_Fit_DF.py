@@ -16,8 +16,8 @@ rootDir = os.getcwd()
 import numpy as np
 import time
 import matplotlib.pyplot as plt
-from nplab.analysis import DF_PL_Multipeakfit as mpf
-from nplab.analysis import Condense_DF_Spectra as cdf
+from nplab.analysis.NPoM_DF_Analysis import DF_Multipeakfit as mpf
+from nplab.analysis.NPoM_DF_Analysis import Condense_DF_Spectra as cdf
 #charDir = r'C:\Users\car72\Documents\GitHub\charlie\charlie'
 #os.chdir(charDir)
 #import DF_PL_Multipeakfit as mpf
@@ -31,19 +31,25 @@ if __name__ == '__main__':
     raiseExceptions = False #Setting this to True will stop the analysis return the traceback if an individual spectrum fails
 
     statsOnly = False #if you have already analysed the spectra and want to re-plot histograms (etc)
-    pl = True #Set to True if your dataset contains PL
+    pl = False #Set to True if your dataset contains PL
     npSize = 80 #Peak analysis uses different values for different NP sizes. Valid inputs are 50, 60, 70, 80
+    npomTypes = ['All NPoMs', 'Ideal NPoMs'] # Valid entries: ['All NPoMs', 'Non-Weird-Peakers', 'Weird Peakers', 'Ideal NPoMs', 'Doubles', 'Singles']
+    consolidateScans = True
 
     if statsOnly == True:
         outputFileName = mpf.findH5File(os.getcwd(), nameFormat = 'MultiPeakFitOutput', mostRecent = True)#finds the most recent file with given name format
-        mpf.doStats(outputFileName, stacks = False, pl = pl)
+        mpf.doStats(outputFileName, stacks = False, pl = pl, npomTypes = npomTypes)
 
     else:
         startSpec = 0
         finishSpec = 0
 
+        if consolidateScans == True:
+            cdf.consoliData(os.getcwd())
+
         summaryFile = cdf.extractAllSpectra(os.getcwd(), returnIndividual = True, start = startSpec,
-                                            finish = finishSpec)#condenses Z-stack (inc. background subtraction and referencing) for each particle and makes summary file
+                                            finish = finishSpec, raiseExceptions = raiseExceptions,
+                                            consolidated = consolidateScans)#condenses Z-stack (inc. background subtraction and referencing) for each particle and makes summary file
 
         if pl == True:
             summaryFile = cdf.transferPlSpectra(os.getcwd(), startWl = 505, start = startSpec,
@@ -53,7 +59,8 @@ if __name__ == '__main__':
 
         if raiseExceptions == True:
             outputFileName = mpf.createOutputFile('MultiPeakFitOutput')
-            mpf.fitAllSpectra(os.getcwd(), outputFileName, npSize = 80, first = startSpec, last = finishSpec, pl = pl, closeFigures = True, stats = True,
+            mpf.fitAllSpectra(os.getcwd(), outputFileName, npSize = npSize, first = startSpec, last = finishSpec,
+                              pl = pl, closeFigures = True, stats = True, npomTypes = npomTypes,
                               raiseExceptions = raiseExceptions, raiseSpecExceptions = raiseExceptions)
 
 
@@ -62,7 +69,8 @@ if __name__ == '__main__':
         else:
             try:
                 outputFileName = mpf.createOutputFile('MultiPeakFitOutput')
-                mpf.fitAllSpectra(os.getcwd(), outputFileName, npSize = 80, first = startSpec, last = finishSpec, pl = pl, closeFigures = True, stats = True,
+                mpf.fitAllSpectra(os.getcwd(), outputFileName, npSize = npSize, first = startSpec, last = finishSpec,
+                                  pl = pl, closeFigures = True, stats = True, npomTypes = npomTypes,
                                   raiseExceptions = raiseExceptions, raiseSpecExceptions = raiseExceptions)
 
                 print('\nData fitting complete')
