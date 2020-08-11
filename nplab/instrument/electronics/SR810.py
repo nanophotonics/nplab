@@ -325,7 +325,14 @@ class Lockin_SR810(vi.VisaInstrument):
         return (
          sens, wide_res, close_res)
 
-
+    def get_harmonic(self):
+        num = self.int_query("HARM?");
+        return num
+    def set_harmonic(self,i):
+        self.write("HARM%s" %i)
+        
+    harmonic = property(get_harmonic, set_harmonic)
+    
 if __name__ == '__main__':
     testlockin = Lockin_SR844()
 # okay decompiling SR810.pyc
