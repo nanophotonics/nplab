@@ -133,6 +133,7 @@ def sort_by_timestamp(hdf5_group):
         keys.sort(key=split_number_from_name)
     items_lists = [[key,hdf5_group[key]] for key in keys]
     return items_lists
+
 class Group(h5py.Group, ShowGUIMixin):
     """HDF5 Group, a collection of datasets and subgroups.
 
@@ -319,7 +320,7 @@ class DataFile(Group):
     """
 
     def __init__(self, name, mode=None, save_version_info=False,
-                 update_current_group = True, *args, **kwargs):
+                 update_current_group=True, *args, **kwargs):
         """Open or create an HDF5 file.
 
         :param name: The filename/path of the HDF5 file to open or create, or an h5py File object
