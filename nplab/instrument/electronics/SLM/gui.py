@@ -132,8 +132,20 @@ class astigmatismUi(BaseUi):
         self.angle_slider.valueChanged.connect(self.slm_gui.make)
 
     def update_amplitude_lineedit(self):
-        step_size = float(self.amplitude_step_lineEdit.text())
-        offset = float(self.amplitude_offset_lineEdit.text())
+        try:
+            step_size = float(self.amplitude_step_lineEdit.text())
+        except ValueError:
+            amplitude = float(self.amplitude_lineEdit.text())
+            if amplitude != 0:
+                step_size = 0.01 * amplitude
+            else:
+                step_size = 0.0001
+            self.amplitude_step_lineEdit.setText(str(step_size))
+        try:
+            offset = float(self.amplitude_offset_lineEdit.text())
+        except ValueError:
+            offset = float(self.amplitude_lineEdit.text())
+            self.amplitude_offset_lineEdit.setText(str(offset))
         steps = self.amplitude_slider.value()
         value = offset + steps * step_size
 
@@ -148,8 +160,16 @@ class astigmatismUi(BaseUi):
         self.amplitude_slider.setValue(steps)
 
     def update_angle_lineedit(self):
-        step_size = float(self.angle_step_lineEdit.text())
-        offset = float(self.angle_offset_lineEdit.text())
+        try:
+            step_size = float(self.angle_step_lineEdit.text())
+        except ValueError:
+            step_size = 1
+            self.angle_step_lineEdit.setText(str(step_size))
+        try:
+            offset = float(self.angle_offset_lineEdit.text())
+        except ValueError:
+            offset = float(self.angle_lineEdit.text())
+            self.angle_offset_lineEdit.setText(str(offset))
         steps = self.angle_slider.value()
         value = offset + steps * step_size
 
