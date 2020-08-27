@@ -6,16 +6,17 @@ Created on Thu Feb 27 10:36:15 2020
 """
 import time
 from nplab.instrument.serial_instrument import SerialInstrument
+
 class ArduinoRotator(SerialInstrument):
+    STEPS_PER_REV = 52_000
     def __init__(self, port):
         self.termination_character = '\n'
         SerialInstrument.__init__(self, port)
         self.flush_input_buffer()
         self.ignore_echo = True
         self.timeout = 2
-        self.STEPS_PER_REV = 165_000 # roughly
-        # time.sleep(1)
-        # self.speed = 15
+        # time.sleep(2) # for some reason this is necessary to change default speed
+        self.speed = 15
         self._logger.setLevel('WARN')
         
     # def query(self, queryString, **args):
@@ -40,13 +41,14 @@ class ArduinoRotator(SerialInstrument):
     def move_a_lot(self, steps):
         if steps == 0: return  
         movements = 0
+        sign = (1, -1)[steps<0]
         if (-32768 > steps) or (steps > 32767):
             movements = steps // 32767
             steps = steps % 32767
         for movement in range(movements):
             self._logger.info('starting new command,\
                               rotation may be discontinuous')
-            self.move_raw(3267)
+            self.move_raw(sign*3267)
         self.move_raw(steps)
     
     def move(self, degrees):
