@@ -96,7 +96,7 @@ class SerialInstrument(MessageBusInstrument):
     def __del__(self):
         self.close()
 
-    def write(self,query_string):
+    def write(self,query_string, ignore_echo=False, timeout=None):
         """Write a string to the serial port"""
         with self.communications_lock:
             assert self.ser.isOpen(), "Warning: attempted to write to the serial port before it was opened.  Perhaps you need to call the 'open' method first?"
@@ -105,6 +105,10 @@ class SerialInstrument(MessageBusInstrument):
             except AttributeError:
                 if self.ser.out_waiting>0: self.ser.flushOutput() #ensure there's nothing waiting
             self.ser.write(str.encode(self.initial_character+str(query_string)+self.termination_character))
+            if ignore_echo:
+                echo = self.readline(timeout).strip()
+                if query_string != echo:
+                    self._logger.warn('This write did not echo: ' + echo)
             # self.ser.write(np.char.encode(np.array([self.initial_character+query_string+self.termination_character]), 'utf8'))
 
     def flush_input_buffer(self):
