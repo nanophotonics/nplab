@@ -346,6 +346,8 @@ class fullfit(object):
         try: smoothed = sm.Run(self.spec)
         except:smoothed = smoothed = sm2(self.spec, 2)
         self.bg_indices = argrelextrema(smoothed, np.less)[0]
+        while len(self.bg_indices)<2:
+            self.bg_indices = np.append(self.bg_indices, np.random.random_integers(high=len(self.spec)))
         self.bg_vals = smoothed[self.bg_indices]
         
         residuals = []
