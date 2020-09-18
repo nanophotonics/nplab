@@ -54,7 +54,7 @@ class SerialInstrument(MessageBusInstrument):
     """
 
     _serial_port_lock = threading.Lock()
-
+    
     def __init__(self, port=None):
         """
         Set up the serial port and so on.
@@ -64,6 +64,16 @@ class SerialInstrument(MessageBusInstrument):
         if self.termination_read is None:
             self.termination_read = self.termination_character
         self.open(port, False)
+    
+    @property
+    def timeout(self):
+        return self._timeout
+    
+    @timeout.setter
+    def timeout(self, value):
+        self.ser._timeout = self._timeout = value
+        self.ser._reconfigure_port()
+        
     def open(self, port=None, quiet=True):
         """Open communications with the serial port.
 
@@ -104,6 +114,7 @@ class SerialInstrument(MessageBusInstrument):
                 if self.ser.outWaiting()>0: self.ser.flushOutput() #ensure there's nothing waiting
             except AttributeError:
                 if self.ser.out_waiting>0: self.ser.flushOutput() #ensure there's nothing waiting
+            if ignore_echo: self.flush_input_buffer()
             self.ser.write(str.encode(self.initial_character+str(query_string)+self.termination_character))
             if ignore_echo:
                 echo = self.readline(timeout).strip()
