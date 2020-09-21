@@ -7,10 +7,7 @@ This module provides the DataFile class, a subclass of h5py's File class with a 
 
 :author: Richard Bowman
 """
-from __future__ import print_function
 
-from builtins import str
-from past.builtins import basestring
 __author__ = "rwb27"
 
 import h5py
