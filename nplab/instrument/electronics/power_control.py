@@ -4,9 +4,7 @@ Created on Thu Aug 01 16:38:56 2019
 
 @author: ee306
 """
-from __future__ import division
-from __future__ import print_function
-from past.utils import old_div
+
 import os
 import numpy as np
 from scipy import interpolate 
@@ -98,7 +96,7 @@ class PowerControl(Instrument):
   
     @property
     def mid_param(self):
-        return old_div((self.max_param - self.min_param),2)
+        return (self.max_param - self.min_param)/2
 
     @property
     def points(self):
@@ -149,7 +147,7 @@ class PowerControl(Instrument):
         self.update_power_calibration()    
         self.pometer.live = live
     
-    def update_power_calibration(self, specific_calibration = None, laser = None):
+    def update_power_calibration(self, specific_calibration=None, laser=None):
         '''
         specific_calibration should be the exact name of the power calibration group, otherwise
         the most recent calibration for the given laser is used.

@@ -20,16 +20,16 @@ class SignalGenerator(VisaInstrument):
                                    validate=['inf'], dtype='str')
     volt_high = queried_property('volt:high?', 'volt:high {0}')
     volt_low = queried_property('volt:low?', 'volt:low {0}')
+    output = queried_property('output?', 'output {0}',
+                              validate=['OFF', 'ON'], dtype='str')
 
     def reset(self):
         self.write('*rst')
 
 if __name__ == '__main__':
-    s = SignalGenerator()
+    s = SignalGenerator(address='USB0::0x0957::0x0407::MY44037109::0::INSTR')
     print(s.frequency)
     s.frequency = 1e3
-    print(s.frequency)
-    s.frequency = 2e3
     print(s.frequency)
     print(s.function)
     s.function = 'sinusoid'

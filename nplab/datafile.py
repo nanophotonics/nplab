@@ -7,10 +7,7 @@ This module provides the DataFile class, a subclass of h5py's File class with a 
 
 :author: Richard Bowman
 """
-from __future__ import print_function
 
-from builtins import str
-from past.builtins import basestring
 __author__ = "rwb27"
 
 import h5py
@@ -216,8 +213,9 @@ class Group(h5py.Group, ShowGUIMixin):
         """Return a subgroup, creating it if it does not exist."""
         return Group(super(Group, self).require_group(name).id)  # wrap the returned group
 
-    def create_dataset(self, name, auto_increment=True, shape=None, dtype=None,
-                       data=None, attrs=None, timestamp=True,autoflush = True, *args, **kwargs):
+    def create_dataset(self, name, data=None, attrs=None, auto_increment=True,
+                       shape=None, dtype=None, timestamp=True, autoflush=True,
+                       *args, **kwargs):
         """Create a new dataset, optionally with an auto-incrementing name.
 
         :param name: the name of the new dataset
