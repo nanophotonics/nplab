@@ -93,7 +93,7 @@ class Triax(VisaInstrument):
             else:
                 self.Regions.append(None)
 
-        self.Wavelength_Array=None #Not intially set. Updated with a change of grating or stepper motor position
+        self.Wavelength_Array = None #Not intially set. Updated with a change of grating or stepper motor position
         self.Number_of_Pixels=CCD_Horizontal_Resolution
 
     def Get_Wavelength_Array(self):
@@ -126,7 +126,7 @@ class Triax(VisaInstrument):
             self.waitTillReady()
             self.Grating_Number = Set_To
             #try:
-            self.Wavelength_Array=self.Convert_Pixels_to_Wavelengths(np.array(list(range(self.Number_of_Pixels)))) #Update wavelength array
+            self.Wavelength_Array=self.Convert_Pixels_to_Wavelengths(np.arange(self.Number_of_Pixels)) #Update wavelength array
             #except:
                 #Dump=1
 
@@ -177,7 +177,7 @@ class Triax(VisaInstrument):
         #Optimise this relation over all pixels
 
         def Loss(Coefficents):
-            Wavelengths=np.polyval(np.polyfit(Sample_Pixels,Sample_Wavelengths,2),Pixel_Array)
+            Wavelengths = np.polyval(np.polyfit(Sample_Pixels,Sample_Wavelengths,2),Pixel_Array)
             Diff=[]
             for i in range(len(Pixel_Array)):
                 Diff.append(self.Find_Required_Step(Wavelengths[i],Pixel_Array[i],False)-Steps)
@@ -185,7 +185,7 @@ class Triax(VisaInstrument):
 
         Coefficents=spo.minimize(Loss,Coefficents).x
 
-        Wavelengths=np.polyval(np.polyfit(Sample_Pixels,Sample_Wavelengths,2),Pixel_Array)
+        Wavelengths=np.polyval(np.polyfit(Sample_Pixels,Sample_Wavelengths,2), Pixel_Array)
 
         return Wavelengths
            
@@ -253,7 +253,8 @@ class Triax(VisaInstrument):
         self.Move_Steps(Required_Step-Current_Step)
     
     def Get_Center_Wavelength(self):
-        return self.Get_Wavelength_Array()[len(wl_arr)//2]
+        wls = self.Get_Wavelength_Array()
+        return wls[len(wls)//2]
     
     center_wavelength = property(Get_Center_Wavelength, Set_Center_Wavelength)    
 

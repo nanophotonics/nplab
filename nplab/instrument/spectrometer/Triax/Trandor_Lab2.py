@@ -44,12 +44,13 @@ Calibration_Arrays[2].append([979.72, 2.16188951e-07, -1.59901057e-01,  1.585513
 Calibration_Arrays[2].append([992.11, 2.23593080e-07, -1.61622854e-01,  1.61153277e+04])
 
 
-Calibration_Arrays[2]=[Calibration_Arrays[2],-1]
+Calibration_Arrays[2] = [Calibration_Arrays[2],-1]
 
 
 Calibration_Arrays=np.array(Calibration_Arrays)
 
-CCD_Size=1600 #Size of ccd in pixels
+
+CCD_Size=2048 #Size of ccd in pixels
 
 #Make a deepcopy of the andor capture function, to add a white light shutter close command to if required later
 # Andor_Capture_Function=types.FunctionType(Andor.capture.__code__, Andor.capture.__globals__, 'Unimportant_Name',Andor.capture.__defaults__, Andor.capture.__closure__)
@@ -57,10 +58,11 @@ CCD_Size=1600 #Size of ccd in pixels
 class Trandor(Andor):#Andor
     ''' Wrapper class for the Triax and the andor
     ''' 
+    # Calibration_Arrays = Calibration_Arrays
     def __init__(self, white_shutter=None, triax_address = 'GPIB0::1::INSTR', use_shifts = False, laser = '_633'):
         print ('Triax Information:')
         super(Trandor,self).__init__()
-        self.triax = Triax(triax_address, Calibration_Arrays,CCD_Size) #Initialise triax
+        self.triax = Triax(triax_address, Calibration_Data=Calibration_Arrays, CCD_Size) #Initialise triax
         self.white_shutter = white_shutter
         self.triax.ccd_size = CCD_Size
         self.use_shifts = use_shifts
@@ -69,7 +71,8 @@ class Trandor(Andor):#Andor
         print ('Current Grating:'+str(self.triax.Grating()))
         print ('Current Slit Width:'+str(self.triax.Slit())+'um')
         self.metadata_property_names += ('slit_width', 'wavelengths')
-        
+        # self.triax.Calibration_Arrays = Calibration_Arrays
+    
     def Grating(self, Set_To=None):
         return self.triax.Grating(Set_To)
 
@@ -122,6 +125,8 @@ def Capture(_AndorUI):
     else:
         _AndorUI.Andor.raw_image(update_latest_frame = True)
 setattr(AndorUI, 'Capture', Capture)
+
+
    
 
   
