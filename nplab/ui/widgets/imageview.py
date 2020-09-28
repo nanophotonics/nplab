@@ -182,6 +182,14 @@ class ExtendedImageView(pg.ImageView):
             for ax in self.get_axes():
                 ax.show()
 
+    def quickMinMax(self, cur_image):
+        '''quickMinMax returns either list of tuples, or a tuple depending on version.
+        This ensures consistent behaviour'''
+        minmax = super().quickMimMax(cur_image)
+        if type(minmax) is tuple:
+            return 
+        return minmax[0]
+
     # Percentile functions
     def getProcessedImage(self):
         """Checks if we want to autolevel for each image and does it"""
