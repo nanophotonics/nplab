@@ -187,7 +187,7 @@ class ExtendedImageView(pg.ImageView):
         This ensures consistent behaviour'''
         minmax = super().quickMimMax(cur_image)
         if type(minmax) is tuple:
-            return 
+            return minmax
         return minmax[0]
 
     # Percentile functions
