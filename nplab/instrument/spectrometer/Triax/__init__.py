@@ -252,6 +252,11 @@ class Triax(VisaInstrument):
         Current_Step=self.Motor_Steps()
         self.Move_Steps(Required_Step-Current_Step)
     
+    def Get_Center_Wavelength(self):
+        return self.Get_Wavelength_Array()[len(wl_arr)//2]
+    
+    center_wavelength = property(Get_Center_Wavelength, Set_Center_Wavelength)    
+
     def Slit(self, Width=None):
         """
         Function to return or set the triax slit with in units of um. If Width is None, the current width is returned. 
@@ -341,9 +346,8 @@ class TriaxUI(QtWidgets.QWidget,UiTools):
         uic.loadUi(ui_file, self)
         self.triax = triax
         self.centre_wl_lineEdit.returnPressed.connect(self.set_wl_gui)
-        self.slit_lineEdit.returnPressed.connect(self.set_slit_gui)
-        wl_arr = self.triax.Get_Wavelength_Array()      
-        self.centre_wl_lineEdit.setText(str(np.around(wl_arr[len(wl_arr)//2])))
+        self.slit_lineEdit.returnPressed.connect(self.set_slit_gui)     
+        self.centre_wl_lineEdit.setText(str(np.around(self.triax.center_wavelength)))
         self.slit_lineEdit.setText(str(self.triax.Slit()))
         eval('self.grating_'+str(self.triax.Grating())+'_radioButton.setChecked(True)')
         for radio_button in range(3):
