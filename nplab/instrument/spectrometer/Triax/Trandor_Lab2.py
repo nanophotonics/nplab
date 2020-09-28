@@ -1,3 +1,6 @@
+from __future__ import division
+from __future__ import print_function
+
 # -*- coding: utf-8 -*-
 # -*- coding: utf-8 -*-
 """
@@ -9,8 +12,7 @@ Created on Mon Sep 28 11:01:37 2020
 """
 jpg66
 """
-from __future__ import division
-from __future__ import print_function
+
 
 from builtins import input
 from builtins import str
