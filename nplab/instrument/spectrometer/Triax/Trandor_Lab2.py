@@ -62,7 +62,7 @@ class Trandor(Andor):#Andor
     def __init__(self, white_shutter=None, triax_address = 'GPIB0::1::INSTR', use_shifts = False, laser = '_633'):
         print ('Triax Information:')
         super(Trandor,self).__init__()
-        self.triax = Triax(triax_address, CCD_Size=CCD_Size, Calibration_Data=Calibration_Arrays) #Initialise triax
+        self.triax = Triax(triax_address, Calibration_Data=Calibration_Arrays, CCD_Horizontal_Resolution=CCD_Size) #Initialise triax
         self.white_shutter = white_shutter
         self.triax.ccd_size = CCD_Size
         self.use_shifts = use_shifts
