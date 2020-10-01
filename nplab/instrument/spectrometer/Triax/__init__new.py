@@ -147,13 +147,13 @@ class Triax(VisaInstrument):
         End=np.ceil(np.max(np.array(Extremes)))
 
         if Steps<Start:
-            print 'Warning: You are outside of calibrated region'
+            print('Warning: You are outside of calibrated region')
             Edge=self.Convert_Pixels_to_Wavelengths(Pixel_Array,Start)
             In=self.Convert_Pixels_to_Wavelengths(Pixel_Array,Start+1)
             Step=np.mean(Edge-In)
             return (Start-Steps)*Step+Edge
         if Steps>End:
-            print 'Warning: You are outside of calibrated region'
+            print('Warning: You are outside of calibrated region')
             Edge=self.Convert_Pixels_to_Wavelengths(Pixel_Array,End)
             In=self.Convert_Pixels_to_Wavelengths(Pixel_Array,End-1)
             Step=np.mean(Edge-In)
