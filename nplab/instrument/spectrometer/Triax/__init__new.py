@@ -95,7 +95,7 @@ class Triax(VisaInstrument):
         if self.Wavelength_Array is None:
             Steps=self.Motor_Steps()
             if Steps<self.Grating_Information[0][0] or Steps>self.Grating_Information[0][-1]:
-                print 'WARNING: You are outside of the calibration range'
+                print('WARNING: You are outside of the calibration range')
             self.Wavelength_Array=self.Convert_Pixels_to_Wavelengths(np.array(range(self.Number_of_Pixels)),Steps)
         return self.Wavelength_Array
 
@@ -276,11 +276,11 @@ class Triax(VisaInstrument):
 
         Start_Time = time.time()
 
-        while self._isBusy()==True:
+        while self._isBusy():
             time.sleep(1)
             if (time.time() - Start_Time) > Timeout:
                 self._logger.warn('Timed out')
-                print 'Timed out'
+                print('Timed out')
                 break
 
     #-------------------------------------------------------------------------------------------------
