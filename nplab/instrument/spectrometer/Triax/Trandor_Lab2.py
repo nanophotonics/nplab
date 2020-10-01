@@ -109,7 +109,7 @@ class Triax(VisaInstrument):
         if self.Wavelength_Array is None:
             Steps=self.Motor_Steps()
             if Steps<self.Grating_Information[0][0] or Steps>self.Grating_Information[0][-1]:
-                print 'WARNING: You are outside of the calibration range'
+                print('WARNING: You are outside of the calibration range')
             self.Wavelength_Array=self.Convert_Pixels_to_Wavelengths(np.array(range(self.Number_of_Pixels)),Steps)
         return self.Wavelength_Array
 
@@ -161,13 +161,13 @@ class Triax(VisaInstrument):
         End=np.ceil(np.max(np.array(Extremes)))
 
         if Steps<Start:
-            print 'Warning: You are outside of calibrated region'
+            print('Warning: You are outside of calibrated region')
             Edge=self.Convert_Pixels_to_Wavelengths(Pixel_Array,Start)
             In=self.Convert_Pixels_to_Wavelengths(Pixel_Array,Start+1)
             Step=np.mean(Edge-In)
             return (Start-Steps)*Step+Edge
         if Steps>End:
-            print 'Warning: You are outside of calibrated region'
+            print('Warning: You are outside of calibrated region')
             Edge=self.Convert_Pixels_to_Wavelengths(Pixel_Array,End)
             In=self.Convert_Pixels_to_Wavelengths(Pixel_Array,End-1)
             Step=np.mean(Edge-In)
@@ -442,6 +442,7 @@ def Capture(_AndorUI):
             _AndorUI.Andor.white_shutter.open_shutter()
     else:
         _AndorUI.Andor.raw_image(update_latest_frame = True)
+
 setattr(AndorUI, 'Capture', Capture)
 
 
