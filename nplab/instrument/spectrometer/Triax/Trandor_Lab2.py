@@ -23,7 +23,42 @@ import numpy as np
 import time
 import copy
 import scipy.interpolate as scint
+from builtins import input
+from builtins import str
+from past.utils import old_div
+import numpy as np
+from nplab.instrument.camera.Andor import Andor, AndorUI
+import types
+import future
 
+Calibration_Arrays=[]
+
+Calibration_Arrays.append([])
+Calibration_Arrays.append([])
+Calibration_Arrays.append([])
+
+Calibration_Arrays[2].append([764.61,  2.27389453e-07, -1.50626785e-01,  1.21487041e+04])
+Calibration_Arrays[2].append([789.48,  1.59023464e-07, -1.38884759e-01,  1.19635203e+04])
+Calibration_Arrays[2].append([823.5, 4.03268378e-08, -1.17709195e-01,  1.14389462e+04])
+Calibration_Arrays[2].append([828.15, 1.2025391e-08, -1.1258273e-01,  1.1259733e+04])
+Calibration_Arrays[2].append([834.76, -1.61822540e-08, -1.07392158e-01,  1.11077126e+04])
+Calibration_Arrays[2].append([841.12, -6.09192196e-08, -9.91452193e-02,  1.08073451e+04])
+Calibration_Arrays[2].append([882.44, -2.41269681e-07, -6.46639473e-02,  9.68027416e+03])
+Calibration_Arrays[2].append([895.32, -2.42364194e-07, -6.43223220e-02,  9.82060231e+03])
+Calibration_Arrays[2].append([904.72, -2.15463477e-07, -6.95790273e-02,  1.01941429e+04])
+Calibration_Arrays[2].append([916.35, -1.62169936e-07, -8.02752427e-02,  1.08757910e+04])
+Calibration_Arrays[2].append([938.31, -4.38217497e-09, -1.12728352e-01,  1.28287277e+04])
+Calibration_Arrays[2].append([979.72, 2.16188951e-07, -1.59901057e-01,  1.58551361e+04])
+Calibration_Arrays[2].append([992.11, 2.23593080e-07, -1.61622854e-01,  1.61153277e+04])
+
+
+Calibration_Arrays[2] = [Calibration_Arrays[2],-1]
+
+
+Calibration_Arrays=np.array(Calibration_Arrays)
+
+
+CCD_Size=2048 #Size of ccd in pixels
 """
 This is the base class for the Triax spectrometer. This should be wrapped for each lab use, due to the differences in calibrations.
 """
@@ -108,7 +143,7 @@ class Triax(VisaInstrument):
         """
         if self.Wavelength_Array is None:
             Steps=self.Motor_Steps()
-            if Steps<self.Grating_Information[0][0] or Steps>self.Grating_Information[0][-1]:
+            if False: # Steps<self.Grating_Information[0][0] or Steps>self.Grating_Information[0][-1]:
                 print('WARNING: You are outside of the calibration range')
             self.Wavelength_Array=self.Convert_Pixels_to_Wavelengths(np.array(range(self.Number_of_Pixels)),Steps)
         return self.Wavelength_Array
@@ -331,44 +366,35 @@ class Triax(VisaInstrument):
     def exitAxial(self):
         self.write("f0\r")
         self.write("d0\r")  # sets the entrance mirror to axial as well
-        
-
-from builtins import input
-from builtins import str
-from past.utils import old_div
-import numpy as np
-from nplab.instrument.camera.Andor import Andor, AndorUI
-import types
-import future
-
-Calibration_Arrays=[]
-
-Calibration_Arrays.append([])
-Calibration_Arrays.append([])
-Calibration_Arrays.append([])
-
-Calibration_Arrays[2].append([764.61,  2.27389453e-07, -1.50626785e-01,  1.21487041e+04])
-Calibration_Arrays[2].append([789.48,  1.59023464e-07, -1.38884759e-01,  1.19635203e+04])
-Calibration_Arrays[2].append([823.5, 4.03268378e-08, -1.17709195e-01,  1.14389462e+04])
-Calibration_Arrays[2].append([828.15, 1.2025391e-08, -1.1258273e-01,  1.1259733e+04])
-Calibration_Arrays[2].append([834.76, -1.61822540e-08, -1.07392158e-01,  1.11077126e+04])
-Calibration_Arrays[2].append([841.12, -6.09192196e-08, -9.91452193e-02,  1.08073451e+04])
-Calibration_Arrays[2].append([882.44, -2.41269681e-07, -6.46639473e-02,  9.68027416e+03])
-Calibration_Arrays[2].append([895.32, -2.42364194e-07, -6.43223220e-02,  9.82060231e+03])
-Calibration_Arrays[2].append([904.72, -2.15463477e-07, -6.95790273e-02,  1.01941429e+04])
-Calibration_Arrays[2].append([916.35, -1.62169936e-07, -8.02752427e-02,  1.08757910e+04])
-Calibration_Arrays[2].append([938.31, -4.38217497e-09, -1.12728352e-01,  1.28287277e+04])
-Calibration_Arrays[2].append([979.72, 2.16188951e-07, -1.59901057e-01,  1.58551361e+04])
-Calibration_Arrays[2].append([992.11, 2.23593080e-07, -1.61622854e-01,  1.61153277e+04])
-
-
-Calibration_Arrays[2] = [Calibration_Arrays[2],-1]
-
-
-Calibration_Arrays=np.array(Calibration_Arrays)
-
-
-CCD_Size=2048 #Size of ccd in pixels
+from nplab.utils.gui import QtGui, QtWidgets, uic 
+from nplab.ui.ui_tools import UiTools  
+class TriaxUI(QtWidgets.QWidget,UiTools):
+    def __init__(self, triax, ui_file =os.path.join(os.path.dirname(__file__),'triax_ui.ui'),  parent=None):
+        assert isinstance(triax, Triax), "instrument must be a Triax"
+        super(TriaxUI, self).__init__()
+        uic.loadUi(ui_file, self)
+        self.triax = triax
+        self.centre_wl_lineEdit.returnPressed.connect(self.set_wl_gui)
+        self.slit_lineEdit.returnPressed.connect(self.set_slit_gui)     
+        self.centre_wl_lineEdit.setText(str(np.around(self.triax.center_wavelength)))
+        self.slit_lineEdit.setText(str(self.triax.Slit()))
+        eval('self.grating_'+str(self.triax.Grating())+'_radioButton.setChecked(True)')
+        for radio_button in range(3):
+            eval('self.grating_'+str(radio_button)+'_radioButton.clicked.connect(self.set_grating_gui)')
+    def set_wl_gui(self):
+        self.triax.Set_Center_Wavelength(float(self.centre_wl_lineEdit.text().strip()))
+    def set_slit_gui(self):
+        self.triax.Slit(float(self.slit_lineEdit.text().strip()))
+    def set_grating_gui(self):
+        s = self.sender()
+        if s is self.grating_0_radioButton:
+            self.triax.Grating(0)
+        elif s is self.grating_1_radioButton:
+            self.triax.Grating(1)
+        elif s is self.grating_2_radioButton:
+            self.triax.Grating(2)
+        else:
+            raise ValueError('radio buttons not connected!')
 
 #Make a deepcopy of the andor capture function, to add a white light shutter close command to if required later
 # Andor_Capture_Function=types.FunctionType(Andor.capture.__code__, Andor.capture.__globals__, 'Unimportant_Name',Andor.capture.__defaults__, Andor.capture.__closure__)
@@ -377,10 +403,10 @@ class Trandor(Andor):#Andor
     ''' Wrapper class for the Triax and the andor
     ''' 
     # Calibration_Arrays = Calibration_Arrays
-    def __init__(self, white_shutter=None, triax_address = 'GPIB0::1::INSTR', use_shifts = False, laser = '_633'):
-        print ('Triax Information:')
+    def __init__(self, white_shutter=None, triax_address='GPIB0::1::INSTR', use_shifts = False, laser = '_633'):
+        print ('Triax Information:, 2')
         super(Trandor,self).__init__()
-        self.triax = Triax(triax_address, Calibration_Data=Calibration_Arrays, CCD_Horizontal_Resolution=CCD_Size) #Initialise triax
+        self.triax = Triax(triax_address, Calibration_Arrays=Calibration_Arrays, CCD_Horizontal_Resolution=CCD_Size) #Initialise triax
         self.white_shutter = white_shutter
         self.triax.ccd_size = CCD_Size
         self.use_shifts = use_shifts
@@ -446,6 +472,16 @@ def Capture(_AndorUI):
 setattr(AndorUI, 'Capture', Capture)
 
 
+if __name__ == '__main__':
+    import os 
+
+    os.chdir(r'C:/Users/hera/Documents')       
+    # t = Triax('GPIB0::1::INSTR', Calibration_Arrays=Calibration_Arrays, CCD_Horizontal_Resolution=CCD_Size)
+    # t.show_gui()
+
+    trandor = Trandor()
+    g = trandor.show_gui(blocking=False)
+    trandor.triax.show_gui(block=False)
    
 
   
