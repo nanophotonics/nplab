@@ -407,6 +407,7 @@ class Trandor(Andor):#Andor
         print ('Triax Information:, 2')
         super(Trandor,self).__init__()
         self.triax = Triax(triax_address, Calibration_Arrays=Calibration_Arrays, CCD_Horizontal_Resolution=CCD_Size) #Initialise triax
+
         self.white_shutter = white_shutter
         self.triax.ccd_size = CCD_Size
         self.use_shifts = use_shifts
