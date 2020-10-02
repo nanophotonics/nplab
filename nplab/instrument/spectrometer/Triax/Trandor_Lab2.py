@@ -30,6 +30,7 @@ import numpy as np
 from nplab.instrument.camera.Andor import Andor, AndorUI
 import types
 import future
+import os
 
 Calibration_Arrays=[]
 
