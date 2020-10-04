@@ -429,10 +429,10 @@ class Trandor(Andor):#Andor
         if use_shifts:
             if self.laser == '_633': centre_wl = 632.8
             elif self.laser == '_785': centre_wl = 784.81
-            wavelengths = np.array(self.triax.Get_Wavelength_Array()[::-1])
+            wavelengths = np.array(self.triax.Get_Wavelength_Array())
             return ( 1./(centre_wl*1e-9)- 1./(wavelengths*1e-9))/100    
         else:
-            return self.triax.Get_Wavelength_Array()[::-1]
+            return self.triax.Get_Wavelength_Array()
     x_axis = property(Generate_Wavelength_Axis)
 
     @property
