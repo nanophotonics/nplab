@@ -107,7 +107,7 @@ def Quad_Interp(x_Points,y_Points,Input): #x are in order
 class Triax(VisaInstrument):
     metadata_property_names = ('wavelength', )
 
-    def __init__(self, Address, Calibration_Arrays=[],CCD_Horizontal_Resolution=1600):  
+    def __init__(self, Address, Calibration_Arrays=[],CCD_Horizontal_Resolution=2048):  
         """
         Initialisation function for the triax class. Address in the port address of the triax connection. Calibration_Arrays is a list of 3x3 numpy arrays
         containing the calibration coefficents for each grating in the spectrometer.
