@@ -94,8 +94,7 @@ import pywt
 from nplab.analysis import Auto_Gaussian_Smooth as sm
 from nplab.analysis import smoothing as sm2
 from scipy.signal import argrelextrema
-
-DUMMY = False
+import random
 
 def truncate(counts, wavelengths, lower_cutoff, upper_cutoff, return_indices_only = False):
     '''
@@ -342,12 +341,6 @@ class fullfit:
         try: smoothed = sm.Run(self.spec)
         except: smoothed = sm2.convex_smooth(self.spec, 25)[0]
         self.bg_indices = argrelextrema(smoothed, np.less)[0]
-        while len(self.bg_indices) < 3*self.order:
-            self.bg_indices = np.append(self.bg_indices,
-                                        min(np.random.randint(0, 
-                                                              high=len(self.spec),
-                                                              size=(10,)), 
-                                            key=lambda i: self.spec[i]))
         self.bg_vals = smoothed[self.bg_indices]
         
         residuals = []
@@ -681,14 +674,8 @@ class fullfit:
     
         self.optimize_heights
         self.optimize_centre_and_width()
-        print("I'm a dummy!")        
-    
-    def Run(self, *args, **kwargs):
-        if DUMMY:
-            self.dummyRun(*args, **kwargs)
-        else:
-            self._Run(*args, **kwargs)
-    def _Run(self,
+        
+    def Run(self,
             initial_fit=None, 
             add_peaks = True, 
             allow_asymmetry = False,
