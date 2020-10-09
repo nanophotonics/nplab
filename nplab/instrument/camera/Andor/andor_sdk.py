@@ -209,16 +209,17 @@ class AndorBase(object):
     
     
     @property
-    def MultiTrack(self):
-        return self._MultiTrack
+    def multitrack(self):
+        return self._multitrack
     
-    @MultiTrack.setter        
-    def MultiTrack(self, params):
+    @multitrack.setter        
+    def multitrack(self, params):
         bottom = c_int()
         gap = c_int()
         assert len(params) == 3, 'length must be 3'
         self.dll.SetMultiTrack(*params, byref(bottom), byref(gap))
-        print(bottom, gap, ': bottom, gap')
+        self._multitrack = params
+        self._logger.info(f'bottom, gap: {bottom}, {gap}')
    
     def set_andor_parameter(self, param_loc, *inputs):
         """Parameter setter
@@ -514,8 +515,8 @@ class AndorBase(object):
                     image_shape = (old_div(self._parameters['IsolatedCropMode'][2], self._parameters['IsolatedCropMode'][4]), )
                 else:
                     image_shape = (old_div(self._parameters['DetectorShape'][0], self._parameters['FVBHBin']), )
-            elif self._parameters['Readmode'] == 1: #random track
-                image_shape = (self._parameters['MultiTrack']['TODO'], self._parameters['DetectorShape'][0] // self._parameters['FVBHBin'])
+            elif self._parameters['ReadMode'] == 1: #random track
+                image_shape = (self.multitrack[0], self._parameters['DetectorShape'][0] // self._parameters['FVBHBin'])
             
             elif self._parameters['ReadMode'] == 3:
                 image_shape = (self._parameters['DetectorShape'][0],)

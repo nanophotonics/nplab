@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>461</width>
-    <height>443</height>
+    <height>542</height>
    </rect>
   </property>
   <property name="maximumSize">
@@ -468,12 +468,6 @@
          <enum>QFrame::Raised</enum>
         </property>
         <layout class="QGridLayout" name="gridLayout_3">
-         <item row="12" column="1">
-          <widget class="QSpinBox" name="spinBoxHeight"/>
-         </item>
-         <item row="13" column="1">
-          <widget class="QSpinBox" name="spinBoxOffset"/>
-         </item>
          <item row="7" column="0">
           <widget class="QLabel" name="labelCenterRow">
            <property name="text">
@@ -491,6 +485,9 @@
            </property>
           </widget>
          </item>
+         <item row="12" column="1">
+          <widget class="QSpinBox" name="spinBoxHeight"/>
+         </item>
          <item row="4" column="0">
           <widget class="QLabel" name="labelNumFrames">
            <property name="maximumSize">
@@ -503,6 +500,9 @@
             <string>Frames</string>
            </property>
           </widget>
+         </item>
+         <item row="13" column="1">
+          <widget class="QSpinBox" name="spinBoxOffset"/>
          </item>
          <item row="6" column="0">
           <widget class="QLabel" name="labelNumRows">
@@ -598,15 +598,15 @@
            </property>
           </widget>
          </item>
-         <item row="14" column="1">
-          <widget class="QSpinBox" name="spinBoxBottom"/>
-         </item>
          <item row="11" column="0">
           <widget class="QLabel" name="labelTracks">
            <property name="text">
             <string>Tracks</string>
            </property>
           </widget>
+         </item>
+         <item row="11" column="1">
+          <widget class="QSpinBox" name="spinBoxTracks"/>
          </item>
          <item row="12" column="0">
           <widget class="QLabel" name="labelHeight">
@@ -615,30 +615,10 @@
            </property>
           </widget>
          </item>
-         <item row="11" column="1">
-          <widget class="QSpinBox" name="spinBoxTracks"/>
-         </item>
          <item row="13" column="0">
           <widget class="QLabel" name="labelOffset">
            <property name="text">
             <string>Offset</string>
-           </property>
-          </widget>
-         </item>
-         <item row="15" column="1">
-          <widget class="QSpinBox" name="spinBoxGap"/>
-         </item>
-         <item row="14" column="0">
-          <widget class="QLabel" name="labelBottom">
-           <property name="text">
-            <string>Bottom</string>
-           </property>
-          </widget>
-         </item>
-         <item row="15" column="0">
-          <widget class="QLabel" name="labelGap">
-           <property name="text">
-            <string>Gap</string>
            </property>
           </widget>
          </item>
@@ -660,10 +640,6 @@
         <zorder>labelTracks</zorder>
         <zorder>labelHeight</zorder>
         <zorder>labelOffset</zorder>
-        <zorder>spinBoxBottom</zorder>
-        <zorder>spinBoxGap</zorder>
-        <zorder>labelBottom</zorder>
-        <zorder>labelGap</zorder>
        </widget>
       </item>
      </layout>

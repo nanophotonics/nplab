@@ -55,26 +55,26 @@ class Andor(CameraRoiScale, AndorBase):
     metadata = property(get_metadata)
 
     def raw_snapshot(self):
-        try:
-            if self.keep_shutter_open:
-                i = self.Shutter  # initial shutter settings
-                self.Shutter = (i[0], 1, i[2], i[3])
-            imageArray, num_of_images, image_shape = self.capture()
-            if self.keep_shutter_open:
-                self.Shutter = i
-            
-            # The image is reversed depending on whether you read in the conventional CCD register or the EM register,
-            # so we reverse it back
-            if self._parameters['OutAmp']:
-                reshaped = np.reshape(imageArray, (num_of_images,) + image_shape)[..., ::-1]
-            else:
-                reshaped = np.reshape(imageArray, (num_of_images,) + image_shape)
-            if num_of_images == 1:
-                reshaped = reshaped[0]
-            self.CurImage = self.bundle_metadata(reshaped)
-            return True, self.CurImage
-        except Exception as e:
-            self._logger.warn("Couldn't Capture because %s" % e)
+        # try:
+        if self.keep_shutter_open:
+            i = self.Shutter  # initial shutter settings
+            self.Shutter = (i[0], 1, i[2], i[3])
+        imageArray, num_of_images, image_shape = self.capture()
+        if self.keep_shutter_open:
+            self.Shutter = i
+        print(imageArray, num_of_images, image_shape)
+        # The image is reversed depending on whether you read in the conventional CCD register or the EM register,
+        # so we reverse it back
+        if self._parameters['OutAmp']:
+            reshaped = np.reshape(imageArray, (num_of_images,) + image_shape)[..., ::-1]
+        else:
+            reshaped = np.reshape(imageArray, (num_of_images,) + image_shape)
+        if num_of_images == 1:
+            reshaped = reshaped[0]
+        self.CurImage = self.bundle_metadata(reshaped)
+        return True, self.CurImage
+        # except Exception as e:
+            # self._logger.warn("Couldn't Capture because %s" % e)
 
     def Capture(self):
         """takes a spectrum, and displays it"""
@@ -165,6 +165,8 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         self.spinBoxNumAccum.valueChanged.connect(self.number_accumulations)
         self.spinBoxNumRows.valueChanged.connect(self.number_rows)
         self.spinBoxCenterRow.valueChanged.connect(self.number_rows)
+        for box in ['Tracks', 'Height', 'Offset']:
+            eval(f'self.spinBox{box}.valueChanged.connect(self.set_multitrack)')
         self.checkBoxROI.stateChanged.connect(self.ROI)
         self.checkBoxCrop.stateChanged.connect(self.isolated_crop)
         self.checkBoxCooler.stateChanged.connect(self.cooler)
@@ -188,7 +190,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         self.temperature_display_thread.ready.connect(self.update_temperature_display)
     
     def set_multitrack(self):
-        self.Andor.Multitrack = self.spinBoxTracks.value, self.spinBoxHeight.value, self.spinBoxOffset.value
+        self.Andor.multitrack = self.spinBoxTracks.value(), self.spinBoxHeight.value(), self.spinBoxOffset.value()
 
     def init_gui(self):
         trig_modes = {0: 0, 1: 1, 6: 2}
@@ -287,8 +289,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
             self.spinBoxHeight.show()
             self.labelOffset.show()
             self.spinBoxOffset.show()
-            self.spinBoxBottom.show()
-            self.spinBoxGap.show()
+
         else:
             self.labelTracks.hide()
             self.spinBoxTracks.hide()
@@ -296,9 +297,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
             self.spinBoxHeight.hide()
             self.labelOffset.hide()
             self.spinBoxOffset.hide()
-            self.spinBoxBottom.hide()
-            self.spinBoxGap.hide()
-            
+
     def update_ReadMode(self, index):
         self.comboBoxReadMode.setCurrentIndex(index)
 
