@@ -276,8 +276,26 @@ class AndorUI(QtWidgets.QWidget, UiTools):
             self.labelCenterRow.hide()
             if self.comboBoxAcqMode.currentText() != 'Fast Kinetic':
                 self.spinBoxNumRows.hide()
-                self.labelNumRows.hide()            
-
+                self.labelNumRows.hide()         
+        if currentMode == 'Multi-track':
+            self.labelTracks.show()
+            self.spinBoxTracks.show()
+            self.labelHeight.show()
+            self.spinBoxHeight.show()
+            self.labelOffset.show()
+            self.spinBoxOffset.show()
+            self.spinBoxBottom.show()
+            self.spinBoxGap.show()
+        else:
+            self.labelTracks.hide()
+            self.spinBoxTracks.hide()
+            self.labelHeight.hide()
+            self.spinBoxHeight.hide()
+            self.labelOffset.hide()
+            self.spinBoxOffset.hide()
+            self.spinBoxBottom.hide()
+            self.spinBoxGap.hide()
+            
     def update_ReadMode(self, index):
         self.comboBoxReadMode.setCurrentIndex(index)
 

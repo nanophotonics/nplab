@@ -468,19 +468,16 @@
          <enum>QFrame::Raised</enum>
         </property>
         <layout class="QGridLayout" name="gridLayout_3">
-         <item row="4" column="1">
-          <widget class="QSpinBox" name="spinBoxNumFrames">
-           <property name="maximumSize">
-            <size>
-             <width>50</width>
-             <height>16777215</height>
-            </size>
-           </property>
-           <property name="minimum">
-            <number>1</number>
-           </property>
-           <property name="maximum">
-            <number>999</number>
+         <item row="12" column="1">
+          <widget class="QSpinBox" name="spinBoxHeight"/>
+         </item>
+         <item row="13" column="1">
+          <widget class="QSpinBox" name="spinBoxOffset"/>
+         </item>
+         <item row="7" column="0">
+          <widget class="QLabel" name="labelCenterRow">
+           <property name="text">
+            <string>Center</string>
            </property>
           </widget>
          </item>
@@ -507,6 +504,48 @@
            </property>
           </widget>
          </item>
+         <item row="6" column="0">
+          <widget class="QLabel" name="labelNumRows">
+           <property name="maximumSize">
+            <size>
+             <width>40</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>Rows</string>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="1">
+          <widget class="QSpinBox" name="spinBoxNumFrames">
+           <property name="maximumSize">
+            <size>
+             <width>50</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="minimum">
+            <number>1</number>
+           </property>
+           <property name="maximum">
+            <number>999</number>
+           </property>
+          </widget>
+         </item>
+         <item row="9" column="0">
+          <widget class="QLabel" name="labelNumAccum">
+           <property name="maximumSize">
+            <size>
+             <width>40</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>Accum</string>
+           </property>
+          </widget>
+         </item>
          <item row="10" column="1">
           <widget class="QDoubleSpinBox" name="doubleSpinBoxCycleTime"/>
          </item>
@@ -523,23 +562,23 @@
            </property>
           </spacer>
          </item>
+         <item row="9" column="1">
+          <widget class="QSpinBox" name="spinBoxNumAccum">
+           <property name="maximumSize">
+            <size>
+             <width>50</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="minimum">
+            <number>1</number>
+           </property>
+          </widget>
+         </item>
          <item row="10" column="0">
           <widget class="QLabel" name="labelCycleTime">
            <property name="text">
             <string>Cycle time</string>
-           </property>
-          </widget>
-         </item>
-         <item row="6" column="0">
-          <widget class="QLabel" name="labelNumRows">
-           <property name="maximumSize">
-            <size>
-             <width>40</width>
-             <height>16777215</height>
-            </size>
-           </property>
-           <property name="text">
-            <string>Rows</string>
            </property>
           </widget>
          </item>
@@ -559,36 +598,47 @@
            </property>
           </widget>
          </item>
-         <item row="7" column="0">
-          <widget class="QLabel" name="labelCenterRow">
+         <item row="14" column="1">
+          <widget class="QSpinBox" name="spinBoxBottom"/>
+         </item>
+         <item row="11" column="0">
+          <widget class="QLabel" name="labelTracks">
            <property name="text">
-            <string>Center</string>
+            <string>Tracks</string>
            </property>
           </widget>
          </item>
-         <item row="9" column="1">
-          <widget class="QSpinBox" name="spinBoxNumAccum">
-           <property name="maximumSize">
-            <size>
-             <width>50</width>
-             <height>16777215</height>
-            </size>
-           </property>
-           <property name="minimum">
-            <number>1</number>
+         <item row="12" column="0">
+          <widget class="QLabel" name="labelHeight">
+           <property name="text">
+            <string>Height</string>
            </property>
           </widget>
          </item>
-         <item row="9" column="0">
-          <widget class="QLabel" name="labelNumAccum">
-           <property name="maximumSize">
-            <size>
-             <width>40</width>
-             <height>16777215</height>
-            </size>
-           </property>
+         <item row="11" column="1">
+          <widget class="QSpinBox" name="spinBoxTracks"/>
+         </item>
+         <item row="13" column="0">
+          <widget class="QLabel" name="labelOffset">
            <property name="text">
-            <string>Accum</string>
+            <string>Offset</string>
+           </property>
+          </widget>
+         </item>
+         <item row="15" column="1">
+          <widget class="QSpinBox" name="spinBoxGap"/>
+         </item>
+         <item row="14" column="0">
+          <widget class="QLabel" name="labelBottom">
+           <property name="text">
+            <string>Bottom</string>
+           </property>
+          </widget>
+         </item>
+         <item row="15" column="0">
+          <widget class="QLabel" name="labelGap">
+           <property name="text">
+            <string>Gap</string>
            </property>
           </widget>
          </item>
@@ -604,6 +654,16 @@
         <zorder>doubleSpinBoxCycleTime</zorder>
         <zorder>spinBoxNumAccum</zorder>
         <zorder>labelNumAccum</zorder>
+        <zorder>spinBoxTracks</zorder>
+        <zorder>spinBoxHeight</zorder>
+        <zorder>spinBoxOffset</zorder>
+        <zorder>labelTracks</zorder>
+        <zorder>labelHeight</zorder>
+        <zorder>labelOffset</zorder>
+        <zorder>spinBoxBottom</zorder>
+        <zorder>spinBoxGap</zorder>
+        <zorder>labelBottom</zorder>
+        <zorder>labelGap</zorder>
        </widget>
       </item>
      </layout>
