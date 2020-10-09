@@ -186,6 +186,9 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         self.read_temperature_pushButton.clicked.connect(self.temperature_gui)
         self.live_temperature_checkBox.clicked.connect(self.temperature_gui)
         self.temperature_display_thread.ready.connect(self.update_temperature_display)
+    
+    def set_multitrack(self):
+        self.Andor.Multitrack = self.spinBoxTracks.value, self.spinBoxHeight.value, self.spinBoxOffset.value
 
     def init_gui(self):
         trig_modes = {0: 0, 1: 1, 6: 2}
@@ -487,3 +490,4 @@ if __name__ == '__main__':
     andor = Andor()
     andor._logger.setLevel('DEBUG')
     gui = andor.show_gui(block=False)
+

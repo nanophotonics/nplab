@@ -206,7 +206,20 @@ class AndorBase(object):
             return
         if error != 20002:
             raise AndorWarning(error, funcname, ERROR_CODE[error])
-
+    
+    
+    @property
+    def MultiTrack(self):
+        return self._MultiTrack
+    
+    @MultiTrack.setter        
+    def MultiTrack(self, params):
+        bottom = c_int()
+        gap = c_int()
+        assert len(params) == 3, 'length must be 3'
+        self.dll.SetMultiTrack(*params, byref(bottom), byref(gap))
+        print(bottom, gap, ': bottom, gap')
+   
     def set_andor_parameter(self, param_loc, *inputs):
         """Parameter setter
 
