@@ -1,0 +1,38 @@
+#------------------------------------------------------------------------------
+# Bentham Instruments system model attributes file
+# Created at 0:00 on 0/0/0
+# This file should NOT be edited by hand
+#------------------------------------------------------------------------------
+
+monoTurret 1
+  grating,1 = 1200
+  minimum wavelength,1 = 0
+  maximum wavelength,1 = 1101
+  zord,1 = 15236
+  alpha,1 =  0.99900000000000E+0000
+  zord,2 = 0
+  alpha,2 =  0.0000000000000E+0000
+  zord,3 = 0
+  alpha,3 =  1.00000000000000E+0000
+  settle time = 100
+end
+
+monoTurret 2
+  grating,1 = 1200
+  minimum wavelength,1 = 0
+  maximum wavelength,1 = 1101
+  zord,1 = 340956
+  alpha,1 =  1.00050000000000E+0000
+  zord,2 = 0
+  alpha,2 =  0.00000000000000E+0000
+  zord,3 = 0
+  alpha,3 =  1.00000000000000E+0000
+  settle time = 100
+end
+
+~System
+  stop count = 1.000
+  dark I integration time = 5.000
+  225 277 input = 1
+  group = ,,,,,,,mono,,
+end

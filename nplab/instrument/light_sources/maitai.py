@@ -4,6 +4,7 @@ Created on Thu Jul 06 13:57:22 2017
 
 @author: Hera
 """
+from builtins import str
 import serial
 import numpy as np
 

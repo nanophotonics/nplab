@@ -1,9 +1,11 @@
+from __future__ import print_function
 from nplab.utils.gui import QtWidgets, uic, QtCore
 from nplab.ui.ui_tools import UiTools
 import nplab.datafile as df
 from nplab.utils.log import create_logger, ColoredFormatter
 
 import os
+import sys
 import inspect
 import numpy as np
 
@@ -22,7 +24,7 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
     """
 
     def __init__(self, instrument_dict, parent=None, dock_settings_path=None,
-                 scripts_path=None, working_directory=None, file_path=None):  #
+                 scripts_path=None, working_directory=None, file_path=None, terminal = False):  #
         """Args:
             instrument_dict(dict) :     This is a dictionary containing the
                                         instruments objects where the key is the 
@@ -39,6 +41,9 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
             file_path(str):             A path to the file for saving data. If None,
                                         a dialog will ask for one. Can be a relative
                                         path (from working_directory) or an absolute path
+            terminal(bool):             Specifies whether the generated gui has an ipython 
+                                        console. Sripts ran in an ipython console cannot 
+                                        generate another one.
                                 """
         super(GuiGenerator, self).__init__(parent)
         self._logger = LOGGER
@@ -77,15 +82,18 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
 
         for instr in self.instr_dict:
             self._open_one_gui(instr)
-
+            
         self.script_menu = None
         if scripts_path is not None:
             self.scripts_path = scripts_path
         else:
             self.scripts_path = 'scripts'
+        sys.path.append(self.scripts_path)
         self.terminalWindow = None
-        self.menuTerminal()
-        self._addActionViewMenu('Terminal')
+        self.terminal = terminal
+        if terminal:
+            self.menuTerminal()
+            self._addActionViewMenu('Terminal')
         self.makeScriptMenu()
 
         self.NightMode = 1
@@ -187,8 +195,8 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
             else:
                 self.setStyleSheet('')
         except Exception as e:
-            print e
-            print 'trying Qt 5'
+            print(e)
+            print('trying Qt 5')
             try:
                 if self.actionNightMode.isChecked():
                     import qdarkstyle
@@ -196,8 +204,8 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
                 else:
                     self.setStyleSheet('')
             except Exception as ee:
-                print ee
-                print 'Qt 5 style sheet failed'
+                print(ee)
+                print('Qt 5 style sheet failed')
 
     def menuSaveSettings(self):
         """A function for saving the current dock layout and settings to a numpy
@@ -334,10 +342,14 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
 
     def menuScriptClicked(self, scriptname):
         """Runs the selected script """
-        if self.terminalWindow is None:
-            self.menuTerminal()
-        self.terminalWindow.run_script(scriptname)
-
+        if self.terminal:
+            if self.terminalWindow is None:
+                self.menuTerminal()
+                self.terminalWindow.run_script(scriptname)
+        else: 
+            print('Running',os.path.join(self.scripts_path, scriptname))
+            exec(open(os.path.join(self.scripts_path, scriptname)).read())
+            
     def VerboseChanged(self, action):
         """Automatically change the loggers 
         verbosity level across all instruments upon 
@@ -357,7 +369,7 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
     def closeEvent(self, event):
         """A quick are you sure you want to quit function """
         quit_msg = "Are you sure you want to exit the program?"
-        print quit_msg
+        print(quit_msg)
         try:
             if os.environ["QT_API"] == "pyqt5":
                 reply = QtWidgets.QMessageBox.question(self, 'Message', quit_msg,
@@ -382,4 +394,4 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
             else:
                 event.ignore()
         except Exception as e:
-            print e
+            print(e)

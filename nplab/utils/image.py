@@ -4,7 +4,10 @@ Created on Wed Oct 21 18:41:41 2015
 
 @author: rwb27
 """
+from __future__ import division
+from __future__ import print_function
 
+from past.utils import old_div
 from nplab.utils.array_with_attrs import ArrayWithAttrs
 import numpy as np
 import cv2
@@ -60,24 +63,23 @@ def test_image_codecs():
     noise *= 255.0/4
     img = noise.astype(np.uint8)
     
-    print "image size is %d" % img.size
+    print("image size is %d" % img.size)
     
     png = png_encode(img)
-    print "PNG size is %d (%.d%%)" % (png.size, (100*png.size)/img.size)
+    print("PNG size is %d (%.d%%)" % (png.size, old_div((100*png.size),img.size)))
     assert png.size < img.size, "The PNG was bigger than the image!"
     
     jpeg = jpeg_encode(img)
-    print "JPEG size is %d (%d%%)" % (jpeg.size, (100*jpeg.size)/img.size)
+    print("JPEG size is %d (%d%%)" % (jpeg.size, old_div((100*jpeg.size),img.size)))
+
     assert jpeg.size < img.size, "The JPEG was bigger than the image!"
     
     assert np.all(png_decode(png) == img), "The PNG did not uncompress losslessly."
     assert np.any(jpeg_decode(jpeg) != img), "The JPEG uncompressed losslessly - wtf?"
     
     jpeg_noise = jpeg_decode(jpeg).astype(np.float) - img
-    print "JPEG differed from source image by %.2f RMS" % np.std(jpeg_noise)
-    
+    print("JPEG differed from source image by %.2f RMS" % np.std(jpeg_noise))
+
+
 if __name__ == '__main__':
     test_image_codecs()
-    
-    
-    

@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+from __future__ import print_function
+from builtins import object
 __author__ = 'alansanders'
 
 
@@ -118,17 +121,17 @@ class UiTools(object):
                 assert callable(action), "To call it from a button, it must be callable!"
                 button.clicked.connect(action)
                 if verbose:
-                    print "connected button '{0}' to {1}".format(name, action)
+                    print("connected button '{0}' to {1}".format(name, action))
             except:
                 if verbose:
-                    print "didn't connect button with name '%s'" % name    
+                    print("didn't connect button with name '%s'" % name)    
         
         # Now, we try to connect properties with their controls.  This only
         # works for the most common controls, defined in 
         # auto_connectable_controls
         
         # Connect controls to properties with the same name
-        for control_type, c in auto_connectable_controls.iteritems():
+        for control_type, c in list(auto_connectable_controls.items()):
             for control in self.findChildren(c['qt_type']):
                 name = strip_suffices(control.objectName(), c['suffices'])
                 try:
@@ -150,8 +153,8 @@ class UiTools(object):
                         self.callbacks_to_update_controls[name] = update_handler
                     except:
                         if verbose:
-                            print "Couldn't register for updates on {0}, perhaps "\
-                                   "it's not a NotifiedProperty?".format(name)
+                            print("Couldn't register for updates on {0}, perhaps "\
+                                   "it's not a NotifiedProperty?".format(name))
                     
                     # whether or not it's a NotifiedProperty, we can at least 
                     # try to ensure we *start* with the same values!
@@ -160,17 +163,17 @@ class UiTools(object):
                         # this should fail if the property doesn't exist...
                     except:
                         if verbose:
-                            print "Failed to initialise {0}, perhaps there's "\
-                                   "no matching property...".format(name)
+                            print("Failed to initialise {0}, perhaps there's "\
+                                   "no matching property...".format(name))
                             
                     
                     if verbose:
-                        print "connected {0} '{1}' to {2}".format(control_type, 
-                                 name, "UI" if obj is self else "target")
+                        print("connected {0} '{1}' to {2}".format(control_type, 
+                                 name, "UI" if obj is self else "target"))
                 except Exception as e:
                     if verbose:
-                        print "didn't connect {0} '{1}'".format(control_type, name)
-                        print e
+                        print("didn't connect {0} '{1}'".format(control_type, name))
+                        print(e)
 
 class QuickControlBox(QtWidgets.QGroupBox, UiTools):
     "A groupbox that can quickly add controls that synchronise with properties."
@@ -264,7 +267,7 @@ def control_change_handler(conversion=lambda x: x):
             try:
                 setattr(obj, name, conversion(value))
             except AttributeError:
-                print name,'has no setter?'
+                print(name,'has no setter?')
         return update_property
     return handler_generator
 def property_change_handler(value_name, 

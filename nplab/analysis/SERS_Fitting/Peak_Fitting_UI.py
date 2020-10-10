@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Peak Fitting Program
 
@@ -18,8 +19,14 @@ To visualise the results, use View_Results(Array,x_axis,Start_Spectrum,End_Spect
 
 If the fits display "crosstalk", use the function Reorder_Peaks(Fits).
 """
+from __future__ import division
+from __future__ import print_function
 
 
+from builtins import input
+from builtins import str
+from builtins import range
+from past.utils import old_div
 import matplotlib
 matplotlib.use('Qt4Agg')
 import matplotlib.pyplot as pl
@@ -38,36 +45,35 @@ def Select_Time_Range(Min,Max):
 
 		Lower=None
 		while Lower is None:
-			Input=raw_input('Please Enter a Lower Spectrum Number (Type \'Cancel\' to cancel): ')
+			Input=eval(input('Please Enter a Lower Spectrum Number (Type \'Cancel\' to cancel): '))
 			if Input.upper()=='CANCEL':
 				return None,None
 			else:
 				try:
 					Input=int(Input)
 					if Input<Min or Input>Max:
-						print 'Invalid'
+						print('Invalid')
 					else:
 						Lower=Input
 				except ValueError:
-					print 'Invalid'
+					print('Invalid')
 
 		Upper=None
 		while Upper is None:
-			Input=raw_input('Please Enter a Upper Spectrum Number (Type \'Cancel\' to cancel): ')
+			Input=eval(input('Please Enter a Upper Spectrum Number (Type \'Cancel\' to cancel): '))
 			if Input.upper()=='CANCEL':
 				return None,None
 			else:
 				try:
 					Input=int(Input)
 					if Input<Min or Input>Max or Input<=Lower:
-						print 'Invalid'
+						print('Invalid')
 					else:
 						Upper=Input
 				except ValueError:
-					print 'Invalid'
+					print('Invalid')
 
-
-		Input=raw_input('Continue with range '+str(Lower)+' to '+str(Upper)+'? (Y/N): ')
+		Input=eval(input('Continue with range '+str(Lower)+' to '+str(Upper)+'? (Y/N): '))
 		if Input.upper()=='Y':
 			Continue=True
 
@@ -140,18 +146,18 @@ def Select_Peaks(Array,Threshold,Color='r',Extra_Lines=None,colormap='inferno'):
 def Input_Width():
 	Output=None
 	while Output is None:
-		Input=raw_input('Please Enter an Approximate Peak Width in Given X-Axis Units (Type \'Cancel\' to cancel): ')
+		Input=eval(input('Please Enter an Approximate Peak Width in Given X-Axis Units (Type \'Cancel\' to cancel): '))
 		if Input.upper()=='CANCEL':
 				return None
 		else:
 			try:
 				Input=int(Input)
 				if Input<=0:
-					print 'Invalid'
+					print('Invalid')
 				else:
 					Output=Input
 			except ValueError:
-				print 'Invalid'
+				print('Invalid')
 	return Output
 
 def Input_Core_Number():
@@ -161,18 +167,18 @@ def Input_Core_Number():
 	Maximum=mp.cpu_count()
 	Output=None
 	while Output is None:
-		Input=raw_input('Please Enter the Number of CPU Cores to Utilise: ')
+		Input=eval(input('Please Enter the Number of CPU Cores to Utilise: '))
 		try:
 			Input=int(Input)
 			if Input<=0:
-				print 'Invalid: Negative/Zero'
+				print('Invalid: Negative/Zero')
 			else:
 				if Input>Maximum:
-					print 'Invalid: This number of CPU cores is not available'
+					print('Invalid: This number of CPU cores is not available')
 				else:
 					Output=Input
 		except ValueError:
-			print 'Invalid'
+			print('Invalid')
 	return Output
 
 def Quick_Sort(List,Argument):
@@ -220,7 +226,7 @@ def Lorentzian(x,Centre,Width,Height):
 	"""
 	Defines a Lorentzian
 	"""
-	return Height/(1+(((x-Centre)/Width)**2))
+	return old_div(Height,(1+((old_div((x-Centre),Width))**2)))
 
 def Constant_plus_Lorentzians(x,*Params):
 	"""
@@ -319,19 +325,19 @@ def Run(Array,x_axis,Threshold=None,colormap='inferno'):
 
 	#----------Select Peaks-------------
 
-	print '=========='
-	print "Please use your left mouse button to select peaks to track. Use your right mouse button to erase the last selection. Press Enter when done."
-	print '=========='
+	print('==========')
+	print("Please use your left mouse button to select peaks to track. Use your right mouse button to erase the last selection. Press Enter when done.")
+	print('==========')
 
 	Peaks=Select_Peaks(To_Fit,Threshold,colormap=colormap)
 	Peaks=sorted(Peaks)
 
 	#-------------Select Interpeak Bounds
 
-	print '=========='
-	print "Fitting will be faster and less likely to fail if each spectrum is split into sections."
-	print "Please use your left mouse button to select section boundaries. Use your right mouse button to erase the last selection. Press Enter when done."
-	print '=========='
+	print('==========')
+	print("Fitting will be faster and less likely to fail if each spectrum is split into sections.")
+	print("Please use your left mouse button to select section boundaries. Use your right mouse button to erase the last selection. Press Enter when done.")
+	print('==========')
 
 	Bounds=Select_Peaks(To_Fit,Threshold,'w',[Peaks,'r'],colormap=colormap)
 	Bounds=sorted(Bounds)
@@ -368,14 +374,14 @@ def Run(Array,x_axis,Threshold=None,colormap='inferno'):
 
 	#----Hold------
 
-	Hold=raw_input('Press Enter to Begin')
+	Hold=eval(input('Press Enter to Begin'))
 
 	#---------Fit Array Sections----------------
 
 	Results=[]
 
 	for i in Sections:
-		print 'Fitting.....'
+		print('Fitting.....')
 		Results.append(Run_Fitting(np.transpose(np.transpose(To_Fit)[int(i[0]):int(i[1])]),x_axis[int(i[0]):int(i[1])],i[2],Width,Cores))
 
 	Output=[]
@@ -414,11 +420,11 @@ def View_Results(Array,x_axis,Start_Spectrum,End_Spectrum,Fit,Threshold=None):
 				n=0
 				while x_axis[n]<j:
 					n+=1
-				Weight=(j-x_axis[n-1])/(x_axis[n]-x_axis[n-1])
+				Weight=old_div((j-x_axis[n-1]),(x_axis[n]-x_axis[n-1]))
 				To_Plot.append(n-1.+Weight)
 			else:
 				To_Plot.append(None)
-		pl.plot(To_Plot,range(len(To_Show)),'b-')
+		pl.plot(To_Plot,list(range(len(To_Show))),'b-')
 	pl.xlim([0,len(To_Show[0])])
 	pl.ylim([0,len(To_Show)])
 	
@@ -456,20 +462,20 @@ def Reorder_Peaks(Fits):
 	while Start<len(Fits) and None in Fits[Start][0]:
 		Start+=1
 	if Start==len(Fits):
-		print 'No fully sucessfull fits detected!'
+		print('No fully sucessfull fits detected!')
 		return
 	else:
 		Results=[Fits[Start]]
 		Current=[]
-		for i in range(len(Fits[Start][0])/3):
+		for i in range(old_div(len(Fits[Start][0]),3)):
 			Current.append(Fits[Start][0][i*3])
 		To_Sort=Start+1
 		while To_Sort<len(Fits):
-			print To_Sort
+			print(To_Sort)
 			Sorting_Positions=[]
-			for i in range(len(Fits[To_Sort][0])/3):
+			for i in range(old_div(len(Fits[To_Sort][0]),3)):
 				Sorting_Positions.append(Fits[To_Sort][0][i*3])
-			Sorting_Order=range(len(Sorting_Positions))
+			Sorting_Order=list(range(len(Sorting_Positions)))
 			Trigger=True
 			while Trigger is True:
 				Trigger=False
@@ -496,7 +502,7 @@ def Reorder_Peaks(Fits):
 				Result[1]+=Fits[To_Sort][1][i*3:(i+1)*3]
 			Results.append(Result)
 			Current_new=[]
-			for i in range(len(Result[0])/3):
+			for i in range(old_div(len(Result[0]),3)):
 				if Result[0][i*3] is not None:
 					Current_new.append(Result[0][i*3])
 				else:
@@ -505,15 +511,15 @@ def Reorder_Peaks(Fits):
 			To_Sort+=1
 
 		Current=[]
-		for i in range(len(Fits[Start][0])/3):
+		for i in range(old_div(len(Fits[Start][0]),3)):
 			Current.append(Fits[Start][0][i*3])
 		To_Sort=Start-1
 		while To_Sort>=0:
-			print To_Sort
+			print(To_Sort)
 			Sorting_Positions=[]
-			for i in range(len(Fits[To_Sort][0])/3):
+			for i in range(old_div(len(Fits[To_Sort][0]),3)):
 				Sorting_Positions.append(Fits[To_Sort][0][i*3])
-			Sorting_Order=range(len(Sorting_Positions))
+			Sorting_Order=list(range(len(Sorting_Positions)))
 			Trigger=True
 			while Trigger is True:
 				Trigger=False
@@ -540,7 +546,7 @@ def Reorder_Peaks(Fits):
 				Result[1]+=Fits[To_Sort][1][i*3:(i+1)*3]
 			Results=[Result]+Results
 			Current_new=[]
-			for i in range(len(Result[0])/3):
+			for i in range(old_div(len(Result[0]),3)):
 				if Result[0][i*3] is not None:
 					Current_new.append(Result[0][i*3])
 				else:

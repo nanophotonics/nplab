@@ -40,11 +40,16 @@ EXAMPLE:
     >>>> camera = camera_client((IP, port))
     >>>> camera.show_gui()
 """
+from __future__ import division
 
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from past.utils import old_div
 from nplab.utils.log import create_logger
 from nplab.utils.array_with_attrs import ArrayWithAttrs
 import threading
-import SocketServer
+import socketserver
 import socket
 import ast
 import inspect
@@ -53,10 +58,15 @@ import sys
 import re
 
 BUFFER_SIZE = 3131894
-message_end = 'tcp_termination'
+message_end = 'tcp_termination'.encode()
 
 
 def parse_arrays(value):
+    """Utility function to convert arrays to strings to be sent over TCP
+
+    :param value: array to be converted
+    :return:
+    """
     if type(value) == ArrayWithAttrs:
         reply = repr(dict(array=value.tolist(), attrs=value.attrs))
     elif type(value) == np.ndarray:
@@ -67,37 +77,48 @@ def parse_arrays(value):
 
 
 def parse_strings(value):
+    """Utility function to convert strings back into arrays
+
+    :param value: string containing an array
+    :return:
+    """
     if not isinstance(value, dict):
-        parse1 = ast.literal_eval(value)
-    if isinstance(parse1, dict):
-        if 'array' in parse1 and 'attrs' in parse1:
-            return ArrayWithAttrs(parse1['array'], parse1['attrs'])
-        elif 'array' in parse1:
-            return np.array(parse1['array'])
+        value = ast.literal_eval(value)
+    if isinstance(value, dict):
+        if 'array' in value and 'attrs' in value:
+            return ArrayWithAttrs(value['array'], value['attrs'])
+        elif 'array' in value:
+            return np.array(value['array'])
     else:
-        return parse1
+        return value
 
 
 def subselect(string, size=100):
+    """Utility function to create a shortened version of strings for logging
+
+    :param string: string to be shortened
+    :param size: maximum size of string allowed
+    :return:
+    """
     if len(string) > size:
-        return '%s ... %s' % (string[:size/2], string[-size/2:])
+        return '%s ... %s' % (string[:int(size/2)], string[-int(size/2):])
     else:
         return string
 
 
-class ServerHandler(SocketServer.BaseRequestHandler):
+class ServerHandler(socketserver.BaseRequestHandler):
     def handle(self):
         try:
             raw_data = self.request.recv(BUFFER_SIZE).strip()
             while message_end not in raw_data:
                 raw_data += self.request.recv(BUFFER_SIZE).strip()
-            raw_data = re.sub(re.escape(message_end) + '$', '', raw_data)
+            raw_data = re.sub(re.escape(message_end) + b'$', b'', raw_data)
             self.server._logger.debug("Server received: %s" % subselect(raw_data))
 
-            if raw_data == "list_attributes":
-                instr_reply = self.server.instrument.__dict__.keys()
+            if raw_data == b"list_attributes":
+                instr_reply = list(self.server.instrument.__dict__.keys())
             else:
-                command_dict = ast.literal_eval(raw_data)
+                command_dict = ast.literal_eval(raw_data.decode())
                 if "command" in command_dict:
                     if "args" in command_dict and "kwargs" in command_dict:
                         instr_reply = getattr(self.server.instrument,
@@ -131,8 +152,7 @@ class ServerHandler(SocketServer.BaseRequestHandler):
         except Exception as e:
             self.server._logger.warn(e)
             reply = repr(dict(error=str(e)))
-        reply += message_end
-        self.request.sendall(reply)
+        self.request.sendall(reply.encode() + message_end)
         self.server._logger.debug(
             "Server replied %s %s: %s" % (len(reply), sys.getsizeof(reply), subselect(reply)))
 
@@ -145,7 +165,7 @@ def create_server_class(original_class):
     :return: server class
     """
 
-    class Server(SocketServer.TCPServer):
+    class Server(socketserver.TCPServer):
         def __init__(self, server_address, *args, **kwargs):
             """
             To instantiate the server class, the TCP address needs to be given first, and then the arguments that would
@@ -155,7 +175,7 @@ def create_server_class(original_class):
             :param args: arguments to be passed to the nplab instrument
             :param kwargs: named arguments for the nplab instrument
             """
-            SocketServer.TCPServer.__init__(self, server_address, ServerHandler, True)
+            socketserver.TCPServer.__init__(self, server_address, ServerHandler, True)
             self.instrument = original_class(*args, **kwargs)
             self._logger = create_logger('TCP server')
             self.thread = None
@@ -217,7 +237,7 @@ def create_client_class(original_class,
             command_dict = dict(command=method_name)
             if len(args) > 1:
                 command_dict["args"] = args[1:]
-            if len(kwargs.keys()) > 0:
+            if len(list(kwargs.keys())) > 0:
                 command_dict["kwargs"] = kwargs
             reply = obj.send_to_server(repr(command_dict))
             if type(reply) == dict:
@@ -274,6 +294,8 @@ def create_client_class(original_class,
             """
             if address is None:
                 address = self.address
+            if isinstance(tcp_string, str):
+                tcp_string = tcp_string.encode()
             self._logger.debug("Client sending: %s" % subselect(tcp_string))
             try:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -283,17 +305,17 @@ def create_client_class(original_class,
                 received = sock.recv(BUFFER_SIZE)
                 while message_end not in received:
                     received += sock.recv(BUFFER_SIZE)
-                received = re.sub(re.escape(message_end) + '$', '', received)
+                received = re.sub(re.escape(message_end) + b'$', b'', received)
                 self._logger.debug("Client received: %s" % subselect(received))
                 sock.close()
-                if 'error' in received:
+                if b'error' in received:
                     raise RuntimeError('Server error: %s' % subselect(received))
             except Exception as e:
                 raise e
-            return ast.literal_eval(received)
+            return ast.literal_eval(received.decode())
 
     if tcp_methods is None:
-        tcp_methods = original_class.__dict__.keys()
+        tcp_methods = list(original_class.__dict__.keys())
     excluded_methods = list(excluded_methods)
     if tcp_attributes is None:
         tcp_attributes = list()
@@ -303,19 +325,22 @@ def create_client_class(original_class,
     for command_name in tcp_methods:
         command = getattr(NewClass, command_name)
         # only replaces methods that are not magic (__xx__) and are not explicitly excluded
-        if inspect.ismethod(command) and not command_name.startswith('__') and command_name not in excluded_methods:
+        if (inspect.ismethod(command) or inspect.isfunction(command)) and not command_name.startswith('__') and command_name not in excluded_methods:
             setattr(NewClass, command_name, method_builder(command_name))
             methods += [command_name]
     setattr(NewClass, "method_list", methods)
 
     def my_getattr(self, item):
-        # print "Getting: ", item, item in ["address", "instance_attributes"]
+        # print("Getting: ", item, item in ["address", "instance_attributes"])
         if item in ["address", "instance_attributes", "method_list", "_logger", "__init__"] + excluded_attributes:
+            # print('Excluded attribute: %s' % item)
             return object.__getattribute__(self, item)
             # return object.__getattr__(self, item)
         elif item in self.instance_attributes or item in tcp_attributes:
+            # print('TCP: %s' % item)
             return self.send_to_server(repr(dict(variable_get=item)))
         elif item in excluded_methods:
+            # print('Excluded method: %s' % item)
             # return original_class.__getattribute__(self, item)
             return original_class.__getattr__(self, item)
         else:

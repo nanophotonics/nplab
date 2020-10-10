@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Camera with Location
 ====================
@@ -14,6 +15,10 @@ you should use its `color_image`, `gray_image` and `raw_image` methods rather th
 
 NB see the note on coordinate systems in utils/image_with_location.py
 """
+from __future__ import division
+from __future__ import print_function
+from builtins import range
+from past.utils import old_div
 import nplab
 from nplab.instrument.camera import Camera
 import nplab.instrument.camera
@@ -98,7 +103,7 @@ class CameraWithLocation(Instrument):
             iwl.attrs['pixel_to_sample_matrix'] = self.pixel_to_sample_matrix
         else:
             iwl.attrs['pixel_to_sample_matrix'] = np.identity(4)
-            print 'Stage is not yet calbirated'
+            print('Stage is not yet calbirated')
         return iwl
 
 
@@ -122,8 +127,8 @@ class CameraWithLocation(Instrument):
     def thumb_image(self,size = (100,100)):
         """Return a cropped "thumb" from the CWL with size  """
         image =self.color_image()
-        thumb = image[image.shape[0]/2-size[0]/2:image.shape[0]/2+size[0]/2,
-                     image.shape[1]/2-size[1]/2:image.shape[1]/2+size[1]/2]
+        thumb = image[old_div(image.shape[0],2)-old_div(size[0],2):old_div(image.shape[0],2)+old_div(size[0],2),
+                     old_div(image.shape[1],2)-old_div(size[1],2):old_div(image.shape[1],2)+old_div(size[1],2)]
         return thumb
 
     ###### Wrapping functions for the stage ######
@@ -135,14 +140,18 @@ class CameraWithLocation(Instrument):
         """Move the stage by a given amount"""
         self.stage.move_rel(*args, **kwargs)
     def move_to_pixel(self,x,y):
-        image = self.color_image()
-        if (image.pixel_to_sample_matrix != np.identity(4)).any():
+        
+        iwl = ImageWithLocation(self.camera.latest_raw_frame)
+        iwl.attrs['datum_pixel'] = self.datum_pixel
+#        self.use_previous_datum_location = True
+        iwl.attrs['pixel_to_sample_matrix'] = self.pixel_to_sample_matrix
+        if (iwl.pixel_to_sample_matrix != np.identity(4)).any():
             #check if the image has been calibrated
-            print 'move coords', image.pixel_to_location([x,y])
-            print 'current position', self.stage.position
-            self.move(image.pixel_to_location([x,y]))
-            print 'post move position', self.stage.position
-
+            #print('move coords', image.pixel_to_location([x,y]))
+            #print('current position', self.stage.position)
+            self.move(iwl.pixel_to_location([x,y]))
+            #print('post move position', self.stage.position)
+#        self.use_previous_datum_location = False
     @property
     def datum_location(self):
         """The location in the sample of the datum point (i.e. the current stage position, corrected for drift)"""
@@ -195,7 +204,7 @@ class CameraWithLocation(Instrument):
                 else:
                     self.move(feature.datum_location) #initial move to where we recorded the feature was
             except:
-                print "Warning: no position data in feature image, skipping initial move."
+                print("Warning: no position data in feature image, skipping initial move.")
         image = self.color_image()
         assert isinstance(image, ImageWithLocation), "CameraWithLocation should return an ImageWithLocation...?"
 
@@ -228,7 +237,7 @@ class CameraWithLocation(Instrument):
             self.last_feature = feature
             self.move_to_feature(feature)
         else:
-            print 'CameraWithLocation is not yet calibrated!!'
+            print('CameraWithLocation is not yet calibrated!!')
         
 
     def autofocus(self, dz=None, merit_function=af_merit_squared_laplacian,
@@ -244,9 +253,9 @@ class CameraWithLocation(Instrument):
         update_progress : function, optional
             This will be called each time we take an image - for use with run_function_modally.
         """
-        self.camera.exposure = self.camera.exposure/exposure_factor
+        self.camera.exposure = old_div(self.camera.exposure,exposure_factor)
         if dz is None:
-            dz = (np.arange(self.af_steps) - (self.af_steps - 1)/2) * self.af_step_size # Default value
+            dz = (np.arange(self.af_steps) - old_div((self.af_steps - 1),2)) * self.af_step_size # Default value
         here = self.stage.position
         positions = []  # positions keeps track of where we sample
         powers = []  # powers holds the value of the merit fn at each point
@@ -274,17 +283,17 @@ class CameraWithLocation(Instrument):
             indices_of_maxima = argrelextrema(np.pad(weights, (1, 1), 'minimum'), np.greater)[0]-1
             number_of_maxima = indices_of_maxima.size
             if (np.sum(weights) == 0):
-                print "Warning, something went wrong and all the autofocus scores were identical! Returning to initial position."
+                print("Warning, something went wrong and all the autofocus scores were identical! Returning to initial position.")
                 new_position = here # Return to initial position if something fails
             elif (number_of_maxima == 1) and not (indices_of_maxima[0] == 0 or indices_of_maxima[-1] == (weights.size-1)):
-                new_position = np.dot(weights, positions) / np.sum(weights)
+                new_position = old_div(np.dot(weights, positions), np.sum(weights))
             else:
                 print("Warning, a maximum autofocus score could not be found. Returning to initial position.")
                 new_position = here
         elif method == "parabola":
             coefficients = np.polyfit(z, powers, deg=2)  # fit a parabola
-            root = -coefficients[1] / (2 * coefficients[
-                0])  # p = c[0]z**" + c[1]z + c[2] which has max (or min) at 2c[0]z + c[1]=0 i.e. z=-c[1]/2c[0]
+            root = old_div(-coefficients[1], (2 * coefficients[
+                0]))  # p = c[0]z**" + c[1]z + c[2] which has max (or min) at 2c[0]z + c[1]=0 i.e. z=-c[1]/2c[0]
             if z.min() < root and root < z.max():
                 new_position = [here[0], here[1], root]
             else:
@@ -303,7 +312,7 @@ class CameraWithLocation(Instrument):
 
         dz is a single number - we move this far above and below the current position."""
         shift, pos, powers = self.autofocus(np.array([-dz,0,dz]), method="parabola", update_progress=update_progress)
-        if np.abs(shift) >= dz and trigger_full_af:
+        if np.linalg.norm(shift) >= dz and trigger_full_af:
             return self.autofocus(full_dz, update_progress=update_progress, **kwargs)
         else:
             return shift, pos, powers
@@ -340,17 +349,17 @@ class CameraWithLocation(Instrument):
         starting_image = self.color_image()
         starting_location = self.datum_location
         w, h = starting_image.shape[:2]
-        template = starting_image[w/4:3*w/4,h/4:3*h/4, ...] # Use the central 50%x50% as template
+        template = starting_image[int(w/4):int(3*w/4),int(h/4):int(3*h/4), ...] # Use the central 50%x50% as template
         threshold_shift = w*0.02 # Require a shift of at least 2% of the image's width ,changed s[0] to w
         target_shift = w*0.1 # Aim for a shift of about 10%
-#Swapping images[-1] for starting_image
+        # Swapping images[-1] for starting_image
         assert np.sum((locate_feature_in_image(starting_image, template) - self.datum_pixel)**2) < 1, "Template's not centred!"
         update_progress(1)
         if step is None:
             # Next, move a small distance until we see a shift, to auto-determine the calibration distance.
             step = min_step
             shift = 0
-            while shift < threshold_shift:
+            while np.linalg.norm(shift) < threshold_shift:
                 assert step < max_step, "Error, we hit the maximum step before we saw the sample move."
                 self.move(starting_location + np.array([step,0,0]))
                 image = self.color_image()
@@ -359,7 +368,7 @@ class CameraWithLocation(Instrument):
                     break
                 else:
                     step *= 10**(0.5)
-            step *= target_shift / shift # Scale the amount we step the stage by, to get a reasonable image shift.
+            step *= old_div(target_shift, shift) # Scale the amount we step the stage by, to get a reasonable image shift.
         update_progress(2)
         # Move the stage in a square, recording the displacement from both the stage and the camera
         pixel_shifts = []
@@ -377,20 +386,21 @@ class CameraWithLocation(Instrument):
             # the template, not the other way around.
             update_progress(3+i)
         # We then use least-squares to fit the XY part of the matrix relating pixels to distance
-#        location_shifts = np.array([ensure_2d(im.datum_location - starting_location) for im in images])#Does this need to be the datum_location... will this really work for when the stage has not previously been calibrated
+        # location_shifts = np.array([ensure_2d(im.datum_location - starting_location) for im in images])
+        # Does this need to be the datum_location... will this really work for when the stage has not previously been calibrated
         location_shifts = np.array([ensure_2d(im.attrs['stage_position'] - starting_location) for im in images])
         pixel_shifts = np.array(pixel_shifts)
-        print np.shape(pixel_shifts),np.shape(location_shifts)
+        print(np.shape(pixel_shifts),np.shape(location_shifts))
         A, res, rank, s = np.linalg.lstsq(pixel_shifts, location_shifts) # we solve pixel_shifts*A = location_shifts
 
         self.pixel_to_sample_displacement = np.zeros((3,3))
         self.pixel_to_sample_displacement[2,2] = 1 # just pass Z through unaltered
         self.pixel_to_sample_displacement[:2,:2] = A # A deals with xy only
         fractional_error = np.sqrt(np.sum(res)/np.prod(pixel_shifts.shape)) / np.std(pixel_shifts)
-        print fractional_error
-        print np.sum(res),np.prod(pixel_shifts.shape),np.std(pixel_shifts)
+        print(fractional_error)
+        print(np.sum(res),np.prod(pixel_shifts.shape),np.std(pixel_shifts))
         if fractional_error > 0.02: # Check it was a reasonably good fit
-            print "Warning: the error fitting measured displacements was %.1f%%" % (fractional_error*100)
+            print("Warning: the error fitting measured displacements was %.1f%%" % (fractional_error*100))
         self.log("Calibrated the pixel-location matrix.\nResiduals were {}% of the shift.\nStage positions:\n{}\n"
                  "Pixel shifts:\n{}\nResulting matrix:\n{}".format(fractional_error*100, location_shifts, pixel_shifts,
                                                                    self.pixel_to_sample_displacement))
@@ -421,6 +431,7 @@ class CameraWithLocationControlUI(QtWidgets.QWidget):
         cc = QuickControlBox("Settings")
         cc.add_doublespinbox("calibration_distance")
         cc.add_button("calibrate_xy_gui", "Calibrate XY")
+        cc.add_button('load_calibration_gui', 'Load Calibration')
         cc.auto_connect_by_name(self)
         self.calibration_controls = cc
 
@@ -443,8 +454,9 @@ class CameraWithLocationControlUI(QtWidgets.QWidget):
         """Run an XY calibration, with a progress bar in the foreground"""
         # 
         run_function_modally(self.cwl.calibrate_xy,
-                             progress_maximum=7, step = None if self.calibration_distance<= 0 else float(self.calibration_distance))
-
+                             progress_maximum=self.cwl.af_steps+1, step = None if self.calibration_distance<= 0 else float(self.calibration_distance))
+    def load_calibration_gui(self):
+        self.cwl.load_calibration()
 
 class CameraWithLocationUI(QtWidgets.QWidget):
     """Generic user interface for a camera."""
@@ -471,7 +483,6 @@ class CameraWithLocationUI(QtWidgets.QWidget):
         l.addWidget(self.tabs)
         self.setLayout(l)
 
-
 class AcquireGridOfImages(ExperimentWithProgressBar):
     """Use a CameraWithLocation to acquire a grid of image tiles that can later be stitched together"""
     def __init__(self, camera_with_location=None,completion_function= None, **kwargs):
@@ -480,7 +491,7 @@ class AcquireGridOfImages(ExperimentWithProgressBar):
         self.completion_function = completion_function
 
     def prepare_to_run(self, n_tiles=None, overlap_pixels = 250,
-                       data_group=None,autofocus = False, *args, **kwargs):
+                       data_group=None, autofocus = False, *args, **kwargs):
         self.autofocus = autofocus
         self.progress_maximum = n_tiles[0] * n_tiles[1]
         self.overlap_pixels = overlap_pixels
@@ -489,8 +500,7 @@ class AcquireGridOfImages(ExperimentWithProgressBar):
     def run(self, n_tiles=(1,1), autofocus_args=None):
         """Acquire a grid of images with the specified overlap."""
         self.update_progress(0)
-        cwl = self.cwl
-        centre_image = cwl.color_image()
+        centre_image = self.cwl.color_image()
         scan_step = np.array(centre_image.shape[:2]) - self.overlap_pixels
         self.log("Starting a {} scan with a step size of {}".format(n_tiles, scan_step))
 
@@ -502,14 +512,12 @@ class AcquireGridOfImages(ExperimentWithProgressBar):
             for y_index in y_indices:
                 for x_index in x_indices:
                     # Go to the grid point
-                    if self.autofocus == True:
-                        cwl.autofocus()
-                    cwl.move(centre_image.pixel_to_location(np.array([x_index, y_index]) * scan_step)[:2])
+                    self.cwl.move(centre_image.pixel_to_location(np.array([x_index, y_index]) * scan_step)[:2])
                     # TODO: make autofocus update drift or something...
                     if autofocus_args is not None:
-                        cwl.autofocus(**autofocus_args)
-                    cwl.settle()  # wait for the camera to be ready/stage to settle
-                    dest.create_dataset("tile_%d",data=cwl.color_image())
+                        self.cwl.autofocus(**autofocus_args)
+                    self.cwl.settle()  # wait for the camera to be ready/stage to settle
+                    dest.create_dataset("tile_%d",data=self.cwl.color_image())
                     dest.file.flush()
                     images_acquired += 1 # TODO: work out why I can't just use dest.count_numbered_items("tile")
                     self.update_progress(images_acquired)

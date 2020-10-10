@@ -1,6 +1,8 @@
 """
 A collection of decorators useful when subclassing in NPLab
 """
+from __future__ import print_function
+from builtins import object
 __author__ = 'alansanders'
 
 
@@ -42,4 +44,4 @@ if __name__ == '__main__':
             """Docstring for C"""
             return x+3
 
-    print C.foo.__doc__
+    print(C.foo.__doc__)

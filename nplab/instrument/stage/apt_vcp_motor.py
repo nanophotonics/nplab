@@ -4,6 +4,10 @@ Created on Tue Mar 21 17:04:11 2017
 
 @author: Will, Yago
 """
+from __future__ import division
+from __future__ import print_function
+from builtins import str
+from past.utils import old_div
 import serial
 import struct
 import numpy as np
@@ -116,17 +120,17 @@ class APT_VCP_motor(APT_VCP, Stage):
     def _waitFinishMove(self,axis = None,debug=False):
         """A simple function to force movement to block the console """
         if axis == None:
-            destination_ids = self.destination.keys()
+            destination_ids = list(self.destination.keys())
         else:
             destination_ids = [axis]
         for dest in destination_ids:
             status = self.get_status_update(axis = dest)
-            if debug > 0 or DEBUG == True:
-                print status
-            while any(map(lambda x: 'in motion' in x[1], status)):
+            if debug > 0 or DEBUG:
+                print(status)
+            
+            while any(['in motion' in x[1] for x in status]):
                 time.sleep(0.1)
                 status = self.get_status_update(axis = dest)
-          #      print status
 
     def home(self,axis = None):
         """Rehome the stage with an axis input """
@@ -202,7 +206,7 @@ class APT_VCP_motor(APT_VCP, Stage):
         '''
         if debug > 0 or DEBUG == True:
             N = len(returned_message)
-            print "returned_message length:",N
+            print("returned_message length:",N)
         if self.model[1] in DC_status_motors:
             channel, position, velocity, Reserved, status_bits = struct.unpack('<HLHHI', returned_message)
             #HLHHI
@@ -217,7 +221,7 @@ class APT_VCP_motor(APT_VCP, Stage):
         bitmask = self._bit_mask_array(status_bits, [int(i) for i in self.status_bit_mask[:, 0]])
         self.status = self.status_bit_mask[np.where(bitmask)]
         if debug > 0 or DEBUG == True:
-            print self.status
+            print(self.status)
         return self.status
 
 
@@ -262,7 +266,7 @@ class APT_VCP_motor(APT_VCP, Stage):
 
 
     def convert(self, value, from_, to_):
-        print 'Not doing anything from ', from_, ' to ', to_
+        print('Not doing anything from ', from_, ' to ', to_)
         return value
 
     def make_parameter(self, param_dict, destination_id = None):
@@ -331,7 +335,7 @@ class APT_VCP_motor(APT_VCP, Stage):
         try:
             setattr(self, param_dict['name'], property('get_' + param_dict['name'], 'set_' + param_dict['name']))
         except AttributeError:
-            print param_dict['name'], ' already exists'
+            print(param_dict['name'], ' already exists')
 
     def make_all_parameters(self):
         # TODO: add all the documentation for each of these parameters
@@ -390,8 +394,7 @@ class DC_APT(APT_VCP_motor):
                 self.EncCnt = None
                 self._logger.warn('The stage type suggested is not listed and therefore a calibration cannot be set')
         else:
-            self.EncCnt = None
-                
+            self.EncCnt = None    
             
     def convert(self, value, from_, to_):
         if None in (self.EncCnt,self.t_constant):
@@ -406,22 +409,45 @@ class DC_APT(APT_VCP_motor):
             return value
 
     def counts_to_pos(self,counts):
-        return counts/self.EncCnt*1E3
+        return old_div(counts,self.EncCnt)*1E3
     def pos_to_counts(self,pos):
-        return pos*self.EncCnt/1E3
+        return old_div(pos*self.EncCnt,1E3)
     
     def counts_to_vel(self,counts):
-        return counts/(self.EncCnt*self.t_constant*65536)*1E3
+        return old_div(counts,(self.EncCnt*self.t_constant*65536))*1E3
     def vel_to_counts(self,vel):
-        return vel*65536*self.t_constant*self.EncCnt/1E3
+        return old_div(vel*65536*self.t_constant*self.EncCnt,1E3)
         
     def counts_to_acc(self,counts):
-        return counts/(self.EncCnt*self.t_constant**2*65536)*1E3
+        return old_div(counts,(self.EncCnt*self.t_constant**2*65536))*1E3
     def acc_to_counts(self,acc):
-        return self.EncCnt*self.t_constant**2*65536*acc/1E3
+        return old_div(self.EncCnt*self.t_constant**2*65536*acc,1E3)
     def move_step(self,axis,direction):
         self.move_rel(self.stepsize*direction,axis)
-        
+    def _waitFinishMove(self,axis = None,debug=False):
+        """A simple function to force movement to block the console """
+        if axis == None:
+            destination_ids = list(self.destination.keys())
+        else:
+            destination_ids = [axis]
+        for dest in destination_ids:
+            status = self.get_status_update(axis = dest)# \ # and all([not x[1].endswith('homing') for x in status])\
+            while any(['in motion' in x[1] for x in status]):
+ 
+                time.sleep(0.1)
+                status = self.get_status_update(axis = dest)
+                if debug > 0 or DEBUG:
+                    print(status)
+    def home(self,axis = None):
+        """Rehome the stage with an axis input """
+        if axis == None:
+            destination_ids = self.axis_names
+        else:
+            destination_ids = tuple(axis)
+        for dest in destination_ids:
+            self.write(0x0443,destination_id = dest)
+            self._waitForReply()
+            self._waitFinishMove()
     counts_to = {'position' : counts_to_pos,
                  'velocity' : counts_to_vel,
                  'acceleration' : counts_to_acc}
@@ -472,9 +498,9 @@ class Stepper_APT_std(APT_VCP_motor):
             return value
 
     def counts_to_si(self,counts):
-        return counts/self.EncCnt*1E3
+        return old_div(counts,self.EncCnt)*1E3
     def si_to_counts(self,pos):
-        return pos*self.EncCnt/1E3
+        return old_div(pos*self.EncCnt,1E3)
     
 class Stepper_APT_trinamics(APT_VCP_motor):
     #The different EncCnt (calibrations) for the different stage types is microstep/mm
@@ -519,19 +545,19 @@ class Stepper_APT_trinamics(APT_VCP_motor):
             return value
 
     def counts_to_pos(self,counts):
-        return counts/self.EncCnt*1E3
+        return old_div(counts,self.EncCnt)*1E3
     def pos_to_counts(self,pos):
-        return pos*self.EncCnt/1E3
+        return old_div(pos*self.EncCnt,1E3)
     
     def counts_to_vel(self,counts):
-        return counts/(self.EncCnt*53.68)*1E3
+        return old_div(counts,(self.EncCnt*53.68))*1E3
     def vel_to_counts(self,vel):
-        return vel*53.68*self.EncCnt/1E3
+        return old_div(vel*53.68*self.EncCnt,1E3)
         
     def counts_to_acc(self,counts):
-        return counts/(self.EncCnt/90.9)*1E3
+        return old_div(counts,(self.EncCnt/90.9))*1E3
     def acc_to_counts(self,acc):
-        return self.EncCnt/90.9*acc/1E3
+        return old_div(self.EncCnt/90.9*acc,1E3)
         
     counts_to = {'position' : counts_to_pos,
                  'velocity' : counts_to_vel,
@@ -541,13 +567,15 @@ class Stepper_APT_trinamics(APT_VCP_motor):
              'acceleration' : acc_to_counts}
     
 if __name__ == '__main__':
-    print "pass"
+    print("pass")
     # microscope_stage = APT_VCP_motor(port='COM12', source=0x01, destination=0x21)
+    r = DC_APT(port = 'COM13', destination = 0x01, stage_type = 'PRM' )
+    DEBUG = True
 
-    tdc_cube = Stepper_APT_trinamics(port='/dev/ttyUSB1', source=0x01, destination=0x50)
-    # tdc_cube2 = APT_VCP_motor(port='COM20', source=0x01, destination=0x50)
+    # tdc_cube = Stepper_APT_trinamics(port='/dev/ttyUSB1', source=0x01, destination=0x50)
+    # # tdc_cube2 = APT_VCP_motor(port='COM20', source=0x01, destination=0x50)
 
-    tdc_cube.show_gui()
+    # tdc_cube.show_gui()
     # print tdc_cube.position
     # tdc_cube.home()
     # delattr(tdc_cube, 'get_qt_ui')

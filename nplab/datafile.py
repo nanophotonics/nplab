@@ -26,12 +26,12 @@ from nplab.utils.array_with_attrs import DummyHDF5Group
 def attributes_from_dict(group_or_dataset, dict_of_attributes):
     """Update the metadata of an HDF5 object with a dictionary."""
     attrs = group_or_dataset.attrs
-    for key, value in dict_of_attributes.iteritems():
+    for key, value in list(dict_of_attributes.items()):
         if value is not None:
             try:
                 attrs[key] = value
             except TypeError:
-                print "Warning, metadata {0}='{1}' can't be saved in HDF5.  Saving with str()".format(key, value)
+                print("Warning, metadata {0}='{1}' can't be saved in HDF5.  Saving with str()".format(key, value))
                 attrs[key] = str(value)
     #group_or_dataset.attrs.update(dict_of_attributes) #We can't do this - we'd lose the error handling.
 
@@ -114,10 +114,10 @@ def wrap_h5py_item(item):
         
 def sort_by_timestamp(hdf5_group):
     """a quick function for sorting hdf5 groups (or files or dictionarys...) by timestamp """
-    keys = hdf5_group.keys()
+    keys = list(hdf5_group.keys())
     try:
         time_stamps = []
-        for value in hdf5_group.values():
+        for value in list(hdf5_group.values()):
             time_stamp_str = value.attrs['creation_timestamp']
             try:
                 time_stamp_float = datetime.datetime.strptime(time_stamp_str,"%Y-%m-%dT%H:%M:%S.%f")
@@ -130,6 +130,7 @@ def sort_by_timestamp(hdf5_group):
         keys.sort(key=split_number_from_name)
     items_lists = [[key,hdf5_group[key]] for key in keys]
     return items_lists
+
 class Group(h5py.Group, ShowGUIMixin):
     """HDF5 Group, a collection of datasets and subgroups.
 
@@ -150,7 +151,7 @@ class Group(h5py.Group, ShowGUIMixin):
 
         :param name: If this contains a %d placeholder, it will be replaced with the lowest integer such that the new name is unique.  If no %d is included, _%d will be appended to the name if the name already exists in this group.
         """
-        if "%d" not in name and name not in self.keys():
+        if "%d" not in name and name not in list(self.keys()):
             return name  # simplest case: it's a unique name
         else:
             n = 0
@@ -169,7 +170,7 @@ class Group(h5py.Group, ShowGUIMixin):
         come in alphabetical order, so 10 comes before 2).  `name` is the
         name passed in without the _0 suffix.
         """
-        items = [wrap_h5py_item(v) for k, v in self.iteritems()
+        items = [wrap_h5py_item(v) for k, v in list(self.items())
                  if k.startswith(name)  # only items that start with `name`
                  and re.match(r"_*(\d+)$", k[len(name):])]  # and end with numbers
         return sorted(items, key=h5_item_number)
@@ -181,7 +182,7 @@ class Group(h5py.Group, ShowGUIMixin):
         a faster way to do it than len(group.numbered_items("name")).
         """
         n = 0
-        for k in self.keys():
+        for k in list(self.keys()):
             if k.startswith(name) and re.match(r"_*(\d+)$", k[len(name):]):
                 n += 1
                 return n
@@ -203,7 +204,7 @@ class Group(h5py.Group, ShowGUIMixin):
             name = self.find_unique_name(name) #name is None if creating via the dict interface
         g = super(Group, self).create_group(name)
         if timestamp:
-            g.attrs.create('creation_timestamp', datetime.datetime.now().isoformat())
+            g.attrs.create('creation_timestamp', datetime.datetime.now().isoformat().encode())
         if attrs is not None:
             attributes_from_dict(g, attrs)
         return Group(g.id)  # make sure it's wrapped!
@@ -212,8 +213,9 @@ class Group(h5py.Group, ShowGUIMixin):
         """Return a subgroup, creating it if it does not exist."""
         return Group(super(Group, self).require_group(name).id)  # wrap the returned group
 
-    def create_dataset(self, name, auto_increment=True, shape=None, dtype=None,
-                       data=None, attrs=None, timestamp=True,autoflush = True, *args, **kwargs):
+    def create_dataset(self, name, data=None, attrs=None, auto_increment=True,
+                       shape=None, dtype=None, timestamp=True, autoflush=True,
+                       *args, **kwargs):
         """Create a new dataset, optionally with an auto-incrementing name.
 
         :param name: the name of the new dataset
@@ -231,7 +233,7 @@ class Group(h5py.Group, ShowGUIMixin):
             name = self.find_unique_name(name)
         dset = super(Group, self).create_dataset(name, shape, dtype, data, *args, **kwargs)
         if timestamp:
-            dset.attrs.create('creation_timestamp', datetime.datetime.now().isoformat())
+            dset.attrs.create('creation_timestamp', datetime.datetime.now().isoformat().encode())
         if hasattr(data, "attrs"): #if we have an ArrayWithAttrs, use the attrs!
             attributes_from_dict(dset, data.attrs)
         if attrs is not None:
@@ -315,8 +317,8 @@ class DataFile(Group):
     change in the future...
     """
 
-    def __init__(self, name, mode=None, save_version_info=True,
-                 update_current_group = True, *args, **kwargs):
+    def __init__(self, name, mode=None, save_version_info=False,
+                 update_current_group=True, *args, **kwargs):
         """Open or create an HDF5 file.
 
         :param name: The filename/path of the HDF5 file to open or create, or an h5py File object
@@ -344,10 +346,10 @@ class DataFile(Group):
             n=0
             while "version_info_%04d" % n in self.attrs:
                 n += 1
-            #try:
-            self.attrs.create("version_info_%04d" % n, str(nplab.utils.version.version_info_string()))
-            #except:
-            #    print "Error: could not save version information"
+            try:
+                self.attrs.create("version_info_%04d" % n, np.string_(nplab.utils.version.version_info_string()))
+            except:
+               print("Error: could not save version information")
         self.update_current_group = update_current_group
 
     def flush(self):
@@ -393,12 +395,12 @@ def current(create_if_none=True, create_if_closed=True, mode='a',working_directo
     global _current_datafile
     if create_if_closed:  # try to access the file - if it's closed, it will fail
         try:
-            _current_datafile.keys()
+            list(_current_datafile.keys())
         except:  # if the file is closed, set it to none so we make a new one.
             _current_datafile = None
 
     if _current_datafile is None and create_if_none:
-        print "No current data file, attempting to create..."
+        print("No current data file, attempting to create...")
         if working_directory==None:
             working_directory=os.getcwd()
         try:  # we try to pop up a Qt file dialog
@@ -412,10 +414,10 @@ def current(create_if_none=True, create_if_closed=True, mode='a',working_directo
                 filter="HDF5 Data (*.h5 *.hdf5)",
                 options=QtWidgets.QFileDialog.DontConfirmOverwrite,
             )
-            if not isinstance(fname, basestring):
+            if not isinstance(fname, str):
                 fname = fname[0]  # work around version-dependent Qt behaviour :(
             if len(fname) > 0:
-                print fname
+                print(fname)
                 if not "." in fname:
                     fname += ".h5"
                 set_current(fname, mode=mode)
@@ -424,10 +426,10 @@ def current(create_if_none=True, create_if_closed=True, mode='a',working_directo
             #                else:
             #                    set_current(fname,mode='w-') #create the datafile
             else:
-                print "Cancelled by the user."
+                print("Cancelled by the user.")
         except Exception as e:
-            print "File dialog went wrong :("
-            print e
+            print("File dialog went wrong :(")
+            print(e)
 
     if _current_datafile is not None:
         return _current_datafile  # if there is a file (or we created one) return it
@@ -445,14 +447,14 @@ def set_current(datafile, **kwargs):
         _current_datafile = DataFile(datafile)
         return _current_datafile
     else:
-        print "opening file: ", datafile
+        print("opening file: ", datafile)
         try:
             _current_datafile = DataFile(datafile, **kwargs)  # open a new datafile
             return _current_datafile
         except Exception as e:
-            print "problem opening file:"
-            print e
-            print "trying with mode=r+"
+            print("problem opening file:")
+            print(e)
+            print("trying with mode=r+")
             kwargs['mode'] = 'r+'  # dirty hack to work around mode=a not working
             _current_datafile = DataFile(datafile, **kwargs)
 
@@ -469,7 +471,7 @@ def close_current():
         try:
             _current_datafile.close()
         except:
-            print "Error closing the data file"
+            print("Error closing the data file")
 _current_group = None
 _use_current_group = False
 def set_current_group(selected_object):
@@ -478,7 +480,7 @@ def set_current_group(selected_object):
     global _current_group
     try:
         if type(selected_object) == DummyHDF5Group:
-            potential_group = selected_object.values()[0]
+            potential_group = list(selected_object.values())[0]
         else:
             potential_group = selected_object
         if type(selected_object) == Group or type(selected_object)==h5py.Group:
@@ -501,19 +503,19 @@ def open_file(set_current_bool = True,mode = 'a'):
             filter="HDF5 Data (*.h5 *.hdf5)",
 #            options=qtgui.QFileDialog.DontConfirmOverwrite,
         )
-        if not isinstance(fname, basestring):
+        if not isinstance(fname, str):
             fname = fname[0]  # work around version-dependent Qt behaviour :(
         if len(fname) > 0:
-            print fname
+            print(fname)
             if set_current_bool == True:
                 set_current(fname, mode=mode)
             else:
                 return DataFile(fname,mode = mode )
         else:
-            print "Cancelled by the user."
+            print("Cancelled by the user.")
     except Exception as e:
-            print "File dialog went wrong :("
-            print e
+            print("File dialog went wrong :(")
+            print(e)
 
     return _current_datafile  # if there is a file return it
 
@@ -530,19 +532,19 @@ def create_file(set_current_bool = False,mode = 'a'):
             filter="HDF5 Data (*.h5 *.hdf5)",
 #            options=qtgui.QFileDialog.DontConfirmOverwrite,
         )
-        if not isinstance(fname, basestring):
+        if not isinstance(fname, str):
             fname = fname[0]  # work around version-dependent Qt behaviour :(
         if len(fname) > 0:
-            print fname
+            print(fname)
             if set_current_bool == True:
                 set_current(fname, mode=mode)
             else:
                 return DataFile(fname,mode = mode )
         else:
-            print "Cancelled by the user."
+            print("Cancelled by the user.")
     except Exception as e:
-            print "File dialog went wrong :("
-            print e
+            print("File dialog went wrong :(")
+            print(e)
 
     return _current_datafile  # if there is a file return it
 

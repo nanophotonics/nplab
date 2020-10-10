@@ -1,3 +1,8 @@
+from __future__ import division
+from __future__ import print_function
+from builtins import str
+from builtins import range
+from past.utils import old_div
 import os,sys,math, numpy as np, matplotlib.pyplot as plt 
 import ctypes
 from ctypes import *
@@ -178,12 +183,12 @@ class Adlink9812(Instrument):
 		cardBuffer = (c_ushort*card_buffer_size)()
 
 		#user buffers
-		user_buffer_size = card_buffer_size/2 #half due to being full when buffer is read
+		user_buffer_size = old_div(card_buffer_size,2) #half due to being full when buffer is read
 		nbuff = int(math.ceil(sample_count/float(user_buffer_size)))
 		
 		# uBs = [(c_double*user_buffer_size)()]*nbuff
 		uBs = []
-		print uBs
+		print(uBs)
 		# oBs = [(c_double*user_buffer_size)()]*nbuff
 		oBs = []
 		if verbose:
@@ -326,7 +331,7 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 	def set_bin_width(self):
 		try:
 			self.bin_width = float(self.binning_textbox.text())
-		except Exception, e:
+		except Exception as e:
 			self.log(message="Failed parsing binning_threshold: {0}".format(self.binning_textbox.text()))
 		return
 
@@ -334,7 +339,7 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 		MHz = 1e6
 		try:
 			self.sample_freq = int(float(self.sample_freq_textbox.text())*MHz)
-		except Exception,e:
+		except Exception as e:
 			self.log(message="Failed parsing sample_freq_textbox value to float:"+str(self.sample_freq_textbox.text()))
 			return
 		return
@@ -345,11 +350,11 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 
 			self.sample_count = int(float(self.sample_count_textbox.text()))
 			if self.verbose>0:
-				print "Sample Count: {0} [Counts]".format(self.sample_count)
+				print("Sample Count: {0} [Counts]".format(self.sample_count))
 
 			self.sample_count = int(float(self.sample_count_textbox.text()))
 
-		except Exception,e:
+		except Exception as e:
 			self.log(message="Failed parsing sample count to int:"+self.sample_freq_textbox.text())
 		return
 
@@ -438,7 +443,7 @@ class Adlink9812UI(QtWidgets.QWidget, UiTools):
 		#convert rounded difference to integers
 		thresholded = np.absolute(dls_signal_postprocessing.signal_diff(voltages)).astype(int)
 		total_counts = np.sum(thresholded)
-		count_rate = total_counts/sample_time
+		count_rate = old_div(total_counts,sample_time)
 		self.log("Total Counts: {0} [counts], Rate: {1} [counts/s]".format(int(total_counts), count_rate))
 		return total_counts, count_rate 
 

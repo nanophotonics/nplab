@@ -1,3 +1,5 @@
+from __future__ import print_function
+from builtins import str
 __author__ = 'alansanders'
 
 from nplab.instrument import Instrument
@@ -26,7 +28,7 @@ class LightSource(Instrument):
 
     def set_power(self, value):
         """Set the current power of the light source"""
-        print value
+        print(value)
 
     def _get_power(self):
         """Wrapper for get_power so we don't need to redefine properties"""

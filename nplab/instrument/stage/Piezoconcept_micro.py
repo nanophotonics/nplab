@@ -4,6 +4,8 @@ Created on Thu Oct 01 11:52:44 2015
 
 @author: wmd22
 """
+from __future__ import print_function
+from builtins import str
 import serial
 
 import nplab.instrument.serial_instrument as si
@@ -48,7 +50,7 @@ class Piezoconcept(si.SerialInstrument,Stage):
             multiplier=0.001
         if self.unit == "u":
             multiplier=1.0
-        print value
+        print(value)
         if relative ==False:
             if value*multiplier < 1E2 and value*multiplier >=0:
                 if (value*multiplier-0.2*multiplier)>0:
@@ -63,10 +65,10 @@ class Piezoconcept(si.SerialInstrument,Stage):
             else:
                 self.log("The value is out of range! 0-100 um (0-1E8 nm) (Z)",level = 'WARN')
         time.sleep(0.1)
-        print value,self.position
+        print(value,self.position)
     def get_position(self):
         str_pos = self.query('GET_X')[:-3]
-        print "'"+str_pos+"'"
+        print("'"+str_pos+"'")
         return float(self.query('GET_X')[:-3])
                 
     def move_step(self,direction):

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from builtins import object
 from nplab.utils import monitor_property
 import threading
 import time

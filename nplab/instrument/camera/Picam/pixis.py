@@ -1,4 +1,5 @@
-''' 
+# -*- coding: utf-8 -*-
+"""
 # Ralf Mouthaan, Ilya Manyakin, Ermanno Miele
 # University of Cambridge
 # October 2018
@@ -20,22 +21,29 @@
 Development notes:
     * API for DLL: Picam 5.x Programmers Manual, 4411-0161, Issue 5, August 2018
     
-'''
+"""
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
 
+from builtins import range
+from past.utils import old_div
 import ctypes as ct
 import numpy as np
 from matplotlib import pyplot as plt
 from nplab.instrument.camera import Camera
-
 import sys,os, time
-from picam_constants import PicamSensorTemperatureStatus,PicamParameter,PicamValueType,PicamError,transpose_dictionary,PI_V,PicamConstraintType
+
+from .picam_constants import PicamSensorTemperatureStatus,PicamParameter,PicamValueType,PicamError,transpose_dictionary,PI_V,PicamConstraintType
 
 import logging
 PARENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
+
 class clsPicamReadoutStruct(ct.Structure):
     _fields_ = [("ptr", ct.c_void_p),
                 ("intCount", ct.c_int64)]
+
 
 class Pixis(Camera):
     def __init__(self,with_start_up = False,debug=0):
@@ -60,7 +68,7 @@ class Pixis(Camera):
         try:
             image  = self.GetCurrentFrame()
             return True, image
-        except Exception, e:
+        except Exception as e:
             if suppress_errors==True:
                 False, None
             else:
@@ -74,17 +82,17 @@ class Pixis(Camera):
             y_max = self.y_max
 
         if debug > 0:
-            print "Pixis.get_roi region of interest:",x_min,x_max,y_min,y_max
+            print("Pixis.get_roi region of interest:",x_min,x_max,y_min,y_max)
         roi_image = raw_image[max(0,y_min):min(y_max,self.y_max),max(0,x_min):min(self.x_max,x_max)]
         if debug > 0:
-            print "Pixis.roi_image.shape:",roi_image.shape
+            print("Pixis.roi_image.shape:",roi_image.shape)
         return roi_image
 
     def get_spectrum(self, x_min=0, x_max = None, y_min=0,y_max = None,with_boundary_cut = True, suppress_errors=False):    
         roi_image = self.get_roi(x_min,x_max,y_min,y_max,suppress_errors)
         #cut edge values from raw spectrum - remove edge effects
         raw_spectrum = np.mean(roi_image,axis=0)
-        pixel_offsets = np.array(range(0,len(raw_spectrum)))-int(self.FrameWidth/2)
+        pixel_offsets = np.array(list(range(0,len(raw_spectrum))))-int(self.FrameWidth/2)
         if with_boundary_cut == True:
             return raw_spectrum[self.boundary_cut:-self.boundary_cut], pixel_offsets[self.boundary_cut:-self.boundary_cut]
 
@@ -92,35 +100,35 @@ class Pixis(Camera):
             return raw_spectrum,pixel_offsets
 
     def get_parameter(self,parameter_name, label="unknown"):
-        '''
+        """
         Perform GetParameterIntegerValue calls to DLL
         parameter_name : name of parameter as specified in the picam_constants.py file
-        '''
+        """
 
         if self.debug > 0:
-            print "pixis.get_parameter::parameter_name:{}".format(parameter_name)
+            print("pixis.get_parameter::parameter_name:{}".format(parameter_name))
         self.picam.PicamAdvanced_RefreshParametersFromCameraDevice(self.CameraHandle)
-        assert(parameter_name in PicamParameter.keys()) #Check that the passed parameter name is valid (ie. in constants file)
+        assert(parameter_name in list(PicamParameter.keys())) #Check that the passed parameter name is valid (ie. in constants file)
         param_type, constraint_type, n = PicamParameter[parameter_name]
         if self.debug > 0:
-            print "pixis:get_parameter::param_type: {}".format(param_type)
-            print "pixis:get_parameter::constraint_type: {}".format(constraint_type)
-            print "pixis:get_parameter::n: {}".format(n)
+            print("pixis:get_parameter::param_type: {}".format(param_type))
+            print("pixis:get_parameter::constraint_type: {}".format(constraint_type))
+            print("pixis:get_parameter::n: {}".format(n))
 
         param_id = PI_V(value_type=param_type, constraint_type= constraint_type, parameter_index=n)
 
         #assert returned parameter value type is valid one
-        valid_value_types = transpose_dictionary(PicamValueType).keys()
+        valid_value_types = list(transpose_dictionary(PicamValueType).keys())
         assert(param_type in valid_value_types)
 
         #assert returned parameter constraint type is valid one
-        valid_constraint_types = transpose_dictionary(PicamConstraintType).keys()
+        valid_constraint_types = list(transpose_dictionary(PicamConstraintType).keys())
         assert(constraint_type in valid_constraint_types)
         
         paramtype = param_type.replace("PicamValueType_","")
 
         if self.debug > 0:
-            print "paramtype:", paramtype
+            print("paramtype:", paramtype)
 
         if paramtype == "Enumeration":
             paramtype="IntegerValue"
@@ -130,9 +138,9 @@ class Pixis(Camera):
 
         function_name = "Picam_GetParameter{}".format(paramtype)
         if self.debug > 0:
-            print "Function name:",function_name
-            print "Parameter name:", parameter_name
-            print "Parameter id:",param_id 
+            print("Function name:",function_name)
+            print("Parameter name:", parameter_name)
+            print("Parameter id:",param_id) 
             # print "Function object", f
         
         getter = getattr(self.picam,function_name,None)
@@ -140,7 +148,7 @@ class Pixis(Camera):
             raise ValueError("Getter is none!")
         else:
             if self.debug > 0:
-                print getter
+                print(getter)
         temp =  {
             "PicamValueType_Integer" : ct.c_int(),
             "PicamValueType_Boolean" : ct.c_bool(),
@@ -158,14 +166,14 @@ class Pixis(Camera):
 
         value = temp[param_type]
         if self.debug > 0:
-            print "pixis.get_parameter::param_type: {}".format(param_type)
-            print "pixis.get_parameter::value: {}".format(value)
+            print("pixis.get_parameter::param_type: {}".format(param_type))
+            print("pixis.get_parameter::value: {}".format(value))
         if value is not None:
             response = getter(self.CameraHandle,param_id, ct.pointer(value))
 
             if response != 0:
-                print("Could not GET value of parameter {0} [label:{1}]".format(parameter_name,label))
-                print("[Code:{0}] {1}".format(response, PicamError[response]))
+                print(("Could not GET value of parameter {0} [label:{1}]".format(parameter_name,label)))
+                print(("[Code:{0}] {1}".format(response, PicamError[response])))
                 return np.nan
         
             return value.value
@@ -184,16 +192,16 @@ class Pixis(Camera):
         Perform GetParameterIntegerValue calls to DLL
         parameter_name : name of parameter as specified in the picam_constants.py file
         '''
-        assert(parameter_name in PicamParameter.keys()) #Check that the passed parameter name is valid (ie. in constants file)
+        assert(parameter_name in list(PicamParameter.keys())) #Check that the passed parameter name is valid (ie. in constants file)
         param_type, constraint_type, n = PicamParameter[parameter_name]
         param_id = PI_V(value_type=param_type, constraint_type= constraint_type, parameter_index=n)
 
         #assert returned parameter value type is valid one
-        valid_value_types = transpose_dictionary(PicamValueType).keys()
+        valid_value_types = list(transpose_dictionary(PicamValueType).keys())
         assert(param_type in valid_value_types)
 
         #assert returned parameter constraint type is valid one
-        valid_constraint_types = transpose_dictionary(PicamConstraintType).keys()
+        valid_constraint_types = list(transpose_dictionary(PicamConstraintType).keys())
         assert(constraint_type in valid_constraint_types)
         
 
@@ -201,9 +209,9 @@ class Pixis(Camera):
         setter = getattr(self.picam,function_name)
         # setter = self.picam.Picam_SetParameterFloatingPointValue
         if self.debug > 0:
-            print "Function name:",function_name
-            print "Paramer type, Constraint type, n:", param_type, constraint_type, n
-            print "Function object", setter
+            print("Function name:",function_name)
+            print("Paramer type, Constraint type, n:", param_type, constraint_type, n)
+            print("Function object", setter)
         
         temp =  {
             "PicamValueType_Integer" : ct.c_int,
@@ -221,26 +229,26 @@ class Pixis(Camera):
 
         if value is not None:
             if self.debug > 0:
-                print "setting: param_id:  {0}, value:{1}".format(param_id,value)
+                print("setting: param_id:  {0}, value:{1}".format(param_id,value))
 
             response = setter(self.CameraHandle,param_id, value)
             if response != 0:
-                print("Could not SET value of parameter {0} [label:{1}]".format(parameter,label))
-                print("[Code:{0}] {1}".format(response, PicamError[response]))
+                print(("Could not SET value of parameter {0} [label:{1}]".format(parameter,label)))
+                print(("[Code:{0}] {1}".format(response, PicamError[response])))
                 return np.nan
             #check if commit failed
             failed_commit = (ct.c_int*10)()
             failed_count = ct.c_int()
             response = self.picam.Picam_CommitParameters(self.CameraHandle,ct.byref(failed_commit),ct.byref(failed_count))
             if self.debug > 0:
-                print "Picam_CommitParameters response:",response, failed_count, list(failed_commit)
+                print("Picam_CommitParameters response:",response, failed_count, list(failed_commit))
             
             assert(int(failed_count.value) == 0)
             #check if commit has passed
             committed = ct.c_bool(False)
             response = self.picam.Picam_AreParametersCommitted(self.CameraHandle,ct.byref(committed))
             if self.debug> 0:
-                    print "Picam_CommitParameters response:",response, committed
+                    print("Picam_CommitParameters response:",response, committed)
 
             assert(bool(committed.value) == True)
             
@@ -261,7 +269,7 @@ class Pixis(Camera):
         # Find DLL
         try:
             self.picam = ct.WinDLL(os.path.normpath('{}/picam_64bit.dll'.format(PARENT_DIR)))
-        except Exception,e:
+        except Exception as e:
             logging.warning("Error:",e)
             logging.info("Could not find picam dll")
             return
@@ -282,7 +290,7 @@ class Pixis(Camera):
 
         self.x_max = self.FrameWidth = self.get_parameter(parameter_name="PicamParameter_SensorActiveWidth", label="frame width")
         self.y_max = self.FrameHeight = self.get_parameter(parameter_name="PicamParameter_SensorActiveHeight", label="frame height")
-        print "Frame size:", self.x_max, self.y_max
+        print("Frame size:", self.x_max, self.y_max)
         self.bolRunning = True
         self.SetTemperatureWithLock(-80.0)
 
@@ -309,12 +317,12 @@ class Pixis(Camera):
         self.__SetSensorTemperatureSetPoint(temperature)
         status_code = p.GetTemperatureStatus()
         while PicamSensorTemperatureStatus[status_code] != "PicamSensorTemperatureStatus_Locked":
-            print "TemperatureStatus: {3}[{2}] (current: {0}, target:{1})".format(p.GetSensorTemperatureReading(), temperature,status_code, PicamSensorTemperatureStatus[status_code])
+            print("TemperatureStatus: {3}[{2}] (current: {0}, target:{1})".format(p.GetSensorTemperatureReading(), temperature,status_code, PicamSensorTemperatureStatus[status_code]))
             time.sleep(0.5)
             status_code = p.GetTemperatureStatus()
 
         status_code = p.GetTemperatureStatus()
-        print "TemperatureStatus: {0} [{1}]".format(PicamSensorTemperatureStatus[status_code], status_code)
+        print("TemperatureStatus: {0} [{1}]".format(PicamSensorTemperatureStatus[status_code], status_code))
         return
 
 
