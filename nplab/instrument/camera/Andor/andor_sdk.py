@@ -206,7 +206,21 @@ class AndorBase(object):
             return
         if error != 20002:
             raise AndorWarning(error, funcname, ERROR_CODE[error])
-
+    
+    
+    @property
+    def multitrack(self):
+        return self._multitrack
+    
+    @multitrack.setter        
+    def multitrack(self, params):
+        bottom = c_int()
+        gap = c_int()
+        assert len(params) == 3, 'length must be 3'
+        self.dll.SetMultiTrack(*params, byref(bottom), byref(gap))
+        self._multitrack = params
+        self._logger.info(f'bottom, gap: {bottom}, {gap}')
+   
     def set_andor_parameter(self, param_loc, *inputs):
         """Parameter setter
 
@@ -230,7 +244,7 @@ class AndorBase(object):
             form_in = ()
             if 'Input_params' in func:
                 for input_param in func['Input_params']:
-                    form_in += ({'value': getattr(self, input_param[0]), 'type': input_param[1]},)
+                    form_in += ({'value': getattr(self, self._parameters['DetectorShape'][0], self._parameters['FVBHBin'][0]), 'type': input_param[1]},)
             for ii in range(len(inputs)):
                 form_in += ({'value': inputs[ii], 'type': func['Inputs'][ii]},)
             try:
@@ -501,6 +515,9 @@ class AndorBase(object):
                     image_shape = (old_div(self._parameters['IsolatedCropMode'][2], self._parameters['IsolatedCropMode'][4]), )
                 else:
                     image_shape = (old_div(self._parameters['DetectorShape'][0], self._parameters['FVBHBin']), )
+            elif self._parameters['ReadMode'] == 1: #random track
+                image_shape = (self.multitrack[0], self._parameters['DetectorShape'][0] // self._parameters['FVBHBin'])
+            
             elif self._parameters['ReadMode'] == 3:
                 image_shape = (self._parameters['DetectorShape'][0],)
             elif self._parameters['ReadMode'] == 4:
