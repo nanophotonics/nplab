@@ -134,7 +134,11 @@ class SlmDisplay(QtWidgets.QWidget):
             self.LUT = interp1d(phase, gray_level)
 
     def set_image(self, phase, slm_monitor=None):
-        phase = phase % (2 * np.pi)
+        # Makes phase go from 0 to 2*pi, and removes floating point errors
+        phase = (phase + 0.1*np.pi / 2 ** self._bitness) % (2 * np.pi) - 0.1*np.pi / 2 ** self._bitness
+        # Makes phase go from -pi to pi
+        phase -= np.pi
+        # Transform into SLM display values
         phase = self.LUT(phase)
 
         self.update_image.emit(phase)
@@ -156,8 +160,7 @@ class SlmDisplay(QtWidgets.QWidget):
         :return:
         """
         img = phase.ravel()
-        # img_slm = np.dstack((img, img, img, img)).astype(np.uint8)
-        # self._QImage = QtGui.QImage(img_slm, phase.shape[1], phase.shape[0], QtGui.QImage.Format_RGB32)
+
         if self._bitness == 8:
             self._QImage = QtGui.QImage(img.astype(np.uint8), phase.shape[1], phase.shape[0], QtGui.QImage.Format_Grayscale8)
         else:
@@ -319,6 +322,10 @@ class SlmUi(QtWidgets.QWidget, UiTools):
             all_params[name] = widget.get_params()
         self.SLM._logger.debug('get_gui_phase_params: %s' % all_params)
         return all_params
+
+    def closeEvent(self, event):
+        if self.SLM.Display is not None:
+            self.SLM.Display.close()
 
 
 if __name__ == "__main__":
