@@ -190,7 +190,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         self.temperature_display_thread.ready.connect(self.update_temperature_display)
     
     def set_multitrack(self):
-        self.Andor.multitrack = self.spinBoxTracks.value(), self.spinBoxHeight.value(), self.spinBoxOffset.value()
+        self.Andor.MultiTrack = self.spinBoxTracks.value(), self.spinBoxHeight.value(), self.spinBoxOffset.value()
 
     def init_gui(self):
         trig_modes = {0: 0, 1: 1, 6: 2}
