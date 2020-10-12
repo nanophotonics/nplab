@@ -288,5 +288,8 @@ class DummyCameraRoiScale(CameraRoiScale):
 if __name__ == '__main__':
 
     dcrd = DummyCameraRoiScale()
-    dcrd.show_gui(blocking=False)
+    dcrd.data = 1
+    gui = dcrd.show_gui(blocking=False)
+    dw = gui.preview_widget
+    dw.setImage(np.random.random((200, 1600)))
 

@@ -145,6 +145,7 @@ class ExtendedImageView(pg.ImageView):
             self.ui.roiBtn.hide()
             self.ui.menuBtn.hide()
 
+    
     def roiClicked(self):
         """Ensures that the new widget in the splitter is displayed"""
         super(ExtendedImageView, self).roiClicked()
@@ -219,8 +220,10 @@ class ExtendedImageView(pg.ImageView):
         :param data:
         :return:
         """
-        (minval, maxval) = super(ExtendedImageView, self).quickMinMax(data)[0]
-
+        mm = super(ExtendedImageView, self).quickMinMax(data)
+        while type(mm[0]) in [list, tuple]: # 3.7 vs 3.8 fix
+            mm = mm[0]
+        minval, maxval = mm
         rng = maxval - minval
         levelmin = minval + rng * self.level_percentiles[0] / 100.
         levelmax = minval + rng * self.level_percentiles[1] / 100.

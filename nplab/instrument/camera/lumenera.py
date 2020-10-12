@@ -183,7 +183,7 @@ class LumeneraCamera(Camera):
         We keep track of the frame rate, and convert each frame to RGB so we 
         can store it in latest_image and thus update the GUI.
         """
-        now = time.clock()
+        now = time.time() #clock()
         self.fps = old_div(1,(now - self.last_frame_time))
         self.last_frame_time = now
         try:
