@@ -4,7 +4,7 @@ from __future__ import division
 from builtins import zip
 from builtins import range
 from past.utils import old_div
-from nplab.utils.gui import QtWidgets, QtGui, QtCore, uic, get_qt_app
+from nplab.utils.gui import QtWidgets, QtGui, QtCore, uic, get_qt_app, gui_save_settings, gui_load_settings
 from nplab.ui.ui_tools import UiTools
 from nplab.instrument import Instrument
 import pyqtgraph.dockarea as dockarea
@@ -294,6 +294,20 @@ class SlmUi(QtWidgets.QWidget, UiTools):
             self.all_widgets[option] = widget
             self.all_docks += [dock]
         self.make_pushButton.pressed.connect(self.make)
+        self.save_pushButton.pressed.connect(self.save)
+        self.load_pushButton.pressed.connect(self.load)
+
+    @property
+    def settings_filename(self):
+        filename = self.filename_lineEdit.text()
+        if filename == '':
+            filename = os.path.join(os.path.dirname(__file__), 'settings.ini')
+            self.filename_lineEdit.setText(filename)
+        return filename
+
+    @settings_filename.setter
+    def settings_filename(self, value):
+        self.filename_lineEdit.setText(value)
 
     def make(self):
         parameters = self.get_gui_phase_params()
@@ -311,6 +325,23 @@ class SlmUi(QtWidgets.QWidget, UiTools):
         # The data is transposed according to the pyqtgraph documentation for axis ordering
         # http://www.pyqtgraph.org/documentation/widgets/imageview.html
         self.PhaseDisplay.setImage(np.copy(phase).transpose())
+
+    def save(self):
+        gui_settings = QtCore.QSettings(self.settings_filename, QtCore.QSettings.IniFormat)
+        # self.save_settings(gui_settings, 'base')
+        for name, widget in list(self.all_widgets.items()):
+            widget.save_settings(gui_settings, name)
+            # gui_save_settings(widget, gui_settings, name)
+            # all_params[name] = widget.get_params()
+        return
+
+    def load(self):
+        gui_settings = QtCore.QSettings(self.settings_filename, QtCore.QSettings.IniFormat)
+        # self.load_settings(gui_settings, 'base')
+        for name, widget in list(self.all_widgets.items()):
+            widget.load_settings(gui_settings, name)
+            # gui_load_settings(widget, gui_settings, name)
+        return
 
     def get_gui_phase_params(self):
         """Iterates over all widgets, calling get_params, and storing the returns in a dictionary

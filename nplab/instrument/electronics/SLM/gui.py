@@ -9,11 +9,12 @@ from __future__ import division
 from builtins import str
 from past.utils import old_div
 from nplab.utils.gui import QtWidgets, uic
+from nplab.ui.ui_tools import UiTools
 import os
 import numpy as np
 
 
-class BaseUi(QtWidgets.QWidget):
+class BaseUi(QtWidgets.QWidget, UiTools):
     def __init__(self, slm_gui, name):
         super(BaseUi, self).__init__()
         uic.loadUi(os.path.join(os.path.dirname(__file__), 'ui_%s.ui' % name), self)
