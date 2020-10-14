@@ -38,7 +38,7 @@ class VisaInstrument(MessageBusInstrument):
         except Exception as e:
             print("The serial port didn't close cleanly:", e)
 
-    def write(self, *args, **kwargs):
+    def _write(self, *args, **kwargs):
         return self.instr.write(*args, **kwargs)
 
     def read(self, *args, **kwargs):

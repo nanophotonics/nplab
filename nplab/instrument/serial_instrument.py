@@ -106,7 +106,7 @@ class SerialInstrument(MessageBusInstrument):
     def __del__(self):
         self.close()
 
-    def write(self,query_string, ignore_echo=False, timeout=None):
+    def _write(self,query_string, ignore_echo=False, timeout=None):
         """Write a string to the serial port"""
         with self.communications_lock:
             assert self.ser.isOpen(), "Warning: attempted to write to the serial port before it was opened.  Perhaps you need to call the 'open' method first?"

@@ -74,11 +74,15 @@ class MessageBusInstrument(nplab.instrument.Instrument):
             self._communications_lock = threading.RLock()
         return self._communications_lock
 
-    def write(self,query_string):
+    def write(self, query_string, timeout=None):
         """Write a string to the unerlying communications port"""
         with self.communications_lock:
-            raise NotImplementedError("Subclasses of MessageBusInstrument must override the write method!")
-            
+            self._write(query_string)
+            self._check_echo(query_string, timeout)
+
+    def _write(self, query_string):
+        raise NotImplementedError("Subclasses of MessageBusInstrument must override the _write method!")
+
     def flush_input_buffer(self):
         """Make sure there's nothing waiting to be read.
 
@@ -127,12 +131,7 @@ class MessageBusInstrument(nplab.instrument.Instrument):
         """
         with self.communications_lock:
             self.flush_input_buffer()
-            self.write(queryString)
-            if self.ignore_echo:
-                echo_line = self.readline(timeout).strip()
-                if echo_line != queryString:
-                    self._logger.warn('Command did not echo: %s' % queryString)
-                    return echo_line
+            self.write(queryString, timeout)
 
             if termination_line is not None:
                 multiline = True
@@ -140,7 +139,13 @@ class MessageBusInstrument(nplab.instrument.Instrument):
                 return self.read_multiline(termination_line)
             else:
                 return self.readline(timeout).strip() #question: should we strip the final newline?
-    
+
+    def _check_echo(self, echo_string, timeout=None):
+        if self.ignore_echo:
+            echo_line = self.readline(timeout).strip()
+            if echo_line != echo_string:
+                self._logger.warn('Command did not echo: %s' % echo_string)
+
     def parsed_query_old(self, query_string, response_string=r"(\d+)", re_flags=0, parse_function=int, **kwargs):
         """
         Perform a query, then parse the result.
