@@ -9,12 +9,12 @@ from nplab.utils.gui import QtWidgets, uic, QtCore
 import os
 
 from nplab.instrument.visa_instrument import VisaInstrument
-from nplab.instrument.temperatureControl import TemperatureControl
+from nplab.instrument.temperatureControl import TemperatureControlMixin
 
 
-class OxfordITC(VisaInstrument, TemperatureControl):
+class OxfordITC(VisaInstrument, TemperatureControlMixin):
     def __init__(self, address, **kwargs):
-        TemperatureControl.__init__(self)
+        TemperatureControlMixin.__init__(self)
         if 'GPIB' in address:
             VisaInstrument.__init__(self, address, settings=dict(timeout=10000, read_termination='\r',
                                                                  write_termination='\r'))

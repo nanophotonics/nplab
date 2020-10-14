@@ -157,12 +157,14 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
             self.actions['Views'][instr] = action
 
     def _toggleView(self, instr):
-        """A function for togalling a single gui """
+        """A function for toggling a single gui """
+        dock = self.allDocks[instr]
         if self.actions['Views'][instr].isChecked():
-            self.allDocks[instr].show()
-            self.dockwidgetArea.addDock(self.allDocks[instr], 'left')
+            self.dockwidgetArea.addDock(dock, 'left')
+            dock.show()
+            dock.showTitleBar()
         else:
-            self.allDocks[instr].close()
+            dock.close()
 
     def _setupSignals(self):
         """Connect signals for the different general gui buttons/menu's """
@@ -244,8 +246,7 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
                 'The dock_settings file does not exist! or it is for the wrong docks!')
 
     def menuNewExperiment(self):
-        """A start new experiement button casuing the gui to close ask for a new file
-            and reopen"""
+        """A start new experiment button causing the gui to close ask for a new file and reopen"""
         dock_state = self.dockWidgetArea.saveState()
         self.toggle_browser()
         self.data_file.flush()
@@ -255,13 +256,12 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
         self._open_one_gui('HDF5')
         self.dockWidgetArea.restoreState(dock_state)
 
-
     def menuSaveExperiment(self):
         """push to data to hard drive """
         self.data_file.flush()
 
     def menuCloseExperiment(self):
-        """Close the current data_file """
+        """Close the current data_file"""
         try:
             self.data_file.flush()
             self.data_file.close()
@@ -337,17 +337,19 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
 
     def refreshScriptMenu(self):
         """clear and recompile the scripts menu """
+        self._logger.debug('Refreshing script menu')
         self.script_menu.clear()
         self.makeScriptMenu()
 
     def menuScriptClicked(self, scriptname):
         """Runs the selected script """
+        self._logger.debug('Script menu clicked: %s' % scriptname)
         if self.terminal:
             if self.terminalWindow is None:
                 self.menuTerminal()
-                self.terminalWindow.run_script(scriptname)
-        else: 
-            print('Running',os.path.join(self.scripts_path, scriptname))
+            self.terminalWindow.run_script(scriptname)
+        else:
+            self._logger.debug('Running %s' % os.path.join(self.scripts_path, scriptname))
             exec(open(os.path.join(self.scripts_path, scriptname)).read())
             
     def VerboseChanged(self, action):
@@ -369,7 +371,7 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
     def closeEvent(self, event):
         """A quick are you sure you want to quit function """
         quit_msg = "Are you sure you want to exit the program?"
-        print(quit_msg)
+        self._logger.info(quit_msg)
         try:
             if os.environ["QT_API"] == "pyqt5":
                 reply = QtWidgets.QMessageBox.question(self, 'Message', quit_msg,
@@ -390,8 +392,13 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
                 #                self.experiment.ExpFile.flush()
                 #                self.experiment.ExpFile.close()
                 #            self.experiment.__del__()
+                for wdgt in self.allWidgets.values():
+                    # Explicitly calling QtWidget.close(), so that individual instruments GUIs can follow their own
+                    # closing procedures
+                    wdgt.close()
                 event.accept()
             else:
                 event.ignore()
         except Exception as e:
+            event.ignore()
             print(e)
