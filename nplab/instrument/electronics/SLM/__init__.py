@@ -4,7 +4,7 @@ from __future__ import division
 from builtins import zip
 from builtins import range
 from past.utils import old_div
-from nplab.utils.gui import QtWidgets, QtGui, QtCore, uic, get_qt_app, gui_save_settings, gui_load_settings
+from nplab.utils.gui import QtWidgets, QtGui, QtCore, uic, get_qt_app
 from nplab.ui.ui_tools import UiTools
 from nplab.instrument import Instrument
 import pyqtgraph.dockarea as dockarea
@@ -328,19 +328,16 @@ class SlmUi(QtWidgets.QWidget, UiTools):
 
     def save(self):
         gui_settings = QtCore.QSettings(self.settings_filename, QtCore.QSettings.IniFormat)
-        # self.save_settings(gui_settings, 'base')
+        self.save_settings(gui_settings, 'base')
         for name, widget in list(self.all_widgets.items()):
             widget.save_settings(gui_settings, name)
-            # gui_save_settings(widget, gui_settings, name)
-            # all_params[name] = widget.get_params()
         return
 
     def load(self):
         gui_settings = QtCore.QSettings(self.settings_filename, QtCore.QSettings.IniFormat)
-        # self.load_settings(gui_settings, 'base')
+        self.load_settings(gui_settings, 'base')
         for name, widget in list(self.all_widgets.items()):
             widget.load_settings(gui_settings, name)
-            # gui_load_settings(widget, gui_settings, name)
         return
 
     def get_gui_phase_params(self):
