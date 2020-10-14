@@ -91,6 +91,9 @@ class ArduinoRotator(SerialInstrument):
         self.STEPS_PER_REV = self.STEPS_PER_REV*(rotations)/(rotations+overshoot/360)
         print(f'steps per rev = {self.STEPS_PER_REV} ')
     
+    def info(self):
+        print('test')
+    
 if __name__ == '__main__':    
     ard = ArduinoRotator('COM5')
     ard._logger.setLevel('INFO')
