@@ -451,21 +451,12 @@ class AndorBase(object):
         """Sets the initial parameters for the Andor typical for our experiments"""
         self._dll_wrapper('Initialize', outputs=(c_char(),))
         self.channel = 0
-        self.set_andor_parameter('ReadMode', 4)
-        self.set_andor_parameter('AcquisitionMode', 1)
-        self.set_andor_parameter('TriggerMode', 0)
-        self.set_andor_parameter('Exposure', 0.01)
         detector_shape = self.get_andor_parameter('DetectorShape')
         self.set_andor_parameter('Image', 1, 1, 1, detector_shape[0], 1, detector_shape[1])
-        self.set_andor_parameter('Shutter', 1, 0, 1, 1)
-        self.set_andor_parameter('SetTemperature', -90)
-        self.set_andor_parameter('CoolerMode', 0)
-        self.set_andor_parameter('FanMode', 0)
         try:
             self.set_andor_parameter('OutAmp', 1)  # This means EMCCD off - this is the default mode
         except AndorWarning:
             self.set_andor_parameter('OutAmp', 0)
-        self.cooler = 1
 
     @locked_action
     def capture(self):
