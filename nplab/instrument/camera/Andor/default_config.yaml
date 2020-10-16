@@ -7,8 +7,8 @@ SetTemperature: -90
 Shutter: !!python/tuple
 - 1
 - 0
-- 50
-- 50
+- 1
+- 1
 TriggerMode: 0
 cooler: 0
 channel: 0
