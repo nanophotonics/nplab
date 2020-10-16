@@ -1,0 +1,14 @@
+AcquisitionMode: 1
+CoolerMode: 0
+Exposure: 0.01
+FanMode: 0
+ReadMode: 4
+SetTemperature: -90
+Shutter: !!python/tuple
+- 1
+- 0
+- 50
+- 50
+TriggerMode: 0
+cooler: 0
+channel: 0
