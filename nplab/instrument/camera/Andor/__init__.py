@@ -55,26 +55,25 @@ class Andor(CameraRoiScale, AndorBase):
     metadata = property(get_metadata)
 
     def raw_snapshot(self):
-        # try:
-        if self.keep_shutter_open:
-            i = self.Shutter  # initial shutter settings
-            self.Shutter = (i[0], 1, i[2], i[3])
-        imageArray, num_of_images, image_shape = self.capture()
-        if self.keep_shutter_open:
-            self.Shutter = i
-        print(imageArray, num_of_images, image_shape)
-        # The image is reversed depending on whether you read in the conventional CCD register or the EM register,
-        # so we reverse it back
-        if self._parameters['OutAmp']:
-            reshaped = np.reshape(imageArray, (num_of_images,) + image_shape)[..., ::-1]
-        else:
-            reshaped = np.reshape(imageArray, (num_of_images,) + image_shape)
-        if num_of_images == 1:
-            reshaped = reshaped[0]
-        self.CurImage = self.bundle_metadata(reshaped)
-        return True, self.CurImage
-        # except Exception as e:
-            # self._logger.warn("Couldn't Capture because %s" % e)
+        try:
+            if self.keep_shutter_open:
+                i = self.Shutter  # initial shutter settings
+                self.Shutter = (i[0], 1, i[2], i[3])
+            imageArray, num_of_images, image_shape = self.capture()
+            if self.keep_shutter_open:
+                self.Shutter = i
+            # The image is reversed depending on whether you read in the conventional CCD register or the EM register,
+            # so we reverse it back
+            if self._parameters['OutAmp']:
+                reshaped = np.reshape(imageArray, (num_of_images,) + image_shape)[..., ::-1]
+            else:
+                reshaped = np.reshape(imageArray, (num_of_images,) + image_shape)
+            if num_of_images == 1:
+                reshaped = reshaped[0]
+            self.CurImage = self.bundle_metadata(reshaped)
+            return True, self.CurImage
+        except Exception as e:
+            self._logger.warn("Couldn't Capture because %s" % e)
 
     def Capture(self):
         """takes a spectrum, and displays it"""
