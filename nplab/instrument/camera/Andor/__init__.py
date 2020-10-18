@@ -282,20 +282,13 @@ class AndorUI(QtWidgets.QWidget, UiTools):
                 self.spinBoxNumRows.hide()
                 self.labelNumRows.hide()         
         if currentMode == 'Multi-track':
-            self.labelTracks.show()
-            self.spinBoxTracks.show()
-            self.labelHeight.show()
-            self.spinBoxHeight.show()
-            self.labelOffset.show()
-            self.spinBoxOffset.show()
-
+            for box in ['Tracks', 'Height', 'Offset']:
+                eval(f'self.label{box}.show()')
+                eval(f'self.spinBox{box}.show()')
         else:
-            self.labelTracks.hide()
-            self.spinBoxTracks.hide()
-            self.labelHeight.hide()
-            self.spinBoxHeight.hide()
-            self.labelOffset.hide()
-            self.spinBoxOffset.hide()
+            for box in ['Tracks', 'Height', 'Offset']:
+                eval(f'self.label{box}.hide()')
+                eval(f'self.spinBox{box}.hide()')
 
     def update_ReadMode(self, index):
         self.comboBoxReadMode.setCurrentIndex(index)
