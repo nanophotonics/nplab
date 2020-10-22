@@ -18,14 +18,14 @@ from weakref import WeakSet
 import nplab.utils.log
 from nplab.utils.array_with_attrs import ArrayWithAttrs
 from nplab.utils.show_gui_mixin import ShowGUIMixin
+from nplab.ui.widgets.msgbox import prompt_box
 import logging
 from nplab.utils.log import create_logger
 import inspect
 import os
 import h5py
 import datetime
-import yaml
-import pymsgbox
+import json
 LOGGER = create_logger('Instrument')
 LOGGER.setLevel('INFO')
 
@@ -222,10 +222,10 @@ class Instrument(ShowGUIMixin):
         for key, value in configuration.items():
             setattr(self, key, value)
 
-    def _config_filename(self, name=None, extension='.yaml'):
+    def _config_filename(self, name=None, extension='.json'):
         """Utility function
 
-        Ensures name is a yaml path, and if it's not an absolute path, it points it to the location of the Python file
+        Ensures name is a JSON path, and if it's not an absolute path, it points it to the location of the Python file
         for the current class
 
         :param name: string. Can be just the filename, a filename with an extension, or a relative/absolute path
@@ -241,7 +241,7 @@ class Instrument(ShowGUIMixin):
             assert ext == extension
         filename = root + ext
 
-        # Default location for YAML is wherever the instance's Python definition is
+        # Default location for JSON is wherever the instance's Python definition is
         if not os.path.isabs(filename):
             f = inspect.getfile(self.__class__)
             d = os.path.dirname(f)
@@ -249,7 +249,7 @@ class Instrument(ShowGUIMixin):
         return filename
 
     def save_config(self, filename=None):
-        """Saves instrument configuration to YAML
+        """Saves instrument configuration to JSON
         :param filename: string
         """
         # Get filename
@@ -257,19 +257,17 @@ class Instrument(ShowGUIMixin):
 
         # If the file exists, checks whether the user wants to overwrite it
         if os.path.exists(filename):
-            reply = pymsgbox.prompt(text='That configuration file exists. Do you want to overwrite it?',
-                                    title='', default=filename)
-            if reply is not None:
-                filename = reply
-            else:
+            reply = prompt_box(text='That configuration file exists. Do you want to overwrite it?', default=filename)
+            if not reply:
                 return
+            filename = reply
 
-        # Dumps the configuration dictionary to a yaml
+        # Dumps the configuration dictionary to a JSON
         with open(filename, 'w') as config_file:
-            yaml.dump(self.config, config_file)
+            json.dump(self.config, config_file)
 
     def load_config(self, filename=None):
-        """Loads configuration from YAML
+        """Loads configuration from JSON
         :param filename: string
         :return:
         """
@@ -278,5 +276,5 @@ class Instrument(ShowGUIMixin):
 
         # Loads and sets the configuration
         with open(filename, 'r') as config_file:
-            config = yaml.load(config_file, Loader=yaml.FullLoader)
+            config = json.load(config_file)
         self.config = config
