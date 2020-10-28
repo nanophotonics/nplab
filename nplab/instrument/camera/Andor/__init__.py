@@ -69,7 +69,6 @@ class Andor(CameraRoiScale, AndorBase):
             imageArray, num_of_images, image_shape = self.capture()
             if self.keep_shutter_open:
                 self.Shutter = i
-            
             # The image is reversed depending on whether you read in the conventional CCD register or the EM register,
             # so we reverse it back
             if self._parameters['OutAmp']:
@@ -172,6 +171,8 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         self.spinBoxNumAccum.valueChanged.connect(self.number_accumulations)
         self.spinBoxNumRows.valueChanged.connect(self.number_rows)
         self.spinBoxCenterRow.valueChanged.connect(self.number_rows)
+        for box in ['Tracks', 'Height', 'Offset']:
+            eval(f'self.spinBox{box}.valueChanged.connect(self.set_multitrack)')
         self.checkBoxROI.stateChanged.connect(self.ROI)
         self.checkBoxCrop.stateChanged.connect(self.isolated_crop)
         self.checkBoxCooler.stateChanged.connect(self.cooler)
@@ -193,6 +194,9 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         self.read_temperature_pushButton.clicked.connect(self.temperature_gui)
         self.live_temperature_checkBox.clicked.connect(self.temperature_gui)
         self.temperature_display_thread.ready.connect(self.update_temperature_display)
+    
+    def set_multitrack(self):
+        self.Andor.MultiTrack = self.spinBoxTracks.value(), self.spinBoxHeight.value(), self.spinBoxOffset.value()
 
     def init_gui(self):
         trig_modes = {0: 0, 1: 1, 6: 2}
@@ -283,7 +287,15 @@ class AndorUI(QtWidgets.QWidget, UiTools):
             self.labelCenterRow.hide()
             if self.comboBoxAcqMode.currentText() != 'Fast Kinetic':
                 self.spinBoxNumRows.hide()
-                self.labelNumRows.hide()            
+                self.labelNumRows.hide()         
+        if currentMode == 'Multi-track':
+            for box in ['Tracks', 'Height', 'Offset']:
+                eval(f'self.label{box}.show()')
+                eval(f'self.spinBox{box}.show()')
+        else:
+            for box in ['Tracks', 'Height', 'Offset']:
+                eval(f'self.label{box}.hide()')
+                eval(f'self.spinBox{box}.hide()')
 
     def update_ReadMode(self, index):
         self.comboBoxReadMode.setCurrentIndex(index)
@@ -476,3 +488,4 @@ if __name__ == '__main__':
     andor = Andor()
     andor._logger.setLevel('DEBUG')
     gui = andor.show_gui(block=False)
+
