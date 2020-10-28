@@ -275,13 +275,17 @@ class Instrument(ShowGUIMixin):
             filename = os.path.join(d, filename)
         return filename
 
-    def save_config(self, filename=None, mode='named'):
-        """Saves instrument configuration to JSON
-        :param filename: string
+    def save_config(self, config=None, filename=None, mode='named'):
+        """Saves instrument configuration
+        :param config:
+        :param filename:
+        :param mode:
+        :return:
         """
         # Get filename
         filename = self._config_filename(filename)
-        config = self.get_config(mode)
+        if config is None:
+            config = self.get_config(mode)
 
         # If the file exists, checks whether the user wants to overwrite it
         if os.path.exists(filename):
@@ -326,7 +330,9 @@ class Instrument(ShowGUIMixin):
                     config[key] = value
         else:
             raise ValueError('Unrecognised extension: %s' % ext)
-        self.config = config
+        return config
+
+    config_file = property(load_config, save_config)
 
     def update_config(self, name, data, filename=None):
         # Get filename
