@@ -12,44 +12,17 @@ import numpy.ma as ma
 
 
 class CCD(Instrument):
+    _CONFIG_EXTENSION = '.h5'
+
     def __init__(self):
         super(CCD, self).__init__()
         self._wavelengths = None
         self.reference = None
         self.background = None
-        self._config_file = None
         self.latest_image = None
-
-    def __del__(self):
-        try:
-            self._config_file.close()
-        except AttributeError:
-            pass  # if it's not present, we get an exception - which doesn't matter.
 
     def read_image(self):
         raise NotImplementedError
-
-    @property
-    def config_file(self):
-        """
-        Open the config file for the current spectrometer and return it, creating if it's not
-        there.
-        """
-        if self._config_file is None:
-            f = inspect.getfile(self.__class__)
-            d = os.path.dirname(f)
-            self._config_file = h5py.File(os.path.join(d, 'config.h5'))
-            self._config_file.attrs['date'] = datetime.datetime.now().strftime("%H:%M %d/%m/%y")
-        return self._config_file
-
-    def update_config(self, name, data):
-        f = self.config_file
-        if name not in f:
-            f.create_dataset(name, data=data)
-        else:
-            dset = f[name]
-            dset[:] = data
-            f.flush()
 
     def read_background(self):
         """Acquire a new spectrum and use it as a background measurement."""
