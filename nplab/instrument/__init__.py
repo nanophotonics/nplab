@@ -338,18 +338,14 @@ class Instrument(ShowGUIMixin):
         # Get filename
         filename = self._config_filename(filename)
 
-        # If the file exists, checks whether the user wants to overwrite it
-        if os.path.exists(filename):
-            reply = prompt_box(text='That configuration file exists. Do you want to overwrite it?', default=filename)
-            if not reply:
-                return
-            filename = reply
-
         _, ext = os.path.splitext(filename)
         if ext == '.json':
             # Dumps the configuration dictionary to a JSON
             with open(filename, 'a') as config_file:
-                config = json.load(config_file)
+                try:
+                    config = json.load(config_file)
+                except:  # would fail if config_file is empty
+                    config = dict()
                 config[name] = data
                 config_file.seek(0)
                 json.dump(config, config_file)
