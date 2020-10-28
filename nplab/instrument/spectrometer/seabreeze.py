@@ -203,15 +203,11 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
             check_error(e)
             self._isOpen = False
 
-    def open_config_file(self):
-        if self._config_file is None:
-            f = inspect.getfile(self.__class__)
-            d = os.path.dirname(f)
-            self._config_file = DataFile(h5py.File(os.path.join(d, self.model_name+'_'+self.serial_number+'_config.h5')))
-            self._config_file.attrs['date'] = datetime.datetime.now().strftime("%H:%M %d/%m/%y")
-        return self._config_file
+    def _config_filename(self, name=None, extension=None):
+        if name is None:
+            name = self.model_name+'_'+self.serial_number+'_config'
+        return super(OceanOpticsSpectrometer, self)._config_filename(name, extension)
 
-    config_file = property(open_config_file)
     def get_API_version(self):
         N = 32  # make a buffer for the DLL to return a string into
         s = ctypes.create_string_buffer(N)
