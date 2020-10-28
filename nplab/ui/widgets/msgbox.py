@@ -22,9 +22,20 @@ def button_box(text="Message box pop up window", title="NpLab button_box", butto
 def prompt_box(text='Enter text:', title="NpLab prompt_box", default='', widget=None, ):
     app = get_qt_app()
     if widget is None:
-        widget = QtWidgets.QWidget()
-    text, ok = QtWidgets.QInputDialog.getText(widget, title, text, text=default)
-    if ok:
-        return text
+        widget = QtWidgets.QInputDialog()
+        widget.setInputMode(QtWidgets.QInputDialog.TextInput)
+        widget.setWindowTitle(title)
+        widget.setLabelText(text)
+        widget.setTextValue(default)
+        if widget.exec_() == QtWidgets.QDialog.Accepted:
+            returnValue = widget.textValue()
+        else:
+            returnValue = False
+        widget.deleteLater()
+        return returnValue
     else:
-        return ok
+        text, ok = QtWidgets.QInputDialog().getText(widget, title, text, text=default)
+        if ok:
+            return text
+        else:
+            return ok
