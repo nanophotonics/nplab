@@ -26,6 +26,10 @@ import os
 import h5py
 import datetime
 import json
+import numpy as np
+import tempfile
+
+
 LOGGER = create_logger('Instrument')
 LOGGER.setLevel('INFO')
 
@@ -37,6 +41,7 @@ class Instrument(ShowGUIMixin):
     __instances = None
     metadata_property_names = () #"Tuple of names of properties that should be automatically saved as HDF5 metadata
     config_property_names = ()
+    _CONFIG_EXTENSION = '.json'
 
     def __init__(self):
         """Create an instrument object."""
@@ -179,50 +184,70 @@ class Instrument(ShowGUIMixin):
         else:
             return data
 
-    def open_config_file(self):
-        """Open the config file for the current spectrometer and return it, creating if it's not there"""
-        if not hasattr(self, '_config_file'):
-            f = inspect.getfile(self.__class__)
-            d = os.path.dirname(f)
-            self._config_file = nplab.datafile.DataFile(h5py.File(os.path.join(d, 'config.h5'), 'a'))
-            self._config_file.attrs['date'] = datetime.datetime.now().strftime("%H:%M %d/%m/%y")
-        return self._config_file
+    # def open_config_file(self):
+    #     """Open the config file for the current spectrometer and return it, creating if it's not there"""
+    #     if not hasattr(self, '_config_file'):
+    #         f = inspect.getfile(self.__class__)
+    #         d = os.path.dirname(f)
+    #         self._config_file = nplab.datafile.DataFile(h5py.File(os.path.join(d, 'config.h5'), 'a'))
+    #         self._config_file.attrs['date'] = datetime.datetime.now().strftime("%H:%M %d/%m/%y")
+    #     return self._config_file
+    #
+    # config_file = property(open_config_file)
+    #
+    # def update_config(self, name, data, attrs=None):
+    #     """Update the configuration file for this spectrometer.
+    #
+    #     A file is created in the nplab directory that holds configuration
+    #     data for the spectrometer, including reference/background.  This
+    #     function allows values to be stored in that file."""
+    #     f = self.config_file
+    #     if name in f:
+    #         try: del f[name]
+    #         except:
+    #             f[name][...] = data
+    #             f.flush()
+    #     else:
+    #         f.create_dataset(name, data=data ,attrs = attrs)
 
-    config_file = property(open_config_file)
-    
-    def update_config(self, name, data, attrs=None):
-        """Update the configuration file for this spectrometer.
-        
-        A file is created in the nplab directory that holds configuration
-        data for the spectrometer, including reference/background.  This
-        function allows values to be stored in that file."""
-        f = self.config_file
-        if name in f:
-            try: del f[name]
-            except: 
-                f[name][...] = data
-                f.flush()    
-        else:
-            f.create_dataset(name, data=data ,attrs = attrs)
-
-    @property
-    def config(self):
+    def get_config(self, mode='named'):
         """Configuration dictionary
         Iterates over self.config_property_names and gets the property values
 
         :return: dictionary
         """
         configuration = dict()
-        for name in self.config_property_names:
-            configuration[name] = getattr(self, name)
+        if mode == 'named':
+            for name in self.config_property_names:
+                configuration[name] = getattr(self, name)
+        elif mode == 'all':
+            for name in dir(self):
+                if not name.startswith('_'):
+                    try:
+                        value = getattr(self, name)
+                        if type(value) in [bool, dict, float, int, list, str, tuple, np.array]:
+                            try:
+                                with tempfile.TemporaryFile('w') as f:  # this check is done here rather than in self.save_config because we dump the whole configuration in self.save_config
+                                    json.dump(value, f)
+                                configuration[name] = value
+                            except Exception as e:
+                                self._logger.info('Configuration value for key: %s cannot be saved to json' % name)
+                    except Exception as e:
+                        self._logger.debug('Failed getting configuration for key: %s' % name)
+        else:
+            raise ValueError("Unrecognised configuration mode: %s. Needs to be 'named' or 'all'" % mode)
         return configuration
 
-    @config.setter
-    def config(self, configuration):
+    def set_config(self, configuration):
         for key, value in configuration.items():
-            setattr(self, key, value)
+            try:
+                setattr(self, key, value)
+            except Exception as e:
+                self._logger.info('Configuration could not be set for: %s = %s' % (key, value))
 
-    def _config_filename(self, name=None, extension='.json'):
+    config = property(get_config, set_config)
+
+    def _config_filename(self, name=None, extension=None):
         """Utility function
 
         Ensures name is a JSON path, and if it's not an absolute path, it points it to the location of the Python file
@@ -233,6 +258,8 @@ class Instrument(ShowGUIMixin):
         """
         if name is None:
             name = 'config'  # default name
+        if extension is None:
+            extension = self._CONFIG_EXTENSION
         # Ensure name has expected extension
         root, ext = os.path.splitext(name)
         if not ext:
@@ -241,17 +268,67 @@ class Instrument(ShowGUIMixin):
             assert ext == extension
         filename = root + ext
 
-        # Default location for JSON is wherever the instance's Python definition is
+        # Default location for configuration file is wherever the instance's Python definition is
         if not os.path.isabs(filename):
             f = inspect.getfile(self.__class__)
             d = os.path.dirname(f)
             filename = os.path.join(d, filename)
         return filename
 
-    def save_config(self, filename=None):
+    def save_config(self, filename=None, mode='named'):
         """Saves instrument configuration to JSON
         :param filename: string
         """
+        # Get filename
+        filename = self._config_filename(filename)
+        config = self.get_config(mode)
+
+        # If the file exists, checks whether the user wants to overwrite it
+        if os.path.exists(filename):
+            reply = prompt_box(text='That configuration file exists. Do you want to overwrite it?', default=filename)
+            if not reply:
+                return
+            filename = reply
+
+        _, ext = os.path.splitext(filename)
+        if ext == '.json':
+            # Dumps the configuration dictionary to a JSON
+            with open(filename, 'w') as config_file:
+                json.dump(config, config_file, indent=4)
+        elif ext == '.h5':
+            with h5py.File(filename, 'w') as dfile:
+                dfile.attrs['date'] = datetime.datetime.now().strftime("%H:%M %d/%m/%y")
+                for name, value in config.items():
+                    try:
+                        dfile.create_dataset(name, data=value)
+                    except Exception as e:
+                        self._logger.info('Configuration value for key: %s cannot be saved to HDF5' % name)
+        else:
+            raise ValueError('Unrecognised extension: %s' % ext)
+
+    def load_config(self, filename=None):
+        """Loads configuration from JSON
+        :param filename: string
+        :return:
+        """
+        # Get filename
+        filename = self._config_filename(filename)
+        _, ext = os.path.splitext(filename)
+
+        # Loads and sets the configuration
+        if ext == '.json':
+            with open(filename, 'r') as config_file:
+                config = json.load(config_file)
+        elif ext == '.h5':
+            with h5py.File(filename, 'r') as dfile:
+                config = dict()
+                for key, value in dfile.items():
+                    config[key] = value
+        else:
+            raise ValueError('Unrecognised extension: %s' % ext)
+        self.config = config
+
+    def update_config(self, name, data, filename=None):
         # Get filename
         filename = self._config_filename(filename)
 
@@ -262,19 +339,19 @@ class Instrument(ShowGUIMixin):
                 return
             filename = reply
 
-        # Dumps the configuration dictionary to a JSON
-        with open(filename, 'w') as config_file:
-            json.dump(self.config, config_file)
-
-    def load_config(self, filename=None):
-        """Loads configuration from JSON
-        :param filename: string
-        :return:
-        """
-        # Get filename
-        filename = self._config_filename(filename)
-
-        # Loads and sets the configuration
-        with open(filename, 'r') as config_file:
-            config = json.load(config_file)
-        self.config = config
+        _, ext = os.path.splitext(filename)
+        if ext == '.json':
+            # Dumps the configuration dictionary to a JSON
+            with open(filename, 'a') as config_file:
+                config = json.load(config_file)
+                config[name] = data
+                config_file.seek(0)
+                json.dump(config, config_file)
+                config_file.truncate()
+        elif ext == '.h5':
+            with h5py.File(filename, 'a') as f:
+                if name in f:
+                    del f[name]
+                f.create_dataset(name, data=data)
+        else:
+            raise ValueError('Unrecognised extension: %s' % ext)
