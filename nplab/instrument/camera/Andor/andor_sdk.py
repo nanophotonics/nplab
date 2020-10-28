@@ -132,7 +132,7 @@ class AndorBase(object):
         if self.get_andor_parameter('AvailableCameras') > 1:
             if camera_index is None:
                 self._logger.warn('More than one camera available, but no index provided. Initializing camera 0')
-            camera_handle = self.get_andor_parameter('CameraHandle', self.camera_index)
+            camera_handle = self.get_andor_parameter('CameraHandle')
             self.set_andor_parameter('CurrentCamera', camera_handle)
         self.initialize()
 
@@ -657,7 +657,7 @@ parameters = dict(
     AvailableCameras=dict(Get=dict(cmdName='GetAvailableCameras', Outputs=(c_uint,)), value=None),
     CurrentCamera=dict(Get=dict(cmdName='GetCurrentCamera', Outputs=(c_uint,)),
                        Set=dict(cmdName='SetCurrentCamera', Inputs=(c_uint,))),
-    CameraHandle=dict(Get=dict(cmdName='GetCameraHandle', Outputs=(c_uint,), Inputs=(c_uint, ))),
+    CameraHandle=dict(Get=dict(cmdName='GetCameraHandle', Outputs=(c_uint,), Input_params=(('camera_index', c_int),))),
     PixelSize=dict(Get=dict(cmdName='GetPixelSize', Outputs=(c_float, c_float))),
     SoftwareWaitBetweenCaptures=dict(value=0),
     SoftwareVersion=dict(Get=dict(cmdName='GetSoftwareVersion', Outputs=(c_int, c_int, c_int, c_int, c_int, c_int))),
