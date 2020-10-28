@@ -12,7 +12,7 @@ of metadata in ArrayWithAttrs objects that include both data and metadata.
 """
 
 from builtins import str
-from nplab.utils.thread_utils import locked_action_decorator, background_action_decorator
+from nplab.utils.thread_utils import locked_action_decorator
 import nplab
 from weakref import WeakSet
 import nplab.utils.log
@@ -33,20 +33,21 @@ import tempfile
 LOGGER = create_logger('Instrument')
 LOGGER.setLevel('INFO')
 
+
 class Instrument(ShowGUIMixin):
     """Base class for all instrument-control classes.
 
     This class takes care of management of instruments, saving data, etc.
     """
     __instances = None
-    metadata_property_names = () #"Tuple of names of properties that should be automatically saved as HDF5 metadata
-    config_property_names = ()
+    metadata_property_names = ()  # tuple of names of properties that should be automatically saved as HDF5 metadata
+    config_property_names = ()  # tuple of names of properties that are saved and loaded for default configuration
     _CONFIG_EXTENSION = '.json'
 
     def __init__(self):
         """Create an instrument object."""
         super(Instrument, self).__init__()
-        Instrument.instances_set().add(self) #keep track of instances (should this be in __new__?)
+        Instrument.instances_set().add(self)  # keep track of instances (should this be in __new__?)
         self._logger = logging.getLogger('Instrument.' + str(type(self)).split('.')[-1].split('\'')[0])
 
     @classmethod
@@ -67,7 +68,7 @@ class Instrument(ShowGUIMixin):
         Usually returns the first available instance.
         """
         instances = cls.get_instances()
-        if len(instances)>0:
+        if len(instances) > 0:
             return instances[0]
         else:
             if create:
@@ -106,6 +107,7 @@ class Instrument(ShowGUIMixin):
 
         :param name: should be a noun describing what the reading is (image,
         spectrum, etc.)
+        :param flush: bool
 
         Other arguments are passed to `nplab.datafile.Group.create_dataset`.
         """
@@ -114,17 +116,17 @@ class Instrument(ShowGUIMixin):
         df = cls.get_root_data_folder()
         dset = df.create_dataset(name, *args, **kwargs)
         if 'data' in kwargs and flush:
-            dset.file.flush() #make sure it's in the file if we wrote data
+            dset.file.flush()  # make sure it's in the file if we wrote data
         return dset
 
-    def log(self, message,level = 'info'):
+    def log(self, message, level='info'):
         """Save a log message to the current datafile.
 
         This is the preferred way to output debug/informational messages.  They
         will be saved in the current HDF5 file and optionally shown in the
         nplab console.
         """
-        nplab.utils.log.log(message, from_object=self,level = level)
+        nplab.utils.log.log(message, from_object=self, level=level)
 
     def get_metadata(self, 
                      property_names=[], 
@@ -184,50 +186,33 @@ class Instrument(ShowGUIMixin):
         else:
             return data
 
-    # def open_config_file(self):
-    #     """Open the config file for the current spectrometer and return it, creating if it's not there"""
-    #     if not hasattr(self, '_config_file'):
-    #         f = inspect.getfile(self.__class__)
-    #         d = os.path.dirname(f)
-    #         self._config_file = nplab.datafile.DataFile(h5py.File(os.path.join(d, 'config.h5'), 'a'))
-    #         self._config_file.attrs['date'] = datetime.datetime.now().strftime("%H:%M %d/%m/%y")
-    #     return self._config_file
-    #
-    # config_file = property(open_config_file)
-    #
-    # def update_config(self, name, data, attrs=None):
-    #     """Update the configuration file for this spectrometer.
-    #
-    #     A file is created in the nplab directory that holds configuration
-    #     data for the spectrometer, including reference/background.  This
-    #     function allows values to be stored in that file."""
-    #     f = self.config_file
-    #     if name in f:
-    #         try: del f[name]
-    #         except:
-    #             f[name][...] = data
-    #             f.flush()
-    #     else:
-    #         f.create_dataset(name, data=data ,attrs = attrs)
-
     def get_config(self, mode='named'):
-        """Configuration dictionary
-        Iterates over self.config_property_names and gets the property values
+        """Returns the configuration dictionary
 
-        :return: dictionary
+        :param mode: str. Either 'named' or 'all'
+            If 'named' it only iterates over self.config_property_names.
+            If 'all' it iterates over the whole __dir__, ignoring hidden attributes/methods, and attempts to get the
+            values. Currently only returns values if they are one of the following:
+                bool, dict, float, int, list, str, tuple, np.array
+        :return:
         """
         configuration = dict()
         if mode == 'named':
             for name in self.config_property_names:
-                configuration[name] = getattr(self, name)
+                try:
+                    configuration[name] = getattr(self, name)
+                except Exception as e:
+                    self._logger.debug('Failed getting configuration for key: %s' % name)
         elif mode == 'all':
             for name in dir(self):
-                if not name.startswith('_'):
+                if not name.startswith('_'):  # ignores hidden attributes/methods
                     try:
                         value = getattr(self, name)
                         if type(value) in [bool, dict, float, int, list, str, tuple, np.array]:
                             try:
-                                with tempfile.TemporaryFile('w') as f:  # this check is done here rather than in self.save_config because we dump the whole configuration in self.save_config
+                                # check whether value can be saved to JSON. Check is done here rather than in
+                                # self.save_config because self.save_config dumps the whole config at once
+                                with tempfile.TemporaryFile('w') as f:
                                     json.dump(value, f)
                                 configuration[name] = value
                             except Exception as e:
@@ -239,6 +224,10 @@ class Instrument(ShowGUIMixin):
         return configuration
 
     def set_config(self, configuration):
+        """Sets attributes according to configuration
+        :param configuration: dict
+        :return:
+        """
         for key, value in configuration.items():
             try:
                 setattr(self, key, value)
@@ -248,19 +237,17 @@ class Instrument(ShowGUIMixin):
     config = property(get_config, set_config)
 
     def _config_filename(self, name=None, extension=None):
-        """Utility function
+        """Returns valid file path
 
-        Ensures name is a JSON path, and if it's not an absolute path, it points it to the location of the Python file
-        for the current class
-
-        :param name: string. Can be just the filename, a filename with an extension, or a relative/absolute path
-        :return:
+        :param name: str. Can be just the filename, a filename with/out an extension, or a relative/absolute path
+        :param extension: str
+        :return: str. Absolute path
         """
         if name is None:
             name = 'config'  # default name
         if extension is None:
-            extension = self._CONFIG_EXTENSION
-        # Ensure name has expected extension
+            extension = self._CONFIG_EXTENSION  # default extension. Can be changed in subclasses
+        # Ensure name has expected extension or adds it if not there
         root, ext = os.path.splitext(name)
         if not ext:
             ext = extension
@@ -276,11 +263,10 @@ class Instrument(ShowGUIMixin):
         return filename
 
     def save_config(self, config=None, filename=None, mode='named'):
-        """Saves instrument configuration
-        :param config:
-        :param filename:
-        :param mode:
-        :return:
+        """Saves instrument configuration to file
+        :param config: dict or None
+        :param filename: str. Passed to self._config_filename
+        :param mode: str. If config dictionary not given, passed to self.get_config
         """
         # Get filename
         filename = self._config_filename(filename)
@@ -311,9 +297,9 @@ class Instrument(ShowGUIMixin):
             raise ValueError('Unrecognised extension: %s' % ext)
 
     def load_config(self, filename=None):
-        """Loads configuration from JSON
-        :param filename: string
-        :return:
+        """Loads configuration from file
+        :param filename: str. Passed to self._config_filename
+        :return: dict
         """
         # Get filename
         filename = self._config_filename(filename)
@@ -335,12 +321,17 @@ class Instrument(ShowGUIMixin):
     config_file = property(load_config, save_config)
 
     def update_config(self, name, data, filename=None):
+        """Edits configuration file
+        :param name: str
+        :param data: anything that can be parsed by JSON or directly saved to HDF5
+        :param filename: str. Passed to self._config_filename
+        """
         # Get filename
         filename = self._config_filename(filename)
 
         _, ext = os.path.splitext(filename)
         if ext == '.json':
-            # Dumps the configuration dictionary to a JSON
+            # Need to read the whole JSON first, modify it, and then re-write the file
             with open(filename, 'a') as config_file:
                 try:
                     config = json.load(config_file)
