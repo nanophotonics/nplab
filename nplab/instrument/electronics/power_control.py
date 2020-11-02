@@ -59,6 +59,7 @@ class PowerControl(Instrument):
         super(PowerControl, self).__init__()
         self._initiate_pc()
         self.pometer = power_meter
+        self._initiate_pometer()
         self.number_points = 25
   
     def _initiate_pc(self):
