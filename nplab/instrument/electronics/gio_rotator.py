@@ -79,7 +79,9 @@ class ArduinoRotator(SerialInstrument):
         self.move_rel(degree - self.angle)
         
     def home(self):
-        self.move(0)
+        if self.angle == 0.:
+            return
+        self.move_rel(360 - self.angle)
         
     def calibrate(self, rotations: int = 5):
         print(f'rotating clockwise {rotations} rotations')
