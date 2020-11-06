@@ -90,6 +90,9 @@ class LumeneraCamera(Camera):
         super(LumeneraCamera,self).__init__() #NB this comes after setting up the hardware
         self.metadata_property_names = ['gain', 'exposure']
         self.auto_crop_fraction = None
+        self._auto_exposure = False
+        self.cam.auto_exp_maximum = 2000
+        self.cam.auto_exp_target = 200 #0:255
 #        for pname in lucam.Lucam.PROPERTY.keys():
 #            try:
 #                getattr(self, pname)
@@ -241,6 +244,20 @@ class LumeneraCamera(Camera):
         """Get the value of a camera setting.  But you should use the property..."""
         self.cam.SetProperty(parameter_name, value)
         
+    @NotifiedProperty
+    def auto_exposure(self):    
+        return self._auto_exposure
+    
+    @auto_exposure.setter    
+    def auto_exposure(self, on_off):
+        '''on_off is a bool'''
+        self._auto_exposure = bool(on_off)
+        if self._auto_exposure:
+            self.cam.ContinuousAutoExposureEnable(self.cam.auto_exp_target,
+                                                  0, 0, 0, 0, 16.667)
+        else: self.cam.ContinuousAutoExposureDisable()
+        
+        
     def get_metadata(self):
         """Return a dictionary of camera settings and parameters."""
         ret = super(LumeneraCamera, self).get_metadata()
@@ -289,6 +306,7 @@ class LumeneraCameraControlWidget(CameraControlWidget):
         gb = QuickControlBox()
         gb.add_doublespinbox("exposure")
         gb.add_doublespinbox("gain")
+        gb.add_checkbox("auto_exposure")
         gb.add_button("show_camera_properties_dialog", title="Camera Setup")
         gb.add_button("show_video_format_dialog", title="Video Format")
         self.layout().insertWidget(1, gb) # put the extra settings in the middle
