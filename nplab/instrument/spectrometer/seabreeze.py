@@ -120,7 +120,7 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
     spectrometer you want, starting at 0.  It has traits, so you can call up a
     GUI to control the spectrometer with s.configure_traits."""
 
-    metadata_property_names = Spectrometer.metadata_property_names# + ("tec_temperature",)
+    metadata_property_names = Spectrometer.metadata_property_names+ ("tec_temperature",)
 
     @staticmethod
     def shutdown_seabreeze():
@@ -439,7 +439,7 @@ class OceanOpticsControlUI(SpectrometerControlUI):
             self.read_tec_temperature_pushButton.clicked.connect(self.gui_read_tec_tempeature)
             self.enable_tec.stateChanged.connect(self.update_enable_tec)
             self.enable_tec.setChecked(self.spectrometer.enable_tec)
-            initial_temperature = np.round(self.spectrometer.get_tec_temperature(), decimals = 1)
+            initial_temperature = np.round(self.spectrometer.tec_temperature, decimals = 1)
             self.tec_temperature_lcdNumber.display(float(initial_temperature))
             self.set_tec_temperature_LineEdit.setText(str(initial_temperature))
             self.update_enable_tec(0) # sometimes helps enable cooling

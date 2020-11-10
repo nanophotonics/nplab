@@ -138,6 +138,15 @@ class CameraRoiScale(Camera):
 
         super(CameraRoiScale, self).update_widgets()
 
+    def get_preview_widget(self):
+        self._logger.debug('Getting preview widget')
+        if self._preview_widgets is None:
+            self._preview_widgets = WeakSet()
+        new_widget = DisplayWidgetRoiScale()
+        self._preview_widgets.add(new_widget)
+
+        return new_widget
+
 
 class DisplayWidgetRoiScale(ExtendedImageView):
     _max_num_line_plots = 4
@@ -149,7 +158,7 @@ class DisplayWidgetRoiScale(ExtendedImageView):
         self._pxl_scale = scale
         self._pxl_offset = offset
 
-        self.LineDisplay = self.ui.roiPlot
+        self.LineDisplay = self.ui.roiPlot#creates a PlotWidget instance
         self.LineDisplay.showGrid(x=True, y=True)
         self.ui.splitter.setHandleWidth(10)
         self.getHistogramWidget().gradient.restoreState(list(Gradients.values())[1])
@@ -164,6 +173,8 @@ class DisplayWidgetRoiScale(ExtendedImageView):
 
         self.checkbox_autorange = QtWidgets.QCheckBox('Autorange')
         self.tools.gridLayout.addWidget(self.checkbox_autorange, 0, 3, 1, 1)
+
+        self.update_data_signal.connect(self._update_image, type=QtCore.Qt.QueuedConnection)
 
     @property
     def x_axis(self):
@@ -205,11 +216,12 @@ class DisplayWidgetRoiScale(ExtendedImageView):
         if boolean:
             self.LineDisplay.show()
             self.LineDisplay.showAxis('left')
+            self.LineDisplay.setMouseEnabled(True, True)
             self.ui.splitter.setSizes([0, self.height()-35, 35])
         else:
             self.ui.splitter.setSizes([self.height()-35, 0, 35])
 
-    def update_image(self, newimage):
+    def _update_image(self, newimage):
         scale = self._pxl_scale
         offset = self._pxl_offset
 
@@ -220,7 +232,7 @@ class DisplayWidgetRoiScale(ExtendedImageView):
             if newimage.shape[0] > self._max_num_line_plots:
                 self.toggle_displays(False)
                 # levels = [np.percentile(newimage, x) for x in self.levels()]
-                self.setImage(newimage,
+                self.setImage(newimage.astype(float),
                               pos=offset,
                               autoRange=self.checkbox_autorange.isChecked(),
                               # levels=levels,
@@ -235,14 +247,17 @@ class DisplayWidgetRoiScale(ExtendedImageView):
             if newimage.shape[0] == 1:
                 newimage = newimage[0]
             # levels = [np.percentile(newimage, x) for x in self.levels()]
-            self.setImage(newimage, xvals=zvals,
+            self.setImage(newimage.astype(float), xvals=zvals,
                           pos=offset,
                           autoRange=self.checkbox_autorange.isChecked(),
                           # levels=levels,
                           scale=scale)
         else:
             raise ValueError('Cannot display. Array shape unrecognised')
-            
+
+    def update_image(self, newimage):
+        self.update_data_signal.emit(newimage)
+
 
 class DummyCameraRoiScale(CameraRoiScale):
     """A Dummy CameraRoiScale camera  """
@@ -255,23 +270,15 @@ class DummyCameraRoiScale(CameraRoiScale):
         """Returns a True, stating a succesful snapshot, followed by a (100,100)
         picture randomly generated image"""
         if self.data == 'spectrum':
-            ran = 100 * ArrayWithAttrs(np.random.random(100))
+            ran = 100 * ArrayWithAttrs(np.random.random(1600))
         else:
-            ran = 100 * np.random.random((100, 100))
+            ran = 100 * np.random.random((200, 1600))
         self._latest_raw_frame = ran
         return True, ran
 
-    def get_preview_widget(self):
-        self._logger.debug('Getting preview widget')
-        if self._preview_widgets is None:
-            self._preview_widgets = WeakSet()
-        new_widget = DisplayWidgetRoiScale()
-        self._preview_widgets.add(new_widget)
-        return new_widget
-
     @property
     def x_axis(self):
-        return np.arange(100) + 1
+        return np.arange(1600) + 1
 
     @x_axis.setter
     def x_axis(self, value):
@@ -279,5 +286,10 @@ class DummyCameraRoiScale(CameraRoiScale):
 
 
 if __name__ == '__main__':
+
     dcrd = DummyCameraRoiScale()
-    dcrd.show_gui(blocking=True)
+    dcrd.data = 1
+    gui = dcrd.show_gui(blocking=False)
+    dw = gui.preview_widget
+    dw.setImage(np.random.random((200, 1600)))
+

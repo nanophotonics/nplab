@@ -126,36 +126,27 @@ class AndorBase(object):
             else:
                 self._parameters[key] = None
 
-        self.camera_index = camera_index
+        self._initialized_cameras = []
         if camera_index is None:
-            self.camera_index = 0
-        if self.get_andor_parameter('AvailableCameras') > 1:
-            if camera_index is None:
+            if self.get_andor_parameter('AvailableCameras') > 1:
                 self._logger.warn('More than one camera available, but no index provided. Initializing camera 0')
-            camera_handle = self.get_andor_parameter('CameraHandle', self.camera_index)
-            self.set_andor_parameter('CurrentCamera', camera_handle)
-        self.initialize()
+            self.camera_index = 0
+        else:
+            self.camera_index = camera_index
 
     def end(self):
         """ Safe shutdown procedure """
-        # If the camera is a Classic or iCCD, wait for the temperature to be higher than -20 before shutting down
-        if self.Capabilities['CameraType'] in [3, 4]:
-            if self.cooler:
-                self.cooler = 0
-            while self.CurrentTemperature < -20:
-                print('Waiting')
-                time.sleep(1)
-        self._logger.info('Shutting down')
-        self._dll_wrapper('ShutDown')
-
-    def _set_dll_camera(self):
-        """Ensures the DLL library is pointing to the correct instrument for any particular instances of this class"""
-        camera_handle = c_uint()
-        error = getattr(self.dll, 'GetCameraHandle')(c_uint(self.camera_index), byref(camera_handle))
-        self._error_handler(error)
-
-        error = getattr(self.dll, 'SetCurrentCamera')(camera_handle)
-        self._error_handler(error)
+        for camera in self._initialized_cameras:
+            self.CurrentCamera = camera
+            # If the camera is a Classic or iCCD, wait for the temperature to be higher than -20 before shutting down
+            if self.Capabilities['CameraType'] in [3, 4]:
+                if self.cooler:
+                    self.cooler = 0
+                while self.CurrentTemperature < -20:
+                    print('Waiting')
+                    time.sleep(1)
+            self._logger.info('Shutting down %s' % camera)
+            self._dll_wrapper('ShutDown')
 
     '''Base functions'''
 
@@ -169,9 +160,7 @@ class AndorBase(object):
         :param reverse:     bool. whether to have the inputs first or the outputs first when calling the dll
         :return:
         """
-
-        self._set_dll_camera()
-
+        self._logger.debug('DLL call: %s, %s, %s' % (funcname, inputs, outputs))
         dll_input = ()
         if reverse:
             for output in outputs:
@@ -206,7 +195,7 @@ class AndorBase(object):
             return
         if error != 20002:
             raise AndorWarning(error, funcname, ERROR_CODE[error])
-
+   
     def set_andor_parameter(self, param_loc, *inputs):
         """Parameter setter
 
@@ -230,11 +219,17 @@ class AndorBase(object):
             form_in = ()
             if 'Input_params' in func:
                 for input_param in func['Input_params']:
-                    form_in += ({'value': getattr(self, input_param[0]), 'type': input_param[1]},)
+                    form_in += ({'value': getattr(self, self._parameters['DetectorShape'][0], self._parameters['FVBHBin'][0]), 'type': input_param[1]},)
             for ii in range(len(inputs)):
                 form_in += ({'value': inputs[ii], 'type': func['Inputs'][ii]},)
+
+            form_out = ()
+            if 'Outputs' in func:
+                for val in func['Outputs']:
+                    form_out += (val(), )
+
             try:
-                self._dll_wrapper(func['cmdName'], inputs=form_in)
+                self._dll_wrapper(func['cmdName'], inputs=form_in, outputs=form_out)
 
                 if len(inputs) == 1:
                     self.parameters[param_loc]['value'] = inputs[0]
@@ -256,6 +251,7 @@ class AndorBase(object):
                             inputs = (inputs, )
                 else:
                     self._logger.warn(andor_warning)
+                    raise andor_warning
 
         if 'Get' not in list(self.parameters[param_loc].keys()):
             if len(inputs) == 1:
@@ -361,6 +357,18 @@ class AndorBase(object):
     '''Used functions'''
 
     @property
+    def camera_index(self):
+        return self._camera_index
+
+    @camera_index.setter
+    def camera_index(self, value):
+        """Ensures the DLL is changed every time the camera_index is changed.
+        CameraHandle calls the value of camera_index"""
+        self._camera_index = value
+        self.CurrentCamera = self.CameraHandle
+        self.initialize()
+
+    @property
     def capabilities(self):
         """Parsing of the Andor capabilities
 
@@ -448,7 +456,9 @@ class AndorBase(object):
 
     def initialize(self):
         """Sets the initial parameters for the Andor typical for our experiments"""
-        self._dll_wrapper('Initialize', outputs=(c_char(),))
+        if self.CurrentCamera not in self._initialized_cameras:
+            self._initialized_cameras += [self.CurrentCamera]
+            self._dll_wrapper('Initialize', outputs=(c_char(),))
         self.channel = 0
         self.set_andor_parameter('ReadMode', 4)
         self.set_andor_parameter('AcquisitionMode', 1)
@@ -460,7 +470,10 @@ class AndorBase(object):
         self.set_andor_parameter('SetTemperature', -90)
         self.set_andor_parameter('CoolerMode', 0)
         self.set_andor_parameter('FanMode', 0)
-        self.set_andor_parameter('OutAmp', 1) # This means EMCCD off - this is the default mode
+        try:
+            self.set_andor_parameter('OutAmp', 1)  # This means EMCCD off - this is the default mode
+        except AndorWarning:
+            self.set_andor_parameter('OutAmp', 0)
         self.cooler = 1
 
     @locked_action
@@ -497,6 +510,8 @@ class AndorBase(object):
                     image_shape = (old_div(self._parameters['IsolatedCropMode'][2], self._parameters['IsolatedCropMode'][4]), )
                 else:
                     image_shape = (old_div(self._parameters['DetectorShape'][0], self._parameters['FVBHBin']), )
+            elif self._parameters['ReadMode'] == 1:  # random track
+                image_shape = (self.MultiTrack[0], self._parameters['DetectorShape'][0] // self._parameters['FVBHBin'])
             elif self._parameters['ReadMode'] == 3:
                 image_shape = (self._parameters['DetectorShape'][0],)
             elif self._parameters['ReadMode'] == 4:
@@ -651,8 +666,8 @@ parameters = dict(
     AvailableCameras=dict(Get=dict(cmdName='GetAvailableCameras', Outputs=(c_uint,)), value=None),
     CurrentCamera=dict(Get=dict(cmdName='GetCurrentCamera', Outputs=(c_uint,)),
                        Set=dict(cmdName='SetCurrentCamera', Inputs=(c_uint,))),
-    CameraHandle=dict(Get=dict(cmdName='GetCameraHandle', Outputs=(c_uint,), Inputs=(c_uint, ))),
     channel=dict(value=0),
+    CameraHandle=dict(Get=dict(cmdName='GetCameraHandle', Outputs=(c_uint,), Input_params=(('camera_index', c_int), ))),
     PixelSize=dict(Get=dict(cmdName='GetPixelSize', Outputs=(c_float, c_float))),
     SoftwareWaitBetweenCaptures=dict(value=0),
     SoftwareVersion=dict(Get=dict(cmdName='GetSoftwareVersion', Outputs=(c_int, c_int, c_int, c_int, c_int, c_int))),
@@ -681,7 +696,7 @@ parameters = dict(
                 Get=dict(cmdName='GetEMCCDGain', Outputs=(c_int,)), value=None),
     EMAdvancedGain=dict(Set=dict(cmdName='SetEMAdvanced', Inputs=(c_int,)), value=None),
     EMMode=dict(Set=dict(cmdName='SetEMCCDGainMode', Inputs=(c_int,)), value=None),
-    EMGainRange=dict(Set=dict(cmdName='GetEMCCDGainRange', Outputs=(c_int,) * 2), value=None),
+    EMGainRange=dict(Get=dict(cmdName='GetEMCCDGainRange', Outputs=(c_int,) * 2), value=None),
     Shutter=dict(Set=dict(cmdName='SetShutter', Inputs=(c_int,) * 4), value=None),
     CoolerMode=dict(Set=dict(cmdName='SetCoolerMode', Inputs=(c_int,)), value=None),
     FanMode=dict(Set=dict(cmdName='SetFanMode', Inputs=(c_int,)), value=None),

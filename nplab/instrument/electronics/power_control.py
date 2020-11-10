@@ -4,9 +4,7 @@ Created on Thu Aug 01 16:38:56 2019
 
 @author: ee306
 """
-from __future__ import division
-from __future__ import print_function
-from past.utils import old_div
+
 import os
 import numpy as np
 from scipy import interpolate 
@@ -17,6 +15,8 @@ from nplab.experiment.gui import run_function_modally
 from nplab.instrument import Instrument
 from nplab.instrument.electronics.aom import AOM as Aom
 from nplab.instrument.stage.Thorlabs_ELL8K import Thorlabs_ELL8K as RStage
+from nplab.instrument.electronics.power_meter import PowerMeter
+from nplab.instrument.electronics.thorlabs_pm100 import ThorlabsPowermeter
 from nplab import datafile
 
 def isMonotonic(A): 
@@ -40,16 +40,16 @@ class PowerControl(Instrument):
             self._633 = False
             self._785 = True
                          
-        else: raise ValueError('power_controller must be AOM or Filter Wheel')
-        
+        assert isinstance(power_controller, (Aom, RStage)), \
+            ('power_controller must be AOM or Filter Wheel')
+        assert isinstance(power_meter, PowerMeter), \
+            ('Power meter have power_meter.PowerMeter base class')
         if isinstance(self.pc, RStage): 
             self.min_param = 0
             self.max_param = 360
         if isinstance(self.pc, Aom):
             self.min_param = 0
             self.max_param = 1
-
-        self._set_to_midpoint()
         self.maxpower = None 
         self.minpower = None
         self.measured_power = None
@@ -59,6 +59,7 @@ class PowerControl(Instrument):
         super(PowerControl, self).__init__()
         self._initiate_pc()
         self.pometer = power_meter
+        self._initiate_pometer()
         self.number_points = 25
   
     def _initiate_pc(self):
@@ -68,14 +69,17 @@ class PowerControl(Instrument):
    
     def _set_to_midpoint(self):
         self.param = self.mid_param
+   
     def _set_to_maxpoint(self):
        self.param = self.max_param
+    
+    
     def _initiate_pometer(self):
-        if isinstance(self.pometer, 'Thorlabs_powermeter'):      
-            self.pometer.system.beeper.immediate()
-            if self._785: self.pometer.sense.correction.wavelength = 785   
-            if self._633: self.pometer.sense.correction.wavelength = 633              
+        if isinstance(self.pometer, ThorlabsPowermeter):      
+            if self._785: self.pometer.wavelength = 785   
+            if self._633: self.pometer.wavelength = 633              
         else: print('wavelength not corrected for')
+   
     @property
     def param(self):
         if isinstance(self.pc, RStage):
@@ -83,28 +87,34 @@ class PowerControl(Instrument):
             return
         if isinstance(self.pc, Aom):
             return self.pc.Get_Power()               
+    
     @param.setter
     def param(self,value):
         if isinstance(self.pc, RStage):        
             self.pc.move(value)     
         if isinstance(self.pc, Aom):
             self.pc.Power(value) 
+  
     @property
     def mid_param(self):
-        return old_div((self.max_param - self.min_param),2)
+        return (self.max_param - self.min_param)/2
 
     @property
     def points(self):
-        if isinstance(self.pc, RStage):        
-            return np.logspace(0,np.log10(self.max_param-self.min_param),self.number_points)+self.min_param
-        if isinstance(self.pc, Aom):
+        if isinstance(self.pc, RStage): 
+            if self.min_param<self.max_param:
+                return np.logspace(0,np.log10(self.max_param-self.min_param),self.number_points)+self.min_param
+            return  self.min_param- np.logspace(0,np.log10(self.min_param-self.max_param),self.number_points)
+        else:# isinstance(self.pc, Aom):
             return np.linspace(self.min_param,self.max_param,num = self.number_points, endpoint = True) 
             
-    def Calibrate_Power(self, update_progress=lambda p:p):
+    def calibrate_power(self, update_progress=lambda p:p):
         '''
         currently doesn't work if power meter gui is in 'live' mode.
       
         '''
+        live = self.pometer.live
+        self.pometer.live = False
         attrs = {}       
         if self.measured_power is not None: attrs['Measured power at maxpoint'] = self.measured_power
         if isinstance(self.pc, RStage):
@@ -121,10 +131,9 @@ class PowerControl(Instrument):
         self.wutter.close_shutter()    
         self.lutter.open_shutter() 
         self.pometer.live = False# if there's a gui turn off live mode 
-        [self.pometer.power for _ in range(10)]# flush the powermeter
         for counter, point in enumerate(self.points):          
             self.param = point
-            time.sleep(0.01)
+            time.sleep(.2)
             powers = np.append(powers,self.pometer.power)
             update_progress(counter)
         group = self.create_data_group('Power_Calibration{}_%d'.format(self.laser), attrs = attrs)
@@ -137,8 +146,9 @@ class PowerControl(Instrument):
         self._set_to_midpoint()
         self.wutter.open_shutter()
         self.update_power_calibration()    
+        self.pometer.live = live
     
-    def update_power_calibration(self, specific_calibration = None, laser = None):
+    def update_power_calibration(self, specific_calibration=None, laser=None):
         '''
         specific_calibration should be the exact name of the power calibration group, otherwise
         the most recent calibration for the given laser is used.
@@ -179,6 +189,7 @@ class PowerControl(Instrument):
     @property
     def power(self):
         return self.pometer.power
+   
     @power.setter
     def power(self, value):
         self._power = value
@@ -202,7 +213,7 @@ class PowerControl_UI(QtWidgets.QWidget,UiTools):
         self.number_points_spinBox.setValue(self.PC.number_points)
         
     def SetupSignals(self):
-        self.pushButton_calibrate_power.clicked.connect(self.Calibrate_Power_gui)             
+        self.pushButton_calibrate_power.clicked.connect(self.calibrate_power_gui)             
         self.doubleSpinBox_min_param.setValue(self.PC.min_param)
         self.doubleSpinBox_max_param.setValue(self.PC.max_param)
         self.doubleSpinBox_max_param.valueChanged.connect(self.update_min_max_params)  
@@ -225,13 +236,13 @@ class PowerControl_UI(QtWidgets.QWidget,UiTools):
         self.PC.power = float(self.doubleSpinBox_set_power.value())
     def update_number_points(self):
         self.PC.number_points = self.number_points_spinBox.value()
-    def Calibrate_Power_gui(self):
-        run_function_modally(self.PC.Calibrate_Power, progress_maximum = len(self.PC.points))
+    def calibrate_power_gui(self):
+        run_function_modally(self.PC.calibrate_power, progress_maximum = len(self.PC.points))
     
 if __name__ == '__main__': 
 
     from nplab.instrument.shutter.BX51_uniblitz import Uniblitz
-    from nplab.instrument.electronics.thorlabs_pm100 import Thorlabs_powermeter
+    from nplab.instrument.electronics.thorlabs_pm100 import ThorlabsPowermeter
     from nplab.instrument.shutter.thorlabs_sc10 import ThorLabsSC10
     from nplab import datafile    
    

@@ -93,7 +93,7 @@ class Triax(VisaInstrument):
             else:
                 self.Regions.append(None)
 
-        self.Wavelength_Array=None #Not intially set. Updated with a change of grating or stepper motor position
+        self.Wavelength_Array = None #Not intially set. Updated with a change of grating or stepper motor position
         self.Number_of_Pixels=CCD_Horizontal_Resolution
 
     def Get_Wavelength_Array(self):
@@ -126,7 +126,7 @@ class Triax(VisaInstrument):
             self.waitTillReady()
             self.Grating_Number = Set_To
             #try:
-            self.Wavelength_Array=self.Convert_Pixels_to_Wavelengths(np.array(list(range(self.Number_of_Pixels)))) #Update wavelength array
+            self.Wavelength_Array=self.Convert_Pixels_to_Wavelengths(np.arange(self.Number_of_Pixels)) #Update wavelength array
             #except:
                 #Dump=1
 
@@ -177,7 +177,7 @@ class Triax(VisaInstrument):
         #Optimise this relation over all pixels
 
         def Loss(Coefficents):
-            Wavelengths=np.polyval(np.polyfit(Sample_Pixels,Sample_Wavelengths,2),Pixel_Array)
+            Wavelengths = np.polyval(np.polyfit(Sample_Pixels,Sample_Wavelengths,2),Pixel_Array)
             Diff=[]
             for i in range(len(Pixel_Array)):
                 Diff.append(self.Find_Required_Step(Wavelengths[i],Pixel_Array[i],False)-Steps)
@@ -185,7 +185,7 @@ class Triax(VisaInstrument):
 
         Coefficents=spo.minimize(Loss,Coefficents).x
 
-        Wavelengths=np.polyval(np.polyfit(Sample_Pixels,Sample_Wavelengths,2),Pixel_Array)
+        Wavelengths=np.polyval(np.polyfit(Sample_Pixels,Sample_Wavelengths,2), Pixel_Array)
 
         return Wavelengths
            
@@ -252,6 +252,12 @@ class Triax(VisaInstrument):
         Current_Step=self.Motor_Steps()
         self.Move_Steps(Required_Step-Current_Step)
     
+    def Get_Center_Wavelength(self):
+        wls = self.Get_Wavelength_Array()
+        return wls[len(wls)//2]
+    
+    center_wavelength = property(Get_Center_Wavelength, Set_Center_Wavelength)    
+
     def Slit(self, Width=None):
         """
         Function to return or set the triax slit with in units of um. If Width is None, the current width is returned. 
@@ -293,7 +299,7 @@ class Triax(VisaInstrument):
 
         Start_Time = time.time()
 
-        while self._isBusy()==True:
+        while self._isBusy():
             time.sleep(1)
             if (time.time() - Start_Time) > Timeout:
                 self._logger.warn('Timed out')
@@ -308,11 +314,11 @@ class Triax(VisaInstrument):
     """
 
     def reset(self):
-        self.instr.write_raw('\xde')
+        self.instr.write_raw(b'\xde')
         time.sleep(5)
         buff = self.query(" ")
         if buff == 'B':
-            self.instr.write_raw('\x4f\x32\x30\x30\x30\x00')  # <O2000>0
+            self.instr.write_raw(b'\x4f\x32\x30\x30\x30\x00')  # <O2000>0
             buff = self.query(" ")
         if buff == 'F':
             self._logger.debug("Triax is reset")
@@ -321,10 +327,10 @@ class Triax(VisaInstrument):
     def setup(self):
         self._logger.info("Initiating motor. This will take some time...")
         self.write("A")
-        time.sleep(60)
-        self.waitTillReady()
-        self.Grating(1)
-        self.Grating_Number = self.Grating()
+        # time.sleep(60)
+        # self.waitTillReady()
+        # self.Grating(1)
+        # self.Grating_Number = self.Grating()
 
     def exitLateral(self):
         self.write("e0\r")
@@ -341,9 +347,8 @@ class TriaxUI(QtWidgets.QWidget,UiTools):
         uic.loadUi(ui_file, self)
         self.triax = triax
         self.centre_wl_lineEdit.returnPressed.connect(self.set_wl_gui)
-        self.slit_lineEdit.returnPressed.connect(self.set_slit_gui)
-        wl_arr = self.triax.Get_Wavelength_Array()      
-        self.centre_wl_lineEdit.setText(str(np.around(wl_arr[len(wl_arr)//2])))
+        self.slit_lineEdit.returnPressed.connect(self.set_slit_gui)     
+        self.centre_wl_lineEdit.setText(str(np.around(self.triax.center_wavelength)))
         self.slit_lineEdit.setText(str(self.triax.Slit()))
         eval('self.grating_'+str(self.triax.Grating())+'_radioButton.setChecked(True)')
         for radio_button in range(3):

@@ -43,7 +43,6 @@ CCD_Size=1600 #Size of ccd in pixels
 # Andor_Capture_Function=types.FunctionType(Andor.capture.__code__, Andor.capture.__globals__, 'Unimportant_Name',Andor.capture.__defaults__, Andor.capture.__closure__)
 
 class Trandor(Andor):#Andor
-    
     ''' Wrapper class for the Triax and the andor
     ''' 
     def __init__(self, white_shutter=None, triax_address = 'GPIB0::1::INSTR', use_shifts = False, laser = '_633'):
@@ -57,13 +56,16 @@ class Trandor(Andor):#Andor
         
         print ('Current Grating:'+str(self.triax.Grating()))
         print ('Current Slit Width:'+str(self.triax.Slit())+'um')
+        self.metadata_property_names += ('slit_width', 'wavelengths')
         
     def Grating(self, Set_To=None):
         return self.triax.Grating(Set_To)
 
-    def Generate_Wavelength_Axis(self):
+    def Generate_Wavelength_Axis(self, use_shifts=None):
 
-        if self.use_shifts:
+        if use_shifts is None:
+            use_shifts = self.use_shifts
+        if use_shifts:
             if self.laser == '_633': centre_wl = 632.8
             elif self.laser == '_785': centre_wl = 784.81
             wavelengths = np.array(self.triax.Get_Wavelength_Array()[::-1])
@@ -71,7 +73,14 @@ class Trandor(Andor):#Andor
         else:
             return self.triax.Get_Wavelength_Array()[::-1]
     x_axis = property(Generate_Wavelength_Axis)
-    
+
+    @property
+    def wavelengths(self):
+        return self.Generate_Wavelength_Axis(use_shifts=False)
+    @property
+    def slit_width(self):
+        return self.triax.Slit()
+
     def Test_Notch_Alignment(self):
         	Accepted=False
         	while Accepted is False:
@@ -101,26 +110,7 @@ def Capture(_AndorUI):
     else:
         _AndorUI.Andor.raw_image(update_latest_frame = True)
 setattr(AndorUI, 'Capture', Capture)
-    # def _Capture(self,Close_White_Shutter=True): # shouldn't be used. use andor.Capture()
-    #     """
-    #     Edits the capture function if a white light shutter object is supplied, to ensure it is closed while the image is taken.
-    #     This behaviour can be overwirtten by passing Close_White_Shutter=False
-    #     """
-    #     if self.White_Shutter is not None and Close_White_Shutter is True:
-    #         try:
-    #             self.White_Shutter.close_shutter()
-    #         except:
-    #               pass
-                    
-    #         Output = super().capture()
-                
-    #         try:
-    #             self.White_Shutter.open_shutter()
-    #         except:
-    #             pass
-    #         return Output
-    #     else:
-    #         return super().capture()
+   
 
   
     

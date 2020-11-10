@@ -8,6 +8,8 @@ from nplab.utils.gui import QtCore, QtGui, QtWidgets, uic
 from nplab.utils.notified_property import NotifiedProperty, register_for_property_changes
 import os
 import sys
+import inspect
+
 
 def strip_suffices(name, suffices=[]):
     """strip a string from the end of a name, if it's present."""
@@ -174,6 +176,78 @@ class UiTools(object):
                     if verbose:
                         print("didn't connect {0} '{1}'".format(control_type, name))
                         print(e)
+
+    def save_settings(self, settings, prefix=''):
+        """Following https://stackoverflow.com/questions/23279125/python-pyqt4-functions-to-save-and-restore-ui-widget-values
+        :param ui:
+        :param settings:
+        :return:
+        """
+
+        for _, obj in inspect.getmembers(self):
+            if isinstance(obj, QtWidgets.QComboBox):
+                wdgt_name = obj.objectName()
+                try:
+                    index = obj.currentIndex()  # get current index from combobox
+                    value = obj.itemText(index)  # get the text for current index
+                    settings.setValue('/'.join([prefix, wdgt_name]), value)  # save combobox selection to registry
+                except Exception as e:
+                    print('Failed saving %s because: %s' % ('/'.join([prefix, wdgt_name]), e))
+
+            elif isinstance(obj, QtWidgets.QLineEdit):
+                wdgt_name = obj.objectName()
+                try:
+                    value = obj.text()
+                    settings.setValue('/'.join([prefix, wdgt_name]),
+                                      value)  # save ui values, so they can be restored next time
+                except Exception as e:
+                    print('Failed saving %s because: %s' % ('/'.join([prefix, wdgt_name]), e))
+
+            elif isinstance(obj, QtWidgets.QCheckBox):
+                wdgt_name = obj.objectName()
+                try:
+                    value = obj.isChecked()
+                    settings.setValue('/'.join([prefix, wdgt_name]), value)
+                except Exception as e:
+                    print('Failed saving %s because: %s' % ('/'.join([prefix, wdgt_name]), e))
+
+    def load_settings(self, settings, prefix=''):
+
+        for _, obj in inspect.getmembers(self):
+            if isinstance(obj, QtWidgets.QComboBox):
+                wdgt_name = obj.objectName()
+                try:
+                    value = settings.value('/'.join([prefix, wdgt_name]))
+                    if value == "":
+                        continue
+                    index = obj.findText(value)  # get the corresponding index for specified string in combobox
+
+                    if index == -1:  # add to list if not found
+                        obj.insertItems(0, [value])
+                        index = obj.findText(value)
+                        obj.setCurrentIndex(index)
+                    else:
+                        obj.setCurrentIndex(index)  # preselect a combobox value by index
+                except Exception as e:
+                    print('Failed saving %s because: %s' % ('/'.join([prefix, wdgt_name]), e))
+
+            elif isinstance(obj, QtWidgets.QLineEdit):
+                wdgt_name = obj.objectName()
+                try:
+                    value = settings.value('/'.join([prefix, wdgt_name]))  # get stored value from registry
+                    obj.setText(value)  # restore lineEditFile
+                except Exception as e:
+                    print('Failed saving %s because: %s' % ('/'.join([prefix, wdgt_name]), e))
+
+            elif isinstance(obj, QtWidgets.QCheckBox):
+                wdgt_name = obj.objectName()
+                try:
+                    value = settings.value('/'.join([prefix, wdgt_name]))  # get stored value from registry
+                    if value is not None:
+                        obj.setCheckState(value)  # restore checkbox
+                except Exception as e:
+                    print('Failed saving %s because: %s' % ('/'.join([prefix, wdgt_name]), e))
+
 
 class QuickControlBox(QtWidgets.QGroupBox, UiTools):
     "A groupbox that can quickly add controls that synchronise with properties."

@@ -9,11 +9,12 @@ from __future__ import division
 from builtins import str
 from past.utils import old_div
 from nplab.utils.gui import QtWidgets, uic
+from nplab.ui.ui_tools import UiTools
 import os
 import numpy as np
 
 
-class BaseUi(QtWidgets.QWidget):
+class BaseUi(QtWidgets.QWidget, UiTools):
     def __init__(self, slm_gui, name):
         super(BaseUi, self).__init__()
         uic.loadUi(os.path.join(os.path.dirname(__file__), 'ui_%s.ui' % name), self)
@@ -37,6 +38,7 @@ class constantUi(BaseUi):
     def _connect(self):
         self.offset_slider.valueChanged.connect(self.update_offset_lineedit)
         self.offset_lineEdit.returnPressed.connect(self.update_offset_slider)
+        self.offset_slider.valueChanged.connect(self.slm_gui.make)
 
     def update_offset_lineedit(self):
         steps = self.offset_slider.value()
@@ -104,9 +106,13 @@ class gratingsUi(BaseUi):
             self.gratingx_lineEdit.setText('%g' % (grating_x - step))
 
     def get_params(self):
-        grating_x = float(self.gratingx_lineEdit.text())
-        grating_y = float(self.gratingy_lineEdit.text())
-        return grating_x, grating_y
+        grating_x = self.gratingx_lineEdit.text()
+        grating_y = self.gratingy_lineEdit.text()
+        if grating_x == '':
+            grating_x = 0
+        if grating_y == '':
+            grating_y = 0
+        return float(grating_x), float(grating_y)
 
 
 class astigmatismUi(BaseUi):
@@ -114,34 +120,74 @@ class astigmatismUi(BaseUi):
         super(astigmatismUi, self).__init__(slm_gui, 'astigmatism')
 
     def _connect(self):
-        self.pushButton_center.clicked.connect(lambda: self.update_astigmatism('center'))
-        self.pushButton_up.clicked.connect(lambda: self.update_astigmatism('up'))
-        self.pushButton_down.clicked.connect(lambda: self.update_astigmatism('down'))
-        self.pushButton_left.clicked.connect(lambda: self.update_astigmatism('left'))
-        self.pushButton_right.clicked.connect(lambda: self.update_astigmatism('right'))
-        self.astigmatismx_lineEdit.textChanged.connect(self.slm_gui.make)
-        self.astigmatismy_lineEdit.textChanged.connect(self.slm_gui.make)
+        self.amplitude_step_lineEdit.returnPressed.connect(self.update_amplitude_lineedit)
+        self.amplitude_offset_lineEdit.returnPressed.connect(self.update_amplitude_lineedit)
+        self.amplitude_slider.valueChanged.connect(self.update_amplitude_lineedit)
+        self.amplitude_lineEdit.returnPressed.connect(self.update_amplitude_slider)
+        self.amplitude_slider.valueChanged.connect(self.slm_gui.make)
 
-    def update_astigmatism(self, direction):
-        step = float(self.lineEdit_step.text())
-        astigmatism_x = float(self.astigmatismx_lineEdit.text())
-        astigmatism_y = float(self.astigmatismy_lineEdit.text())
-        if direction == 'center':
-            self.astigmatismx_lineEdit.setText(str(0))
-            self.astigmatismy_lineEdit.setText(str(0))
-        elif direction == 'up':
-            self.astigmatismy_lineEdit.setText('%g' % (astigmatism_y + step))
-        elif direction == 'down':
-            self.astigmatismy_lineEdit.setText('%g' % (astigmatism_y - step))
-        elif direction == 'left':
-            self.astigmatismx_lineEdit.setText('%g' % (astigmatism_x + step))
-        elif direction == 'right':
-            self.astigmatismx_lineEdit.setText('%g' % (astigmatism_x - step))
+        self.angle_step_lineEdit.returnPressed.connect(self.update_angle_lineedit)
+        self.angle_offset_lineEdit.returnPressed.connect(self.update_angle_lineedit)
+        self.angle_slider.valueChanged.connect(self.update_angle_lineedit)
+        self.angle_lineEdit.returnPressed.connect(self.update_angle_slider)
+        self.angle_slider.valueChanged.connect(self.slm_gui.make)
+
+    def update_amplitude_lineedit(self):
+        try:
+            step_size = float(self.amplitude_step_lineEdit.text())
+        except ValueError:
+            amplitude = float(self.amplitude_lineEdit.text())
+            if amplitude != 0:
+                step_size = 0.01 * amplitude
+            else:
+                step_size = 0.0001
+            self.amplitude_step_lineEdit.setText(str(step_size))
+        try:
+            offset = float(self.amplitude_offset_lineEdit.text())
+        except ValueError:
+            offset = float(self.amplitude_lineEdit.text())
+            self.amplitude_offset_lineEdit.setText(str(offset))
+        steps = self.amplitude_slider.value()
+        value = offset + steps * step_size
+
+        self.amplitude_lineEdit.setText('%g' % value)
+
+    def update_amplitude_slider(self):
+        value = float(self.amplitude_lineEdit.text())
+        step_size = float(self.amplitude_step_lineEdit.text())
+        offset = float(self.amplitude_offset_lineEdit.text())
+
+        steps = int(old_div((value - offset), step_size))
+        self.amplitude_slider.setValue(steps)
+
+    def update_angle_lineedit(self):
+        try:
+            step_size = float(self.angle_step_lineEdit.text())
+        except ValueError:
+            step_size = 1
+            self.angle_step_lineEdit.setText(str(step_size))
+        try:
+            offset = float(self.angle_offset_lineEdit.text())
+        except ValueError:
+            offset = float(self.angle_lineEdit.text())
+            self.angle_offset_lineEdit.setText(str(offset))
+        steps = self.angle_slider.value()
+        value = offset + steps * step_size
+
+        self.angle_lineEdit.setText('%g' % value)
+
+    def update_angle_slider(self):
+        value = float(self.angle_lineEdit.text())
+        step_size = float(self.angle_step_lineEdit.text())
+        offset = float(self.angle_offset_lineEdit.text())
+
+        steps = int(old_div((value - offset), step_size))
+        self.angle_slider.setValue(steps)
 
     def get_params(self):
-        astigmatism_x = float(self.astigmatismx_lineEdit.text())
-        astigmatism_y = float(self.astigmatismy_lineEdit.text())
-        return astigmatism_x, astigmatism_y
+        amplitude = float(self.amplitude_lineEdit.text())
+        angle = float(self.angle_lineEdit.text())
+        return amplitude, angle
 
 
 class focusUi(BaseUi):
@@ -181,10 +227,49 @@ class vortexbeamUi(BaseUi):
     def __init__(self, slm_gui):
         super(vortexbeamUi, self).__init__(slm_gui, 'vortexbeam')
 
+    def _connect(self):
+        self.pushButton_flip.clicked.connect(self.flip)
+
+        self.slider_angle.valueChanged.connect(lambda: self.lineEdit_angle.setText('%g' % self.slider_angle.value()))
+        self.lineEdit_angle.textChanged.connect(lambda: self.slider_angle.setValue(int(float(self.lineEdit_angle.text()))))
+
+        self.slider_center_x.valueChanged.connect(lambda: self.lineEdit_center_x.setText('%g' % (self.slider_center_x.value()/100)))
+        self.slider_center_y.valueChanged.connect(lambda: self.lineEdit_center_y.setText('%g' % (self.slider_center_y.value()/100)))
+        self.lineEdit_center_x.textChanged.connect(lambda: self.slider_center_x.setValue(int(100*float(self.lineEdit_center_x.text()))))
+        self.lineEdit_center_y.textChanged.connect(lambda: self.slider_center_y.setValue(int(100*float(self.lineEdit_center_y.text()))))
+
+        self.lineEdit_order.textChanged.connect(self.slm_gui.make)
+        self.lineEdit_angle.textChanged.connect(self.slm_gui.make)
+        self.lineEdit_center_x.textChanged.connect(self.slm_gui.make)
+        self.lineEdit_center_y.textChanged.connect(self.slm_gui.make)
+
+    def flip(self):
+        order = int(float(self.lineEdit_order.text()))
+        self.lineEdit_order.setText(str(-order))
+
     def get_params(self):
         order = int(float(self.lineEdit_order.text()))
         angle = float(self.lineEdit_angle.text())
-        return order, angle
+        center_x = float(self.lineEdit_center_x.text())
+        center_y = float(self.lineEdit_center_y.text())
+        return order, angle, (center_x, center_y)
+
+
+class multispot_gratingUi(BaseUi):
+    def __init__(self, slm_gui):
+        super(multispot_gratingUi, self).__init__(slm_gui, 'multispot_grating')
+
+    def _connect(self):
+        self.slider_grating.valueChanged.connect(lambda: self.lineEdit_grating.setText('%g' % (self.slider_grating.value()/100)))
+        self.lineEdit_grating.textChanged.connect(lambda: self.slider_grating.setValue(int(100*float(self.lineEdit_grating.text()))))
+
+        self.lineEdit_grating.textChanged.connect(self.slm_gui.make)
+        self.lineEdit_spots.textChanged.connect(self.slm_gui.make)
+
+    def get_params(self):
+        spots = int(float(self.lineEdit_spots.text()))
+        grating = float(self.lineEdit_grating.text())
+        return grating, spots
 
 
 class linear_lutUi(BaseUi):
