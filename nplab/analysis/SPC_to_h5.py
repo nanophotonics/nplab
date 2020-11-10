@@ -78,7 +78,7 @@ def extractRamanSpc(path, bg_path = False, combine_statics = False):
     powerConverter = {532 : p532, 633 : p633, 785 : p785} #Assigns each laser power dictionary to the appropriate wavelength.
 
     os.chdir(path)
-    spcFiles = [f for f in os.listdir('.') if f.endswith('.spc')]
+    spcFiles = sorted([f for f in os.listdir('.') if f.endswith('.spc')])
     spectra = []
 
     for n, spcFile in enumerate(spcFiles):
