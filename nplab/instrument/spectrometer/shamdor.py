@@ -29,7 +29,7 @@ class Shamdor(Andor):
         self.metadata_property_names += ('slit_width', 'wavelengths')
     
     def get_x_axis(self, use_shifts=None):
-        if self.use_shifts and use_shifts in [None, False]:
+        if self.use_shifts and use_shifts in (None, True):
             
             wavelengths = np.array(self.shamrock.GetCalibration()[::-1])
             return ( 1./(self.laser_wl*1e-9)- 1./(wavelengths*1e-9))/100    
