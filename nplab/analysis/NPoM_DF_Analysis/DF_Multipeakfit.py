@@ -1104,6 +1104,8 @@ def analyseNpomSpectrum(x, y, cutoff = 1500, fs = 60000, doublesThreshold = 2, c
     isNpom2, isDouble = testIfDouble(xRaw, yRaw, doublesThreshold = doublesThreshold, lowerLimit = cmLowLim, raiseExceptions = raiseExceptions,
                                      plot = plot)
 
+    
+
     if isNpom1 == True and isNpom2 == True:
         isNpom = True
 

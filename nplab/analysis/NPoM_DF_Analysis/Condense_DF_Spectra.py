@@ -435,7 +435,11 @@ def consoliData(rootDir):
                     gParticleNew = consolidatedScan.create_group(newGroupName)
                     gParticleNew.attrs.update(gParticleOld.attrs)
                     for dataName in gParticleOld.keys():
-                        newDataset = gParticleNew.create_dataset(dataName, data = gParticleOld[dataName])
+                        print(type(gParticleOld[dataName]))
+                        try:
+                            newDataset = gParticleNew.create_dataset(dataName, data = gParticleOld[dataName])
+                        except:
+                            print(type(gParticleOld[dataName]))
                         newDataset.attrs.update(gParticleOld[dataName].attrs)
 
 def extractAllSpectra(rootDir, returnIndividual = True, pl = False, dodgyThreshold = 0.4, start = 0, finish = 0,
@@ -454,6 +458,7 @@ def extractAllSpectra(rootDir, returnIndividual = True, pl = False, dodgyThresho
     outputFile = createOutputFile('summary')
 
     with h5py.File(inputFile, 'a') as ipf:
+        
         if 'particleScans' in ipf.keys():
             fileType = 'pre-2018'
 
@@ -467,6 +472,7 @@ def extractAllSpectra(rootDir, returnIndividual = True, pl = False, dodgyThresho
         with h5py.File(outputFile, 'a') as opf:
 
             gAllOut = opf.create_group('particleScanSummaries')
+            dParticleFormat = None
 
             if returnIndividual == True:
                 gInd = opf.create_group('Individual NPoM Spectra')
@@ -485,9 +491,14 @@ def extractAllSpectra(rootDir, returnIndividual = True, pl = False, dodgyThresho
                               key = lambda groupName: len(list(ipf[groupName].keys())))[::-1]
 
             if fileType == 'post-2018':
-                for dSetName in list(ipf[allScans[0]]['Particle_0'].keys()):
-                    if dSetName.startswith('alinger.z_scan') or dSetName.startswith('zScan'):
-                        dParticleFormat = dSetName
+                particleN = 0
+                while dParticleFormat is None:                    
+                    for dSetName in list(ipf[allScans[0]][f'Particle_{particleN}'].keys()):
+                        if dSetName.startswith('alinger.z_scan') or dSetName.startswith('zScan'):
+                            dParticleFormat = dSetName
+                            break
+                    
+                    particleN += 1
 
             for n, scanName in enumerate(allScans):
 
@@ -970,11 +981,16 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
 
             allScans = sorted([groupName for groupName in list(ipf.keys()) if groupName.startswith(gScanFormat)],
                               key = lambda groupName: len(list(ipf[groupName].keys())))[::-1]
-
+            dParticleFormat = None
             if fileType == 'post-2018':
-                for dSetName in list(ipf[allScans[0]]['Particle_0'].keys()):
-                    if dSetName.startswith('alinger.z_scan') or dSetName.startswith('zScan'):
-                        dParticleFormat = dSetName
+                particleN = 0
+                while dParticleFormat is None:                    
+                    for dSetName in list(ipf[allScans[0]][f'Particle_{particleN}'].keys()):
+                        if dSetName.startswith('alinger.z_scan') or dSetName.startswith('zScan'):
+                            dParticleFormat = dSetName
+                            break
+                    
+                    particleN += 1
 
             for n, scanName in enumerate(allScans):
 
@@ -1017,6 +1033,10 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
                         plGroupName = plGroupNames[0]
                         if nn == 0:
                             print(plGroupName)
+                            
+                    if dParticleFormat not in particleGroup.keys():
+                        print(f'No Z-Stack in {groupName}')
+                        continue
 
                     bg = particleGroup[dParticleFormat].attrs['background']
                     ref = particleGroup[dParticleFormat].attrs['reference']

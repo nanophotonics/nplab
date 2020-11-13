@@ -1,0 +1,653 @@
+'''
+For use with AuNP aggregate extinction timescan .h5 data from OO Spectrometer in lab 9
+Just call "fitAllSpectra('your_filename.h5')" to run
+'''
+
+import time
+import os
+import h5py
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib import cm
+from importlib import reload
+from scipy.integrate import quad as spQuad
+from scipy import sparse
+from scipy.sparse.linalg import spsolve
+import nplab.analysis.NPoM_DF_Analysis.DF_Multipeakfit as mpf
+from matplotlib.ticker import (MultipleLocator, FormatStrFormatter, AutoMinorLocator)
+import matplotlib as mpl
+from IPython import display as ipDisp
+from lmfit.models import LorentzianModel
+from lmfit.models import GaussianModel
+from lmfit.models import StepModel
+from lmfit.models import ExpressionModel
+from lmfit.models import LinearModel
+from lmfit.models import ConstantModel
+from lmfit import Model
+rootDir = os.getcwd()
+#charDir = r'R:\3-Temporary\car72\Plotting'
+
+try:
+    charDir = r'C:\Users\car72\Documents\GitHub\charlie\charlie\Plotting'
+    os.chdir(charDir)
+    import plotPars
+    os.chdir(rootDir)
+    plotParDict = plotPars.plotParDict['Agg Extinction']
+    boxPropDict = plotPars.boxProps
+    aggExtOther = plotPars.aggExtOther
+
+except:
+    plotPars = None
+    plotParDict = {'legend.fontsize': 18,
+                    'legend.title_fontsize' : 20,
+                    'figure.figsize': (12, 7),
+                    'figure.titlesize': 24,
+                    'axes.labelsize': 24,
+                    'axes.titlepad': 10,
+                    'axes.titlesize': 24,
+                    'axes.spines.right' : 'on',
+                    'axes.spines.top' : 'on',
+                    'axes.prop_cycle' : cycler('color', [plt.cm.Dark2(i) for i in np.linspace(0, 1., 8)]),
+                    'xtick.labelsize': 22,
+                    'ytick.labelsize': 22,
+                    'xtick.direction' : 'in',
+                    'ytick.direction' : 'in',
+                    'font.size': 24,
+                    'lines.linewidth': 2,
+                    'axes.linewidth': 2,
+                    'patch.linewidth': 2,
+                    'xtick.major.width': 2,
+                    'xtick.major.size': 4,
+                    'xtick.minor.width': 1.5,
+                    'xtick.minor.size': 2,
+                    'ytick.major.width': 2,
+                    'ytick.major.size': 4,
+                    'ytick.minor.width': 1.5,
+                    'ytick.minor.size': 2,
+                    'legend.facecolor' : 'ivory',
+                    'legend.fancybox' : True,
+                    'legend.edgecolor' : 'darkgray',
+                    'legend.shadow' : False,
+                    'font.family' : 'sans-serif',
+                    'font.sans-serif' : 'Trebuchet MS',
+                    'font.sans-serif' : 'Trebuchet MS',
+                    'mathtext.fontset' : 'custom',
+                    'mathtext.rm' : 'Trebuchet MS',
+                    'mathtext.it' : 'Trebuchet MS:italic',
+                    'mathtext.bf' : 'Trebuchet MS:bold',                
+                    'figure.constrained_layout.hspace' :  0.082,
+                    'figure.constrained_layout.wspace' :  0.1,
+                    'savefig.bbox' : 'tight'
+                    }
+    boxPropDict = {'boxstyle' : 'round',
+                    'facecolor' : 'ivory',
+                    'edgecolor' : 'darkgray',
+                    'linewidth' : 3,
+                    'alpha' : 0.9}
+
+    aggExtOther = {'titleBbox' : 
+                                {'boxstyle' : 'square',
+                                'facecolor' : 'white',
+                                'edgecolor' : 'white',
+                                'linewidth' : 0,
+                                'alpha' : 1},
+
+                'titleWeight' : 1.3,
+                'titlePosition' : (0.5, 1),
+                'titleHAlign' : 'center', 'titleVAlign' : 'center',
+                'legendTitlesize' : 18,
+                'figRect' : [0, 0, 0.85, 1], 'cbarLeft' : 0.85, 'cbarWidth' : 0.05,
+                'cmap' : 'jet_r', 'mainAlpha' : 0.7, 'mainLw' : 3, 'nullColor' : 'grey', 'nullAlpha' : 0.5, 'nullLw' : 0.5
+
+                }
+
+plt.rcParams.update(plotParDict)
+
+totalStartTime = time.time()
+
+def makeDir(dirName):
+    if dirName not in os.listdir('.'):
+        os.mkdir(dirName)
+        
+def getCol(n, dSetSize, cmap, rev = False):    
+    cIndex = n*256/dSetSize
+    #print(cIndex)
+    if rev == True:
+        cIndex = 256 - cIndex
+    color = cmap(int(cIndex))
+    return color
+
+def trapNumInt(x, y):
+    
+    for n, i in enumerate(x):
+        if n == 0:
+            area = 0
+            continue
+
+        h = i - x[n-1]
+        y1 = y[n]
+        y0 = y[n-1]
+        yAvg = np.average([y0, y1])
+        aI = yAvg*h
+        area += aI
+    
+    return area
+
+def lorentzian(x, height, center, fwhm):
+    I = height
+    x0 = center
+    gamma = fwhm/2
+    numerator = gamma**2
+    denominator = (x - x0)**2 + gamma**2
+    quot = numerator/denominator
+    
+    y = I*quot
+    return y
+
+def gaussian(x, height, center, fwhm, offset = 0):
+
+    '''Gaussian as a function of height, centre, fwhm and offset'''
+    a = height
+    b = center
+    c = fwhm
+
+    N = 4*np.log(2)*(x - b)**2
+    D = c**2
+    F = -N/D
+    E = np.exp(F)
+    y = a*E
+    y += offset
+
+    return y
+
+def findAunpSpectrum(h5File):
+    '''
+    searches through h5 file for non-aggregated AuNP spectrum
+    '''
+    with h5py.File(h5File, 'a') as f:
+        allSpecs = sorted(f.keys(), key = lambda i: f[i].attrs['AggInc'])
+
+        #for specName in allSpecs:
+        #    if 'AuNP Spectrum' in f[specName].attrs.keys():
+        #        return f[specName].attrs['AuNP Spectrum'][()]
+
+        n = 0
+        m = 0
+        while True:
+            aunpSpec = allSpecs[m]
+            x = f[aunpSpec].attrs['wavelengths'][()] 
+            startPoint = f[aunpSpec].attrs['Start Point'][()] 
+            y = f[aunpSpec][()][startPoint + n]
+            bg = f[aunpSpec].attrs['background'][()] 
+            ref = f[aunpSpec].attrs['reference'][()] 
+            ref -= bg
+            y -= bg
+            y /= ref
+            y = np.log10(1/y)
+
+            xTrunc, yTrunc = mpf.truncateSpectrum(x, y, startWl = 400, finishWl = 950)
+            
+            plt.plot(xTrunc, yTrunc)
+            plt.xlim(xTrunc.min(), xTrunc.max())
+            plt.show()
+        
+            decision = input('Is this AuNP monomer spectrum acceptable? Enter y to accept; n to find another spectrum; d to look in another dataset ')
+
+            if decision == 'y':
+                f[aunpSpec].attrs['AuNP Spectrum'] = y
+                f[aunpSpec].attrs['AuNP Wavelengths'] = x
+                for specName in allSpecs:
+                    if specName != aunpSpec:
+                        f[specName].attrs['AuNP Spectrum'] = f[aunpSpec].attrs['AuNP Spectrum']
+                        f[specName].attrs['AuNP Wavelengths'] = f[aunpSpec].attrs['AuNP Wavelengths']
+                return ExtinctionSpectrum(x, y)
+            elif decision == 'n':
+                n += 1
+            elif decision == 'd':
+                m += 1
+            else:
+                return
+
+def baseline_als(y, lam, p, niter=10):
+    L = len(y)
+    D = sparse.diags([1,-2,1],[0,-1,-2], shape=(L,L-2))
+    w = np.ones(L)
+    for i in range(niter):
+        W = sparse.spdiags(w, 0, L, L)
+        Z = W + lam * D.dot(D.transpose())
+        z = spsolve(Z, w*y)
+        w = p * (y > z) + (1-p) * (y < z)
+    return z
+
+def nmToEv(nm):
+    wavelength = nm*1e-9
+    c = 299792458
+    h = 6.62607015e-34
+    joules = h*c/wavelength
+    e = 1.60217662e-19
+    eV = joules / e
+    return eV
+
+def evToNm(eV):
+    e = 1.60217662e-19
+    joules = eV * e
+    c = 299792458
+    h = 6.62607015e-34
+    wavelength = h*c/joules
+    nm = wavelength * 1e9
+    return nm
+
+class ExtinctionSpectrum:
+
+    def makeNull(self):
+        self.dimerCenter = np.nan
+        self.dimerHeight = np.nan
+        self.dimerFwhm = np.nan
+        self.chainCenter = np.nan
+        self.chainHeight = np.nan
+        self.chainFwhm = np.nan
+
+    def __init__(self, x, y, startWl = 420, endWl = 950, initSpec = None):
+        if x is None:
+            self.makeNull()
+            return
+
+        self.xRaw = mpf.removeNaNs(x)
+        self.yRaw = mpf.removeNaNs(y)
+        self.startWl = startWl
+        self.endWl = endWl
+        self.xTrunc, self.yTrunc = mpf.truncateSpectrum(self.xRaw, self.yRaw, startWl = self.startWl, finishWl = self.endWl)
+        self.ySmooth = mpf.butterLowpassFiltFilt(self.yTrunc)
+
+        if initSpec is not None:
+            initX, initY, initYSmooth = initSpec.xTrunc, initSpec.yTrunc, initSpec.ySmooth
+
+            if not np.all(initX == self.xTrunc):
+                initY = np.interp(self.xTrunc, initX, initY)
+                initYSmooth = mpf.butterLowpassFiltFilt(initY)
+            
+            aunpIndex = initYSmooth.argmax()
+            scaling = self.ySmooth[aunpIndex]/initYSmooth[aunpIndex]
+            self.ySub = self.ySmooth - initY*scaling
+            
+        else:
+            self.ySub = np.zeros(len(self.yTrunc))
+        
+    def fitAggPeaks(self, dimerWl = None):
+        '''
+        InitY is monomeric AuNP spectrum, scaled if necessary. Must have same length as x and y
+        '''
+        x, y = self.xTrunc, self.ySub
+        ySmooth = mpf.butterLowpassFiltFilt(y, cutoff = 1200, fs = 65000)
+        mindices = mpf.detectMinima(ySmooth)
+        mindices = mindices[np.where(x[mindices] > 500)]
+        startMindex = mindices[0] if len(mindices) > 0 else abs(x-500).argmin()
+
+        xFit, yFit, yFitSmooth = x[startMindex:], y[startMindex:], ySmooth[startMindex:]
+        self.specMaxWl = xFit[yFitSmooth.argmax()]
+
+        if dimerWl is None:
+            initDimerWl = self.specMaxWl
+            dimerIndex = abs(xFit-initDimerWl).argmin()
+            initDimerHeight = yFitSmooth.max()
+        else:
+            initDimerWl = dimerWl
+            dimerIndex = abs(xFit-initDimerWl).argmin()
+            initDimerHeight = yFitSmooth[dimerIndex]
+
+        yOffset = -yFitSmooth.min()
+        yFit += yOffset
+        initDimerHeight += yOffset
+        yFitSmooth += yOffset
+
+        xFit = -nmToEv(xFit)
+        xFitNm = evToNm(-xFit)
+        initDimerWl = xFit[dimerIndex]
+
+        try:
+            dimerHalfMaxDex = abs(yFitSmooth[:dimerIndex] - initDimerHeight/2).argmin()
+        except:
+            print(dimerWl, initDimerWl, dimerIndex)
+
+        initDimerFwhm = 2*(initDimerWl - xFit[dimerHalfMaxDex])
+        initDimerFwhmEv = abs(xFit[dimerHalfMaxDex] - xFit[2*dimerIndex - dimerHalfMaxDex])
+        
+        dimerInit = lorentzian(xFit, initDimerHeight, initDimerWl, initDimerFwhm)
+
+        dimerInit -= dimerInit[0] - yFitSmooth[0]
+        dimerInit *= initDimerHeight/dimerInit.max()
+
+        chainInit = yFitSmooth - dimerInit
+        initChainIndex = dimerIndex + chainInit[dimerIndex:].argmax()        
+
+        '''plt.plot(xFit, yFit)
+        plt.plot(xFit[dimerIndex:initChainIndex], chainInit[dimerIndex:initChainIndex], zorder = 10)
+        plt.plot(xFit, dimerInit)
+        plt.plot(xFit, chainInit)
+        plt.plot(xFit[initChainIndex], chainInit[initChainIndex], 'o')
+        plt.plot(xFit[chainHalfMaxDex], chainInit[chainHalfMaxDex], 'ko')
+        plt.plot(xFit, dimerInit + chainInit, 'r--')
+        plt.show()'''
+
+        aggMod = LorentzianModel(prefix = 'Dimer_')
+        aggModPars = aggMod.guess(dimerInit, x = xFit)
+        aggModPars['Dimer_center'].set(initDimerWl, min = initDimerWl-initDimerFwhm/2, max = initDimerWl+initDimerFwhm/2)
+        aggModPars['Dimer_sigma'].set(initDimerFwhm/2)
+        aggModPars['Dimer_height'].set(initDimerHeight*2/3, max = initDimerHeight, min = 0)
+        aggModPars['Dimer_amplitude'].set(min = 0)
+
+        if initChainIndex < dimerIndex:
+            chainMode = False
+        else:
+            chainMode = True
+            initChainWl, initChainHeight = xFit[initChainIndex], chainInit[initChainIndex]
+
+            try:
+                chainHalfMaxDex = dimerIndex + abs(chainInit[dimerIndex:initChainIndex] - initChainHeight/2).argmin()
+            except:
+                chainHalfMaxDex = np.average([initChainIndex, dimerHalfMaxDex])
+                print(initChainIndex, chainInit[dimerIndex:initChainIndex])
+                plt.plot(xFitNm, yFit)
+                plt.plot(xFitNm[dimerHalfMaxDex], yFitSmooth[dimerHalfMaxDex], 'o')
+                plt.plot(xFitNm, dimerInit)
+                plt.plot(xFitNm, chainInit)
+                plt.plot(xFitNm[dimerIndex], chainInit[dimerIndex], 'ro')
+                plt.plot(xFitNm[initChainIndex], chainInit[initChainIndex], 'ko')
+                plt.show()
+
+            initChainFwhm = 2*(initChainWl - xFit[chainHalfMaxDex])
+            try:
+                initChainFwhmEv = abs(xFit[chainHalfMaxDex] - xFit[max(2*initChainIndex - chainHalfMaxDex, len(xFit) - 1)])
+            except:
+                print(chainHalfMaxDex, 2*initChainIndex - chainHalfMaxDex)
+            chainInit = lorentzian(xFit, initChainHeight, initChainWl, initChainFwhm)
+            gModC = LorentzianModel(prefix = 'Chain_')
+            parsC = gModC.guess(chainInit, x = xFit)
+            parsC['Chain_sigma'].set(initChainFwhm/2)
+            parsC['Chain_height'].set(initChainHeight*2/3, max = initChainHeight, min = 0)
+            parsC['Chain_amplitude'].set(min = 0)
+
+            aggMod += gModC            
+            aggModPars.update(parsC)
+
+            aggModPars['Chain_center'].set(initChainWl, min = initDimerWl)
+
+        aggFit = aggMod.fit(yFit, aggModPars, x = xFit)
+        yAggFit = aggFit.eval(x = xFit)
+        finalParams = aggFit.params
+        comps = aggFit.eval_components()
+
+        xFit = evToNm(-xFit)
+
+        '''plt.plot(xFit, yFit, 'k')
+        plt.plot(xFit, yAggFit, 'r')
+        for comp in comps.keys():
+            print(comp)
+            plt.plot(xFit, comps[comp], label = comp)
+        plt.legend(loc = 0)
+        plt.show()'''
+
+        self.dimerCenter = evToNm(-finalParams['Dimer_center'].value)
+        self.dimerHeight = finalParams['Dimer_height'].value
+        self.dimerFwhm = finalParams['Dimer_fwhm'].value
+
+        if chainMode == True:
+            self.chainCenter = evToNm(-finalParams['Chain_center'].value)
+            self.chainHeight = finalParams['Chain_height'].value
+            self.chainFwhm = finalParams['Chain_fwhm'].value
+
+class AggExtDataset:
+
+    def __init__(self, dSet, dataName = None, startWl = 420, endWl = 950, initSpec = None, startPointPlot = False, startPointThresh = 2, tInit = 15):
+        self.x = dSet.attrs['wavelengths'][()]
+        self.t = dSet.attrs['start times'][()]
+        self.dataName = dataName
+
+        bg = dSet.attrs['background'][()]
+        ref = dSet.attrs['reference'][()]
+        ref -= bg
+        yData = dSet[()] - bg
+        yData /= ref
+
+        self.yData = np.log10(1/yData)
+        self.startWl = startWl
+        self.endWl = endWl
+
+        if 'AggInc' in dSet.attrs.keys():
+            self.startPoint = dSet.attrs['Start Point']
+            self.endPoint   = dSet.attrs['End Point']
+            self.trapDiff   = dSet.attrs['AggInc']
+
+        else:
+            self.findStartPoint(plot = startPointPlot, thresh = startPointThresh, tInit = tInit)
+            dSet.attrs['Start Point'] = self.startPoint
+            dSet.attrs['End Point'] = self.endPoint
+            dSet.attrs['AggInc'] = self.trapDiff
+
+        self.initSpec = initSpec if initSpec is not None else findAunpSpectrum(dSet.file.filename)
+
+    def findStartPoint(self, plot = False, thresh = 2, tInit = 15):
+        x = self.x
+        t = self.t 
+        yData = self.yData
+
+        startIndex = abs(x-600).argmin()
+        endIndex = abs(x-900).argmin()
+
+        trapInts = np.asarray([np.trapz(y[startIndex:endIndex], x = x[startIndex:endIndex]) for y in yData])
+        trapIntMaxs = np.array([i for i in mpf.detectMinima(-trapInts) if t[i] < tInit])
+
+        if len(trapIntMaxs) == 0:
+            trapIntMaxs = np.array([0])
+
+        trapIntMins = np.array([i for i in mpf.detectMinima(trapInts) if t[i] < tInit and i > trapIntMaxs.max()])
+
+        if len(trapIntMins) == 0:
+            trapAvg = np.average([i for t, i in zip(t, trapInts) if t > tInit])
+
+            d1 = mpf.centDiff(t, trapInts)
+            trapIntMaxs = np.array([i for i in mpf.detectMinima(trapInts) if t[i] < tInit and trapInts[i] > trapAvg*thresh])
+
+            if len(trapIntMaxs) == 0:
+                trapIntMaxs = np.array([0])
+
+            trapIntMins = np.array([i for i in mpf.detectMinima(d1) if t[i] < tInit and i > trapIntMaxs.max() and trapInts[i] < trapAvg*thresh])
+
+            if plot == True:
+                fig = plt.figure()
+                ax1 = fig.add_subplot(111)
+                ax2 = ax1.twinx()
+                ax1.plot(t, trapInts)
+                ax2.plot(t, d1, 'k')
+                ax1.plot(t[trapIntMaxs], trapInts[trapIntMaxs], 'ro')
+                ax1.plot(t[trapIntMins], trapInts[trapIntMins], 'go')
+
+                plt.show()
+
+        self.startPoint = trapIntMins.min()
+        self.endPoint = startPoint + trapInts[startPoint:].argmax()
+
+        if endPoint < startPoint + 30:
+            endPoint = len(trapInts) - 1
+
+        self.trapDiff = trapInts[endPoint] - trapInts[startPoint]
+
+        if plot == True:
+            print(trapInts[endPoint] - trapInts[startPoint])
+            plt.plot(t, trapInts)
+            plt.plot(t[startPoint], trapInts[startPoint], 'go')
+            plt.plot(t[endPoint], trapInts[endPoint], 'ro')
+            #plt.xlim(*t[stEnd])
+            plt.xlabel('Time (s)')
+            plt.ylabel('Integrated aggregate modes')
+            plt.show()
+
+    def fitSpectra(self, dSet):
+        x = self.x
+        yData = self.yData
+
+        scanTimes = self.t
+        startPoint = self.startPoint
+        endPoint = self.endPoint
+
+        initSpec = self.initSpec
+
+        specDict = {}
+
+        nummers = np.arange(20, 101, 20)
+
+        if len(yData[startPoint:]) > 150:
+            nummers = np.arange(10, 101, 10)
+
+        if len(yData[startPoint:]) > 500:
+            nummers = np.arange(5, 101, 5)
+
+        totalFitStart = time.time()
+        print('\n0% complete')
+
+        for n, (y, t) in enumerate(zip(yData[startPoint:], scanTimes[startPoint:]), startPoint):
+            dimerWl = None if n == 0 else dSet.attrs.get('Dimer Guess', None)
+            spectrum = ExtinctionSpectrum(x, y, initSpec = initSpec, startWl = self.startWl, endWl = self.endWl)
+            try:
+                spectrum.fitAggPeaks(dimerWl = dimerWl)
+            except:
+                print(f'Spectrum {n} failed')
+                #spectrum.fitAggPeaks(dimerWl = dimerWl)
+                spectrum.makeNull()
+            if (n == 0 or dimerWl is None) and spectrum.specMaxWl is not None:
+                dSet.attrs['Dimer Guess'] = spectrum.specMaxWl
+
+            specDict[n] = spectrum
+
+            if 100 * n//len(yData[startPoint:]) in nummers:
+                currentTime = time.time() - totalFitStart
+                mins = currentTime//60
+                secs = np.round((currentTime % 60)*100)//100
+                print(f'{nummers[0]}% ({n} spectra) analysed in {mins} min {secs} sec')
+                nummers = nummers[1:]
+
+        nSpectra = np.arange(len(yData))
+
+        self.dimerCenters = np.array([specDict.get(n, ExtinctionSpectrum(None, None)).dimerCenter for n in nSpectra])
+        self.chainCenters = np.array([specDict.get(n, ExtinctionSpectrum(None, None)).chainCenter for n in nSpectra])
+
+        dimerWlAvg = np.nanmean(self.dimerCenters)
+        dimerWlStd = np.nanstd(self.dimerCenters)
+        self.dimerCenters = np.array([i if abs(dimerWlAvg - i) < dimerWlStd*3 else np.nan for i in self.dimerCenters])
+
+        chainWlAvg = np.nanmean(self.chainCenters[2:10])
+        chainWlStd = np.nanstd(self.chainCenters[2:10])
+        self.chainCenters[:10] = np.array([i if (abs(chainWlAvg - i) < chainWlStd*2 and i > self.dimerCenters[n] and i > 0) else np.nan for n, i in enumerate(self.chainCenters[:10])])
+
+        dSet.attrs['Dimer Centers'] = self.dimerCenters 
+        dSet.attrs['Chain Centers'] = self.chainCenters 
+
+        dSet.attrs['Dimer Heights'] = self.dimerHeights = np.array([specDict.get(n, ExtinctionSpectrum(None, None)).dimerHeight for n in nSpectra])
+        dSet.attrs['Dimer Fwhms']   = self.dimerFwhms   = np.array([specDict.get(n, ExtinctionSpectrum(None, None)).dimerFwhm   for n in nSpectra])
+        
+        dSet.attrs['Chain Heights'] = self.chainHeights = np.array([specDict.get(n, ExtinctionSpectrum(None, None)).chainHeight for n in nSpectra])
+        dSet.attrs['Chain Fwhms']   = self.chainFwhms   = np.array([specDict.get(n, ExtinctionSpectrum(None, None)).chainFwhm   for n in nSpectra])
+
+    def plotSpectra(self, cmap = 'jet', saveFig = True, fileFmt = 'svg'):
+        print('Plotting...')
+        dataName = self.dataName
+        x = self.x
+        yData = self.yData
+
+        scanTimes = self.t
+        startPoint = self.startPoint
+        endPoint = self.endPoint
+
+        initSpec = self.initSpec
+
+        nCols = len(yData[startPoint:endPoint])
+
+        fig, (ax1, ax2) = plt.subplots(2, sharex = True)
+        initX, initY = initSpec.xTrunc, initSpec.yTrunc
+        ax1.plot(initX, initY, 'k')
+        cmap = plt.get_cmap(cmap, nCols)
+
+        for n, (y, t) in enumerate(zip(yData[startPoint:], scanTimes[startPoint:]), startPoint):
+            spectrum = ExtinctionSpectrum(x, y, initSpec = initSpec)
+            xTrunc, yTrunc, ySub = spectrum.xTrunc, spectrum.yTrunc, spectrum.ySub
+            
+            if n > nCols:
+                color = 'gray'
+                alpha = 0.5
+            else:
+                color = cmap(n)
+                alpha = 1
+
+            dimerX, dimerY = self.dimerCenters[n], self.dimerHeights[n]
+            chainX, chainY = self.chainCenters[n], self.chainHeights[n]
+
+            ax1.plot(xTrunc, yTrunc, color = color, zorder = -n)
+            ax2.plot(xTrunc, ySub, color = color, alpha = alpha, zorder = -2*n)
+            ax2.plot(dimerX, dimerY, 'ro', zorder = -n)
+            ax2.plot(chainX, chainY, 'o', color = 'darkred', zorder = -n)            
+
+        fig.suptitle(dataName)
+        ax1.set_xlim(xTrunc.min(), xTrunc.max())
+        ax2.set_xlim(ax1.get_xlim())
+        ax2.set_xlabel('Wavelength (nm)')
+        ax1.set_ylabel('Absorbance')
+        ax2.set_ylabel('A - A$_{\mathrm{AuNP}}$')
+        plt.subplots_adjust(hspace = 0.05)
+        if saveFig == True:
+            fig.savefig(f'{dataName}.{fileFmt}', bbox_inches = 'tight')
+        plt.show()
+
+    def plotOverviews(self, saveFig = True, fileFmt = 'svg'):
+        dataName = self.dataName
+        startPoint = self.startPoint
+        t = self.t[startPoint:]
+        dimerX = self.dimerCenters[startPoint:]
+        dimerY = self.dimerHeights[startPoint:]
+        dimerW = self.dimerFwhms[startPoint:]
+
+        chainX = self.chainCenters[startPoint:]
+        chainY = self.chainHeights[startPoint:]
+        chainW = self.chainFwhms[startPoint:]
+
+        fig = plt.figure()
+        ax1 = fig.add_subplot(111)
+
+        dXPlot = ax1.plot(t, dimerX, 'o-', label = '$\lambda_\mathrm{Dimer}$')
+        cXPlot = ax1.plot(t, chainX, 'o-', label = '$\lambda_\mathrm{Chain}$')
+        ax1.legend(loc = 0)
+
+        ax1.set_xlabel('Time (s)')
+        ax1.set_ylabel('Peak Wavelength (nm)')
+        plt.title(dataName)
+        if saveFig == True:
+            fig.savefig(f'{dataName} Wavelengths.{fileFmt}', bbox_inches = 'tight')
+        plt.show()
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.plot(t, dimerY, 'o-', color = dXPlot[0].get_color(), label = 'Dimer')
+        ax.plot(t, chainY, 'o-', color = cXPlot[0].get_color(), label = 'Chain')
+        ax.set_xlabel('Time (s)')
+        ax.set_ylabel('Peak Absorbance')
+        plt.title(dataName)
+        if saveFig == True:
+            fig.savefig(f'{dataName} Intensities.{fileFmt}', bbox_inches = 'tight')
+        plt.show()
+
+def fitAllSpectra(h5File, initSpec = None, saveFigs = True, fileFmt = 'svg', startWl = 420, endWl = 950, startPointPlot = False, startPointThresh = 2, tInit = 15):
+    if initSpec is None:
+        initSpec = findAunpSpectrum(h5File)
+
+    with h5py.File(h5File, 'a') as f:
+        for specN, dataName in enumerate(list(f.keys())):
+            print(specN, dataName)
+            dSpectra = f[dataName]
+            dataSet = AggExtDataset(dSpectra, initSpec = initSpec, startWl = startWl, endWl = endWl, startPointPlot = startPointPlot, startPointThresh = startPointThresh, 
+                                 tInit = tInit)
+            dataSet.fitSpectra(dSpectra)
+            dataSet.plotSpectra(saveFig = saveFigs, fileFmt = fileFmt)
+            dataSet.plotOverviews(saveFig = saveFigs, fileFmt = fileFmt)
+
+if __name__ == '__main__':
+    h5File = mpf.findh5File(os.getcwd(), nameFormat = 'date', mostRecent = True)
+    fitAllSpectra(h5File)
