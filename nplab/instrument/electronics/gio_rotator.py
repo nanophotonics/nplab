@@ -8,9 +8,9 @@ import time
 from nplab.instrument.serial_instrument import SerialInstrument
 
 class ArduinoRotator(SerialInstrument):
-    STEPS_PER_REV = 16361.3
+    STEPS_PER_REV = 16334.982528149094
     max_int = 32_767 # biggest integer the arduino can hold
-    def __init__(self, port):
+    def __init__(self, port, unidirectional=False):
         self.termination_character = '\n'
         SerialInstrument.__init__(self, port)
         self.flush_input_buffer()
@@ -20,6 +20,7 @@ class ArduinoRotator(SerialInstrument):
         self.speed = 15
         self._logger.setLevel('WARN')
         self._angle = 0
+        self.unidirectional = unidirectional
         
     # def query(self, queryString, **args):
     #     return super().query(queryString, timeout=self.timeout, **args)
@@ -57,16 +58,21 @@ class ArduinoRotator(SerialInstrument):
             time.sleep(0.1)
     
     def move_a_lot(self, steps):
-        if steps == 0: return  
-        movements = 0
+        if steps == 0:
+            return  
+        
         sign = (1, -1)[steps<0]
         steps = abs(steps)
-        if (-self.max_int > steps) or (steps > self.max_int):
+        
+        movements = 0
+        if steps > self.max_int:
             movements = steps // self.max_int
             steps = steps % self.max_int
+            
         for movement in range(movements):
             self._logger.info('starting new command, rotation may be discontinuous')
             self.move_raw(sign*self.max_int)
+        
         self.move_raw(sign*steps)
     
     def move_rel(self, degrees):
@@ -76,6 +82,8 @@ class ArduinoRotator(SerialInstrument):
         self._angle += degrees
     
     def move(self, degree):
+        if self.angle > degree and self.unidirectional:
+            degree += 360
         self.move_rel(degree - self.angle)
         
     def home(self):
@@ -93,8 +101,6 @@ class ArduinoRotator(SerialInstrument):
         self.STEPS_PER_REV = self.STEPS_PER_REV*(rotations)/(rotations+overshoot/360)
         print(f'steps per rev = {self.STEPS_PER_REV} ')
     
-    def info(self):
-        print('test')
     
 if __name__ == '__main__':    
     ard = ArduinoRotator('COM5')
