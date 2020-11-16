@@ -24,87 +24,74 @@ from lmfit.models import ExpressionModel
 from lmfit.models import LinearModel
 from lmfit.models import ConstantModel
 from lmfit import Model
-rootDir = os.getcwd()
-#charDir = r'R:\3-Temporary\car72\Plotting'
 
+rootDir = os.getcwd()
 np.seterr('ignore')
 
-try:
-    charDir = r'C:\Users\car72\Documents\GitHub\charlie\charlie\Plotting'
-    os.chdir(charDir)
-    import plotPars
-    os.chdir(rootDir)
-    plotParDict = plotPars.plotParDict['Agg Extinction']
-    boxPropDict = plotPars.boxProps
-    aggExtOther = plotPars.aggExtOther
-
-except:
-    plotPars = None
-    plotParDict = {'legend.fontsize': 18,
-                    'legend.title_fontsize' : 20,
-                    'figure.figsize': (12, 7),
-                    'figure.titlesize': 24,
-                    'axes.labelsize': 24,
-                    'axes.titlepad': 10,
-                    'axes.titlesize': 24,
-                    'axes.spines.right' : 'on',
-                    'axes.spines.top' : 'on',
-                    'axes.prop_cycle' : cycler('color', [plt.cm.Dark2(i) for i in np.linspace(0, 1., 8)]),
-                    'xtick.labelsize': 22,
-                    'ytick.labelsize': 22,
-                    'xtick.direction' : 'in',
-                    'ytick.direction' : 'in',
-                    'font.size': 24,
-                    'lines.linewidth': 2,
-                    'axes.linewidth': 2,
-                    'patch.linewidth': 2,
-                    'xtick.major.width': 2,
-                    'xtick.major.size': 4,
-                    'xtick.minor.width': 1.5,
-                    'xtick.minor.size': 2,
-                    'ytick.major.width': 2,
-                    'ytick.major.size': 4,
-                    'ytick.minor.width': 1.5,
-                    'ytick.minor.size': 2,
-                    'legend.facecolor' : 'ivory',
-                    'legend.fancybox' : True,
-                    'legend.edgecolor' : 'darkgray',
-                    'legend.shadow' : False,
-                    'font.family' : 'sans-serif',
-                    'font.sans-serif' : 'Trebuchet MS',
-                    'font.sans-serif' : 'Trebuchet MS',
-                    'mathtext.fontset' : 'custom',
-                    'mathtext.rm' : 'Trebuchet MS',
-                    'mathtext.it' : 'Trebuchet MS:italic',
-                    'mathtext.bf' : 'Trebuchet MS:bold',                
-                    'figure.constrained_layout.hspace' :  0.082,
-                    'figure.constrained_layout.wspace' :  0.1,
-                    'savefig.bbox' : 'tight'
-                    }
-    boxPropDict = {'boxstyle' : 'round',
-                    'facecolor' : 'ivory',
-                    'edgecolor' : 'darkgray',
-                    'linewidth' : 3,
-                    'alpha' : 0.9}
-
-    aggExtOther = {'titleBbox' : 
-                                {'boxstyle' : 'square',
-                                'facecolor' : 'white',
-                                'edgecolor' : 'white',
-                                'linewidth' : 0,
-                                'alpha' : 1},
-
-                'titleWeight' : 1.3,
-                'titlePosition' : (0.5, 1),
-                'titleHAlign' : 'center', 'titleVAlign' : 'center',
-                'legendTitlesize' : 18,
-                'figRect' : [0, 0, 0.85, 1], 'cbarLeft' : 0.85, 'cbarWidth' : 0.05,
-                'cmap' : 'jet_r', 'mainAlpha' : 0.7, 'mainLw' : 3, 'nullColor' : 'grey', 'nullAlpha' : 0.5, 'nullLw' : 0.5
-
+plotParDict = {'legend.fontsize': 18,
+                'legend.title_fontsize' : 20,
+                'figure.figsize': (12, 7),
+                'figure.titlesize': 24,
+                'axes.labelsize': 24,
+                'axes.titlepad': 10,
+                'axes.titlesize': 24,
+                'axes.spines.right' : 'on',
+                'axes.spines.top' : 'on',
+                'axes.prop_cycle' : cycler('color', [plt.cm.Dark2(i) for i in np.linspace(0, 1., 8)]),
+                'xtick.labelsize': 22,
+                'ytick.labelsize': 22,
+                'xtick.direction' : 'in',
+                'ytick.direction' : 'in',
+                'font.size': 24,
+                'lines.linewidth': 2,
+                'axes.linewidth': 2,
+                'patch.linewidth': 2,
+                'xtick.major.width': 2,
+                'xtick.major.size': 4,
+                'xtick.minor.width': 1.5,
+                'xtick.minor.size': 2,
+                'ytick.major.width': 2,
+                'ytick.major.size': 4,
+                'ytick.minor.width': 1.5,
+                'ytick.minor.size': 2,
+                'legend.facecolor' : 'ivory',
+                'legend.fancybox' : True,
+                'legend.edgecolor' : 'darkgray',
+                'legend.shadow' : False,
+                'font.family' : 'sans-serif',
+                'font.sans-serif' : 'Trebuchet MS',
+                'font.sans-serif' : 'Trebuchet MS',
+                'mathtext.fontset' : 'custom',
+                'mathtext.rm' : 'Trebuchet MS',
+                'mathtext.it' : 'Trebuchet MS:italic',
+                'mathtext.bf' : 'Trebuchet MS:bold',                
+                'figure.constrained_layout.hspace' :  0.082,
+                'figure.constrained_layout.wspace' :  0.1,
+                'savefig.bbox' : 'tight'
                 }
+boxPropDict = {'boxstyle' : 'round',
+                'facecolor' : 'ivory',
+                'edgecolor' : 'darkgray',
+                'linewidth' : 3,
+                'alpha' : 0.9}
+
+aggExtOther = {'titleBbox' : 
+                            {'boxstyle' : 'square',
+                            'facecolor' : 'white',
+                            'edgecolor' : 'white',
+                            'linewidth' : 0,
+                            'alpha' : 1},
+
+            'titleWeight' : 1.3,
+            'titlePosition' : (0.5, 1),
+            'titleHAlign' : 'center', 'titleVAlign' : 'center',
+            'legendTitlesize' : 18,
+            'figRect' : [0, 0, 0.85, 1], 'cbarLeft' : 0.85, 'cbarWidth' : 0.05,
+            'cmap' : 'jet_r', 'mainAlpha' : 0.7, 'mainLw' : 3, 'nullColor' : 'grey', 'nullAlpha' : 0.5, 'nullLw' : 0.5
+
+            }
 
 plt.rcParams.update(plotParDict)
-
 totalStartTime = time.time()
 
 def makeDir(dirName):
