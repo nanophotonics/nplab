@@ -9,11 +9,12 @@ from __future__ import division
 from builtins import str
 from past.utils import old_div
 from nplab.utils.gui import QtWidgets, uic
+from nplab.ui.ui_tools import UiTools
 import os
 import numpy as np
 
 
-class BaseUi(QtWidgets.QWidget):
+class BaseUi(QtWidgets.QWidget, UiTools):
     def __init__(self, slm_gui, name):
         super(BaseUi, self).__init__()
         uic.loadUi(os.path.join(os.path.dirname(__file__), 'ui_%s.ui' % name), self)
@@ -119,34 +120,74 @@ class astigmatismUi(BaseUi):
         super(astigmatismUi, self).__init__(slm_gui, 'astigmatism')
 
     def _connect(self):
-        self.pushButton_center.clicked.connect(lambda: self.update_astigmatism('center'))
-        self.pushButton_up.clicked.connect(lambda: self.update_astigmatism('up'))
-        self.pushButton_down.clicked.connect(lambda: self.update_astigmatism('down'))
-        self.pushButton_left.clicked.connect(lambda: self.update_astigmatism('left'))
-        self.pushButton_right.clicked.connect(lambda: self.update_astigmatism('right'))
-        self.astigmatismx_lineEdit.textChanged.connect(self.slm_gui.make)
-        self.astigmatismy_lineEdit.textChanged.connect(self.slm_gui.make)
+        self.amplitude_step_lineEdit.returnPressed.connect(self.update_amplitude_lineedit)
+        self.amplitude_offset_lineEdit.returnPressed.connect(self.update_amplitude_lineedit)
+        self.amplitude_slider.valueChanged.connect(self.update_amplitude_lineedit)
+        self.amplitude_lineEdit.returnPressed.connect(self.update_amplitude_slider)
+        self.amplitude_slider.valueChanged.connect(self.slm_gui.make)
 
-    def update_astigmatism(self, direction):
-        step = float(self.lineEdit_step.text())
-        astigmatism_x = float(self.astigmatismx_lineEdit.text())
-        astigmatism_y = float(self.astigmatismy_lineEdit.text())
-        if direction == 'center':
-            self.astigmatismx_lineEdit.setText(str(0))
-            self.astigmatismy_lineEdit.setText(str(0))
-        elif direction == 'up':
-            self.astigmatismy_lineEdit.setText('%g' % (astigmatism_y + step))
-        elif direction == 'down':
-            self.astigmatismy_lineEdit.setText('%g' % (astigmatism_y - step))
-        elif direction == 'left':
-            self.astigmatismx_lineEdit.setText('%g' % (astigmatism_x + step))
-        elif direction == 'right':
-            self.astigmatismx_lineEdit.setText('%g' % (astigmatism_x - step))
+        self.angle_step_lineEdit.returnPressed.connect(self.update_angle_lineedit)
+        self.angle_offset_lineEdit.returnPressed.connect(self.update_angle_lineedit)
+        self.angle_slider.valueChanged.connect(self.update_angle_lineedit)
+        self.angle_lineEdit.returnPressed.connect(self.update_angle_slider)
+        self.angle_slider.valueChanged.connect(self.slm_gui.make)
+
+    def update_amplitude_lineedit(self):
+        try:
+            step_size = float(self.amplitude_step_lineEdit.text())
+        except ValueError:
+            amplitude = float(self.amplitude_lineEdit.text())
+            if amplitude != 0:
+                step_size = 0.01 * amplitude
+            else:
+                step_size = 0.0001
+            self.amplitude_step_lineEdit.setText(str(step_size))
+        try:
+            offset = float(self.amplitude_offset_lineEdit.text())
+        except ValueError:
+            offset = float(self.amplitude_lineEdit.text())
+            self.amplitude_offset_lineEdit.setText(str(offset))
+        steps = self.amplitude_slider.value()
+        value = offset + steps * step_size
+
+        self.amplitude_lineEdit.setText('%g' % value)
+
+    def update_amplitude_slider(self):
+        value = float(self.amplitude_lineEdit.text())
+        step_size = float(self.amplitude_step_lineEdit.text())
+        offset = float(self.amplitude_offset_lineEdit.text())
+
+        steps = int(old_div((value - offset), step_size))
+        self.amplitude_slider.setValue(steps)
+
+    def update_angle_lineedit(self):
+        try:
+            step_size = float(self.angle_step_lineEdit.text())
+        except ValueError:
+            step_size = 1
+            self.angle_step_lineEdit.setText(str(step_size))
+        try:
+            offset = float(self.angle_offset_lineEdit.text())
+        except ValueError:
+            offset = float(self.angle_lineEdit.text())
+            self.angle_offset_lineEdit.setText(str(offset))
+        steps = self.angle_slider.value()
+        value = offset + steps * step_size
+
+        self.angle_lineEdit.setText('%g' % value)
+
+    def update_angle_slider(self):
+        value = float(self.angle_lineEdit.text())
+        step_size = float(self.angle_step_lineEdit.text())
+        offset = float(self.angle_offset_lineEdit.text())
+
+        steps = int(old_div((value - offset), step_size))
+        self.angle_slider.setValue(steps)
 
     def get_params(self):
-        astigmatism_x = float(self.astigmatismx_lineEdit.text())
-        astigmatism_y = float(self.astigmatismy_lineEdit.text())
-        return astigmatism_x, astigmatism_y
+        amplitude = float(self.amplitude_lineEdit.text())
+        angle = float(self.angle_lineEdit.text())
+        return amplitude, angle
 
 
 class focusUi(BaseUi):

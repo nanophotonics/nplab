@@ -317,7 +317,7 @@ class DataFile(Group):
     change in the future...
     """
 
-    def __init__(self, name, mode=None, save_version_info=False,
+    def __init__(self, name, mode='a', save_version_info=False,
                  update_current_group=True, *args, **kwargs):
         """Open or create an HDF5 file.
 

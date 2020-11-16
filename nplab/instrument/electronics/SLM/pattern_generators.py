@@ -15,6 +15,22 @@ from matplotlib import gridspec
 # TODO: compare initial phase methods in IFT algorithms: quadratic phase; starting in the real plane with a flat phase
 # TODO: compare CPU and GPU
 
+def _get_coordinate_arrays(image, center=None):
+    """Creates coordinate arrays in pixel units
+    :param image: 2D array
+    :param center: two-tuple of floats. If <1, assumes it's a relative center (with the edges of the SLM being at
+                                        [-1, 1]. Otherwise, it should be in pixel units
+    :return: two 2D arrays of coordinates
+    """
+    shape = np.shape(image)
+    if center is None:
+        center = [int(old_div(s, 2)) for s in shape]
+    elif any(np.array(center) < 1):
+        center = [int(old_div(s, 2) + c*s) for s, c in zip(shape, center)]
+    yx = [np.arange(shape[idx]) - center[idx] for idx in range(2)[::-1]]
+    x, y = np.meshgrid(*yx)
+    return x, y
+
 
 def constant(input_phase, offset):
     return input_phase + offset
@@ -51,79 +67,70 @@ def gratings(input_phase, grating_const_x=0, grating_const_y=0):
     :param grating_const_y: float. Period (in pixels) of the grating along the y direction. Default is no grating
     :return:
     """
-    shape = np.shape(input_phase)
-    x = np.arange(shape[1]) - int(old_div(shape[1], 2))
-    y = np.arange(shape[0]) - int(old_div(shape[0], 2))
-    x, y = np.meshgrid(x, y)
-
-    phase = np.zeros(shape)
-    if grating_const_x != 0:
-        phase += (old_div(np.pi, grating_const_x)) * x
-    if grating_const_y != 0:
-        phase += (old_div(np.pi, grating_const_y)) * y
+    x, y = _get_coordinate_arrays(input_phase)
+    phase = np.zeros(x.shape)
+    if np.abs(grating_const_x) > 1:
+        phase += (2 * np.pi / grating_const_x) * x
+    if np.abs(grating_const_y) > 1:
+        phase += (2 * np.pi / grating_const_y) * y
 
     return input_phase + phase
 
 
-def multispot_grating(input_phase, grating_const, n_spot):
+def multispot_grating(input_phase, grating_const, n_spot, center=None):
     """
 
     :param input_phase:
     :param grating_const: float. Inverse period (in pixels) of the grating.
     :param n_spot: int. Number of gratings to divide the SLM in.
+    :param center: two-tuple of floats. To be passed to _get_coordinate_arrays
     :return:
     """
-    shape = np.shape(input_phase)
-    x = np.arange(shape[1]) - int(old_div(shape[1], 2))
-    y = np.arange(shape[0]) - int(old_div(shape[0], 2))
-    x, y = np.meshgrid(x, y)
+    x, y = _get_coordinate_arrays(input_phase, center)
     theta = np.arctan2(y, x) + np.pi
 
-    phase = np.zeros(shape)
+    phase = np.zeros(x.shape)
     if n_spot > 1:
         for i in range(n_spot):
-            gx = grating_const * np.cos((i + 0.5) * 2 * np.pi / n_spot)
-            gy = grating_const * np.sin((i + 0.5) * 2 * np.pi / n_spot)
-            mask = np.zeros(shape)
+            gx = np.pi * grating_const * np.cos((i + 0.5) * 2 * np.pi / n_spot)
+            gy = np.pi * grating_const * np.sin((i + 0.5) * 2 * np.pi / n_spot)
+            mask = np.zeros(x.shape)
             mask[theta <= (i+1) * 2 * np.pi / n_spot] = 1
             mask[theta <= i * 2 * np.pi / n_spot] = 0
             phase += (x * gx + y * gy) * mask
     return input_phase + phase
 
 
-def focus(input_phase, curvature=0):
+def focus(input_phase, curvature=0, center=None):
     """Quadratic phase pattern corresponding to a perfect lens
 
     :param input_phase:
     :param curvature: float. Inverse focal length of the lens in arbitrary units
+    :param center: two-tuple of floats. To be passed to _get_coordinate_arrays
     :return:
     """
-    shape = np.shape(input_phase)
-    x = np.arange(shape[1]) - int(old_div(shape[1], 2))
-    y = np.arange(shape[0]) - int(old_div(shape[0], 2))
-    x, y = np.meshgrid(x, y)
-
+    x, y = _get_coordinate_arrays(input_phase, center)
     phase = curvature * (x ** 2 + y ** 2)
-
     return input_phase + phase
 
 
-def astigmatism(input_phase, horizontal=0, diagonal=0):
+def astigmatism(input_phase, amplitude=0, angle=0, center=None):
     """Cylindrical phase pattern corresponding to astigmatism
 
     :param input_phase:
-    :param horizontal: float. curvature between the x and y axis
-    :param diagonal: float. curvature between the axes at 45deg and 135deg
+    :param amplitude: float. cylindrical curvature
+    :param angle: float. angle between the cylindrical curvature and the input axes
+    :param center: two-tuple of floats. To be passed to _get_coordinate_arrays
     :return:
     """
-    shape = np.shape(input_phase)
-    x = np.arange(shape[1]) - int(old_div(shape[1], 2))
-    y = np.arange(shape[0]) - int(old_div(shape[0], 2))
-    x, y = np.meshgrid(x, y)
+    x, y = _get_coordinate_arrays(input_phase, center)
     rho = np.sqrt(x ** 2 + y ** 2)
     phi = np.arctan2(x, y)
 
-    phase = (horizontal * np.sin(2 * phi) + diagonal * np.cos(2 * phi)) * rho ** 2
+    horizontal = amplitude * np.cos(angle * np.pi / 180)
+    diagonal = amplitude * np.sin(angle * np.pi / 180)
+
+    phase = (horizontal * np.cos(2 * phi) + diagonal * np.sin(2 * phi)) * rho ** 2
 
     return input_phase + phase
 
@@ -137,17 +144,18 @@ def vortexbeam(input_phase, order, angle, center=None):
     :param center: two-iterable of integers. Location of the center of the vortex on the SLM panel
     :return:
     """
-    shape = np.shape(input_phase)
-    if center is None:
-        center = [int(old_div(x, 2)) for x in shape]
-    elif any(np.array(center) < 1):
-        center = [int(old_div(x, 2) + y*x) for x, y in zip(shape, center)]
+    # shape = np.shape(input_phase)
+    # if center is None:
+    #     center = [int(old_div(x, 2)) for x in shape]
+    # elif any(np.array(center) < 1):
+    #     center = [int(old_div(x, 2) + y*x) for x, y in zip(shape, center)]
+    #
+    # x = np.arange(shape[1]) - center[1]
+    # y = np.arange(shape[0]) - center[0]
+    # x, y = np.meshgrid(x, y)
+    x, y = _get_coordinate_arrays(input_phase, center)
 
-    x = np.arange(shape[1]) - center[1]
-    y = np.arange(shape[0]) - center[0]
-    x, y = np.meshgrid(x, y)
-
-    phase = order * (np.angle(x + y * 1j) + np.pi + angle * np.pi / 180.)
+    phase = order * (np.angle(x + y * 1j) + angle * np.pi / 180.)
 
     return input_phase + phase
 
@@ -169,6 +177,21 @@ def linear_lut(input_phase, contrast, offset):
 
 
 """Iterative Fourier Transform algorithms"""
+
+
+def direct_superposition(input_phase, k_vectors, phases=None):
+    if phases is None:
+        phases = np.random.random(len(k_vectors))
+    shape = np.shape(input_phase)
+    x = np.arange(shape[1]) - int(old_div(shape[1], 2))
+    y = np.arange(shape[0]) - int(old_div(shape[0], 2))
+    x, y = np.meshgrid(x, y)
+
+    real_plane = np.zeros(shape)
+    for k_vec, phase in zip(k_vectors, phases):
+        real_plane += np.exp(1j * 2 * np.pi * (k_vec[0] * x + k_vec[1] * y + phase))
+
+    return input_phase + np.angle(np.fft.fftshift(np.fft.fft2(real_plane)))
 
 
 def mraf(original_phase, target_intensity, input_field=None, mixing_ratio=0.4, signal_region_size=0.5, iterations=30):
@@ -233,6 +256,7 @@ def gerchberg_saxton(original_phase, target_intensity, input_field=None, iterati
     :param iterations:
     :return:
     """
+    assert iterations > 0
     shp = target_intensity.shape
     target_intensity = np.fft.fftshift(target_intensity)  # this matrix is only used in the Fourier plane
     if input_field is None:
@@ -246,7 +270,6 @@ def gerchberg_saxton(original_phase, target_intensity, input_field=None, iterati
         input_field = np.fft.ifft2(output_field)
         input_phase = np.angle(input_field)
         input_field = np.sqrt(input_intensity) * np.exp(1j * input_phase)
-        # print(np.sum(np.abs(input_field)**2), np.sum(target_intensity), np.sum(np.abs(output_field)**2))
     return original_phase + input_phase
 
 
@@ -262,9 +285,10 @@ def test_ifft_smoothness(alg_func, *args, **kwargs):
     :return:
     """
     target = np.asarray(misc.face()[:, :, 0], np.float)
+    x, y = _get_coordinate_arrays(target)
     shp = target.shape
-    x, y = np.ogrid[old_div(-shp[1], 2):old_div(shp[1], 2), old_div(-shp[0], 2):old_div(shp[0], 2)]
-    x, y = np.meshgrid(x, y)
+    # x, y = np.ogrid[old_div(-shp[1], 2):old_div(shp[1], 2), old_div(-shp[0], 2):old_div(shp[0], 2)]
+    # x, y = np.meshgrid(x, y)
     mask = (x**2 + y**2) > (0.2 * np.min(shp))**2
     target[mask] = 0
     target /= np.sum(target)
@@ -333,17 +357,30 @@ def test_ifft_basic(alg_func, *args, **kwargs):
     :param kwargs:
     :return:
     """
+    if 'mixing_ratio' in kwargs:
+        intensity_correction = kwargs['mixing_ratio']
+    else:
+        intensity_correction = 1
     target = np.asarray(misc.face()[:, :, 0], np.float)
+    x, y = _get_coordinate_arrays(target)
     shp = target.shape
-    x, y = np.ogrid[old_div(-shp[1], 2):old_div(shp[1], 2), old_div(-shp[0], 2):old_div(shp[0], 2)]
-    x, y = np.meshgrid(x, y)
-    mask = (x**2 + y**2) > (0.2 * np.min(shp))**2
+    # x, y = np.ogrid[old_div(-shp[1], 2):old_div(shp[1], 2), old_div(-shp[0], 2):old_div(shp[0], 2)]
+    # x, y = np.meshgrid(x, y)
+    mask_size = 0.2
+    mask = (x**2 + y**2) > (mask_size * np.min(shp))**2
     target[mask] = 0
     target /= np.sum(target)  # the target intensity is normalised to 1
 
     init_phase = np.zeros(target.shape)
+    # Making an input field that focuses light on the target pattern reduces vortex creation and improves pattern
+    input_field = np.ones(shp) * np.exp(1j * 2*mask_size*np.min(shp) * ((x/np.max(x))**2+(y/np.max(y))**2))
+    kwargs['input_field'] = input_field
     phase = alg_func(init_phase, target, *args, **kwargs)
     output = old_div(np.fft.fftshift(np.fft.fft2(np.exp(1j * phase))), (np.prod(shp)))
+    print(np.sum(np.abs(output)**2), np.sum(np.abs(output[~mask])**2), np.sum(np.abs(output[mask])**2))
+    _errors = (target - np.abs(output)**2) / target
+    errors = _errors[np.abs(_errors) != np.inf]
+    avg = np.sqrt(np.mean(errors**2))
 
     fig, axs = plt.subplots(2, 2, sharey=True, sharex=True, gridspec_kw=dict(wspace=0.01))
     vmin, vmax = (np.min(target), np.max(target))
@@ -351,11 +388,16 @@ def test_ifft_basic(alg_func, *args, **kwargs):
     axs[0, 0].set_title('Target')
     axs[1, 0].imshow(phase)
     axs[1, 0].set_title('Input Phase')
+    vmin *= intensity_correction
+    vmax *= intensity_correction
     axs[0, 1].imshow(np.abs(output)**2, vmin=vmin, vmax=vmax)
     axs[0, 1].set_title('Output')
     axs[1, 1].imshow(np.angle(output))
     axs[1, 1].set_title('Output Phase')
+    fig.suptitle(r'$\sqrt{\sum\left(\frac{target-output}{target}\right)^2}=$%g' % avg)
     plt.show()
+
+    return output, target
 
 
 if __name__ == "__main__":

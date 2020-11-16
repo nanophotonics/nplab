@@ -19,6 +19,7 @@ class ArduinoRotator(SerialInstrument):
         time.sleep(2) # for some reason this is necessary to change default speed
         self.speed = 15
         self._logger.setLevel('WARN')
+        self._angle = 0
         
     # def query(self, queryString, **args):
     #     return super().query(queryString, timeout=self.timeout, **args)
@@ -33,7 +34,14 @@ class ArduinoRotator(SerialInstrument):
         if value > 15: self._speed = 15
         self._speed = int(value)
         self.write(f'S{self._speed}', ignore_echo=True)
-        
+    
+    @property
+    def angle(self):
+        return self._angle
+    
+    @angle.setter
+    def angle(self, angle):
+        self.move(angle)
     
     def move_raw(self, steps):
         start = time.time()
@@ -61,22 +69,29 @@ class ArduinoRotator(SerialInstrument):
             self.move_raw(sign*self.max_int)
         self.move_raw(sign*steps)
     
-    def move(self, degrees):
+    def move_rel(self, degrees):
         ''''clockwise'''
         self._logger.info(f'moving {degrees} degrees')
         self.move_a_lot(int(-degrees*self.STEPS_PER_REV/360))
+        self._angle += degrees
     
+    def move(self, degree):
+        self.move_rel(degree - self.angle)
+        
+    def home(self):
+        self.move(0)
+        
     def calibrate(self, rotations: int = 5):
         print(f'rotating clockwise {rotations} rotations')
         self.speed = 15
-        self.move(rotations*360)
+        self.move_rel(rotations*360)
         overshoot = float(input('''How far did it over/undershoot
                           (in degrees)?'''))
         
         self.STEPS_PER_REV = self.STEPS_PER_REV*(rotations)/(rotations+overshoot/360)
-        print(f'{self.STEPS_PER_REV=} ')
+        print(f'steps per rev = {self.STEPS_PER_REV} ')
     
 if __name__ == '__main__':    
-    ard = ArduinoRotator('COM3')
+    ard = ArduinoRotator('COM5')
     ard._logger.setLevel('INFO')
     
