@@ -7,6 +7,7 @@ import time
 import os
 import h5py
 import numpy as np
+from cycler import cycler
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from importlib import reload
@@ -468,8 +469,8 @@ class AggExtDataset:
 
                 plt.show()
 
-        self.startPoint = trapIntMins.min()
-        self.endPoint = startPoint + trapInts[startPoint:].argmax()
+        startPoint = trapIntMins.min()
+        endPoint = startPoint + trapInts[startPoint:].argmax()
 
         if endPoint < startPoint + 30:
             endPoint = len(trapInts) - 1
@@ -485,6 +486,9 @@ class AggExtDataset:
             plt.xlabel('Time (s)')
             plt.ylabel('Integrated aggregate modes')
             plt.show()
+        
+        self.startPoint = startPoint
+        self.endPoint = endPoint
 
     def fitSpectra(self, dSet, debug = False):
         x = self.x
@@ -652,14 +656,25 @@ class AggExtDataset:
         else:
             plt.show()
 
+def initialiseDatasets(h5File):
+    print('Initialising data...')
+    with h5py.File(h5File, 'a') as f:
+        for specN, dataName in enumerate(list(f.keys())):
+            dataSet = AggExtDataset(f[dataName], dataName = dataName, initSpec = np.linspace(200, 999, 800))
+    print('\tData initialised')
+
 def fitAllSpectra(h5File, initSpec = None, saveFigs = True, fileFmt = 'svg', startWl = 420, endWl = 950, startPointPlot = False, startPointThresh = 2, tInit = 15, debug = False):
+    
+    initialiseDatasets(h5File)
+
     if initSpec is None:
         initSpec = findAunpSpectrum(h5File)
 
     with h5py.File(h5File, 'a') as f:
         for specN, dataName in enumerate(list(f.keys())):
-            print(specN, dataName)
+            print(dataName)
             dSpectra = f[dataName]
+
             dataSet = AggExtDataset(dSpectra, dataName = dataName, initSpec = initSpec, startWl = startWl, endWl = endWl, startPointPlot = startPointPlot, 
                                     startPointThresh = startPointThresh, tInit = tInit)
             dataSet.fitSpectra(dSpectra, debug = debug)
@@ -670,5 +685,5 @@ def fitAllSpectra(h5File, initSpec = None, saveFigs = True, fileFmt = 'svg', sta
     print('\nAll done')
 
 if __name__ == '__main__':
-    h5File = mpf.findh5File(os.getcwd(), nameFormat = 'date', mostRecent = True)
+    h5File = mpf.findH5File(os.getcwd(), nameFormat = 'date', mostRecent = True)
     fitAllSpectra(h5File)
