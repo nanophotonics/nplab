@@ -27,6 +27,8 @@ from lmfit import Model
 rootDir = os.getcwd()
 #charDir = r'R:\3-Temporary\car72\Plotting'
 
+np.seterr('ignore')
+
 try:
     charDir = r'C:\Users\car72\Documents\GitHub\charlie\charlie\Plotting'
     os.chdir(charDir)
@@ -238,7 +240,6 @@ def evToNm(eV):
     return nm
 
 class ExtinctionSpectrum:
-
     def makeNull(self):
         self.dimerCenter = np.nan
         self.dimerHeight = np.nan
@@ -246,6 +247,9 @@ class ExtinctionSpectrum:
         self.chainCenter = np.nan
         self.chainHeight = np.nan
         self.chainFwhm = np.nan
+
+    def debug(self):
+        self.debug = True
 
     def __init__(self, x, y, startWl = 420, endWl = 950, initSpec = None):
         if x is None:
@@ -258,6 +262,7 @@ class ExtinctionSpectrum:
         self.endWl = endWl
         self.xTrunc, self.yTrunc = mpf.truncateSpectrum(self.xRaw, self.yRaw, startWl = self.startWl, finishWl = self.endWl)
         self.ySmooth = mpf.butterLowpassFiltFilt(self.yTrunc)
+        self.debug = False
 
         if initSpec is not None:
             initX, initY, initYSmooth = initSpec.xTrunc, initSpec.yTrunc, initSpec.ySmooth
@@ -307,7 +312,8 @@ class ExtinctionSpectrum:
         try:
             dimerHalfMaxDex = abs(yFitSmooth[:dimerIndex] - initDimerHeight/2).argmin()
         except:
-            print(dimerWl, initDimerWl, dimerIndex)
+            if self.debug == True:
+                print(dimerWl, initDimerWl, dimerIndex)
 
         initDimerFwhm = 2*(initDimerWl - xFit[dimerHalfMaxDex])
         initDimerFwhmEv = abs(xFit[dimerHalfMaxDex] - xFit[2*dimerIndex - dimerHalfMaxDex])
@@ -345,32 +351,39 @@ class ExtinctionSpectrum:
             try:
                 chainHalfMaxDex = dimerIndex + abs(chainInit[dimerIndex:initChainIndex] - initChainHeight/2).argmin()
             except:
-                chainHalfMaxDex = np.average([initChainIndex, dimerHalfMaxDex])
-                print(initChainIndex, chainInit[dimerIndex:initChainIndex])
-                plt.plot(xFitNm, yFit)
-                plt.plot(xFitNm[dimerHalfMaxDex], yFitSmooth[dimerHalfMaxDex], 'o')
-                plt.plot(xFitNm, dimerInit)
-                plt.plot(xFitNm, chainInit)
-                plt.plot(xFitNm[dimerIndex], chainInit[dimerIndex], 'ro')
-                plt.plot(xFitNm[initChainIndex], chainInit[initChainIndex], 'ko')
-                plt.show()
+                chainHalfMaxDex = np.average([initChainIndex, dimerHalfMaxDex])               
+
+                if self.debug == True:
+                    print(initChainIndex, chainInit[dimerIndex:initChainIndex])
+                    plt.plot(xFitNm, yFit)
+                    plt.plot(xFitNm[dimerHalfMaxDex], yFitSmooth[dimerHalfMaxDex], 'o')
+                    plt.plot(xFitNm, dimerInit)
+                    plt.plot(xFitNm, chainInit)
+                    plt.plot(xFitNm[dimerIndex], chainInit[dimerIndex], 'ro')
+                    plt.plot(xFitNm[initChainIndex], chainInit[initChainIndex], 'ko')
+                    plt.show()
+                chainMode = False
 
             initChainFwhm = 2*(initChainWl - xFit[chainHalfMaxDex])
             try:
                 initChainFwhmEv = abs(xFit[chainHalfMaxDex] - xFit[max(2*initChainIndex - chainHalfMaxDex, len(xFit) - 1)])
             except:
-                print(chainHalfMaxDex, 2*initChainIndex - chainHalfMaxDex)
-            chainInit = lorentzian(xFit, initChainHeight, initChainWl, initChainFwhm)
-            gModC = LorentzianModel(prefix = 'Chain_')
-            parsC = gModC.guess(chainInit, x = xFit)
-            parsC['Chain_sigma'].set(initChainFwhm/2)
-            parsC['Chain_height'].set(initChainHeight*2/3, max = initChainHeight, min = 0)
-            parsC['Chain_amplitude'].set(min = 0)
+                if self.debug == True:
+                    print(chainHalfMaxDex, 2*initChainIndex - chainHalfMaxDex)
+                chainMode = False
 
-            aggMod += gModC            
-            aggModPars.update(parsC)
+            if chainMode == True:
+                chainInit = lorentzian(xFit, initChainHeight, initChainWl, initChainFwhm)
+                gModC = LorentzianModel(prefix = 'Chain_')
+                parsC = gModC.guess(chainInit, x = xFit)
+                parsC['Chain_sigma'].set(initChainFwhm/2)
+                parsC['Chain_height'].set(initChainHeight*2/3, max = initChainHeight, min = 0)
+                parsC['Chain_amplitude'].set(min = 0)
 
-            aggModPars['Chain_center'].set(initChainWl, min = initDimerWl)
+                aggMod += gModC            
+                aggModPars.update(parsC)
+
+                aggModPars['Chain_center'].set(initChainWl, min = initDimerWl)
 
         aggFit = aggMod.fit(yFit, aggModPars, x = xFit)
         yAggFit = aggFit.eval(x = xFit)
@@ -395,6 +408,10 @@ class ExtinctionSpectrum:
             self.chainCenter = evToNm(-finalParams['Chain_center'].value)
             self.chainHeight = finalParams['Chain_height'].value
             self.chainFwhm = finalParams['Chain_fwhm'].value
+        else:
+            self.chainCenter = np.nan
+            self.chainHeight = np.nan
+            self.chainFwhm = np.nan
 
 class AggExtDataset:
 
@@ -482,7 +499,7 @@ class AggExtDataset:
             plt.ylabel('Integrated aggregate modes')
             plt.show()
 
-    def fitSpectra(self, dSet):
+    def fitSpectra(self, dSet, debug = False):
         x = self.x
         yData = self.yData
 
@@ -508,10 +525,13 @@ class AggExtDataset:
         for n, (y, t) in enumerate(zip(yData[startPoint:], scanTimes[startPoint:]), startPoint):
             dimerWl = None if n == 0 else dSet.attrs.get('Dimer Guess', None)
             spectrum = ExtinctionSpectrum(x, y, initSpec = initSpec, startWl = self.startWl, endWl = self.endWl)
+            if debug == True:
+                spectrum.debug()
             try:
                 spectrum.fitAggPeaks(dimerWl = dimerWl)
             except:
                 print(f'Spectrum {n} failed')
+                plt.close('all')
                 #spectrum.fitAggPeaks(dimerWl = dimerWl)
                 spectrum.makeNull()
             if (n == 0 or dimerWl is None) and spectrum.specMaxWl is not None:
@@ -521,9 +541,9 @@ class AggExtDataset:
 
             if 100 * n//len(yData[startPoint:]) in nummers:
                 currentTime = time.time() - totalFitStart
-                mins = currentTime//60
-                secs = np.round((currentTime % 60)*100)//100
-                print(f'{nummers[0]}% ({n} spectra) analysed in {mins} min {secs} sec')
+                mins = int(currentTime//60)
+                secs = currentTime % 60
+                print(f'{nummers[0]}% ({n} spectra) analysed in {mins} min {secs:.3f} sec')
                 nummers = nummers[1:]
 
         nSpectra = np.arange(len(yData))
@@ -550,6 +570,7 @@ class AggExtDataset:
 
     def plotSpectra(self, cmap = 'jet', saveFig = True, fileFmt = 'svg'):
         print('Plotting...')
+        makeDir('Plots')
         dataName = self.dataName
         x = self.x
         yData = self.yData
@@ -594,10 +615,14 @@ class AggExtDataset:
         ax2.set_ylabel('A - A$_{\mathrm{AuNP}}$')
         plt.subplots_adjust(hspace = 0.05)
         if saveFig == True:
-            fig.savefig(f'{dataName}.{fileFmt}', bbox_inches = 'tight')
-        plt.show()
+            fig.savefig(f'Plots/{dataName}.{fileFmt}', bbox_inches = 'tight')
+            plt.close('all')
+
+        else:
+            plt.show()        
 
     def plotOverviews(self, saveFig = True, fileFmt = 'svg'):
+        makeDir('Plots')
         dataName = self.dataName
         startPoint = self.startPoint
         t = self.t[startPoint:]
@@ -620,8 +645,11 @@ class AggExtDataset:
         ax1.set_ylabel('Peak Wavelength (nm)')
         plt.title(dataName)
         if saveFig == True:
-            fig.savefig(f'{dataName} Wavelengths.{fileFmt}', bbox_inches = 'tight')
-        plt.show()
+            fig.savefig(f'Plots/{dataName} wl vs t.{fileFmt}', bbox_inches = 'tight')
+            plt.close('all')
+
+        else:
+            plt.show()
 
         fig = plt.figure()
         ax = fig.add_subplot(111)
@@ -631,10 +659,13 @@ class AggExtDataset:
         ax.set_ylabel('Peak Absorbance')
         plt.title(dataName)
         if saveFig == True:
-            fig.savefig(f'{dataName} Intensities.{fileFmt}', bbox_inches = 'tight')
-        plt.show()
+            fig.savefig(f'Plots/{dataName} i vs t.{fileFmt}', bbox_inches = 'tight')
+            plt.close('all')
 
-def fitAllSpectra(h5File, initSpec = None, saveFigs = True, fileFmt = 'svg', startWl = 420, endWl = 950, startPointPlot = False, startPointThresh = 2, tInit = 15):
+        else:
+            plt.show()
+
+def fitAllSpectra(h5File, initSpec = None, saveFigs = True, fileFmt = 'svg', startWl = 420, endWl = 950, startPointPlot = False, startPointThresh = 2, tInit = 15, debug = False):
     if initSpec is None:
         initSpec = findAunpSpectrum(h5File)
 
@@ -642,11 +673,14 @@ def fitAllSpectra(h5File, initSpec = None, saveFigs = True, fileFmt = 'svg', sta
         for specN, dataName in enumerate(list(f.keys())):
             print(specN, dataName)
             dSpectra = f[dataName]
-            dataSet = AggExtDataset(dSpectra, initSpec = initSpec, startWl = startWl, endWl = endWl, startPointPlot = startPointPlot, startPointThresh = startPointThresh, 
-                                 tInit = tInit)
-            dataSet.fitSpectra(dSpectra)
+            dataSet = AggExtDataset(dSpectra, dataName = dataName, initSpec = initSpec, startWl = startWl, endWl = endWl, startPointPlot = startPointPlot, 
+                                    startPointThresh = startPointThresh, tInit = tInit)
+            dataSet.fitSpectra(dSpectra, debug = debug)
+            makeDir('Plots')
             dataSet.plotSpectra(saveFig = saveFigs, fileFmt = fileFmt)
             dataSet.plotOverviews(saveFig = saveFigs, fileFmt = fileFmt)
+
+    print('\nAll done')
 
 if __name__ == '__main__':
     h5File = mpf.findh5File(os.getcwd(), nameFormat = 'date', mostRecent = True)
