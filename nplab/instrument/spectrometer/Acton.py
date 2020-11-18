@@ -147,3 +147,26 @@ class SP2750(VisaInstrument):
         :return:
         """
         return self.query("?GRATINGS")
+
+    # DIVERTER MIRRORS
+    @property
+    def exit_mirror(self):
+        self.query('EXIT-MIRROR')
+        return self.query('?MIRROR')
+
+    @exit_mirror.setter
+    def exit_mirror(self, value):
+        assert value in ['SIDE', 'FRONT']
+        self.query('EXIT-MIRROR')
+        self.query(value)
+
+    @property
+    def entrance_mirror(self):
+        self.query('ENT-MIRROR')
+        return self.query('?MIRROR')
+
+    @entrance_mirror.setter
+    def entrance_mirror(self, value):
+        assert value in ['SIDE', 'FRONT']
+        self.query('ENT-MIRROR')
+        self.query(value)
