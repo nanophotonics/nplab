@@ -34,9 +34,9 @@ class Andor(CameraRoiScale, AndorBase):
 
         self.detector_shape = self.DetectorShape  # passing the Andor parameter to the CameraRoiScale class
         if config_file is not None:
-            self.load_config(config_file)
+            self.config = self.load_config(config_file)
         else:
-            self.load_config('default_config')
+            self.config = self.load_config('default_config')
 
     def __del__(self):
         # Need to explicitly call this method so that the shutdown procedure is followed correctly
