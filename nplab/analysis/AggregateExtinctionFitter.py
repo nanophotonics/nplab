@@ -150,17 +150,29 @@ def gaussian(x, height, center, fwhm, offset = 0):
 
     return y
 
-def findAunpSpectrum(h5File):
+def findAunpSpectrum(h5File, reUse = True):
     '''
     searches through h5 file for non-aggregated AuNP spectrum
     '''
     print('Searching for AuNP monomer spectrum candidates...')
-    timeScans = getTimeScans(h5File)
-    singleSpecs = getTimeScans(h5File, nDims = 1)
+    timeScans = getDsetNames(h5File, nDims = 2)
+    singleSpecs = getDsetNames(h5File, nDims = 1)
 
     with h5py.File(h5File, 'a') as f:
 
         candidates = []
+
+        for i in timeScans:
+
+            if reUse == True:
+                if 'AuNP Spectrum' in f[i].attrs.keys():
+                    y = f[i].attrs['AuNP Spectrum']
+                    x = f[i].attrs['AuNP Wavelengths']
+                    print('\tAuNP monomer spectrum already assigned\n')
+                    return ExtinctionSpectrum(x, y)
+
+            if 'AggInc' not in f[i].attrs.keys():
+                dataset = AggExtDataset(f[i], initSpec = False)
 
         allSpecs = sorted([i for i in timeScans if 'AggInc' in f[i].attrs.keys()], key = lambda i: f[i].attrs['AggInc'])
         allSingles = singleSpecs
@@ -184,9 +196,7 @@ def findAunpSpectrum(h5File):
 
             candidates.append((x, y))
             xTrunc, yTrunc = mpf.truncateSpectrum(x, y, startWl = 600, finishWl = 970)
-            integrals.append(np.trapz(yTrunc, x = xTrunc))
-
-        
+            integrals.append(np.trapz(yTrunc, x = xTrunc))        
 
         for dSetName in allSpecs:
             dSpectra = f[dSetName]
@@ -205,6 +215,9 @@ def findAunpSpectrum(h5File):
             integrals.append(np.trapz(yTrunc, x = xTrunc))
 
         candidates = [i[0] for i in sorted(zip(candidates, integrals), key = lambda i: i[1])]
+
+        if len(candidates) == 0:
+            print('agfsfghfsgh')
 
         for n, (x, y) in enumerate(candidates):
             xTrunc, yTrunc = mpf.truncateSpectrum(x, y, startWl = 400, finishWl = 950)
@@ -277,43 +290,65 @@ class ExtinctionSpectrum:
         self.debug = True
 
     def __init__(self, x, y, startWl = 420, endWl = 950, initSpec = None):
+        self.makeNull()
+        
         if x is None:
-            self.makeNull()
             return
 
         self.xRaw = mpf.removeNaNs(x)
         self.yRaw = mpf.removeNaNs(y)
+
         self.startWl = startWl
         self.endWl = endWl
         self.xTrunc, self.yTrunc = mpf.truncateSpectrum(self.xRaw, self.yRaw, startWl = self.startWl, finishWl = self.endWl)
         self.ySmooth = mpf.butterLowpassFiltFilt(self.yTrunc)
         self.debug = False
+        self.specMaxWl = None
 
         if initSpec is not None:
+            
             initX, initY, initYSmooth = initSpec.xTrunc, initSpec.yTrunc, initSpec.ySmooth
+            initAunpWl = initX[initYSmooth.argmax()]
 
             if not np.all(initX == self.xTrunc):
                 initY = np.interp(self.xTrunc, initX, initY)
-                initYSmooth = mpf.butterLowpassFiltFilt(initY)
-            
+                initYSmooth = mpf.butterLowpassFiltFilt(initY)            
+
             aunpIndex = initYSmooth.argmax()
+            initAunpWl = self.xTrunc[aunpIndex]
+
+            initY -= initYSmooth[-1] - self.ySmooth[-1]
+            initYSmooth -= initYSmooth[-1] - self.ySmooth[-1]
+
             scaling = self.ySmooth[aunpIndex]/initYSmooth[aunpIndex]
+
+            self.aunpSpec = initY*scaling
             self.ySub = self.ySmooth - initY*scaling
             
         else:
-            self.ySub = np.zeros(len(self.yTrunc))
+            self.aunpSpec = None
+            self.ySub = yTrunc
         
-    def fitAggPeaks(self, dimerWl = None):
+    def fitAggPeaks(self, dimerWl = None, plot = False):
         '''
         InitY is monomeric AuNP spectrum, scaled if necessary. Must have same length as x and y
         '''
         x, y = self.xTrunc, self.ySub
         ySmooth = mpf.butterLowpassFiltFilt(y, cutoff = 1200, fs = 65000)
         mindices = mpf.detectMinima(ySmooth)
+
+        if plot == True:
+            plt.plot(x, y)
+            plt.plot(x, ySmooth)
+            plt.show()
+
         mindices = mindices[np.where(x[mindices] > 500)]
         startMindex = mindices[0] if len(mindices) > 0 else abs(x-500).argmin()
+        #startMindex = int(np.round(np.average([startMindex, abs(x-600).argmin()])))
 
         xFit, yFit, yFitSmooth = x[startMindex:], y[startMindex:], ySmooth[startMindex:]
+        yFit -= yFitSmooth.min()
+        yFitSmooth -= yFitSmooth.min()
         self.specMaxWl = xFit[yFitSmooth.argmax()]
 
         if dimerWl is None:
@@ -339,6 +374,7 @@ class ExtinctionSpectrum:
         except:
             if self.debug == True:
                 print(dimerWl, initDimerWl, dimerIndex)
+            return
 
         initDimerFwhm = 2*(initDimerWl - xFit[dimerHalfMaxDex])
         initDimerFwhmEv = abs(xFit[dimerHalfMaxDex] - xFit[2*dimerIndex - dimerHalfMaxDex])
@@ -349,16 +385,17 @@ class ExtinctionSpectrum:
         dimerInit *= initDimerHeight/dimerInit.max()
 
         chainInit = yFitSmooth - dimerInit
-        initChainIndex = dimerIndex + chainInit[dimerIndex:].argmax()        
+        initChainIndex = dimerIndex + chainInit[dimerIndex:].argmax()
 
-        '''plt.plot(xFit, yFit)
-        plt.plot(xFit[dimerIndex:initChainIndex], chainInit[dimerIndex:initChainIndex], zorder = 10)
-        plt.plot(xFit, dimerInit)
-        plt.plot(xFit, chainInit)
-        plt.plot(xFit[initChainIndex], chainInit[initChainIndex], 'o')
-        plt.plot(xFit[chainHalfMaxDex], chainInit[chainHalfMaxDex], 'ko')
-        plt.plot(xFit, dimerInit + chainInit, 'r--')
-        plt.show()'''
+        if plot == True:
+            plt.plot(xFit, yFit)
+            plt.plot(xFit[dimerIndex:initChainIndex], chainInit[dimerIndex:initChainIndex], zorder = 10)
+            plt.plot(xFit, dimerInit)
+            plt.plot(xFit, chainInit)
+            plt.plot(xFit[initChainIndex], chainInit[initChainIndex], 'o')
+            #plt.plot(xFit[chainHalfMaxDex], chainInit[chainHalfMaxDex], 'ko')
+            plt.plot(xFit, dimerInit + chainInit, 'r--')
+            plt.show()
 
         aggMod = LorentzianModel(prefix = 'Dimer_')
         aggModPars = aggMod.guess(dimerInit, x = xFit)
@@ -411,39 +448,119 @@ class ExtinctionSpectrum:
                 aggModPars['Chain_center'].set(initChainWl, min = initDimerWl)
 
         aggFit = aggMod.fit(yFit, aggModPars, x = xFit)
-        yAggFit = aggFit.eval(x = xFit)
+        xTruncEv = evToNm(-self.xTrunc)
+        yAggFit = aggFit.eval(x = xTruncEv)
         finalParams = aggFit.params
-        comps = aggFit.eval_components()
+        comps = aggFit.eval_components(x = xTruncEv)
 
         xFit = evToNm(-xFit)
 
-        '''plt.plot(xFit, yFit, 'k')
-        plt.plot(xFit, yAggFit, 'r')
-        for comp in comps.keys():
-            print(comp)
-            plt.plot(xFit, comps[comp], label = comp)
-        plt.legend(loc = 0)
-        plt.show()'''
+        if plot == True:
+            plt.plot(self.xTrunc, self.ySub, 'k')
+            plt.plot(self.xTrunc, yAggFit, 'r')
+            for comp in comps.keys():
+                print(comp)
+                plt.plot(self.xTrunc, comps[comp], label = comp)
+            plt.legend(loc = 0)
+            plt.xlim(self.startWl, self.endWl)
+            plt.xlabel('Wavelength (nm)')
+            plt.ylabel('$\Delta$A')
+            plt.show()
 
-        self.dimerCenter = evToNm(-finalParams['Dimer_center'].value)
-        self.dimerHeight = finalParams['Dimer_height'].value
-        self.dimerFwhm = finalParams['Dimer_fwhm'].value
+        self.dimerCenterEv = finalParams['Dimer_center'].value
+        self.dimerCenter = evToNm(-self.dimerCenterEv)
+        self.dimerHeight = comps['Dimer_'].max()
+        self.dimerFwhmEv = finalParams['Dimer_fwhm'].value
+        self.dimerFwhm = abs(evToNm(self.dimerCenterEv + self.dimerFwhmEv) - evToNm(self.dimerCenterEv - self.dimerFwhmEv))
+        self.dimerFit = comps['Dimer_']
 
         if chainMode == True:
-            self.chainCenter = evToNm(-finalParams['Chain_center'].value)
-            self.chainHeight = finalParams['Chain_height'].value
-            self.chainFwhm = finalParams['Chain_fwhm'].value
+            self.chainCenterEv = finalParams['Chain_center'].value
+            self.chainCenter = evToNm(-self.chainCenterEv)
+            self.chainHeight = comps['Chain_'].max()
+            self.chainFwhmEv = finalParams['Chain_fwhm'].value
+            self.chainFwhm = abs(evToNm(self.chainCenterEv + self.chainFwhmEv) - evToNm(self.chainCenterEv - self.chainFwhmEv))
+            self.chainFit = comps['Chain_']
         else:
             self.chainCenter = np.nan
+            self.chainCenterEv = np.nan
             self.chainHeight = np.nan
             self.chainFwhm = np.nan
+            self.chainFwhmEv = np.nan
+            self.chainFit = np.zeros(len(self.xTrunc))
 
+    def findDimerIndex(self, plot = False):
+        x = self.xTrunc
+        ySmooth = mpf.butterLowpassFiltFilt(self.ySub, cutoff = 1200, fs = 65000)
+        dimerWl = self.dimerCenter
+
+        if dimerWl == None:
+            self.dimerWl = None
+            return
+
+        elif dimerWl < 600:
+            self.dimerWl = None
+            return
+
+        dimerIndex = abs(self.xTrunc - dimerWl).argmin()   
+        y = self.ySub/ySmooth[dimerIndex]
+        xy1 = mpf.truncateSpectrum(x, y, startWl = 500, finishWl = 600)
+        x2, y2 = mpf.truncateSpectrum(x, y, startWl = 600, finishWl = 900)
+        ySmooth = mpf.butterLowpassFiltFilt(y2, cutoff = 1200, fs = 65000)
+        y2 /= ySmooth.max()
+        ySmooth /= ySmooth.max()
+        
+        mindices = mpf.detectMinima(ySmooth)
+        
+        if len(mindices) == 0:
+            mindices = [0]
+        
+        if x2[mindices[0]] > 700:
+            mindices = [0]
+
+        xDimer = x2[mindices[0]:]
+        yDimer = y2[mindices[0]:]
+        ySmooth = ySmooth[mindices[0]:]
+        dimerIndex = ySmooth.argmax()
+
+        self.dimerWl = xDimer[dimerIndex]
+
+        if plot == True:
+            fig, (ax1, ax2) = plt.subplots(2, sharex = True)
+            ax1.plot(self.xTrunc, self.yTrunc)
+            if self.aunpSpec is not None:
+                ax1.plot(self.xTrunc, self.aunpSpec, 'k--')
+                
+            ax1.plot(self.xTrunc, self.ySub)
+            ax2.plot(x2, y2, alpha = 0.5)
+            ax2.plot(xDimer, yDimer, alpha = 0.5)
+            ax2.plot(xDimer, ySmooth)
+            ax2.plot(xDimer[dimerIndex], ySmooth[dimerIndex], 'o', ms = 20, alpha = 0.5)
+            ax2.set_xlim(420, 900)
+            ax2.set_xlabel('Wavelength (nm)')
+            plt.subplots_adjust(hspace = 0)
+            ax1.set_ylabel('Absorbance')
+            ax2.set_ylabel('$\Delta$A')
+            ax2.set_yticks([])
+            plt.title(r'$\lambda_{\mathrm{Dimer}}$ = %.2f nm' % self.dimerWl)
+            plt.show()       
+        
 class AggExtDataset:
 
-    def __init__(self, dSet, dataName = None, startWl = 420, endWl = 950, initSpec = None, startPointPlot = False, startPointThresh = 2, tInit = 15):
+    '''
+    Class containing (x, y, t) data and methods for an aggregate extinction timescan
+
+    '''
+
+    def __init__(self, dSet, dataName = None, exptName = None, startWl = 420, endWl = 950, initSpec = None, startPointPlot = False, startPointThresh = 2, tInit = 15,
+                 saveFigs = False):
         self.x = dSet.attrs['wavelengths'][()]
         self.t = dSet.attrs['start times'][()]
-        self.dataName = dataName
+
+        self.dataName = dataName if dataName is not None else dSet.name
+
+        if exptName is not None:
+            dSet.attrs['Experiment Name'] = self.exptName = exptName
 
         bg = dSet.attrs['background'][()]
         ref = dSet.attrs['reference'][()]
@@ -454,6 +571,8 @@ class AggExtDataset:
         self.yData = np.log10(1/yData)
         self.startWl = startWl
         self.endWl = endWl
+
+        self.saveFigs = saveFigs
 
         if 'AggInc' in dSet.attrs.keys():
             self.startPoint = dSet.attrs['Start Point']
@@ -466,7 +585,21 @@ class AggExtDataset:
             dSet.attrs['End Point'] = self.endPoint
             dSet.attrs['AggInc'] = self.trapDiff
 
-        self.initSpec = initSpec if initSpec is not None else findAunpSpectrum(dSet.file.filename)
+        if initSpec == False:
+            self.initSpec = None
+        elif initSpec is None:            
+            self.initSpec = findAunpSpectrum(dSet.file.filename)
+        else:
+            self.initSpec = initSpec
+
+        if 'Dimer Centers' in dSet.attrs.keys():
+            self.dimerCenters = dSet.attrs['Dimer Centers']
+            self.dimerHeights = dSet.attrs['Dimer Heights']
+            self.dimerFwhms   = dSet.attrs['Dimer Fwhms']
+
+            self.chainHeights = dSet.attrs['Chain Heights']
+            self.chainFwhms   = dSet.attrs['Chain Fwhms']
+            self.chainCenters = dSet.attrs['Chain Centers']
 
     def findStartPoint(self, plot = False, thresh = 2, tInit = 15):
         x = self.x
@@ -527,7 +660,7 @@ class AggExtDataset:
         self.startPoint = startPoint
         self.endPoint = endPoint
 
-    def fitSpectra(self, dSet, debug = False):
+    def fitSpectra(self, dSet, dimerPlot = False, debug = False):
         x = self.x
         yData = self.yData
 
@@ -541,15 +674,17 @@ class AggExtDataset:
 
         nummers = np.arange(20, 101, 20)
 
-        if len(yData[startPoint:]) > 150:
+        if len(yData[startPoint:]) > 500:
             nummers = np.arange(10, 101, 10)
 
-        if len(yData[startPoint:]) > 500:
+        if len(yData[startPoint:]) > 1500:
             nummers = np.arange(5, 101, 5)
 
         totalFitStart = time.time()
         print('\n0% complete')
         failures = 0
+
+        initDimerWl = None
 
         for n, (y, t) in enumerate(zip(yData[startPoint:], scanTimes[startPoint:]), startPoint):
             dimerWl = None if n == 0 else dSet.attrs.get('Dimer Guess', None)
@@ -564,8 +699,16 @@ class AggExtDataset:
                 #spectrum.fitAggPeaks(dimerWl = dimerWl)
                 spectrum.makeNull()
                 failures += 1
+
+            if initDimerWl is None:
+                spectrum.findDimerIndex(plot = dimerPlot)
+                initDimerWl = spectrum.dimerWl          
+
             if (n == 0 or dimerWl is None) and spectrum.specMaxWl is not None:
                 dSet.attrs['Dimer Guess'] = spectrum.specMaxWl
+
+            if spectrum.dimerCenter is None:
+                failures += 1
 
             specDict[n] = spectrum
 
@@ -575,6 +718,15 @@ class AggExtDataset:
                 secs = currentTime % 60
                 print(f'{nummers[0]}% ({n} spectra) analysed in {mins} min {secs:.3f} sec')
                 nummers = nummers[1:]
+
+        if initDimerWl is not None:
+            dSet.attrs['Dimer Wavelength (t0)'] = initDimerWl
+            print(f'\nDimer Wavelength = {initDimerWl}\n')
+        else:
+            dSet.attrs['Dimer Wavelength (t0)'] = 'N/A'
+            print(f'\nNo dimer peak detected\n')
+
+        print
 
         nSpectra = np.arange(len(yData))
 
@@ -601,12 +753,79 @@ class AggExtDataset:
         dSet.attrs['Chain Heights'] = self.chainHeights = np.array([specDict.get(n, ExtinctionSpectrum(None, None)).chainHeight for n in nSpectra])
         dSet.attrs['Chain Fwhms']   = self.chainFwhms   = np.array([specDict.get(n, ExtinctionSpectrum(None, None)).chainFwhm   for n in nSpectra])
 
-    def plotSpectra(self, cmap = 'jet', saveFig = True, fileFmt = 'png'):
-        print('Plotting...')
+    def plotIndividual(self, specN = 0, plotDimer = False, plotChain = False, plotProgress = False, saveFig = None, returnOnly = False):
         makeDir('Plots')
         dataName = self.dataName
         if '/' in dataName:
             dataName = dataName.split('/')[-1]
+
+        x = self.x
+        yData = self.yData
+
+        scanTimes = self.t
+        startPoint = self.startPoint
+        specN += startPoint
+        endPoint = self.endPoint
+        initSpec = self.initSpec
+
+        saveFig = self.saveFigs if saveFig is None else saveFig
+
+        y = yData[specN]
+        spectrum = ExtinctionSpectrum(x, y, initSpec = initSpec, startWl = self.startWl, endWl = self.endWl)
+        xTrunc, yTrunc, ySub = spectrum.xTrunc, spectrum.yTrunc, spectrum.ySub
+
+        if returnOnly == True:
+            return xTrunc, ySub
+
+        print(f'Plotting {dataName} Spectrum {specN}...')
+
+        if any([plotDimer, plotChain]):
+            spectrum.fitAggPeaks(plot = plotProgress)
+
+        fig, (ax1, ax2) = plt.subplots(2, sharex = True)
+        ax1.plot(xTrunc, yTrunc)
+        ax2.plot(xTrunc, ySub)
+
+        if plotDimer == True:
+            dimerX, dimerY = spectrum.dimerCenter, spectrum.dimerHeight
+            dimerLorentz = spectrum.dimerFit
+            ax2.plot(xTrunc, dimerLorentz)
+            ax2.plot(dimerX, dimerY, 'ro')
+
+        if plotChain == True:
+            chainX, chainY = spectrum.chainCenter, spectrum.chainHeight
+            chainLorentz = spectrum.chainFit
+            ax2.plot(xTrunc, chainLorentz)
+            ax2.plot(chainX, chainY, 'o', color = 'darkred')
+
+        if all([plotDimer, plotChain]):
+            ax2.plot(xTrunc, dimerLorentz + chainLorentz)
+
+        fig.suptitle(dataName)
+        ax1.set_xlim(xTrunc.min(), xTrunc.max())
+        ax2.set_xlim(ax1.get_xlim())
+        ax2.set_xlabel('Wavelength (nm)')
+        ax1.set_ylabel('Absorbance')
+        ax2.set_ylabel('A - A$_{\mathrm{AuNP}}$')
+        plt.subplots_adjust(hspace = 0.05)
+
+        if saveFig == True:
+            imgFName = f'Plots/{dataName}.svg'
+            fig.savefig(imgFName, bbox_inches = 'tight')
+            print(f'Saved as {imgFName}')
+            plt.close('all')
+
+        else:
+            plt.show()
+
+    def plotSpectra(self, cmap = 'jet', saveFig = None):
+        print('Plotting...\n')
+        makeDir('Plots')
+        dataName = self.dataName
+        if '/' in dataName:
+            dataName = dataName.split('/')[-1]
+
+        saveFig = self.saveFigs if saveFig is None else saveFig
 
         x = self.x
         yData = self.yData
@@ -625,15 +844,15 @@ class AggExtDataset:
         cmap = plt.get_cmap(cmap, nCols)
 
         for n, (y, t) in enumerate(zip(yData[startPoint:], scanTimes[startPoint:]), startPoint):
-            spectrum = ExtinctionSpectrum(x, y, initSpec = initSpec)
+            spectrum = ExtinctionSpectrum(x, y, initSpec = initSpec, startWl = self.startWl, endWl = self.endWl)
             xTrunc, yTrunc, ySub = spectrum.xTrunc, spectrum.yTrunc, spectrum.ySub
             
             if n > nCols:
                 color = 'gray'
-                alpha = 0.2
+                alpha = 0.5
             else:
                 color = cmap(n)
-                alpha = 0.5
+                alpha = 1
 
             dimerX, dimerY = self.dimerCenters[n], self.dimerHeights[n]
             chainX, chainY = self.chainCenters[n], self.chainHeights[n]
@@ -651,15 +870,15 @@ class AggExtDataset:
         ax2.set_ylabel('A - A$_{\mathrm{AuNP}}$')
         plt.subplots_adjust(hspace = 0.05)
         if saveFig == True:
-            fileFmt = 'png'
-            fig.savefig(f'Plots/{dataName}.{fileFmt}', bbox_inches = 'tight')
-            print(f'Saved as Plots/{dataName}.{fileFmt}')
+            imgFName = f'Plots/{dataName}.png'
+            fig.savefig(imgFName, bbox_inches = 'tight')
+            print(f'Saved as {imgFName}')
             plt.close('all')
 
         else:
             plt.show()        
 
-    def plotOverviews(self, saveFig = True, fileFmt = 'png'):
+    def plotOverviews(self, saveFig = True):
         makeDir('Plots')
         dataName = self.dataName
         if '/' in dataName:
@@ -685,9 +904,9 @@ class AggExtDataset:
         ax1.set_ylabel('Peak Wavelength (nm)')
         plt.title(dataName)
         if saveFig == True:
-            fileFmt = 'png'
-            fig.savefig(f'Plots/{dataName} wl vs t.{fileFmt}', bbox_inches = 'tight')
-            print(f'Saved as Plots/{dataName} wl vs t.{fileFmt}')
+            imgFName = f'Plots/{dataName} wl vs t.svg'
+            fig.savefig(imgFName, bbox_inches = 'tight')
+            print(f'Saved as {imgFName}')
             plt.close('all')
 
         else:
@@ -701,9 +920,9 @@ class AggExtDataset:
         ax.set_ylabel('Peak Absorbance')
         plt.title(dataName)
         if saveFig == True:
-            fileFmt = 'png'
-            fig.savefig(f'Plots/{dataName} i vs t.{fileFmt}', bbox_inches = 'tight')
-            print(f'Saved as Plots/{dataName} i vs t.{fileFmt}')
+            imgFName = f'Plots/{dataName} i vs t.svg'
+            fig.savefig(imgFName, bbox_inches = 'tight')
+            print(f'Saved as {imgFName}')
             plt.close('all')
 
         else:
@@ -712,29 +931,26 @@ class AggExtDataset:
         print('')
 
 def initialiseDatasets(h5File):
-    print('Initialising data...')
+    print('Initialising timescan data...')
 
-    specNames = getTimeScans(h5File)
+    specNames = getDsetNames(h5File, nDims = 2)
 
     with h5py.File(h5File, 'a') as f:
         for dataName in specNames:
-            print(dataName)
-            dataSet = AggExtDataset(f[dataName], dataName = dataName, initSpec = np.linspace(200, 999, 800))
-    print('\tData initialised')
+            print(f'\t{dataName}')
+            dataSet = AggExtDataset(f[dataName], dataName = dataName, initSpec = False)
+    print('\n\tData initialised\n')
 
-def getTimeScans(h5File, nDims = 2):
-    with h5py.File(h5File, 'a') as f:
-        specNames = []
-
-        if 'OceanOpticsSpectrometer' in f.keys():
-            specNames += [f'OceanOpticsSpectrometer/{i}' for i in f['OceanOpticsSpectrometer'].keys()]
-
-        if len(f.keys()) > 1:
-            specNames += [i for i in f.keys()]
+def getDsetNames(h5File, nDims = 2):
+    with h5py.File(h5File, 'r') as f:
+        names = []
+        f.visit(names.append)
+        names = [i for i in names if isinstance(f[i], h5py.Dataset)]
         
-        return [i for i in specNames if f[i][()].ndim == nDims]
+        return [i for i in names if f[i][()].ndim == nDims]
 
-def fitAllSpectra(h5File, initSpec = None, saveFigs = True, fileFmt = 'png', startWl = 420, endWl = 950, startPointPlot = False, startPointThresh = 2, tInit = 15, debug = False):
+def fitAllSpectra(h5File, initSpec = None, nameDict = {}, dimerPlot = False, saveFigs = True, startWl = 420, endWl = 950, startPointPlot = False, startPointThresh = 2, 
+                  tInit = 15, debug = False):
     
     initialiseDatasets(h5File)
 
@@ -744,23 +960,27 @@ def fitAllSpectra(h5File, initSpec = None, saveFigs = True, fileFmt = 'png', sta
     else:
         initSpec = ExtinctionSpectrum(*initSpec)
 
-    specNames = getTimeScans(h5File)
+    specNames = getDsetNames(h5File, nDims = 2)
     with h5py.File(h5File, 'a') as f:
         for specN, dataName in enumerate(specNames):
+            exptName = nameDict.get(dataName, None)
             print(dataName)
+            if exptName is not None:
+                print(f'\t(= {exptName})')
             dSpectra = f[dataName]
             if len(dSpectra[()]) == 1:
                 continue
 
-            dataSet = AggExtDataset(dSpectra, dataName = dataName, initSpec = initSpec, startWl = startWl, endWl = endWl, startPointPlot = startPointPlot, 
-                                    startPointThresh = startPointThresh, tInit = tInit)
-            dataSet.fitSpectra(dSpectra, debug = debug)
+            dataSet = AggExtDataset(dSpectra, dataName = dataName, exptName = exptName, initSpec = initSpec, startWl = startWl, endWl = endWl, 
+                                    startPointPlot = startPointPlot, startPointThresh = startPointThresh, tInit = tInit)
+            dataSet.fitSpectra(dSpectra, dimerPlot = dimerPlot, debug = debug)
             makeDir('Plots')
-            dataSet.plotSpectra(saveFig = saveFigs, fileFmt = fileFmt)
-            dataSet.plotOverviews(saveFig = saveFigs, fileFmt = fileFmt)
+            dataSet.plotSpectra(saveFig = saveFigs)
+            dataSet.plotOverviews(saveFig = saveFigs)
 
     print('\nAll done')
 
 if __name__ == '__main__':
     h5File = mpf.findH5File(os.getcwd(), nameFormat = 'date', mostRecent = True)
+    nameDict = {}#dictionary to name your spectra, if desired
     fitAllSpectra(h5File)
