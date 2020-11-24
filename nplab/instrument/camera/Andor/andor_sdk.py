@@ -219,7 +219,7 @@ class AndorBase(object):
             form_in = ()
             if 'Input_params' in func:
                 for input_param in func['Input_params']:
-                    form_in += ({'value': getattr(self, self._parameters['DetectorShape'][0], self._parameters['FVBHBin'][0]), 'type': input_param[1]},)
+                    form_in += ({'value': getattr(self, self._parameters['DetectorShape'][0], self._parameters['FVBHBin']), 'type': input_param[1]},)
             for ii in range(len(inputs)):
                 form_in += ({'value': inputs[ii], 'type': func['Inputs'][ii]},)
 
@@ -466,7 +466,7 @@ class AndorBase(object):
         self.set_andor_parameter('Exposure', 0.01)
         detector_shape = self.get_andor_parameter('DetectorShape')
         self.set_andor_parameter('Image', 1, 1, 1, detector_shape[0], 1, detector_shape[1])
-        self.set_andor_parameter('Shutter', 1, 0, 1, 1)
+        self.set_andor_parameter('Shutter', 1, 0, 0, 0)
         self.set_andor_parameter('SetTemperature', -90)
         self.set_andor_parameter('CoolerMode', 0)
         self.set_andor_parameter('FanMode', 0)
