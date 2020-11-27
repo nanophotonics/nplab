@@ -1018,9 +1018,9 @@ class aggExtH5File():
 
                 if decision == 'y':
                     for specName in allSpecs:
-                        updateAunpSpecs(h5File, x, y)
+                        self.updateAunpSpecs(x, y)
                         if extH5File is not None:
-                            updateAunpSpecs(currH5File, x, y)
+                            self.updateAunpSpecs(currH5File, x, y)
                         f[specName].attrs['AuNP Spectrum'] = y
                         f[specName].attrs['AuNP Wavelengths'] = x
                     return ExtinctionSpectrum(x, y)
@@ -1055,7 +1055,7 @@ class aggExtH5File():
 
                 extH5File = '/'.join(extH5File.split('\\'))
             
-                aunpSpec = findAunpSpectrum(h5File, reUse = True, extH5File = extH5File)
+                aunpSpec = self.findAunpSpectrum(reUse = True, extH5File = extH5File)
                 print('AuNP Spectrum successfully added')
 
                 return aunpSpec
