@@ -1017,12 +1017,14 @@ class aggExtH5File():
                 decision = input(query)
 
                 if decision == 'y':
+                    print('\nOk, saving this for future use. Please wait while Dataset attributes are updated...')
                     for specName in allSpecs:
                         self.updateAunpSpecs(x, y)
                         if extH5File is not None:
                             self.updateAunpSpecs(currH5File, x, y)
                         f[specName].attrs['AuNP Spectrum'] = y
                         f[specName].attrs['AuNP Wavelengths'] = x
+                    print('\tDone\n')
                     return ExtinctionSpectrum(x, y)
                 
                 elif decision == 'n':
@@ -1096,6 +1098,7 @@ class aggExtH5File():
 
     def fitAllSpectra(self, nameDict = {}, dimerPlot = False, saveFigs = True, startWl = 420, endWl = 950, startPointPlot = False, startPointThresh = 2, 
                       tInit = 15, debug = False):
+        print('Beginning fit\n')
 
         with h5py.File(self.filename, 'a') as f:
             for specN, dataName in enumerate(self.dSetNames):
