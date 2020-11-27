@@ -150,104 +150,6 @@ def gaussian(x, height, center, fwhm, offset = 0):
 
     return y
 
-def findAunpSpectrum(h5File, reUse = True):
-    '''
-    searches through h5 file for non-aggregated AuNP spectrum
-    '''
-    print('Searching for AuNP monomer spectrum candidates...')
-    timeScans = getDsetNames(h5File, nDims = 2)
-    singleSpecs = getDsetNames(h5File, nDims = 1)
-
-    with h5py.File(h5File, 'a') as f:
-
-        candidates = []
-
-        for i in timeScans:
-
-            if reUse == True:
-                if 'AuNP Spectrum' in f[i].attrs.keys():
-                    y = f[i].attrs['AuNP Spectrum']
-                    x = f[i].attrs['AuNP Wavelengths']
-                    print('\tAuNP monomer spectrum already assigned\n')
-                    return ExtinctionSpectrum(x, y)
-
-            if 'AggInc' not in f[i].attrs.keys():
-                dataset = AggExtDataset(f[i], initSpec = False)
-
-        allSpecs = sorted([i for i in timeScans if 'AggInc' in f[i].attrs.keys()], key = lambda i: f[i].attrs['AggInc'])
-        allSingles = singleSpecs
-
-        #for specName in allSpecs:
-        #    if 'AuNP Spectrum' in f[specName].attrs.keys():
-        #        return f[specName].attrs['AuNP Spectrum'][()]
-
-        integrals = []
-
-        for i in allSingles:
-            spectrum = f[i]
-            x = spectrum.attrs['wavelengths'][()]
-            y = spectrum[()]
-            bg = spectrum.attrs['background'][()] 
-            ref = spectrum.attrs['reference'][()] 
-            ref -= bg
-            y -= bg
-            y /= ref
-            y = np.log10(1/y)
-
-            candidates.append((x, y))
-            xTrunc, yTrunc = mpf.truncateSpectrum(x, y, startWl = 600, finishWl = 970)
-            integrals.append(np.trapz(yTrunc, x = xTrunc))        
-
-        for dSetName in allSpecs:
-            dSpectra = f[dSetName]
-            x = dSpectra.attrs['wavelengths'][()] 
-            startPoint = dSpectra.attrs['Start Point']
-            y = dSpectra[()][startPoint]
-            bg = dSpectra.attrs['background'][()] 
-            ref = dSpectra.attrs['reference'][()] 
-            ref -= bg
-            y -= bg
-            y /= ref
-            y = np.log10(1/y)
-
-            candidates.append((x, y))
-            xTrunc, yTrunc = mpf.truncateSpectrum(x, y, startWl = 600, finishWl = 970)
-            integrals.append(np.trapz(yTrunc, x = xTrunc))
-
-        candidates = [i[0] for i in sorted(zip(candidates, integrals), key = lambda i: i[1])]
-
-        if len(candidates) == 0:
-            print('agfsfghfsgh')
-
-        for n, (x, y) in enumerate(candidates):
-            xTrunc, yTrunc = mpf.truncateSpectrum(x, y, startWl = 400, finishWl = 950)
-            
-            plt.plot(xTrunc, yTrunc)
-            plt.xlim(xTrunc.min(), xTrunc.max())
-            plt.title(f'Attempt {n}')
-            plt.show()
-
-            query = 'Is this AuNP monomer spectrum acceptable? There should be no visible dimer peak.\n**If any aggregation is visible, enter "n" until you find one without it**  \
-                              \nEnter y to accept; n to find another spectrum; anything else to exit '
-
-            if n > 0:
-                query = 'y to accept; n to find another spectrum; anything else to exit '
-        
-            decision = input(query)
-
-            if decision == 'y':
-                for specName in allSpecs:
-                    f[specName].attrs['AuNP Spectrum'] = y
-                    f[specName].attrs['AuNP Wavelengths'] = x
-                return ExtinctionSpectrum(x, y)
-            elif decision == 'n':
-                continue
-            else:
-                break
-
-        print('Please specify "initSpec = [x, y]" when calling fitAllSpectra')
-        print(1/0)
-
 def baseline_als(y, lam, p, niter=10):
     L = len(y)
     D = sparse.diags([1,-2,1],[0,-1,-2], shape=(L,L-2))
@@ -327,7 +229,7 @@ class ExtinctionSpectrum:
             
         else:
             self.aunpSpec = None
-            self.ySub = yTrunc
+            self.ySub = self.yTrunc
         
     def fitAggPeaks(self, dimerWl = None, plot = False):
         '''
@@ -489,17 +391,28 @@ class ExtinctionSpectrum:
             self.chainFwhmEv = np.nan
             self.chainFit = np.zeros(len(self.xTrunc))
 
-    def findDimerIndex(self, plot = False):
+    def findDimerIndex(self, plot = False, returnAll = False):
         x = self.xTrunc
         ySmooth = mpf.butterLowpassFiltFilt(self.ySub, cutoff = 1200, fs = 65000)
         dimerWl = self.dimerCenter
 
         if dimerWl == None:
             self.dimerWl = None
+
+            if plot == True:
+                print('Dimer Wl is None')
+                plt.plot(x, ySmooth)
+                plt.show()
+
             return
 
         elif dimerWl < 600:
             self.dimerWl = None
+            print('Dimer Wl < 600')
+
+            #if plot == True:
+            #    plt.plot(*mpf.truncateSpectrum(x, self.ySub, startWl = 550, finishWl = 900))                
+            #    plt.show()
             return
 
         dimerIndex = abs(self.xTrunc - dimerWl).argmin()   
@@ -528,9 +441,10 @@ class ExtinctionSpectrum:
         if plot == True:
             fig, (ax1, ax2) = plt.subplots(2, sharex = True)
             ax1.plot(self.xTrunc, self.yTrunc)
+
             if self.aunpSpec is not None:
                 ax1.plot(self.xTrunc, self.aunpSpec, 'k--')
-                
+
             ax1.plot(self.xTrunc, self.ySub)
             ax2.plot(x2, y2, alpha = 0.5)
             ax2.plot(xDimer, yDimer, alpha = 0.5)
@@ -541,23 +455,30 @@ class ExtinctionSpectrum:
             plt.subplots_adjust(hspace = 0)
             ax1.set_ylabel('Absorbance')
             ax2.set_ylabel('$\Delta$A')
+            ax1.set_yticks([])
             ax2.set_yticks([])
-            plt.title(r'$\lambda_{\mathrm{Dimer}}$ = %.2f nm' % self.dimerWl)
-            plt.show()       
+            ax1.set_title(r'$\lambda_{\mathrm{Dimer}}$ = %.2f nm' % self.dimerWl)
+            plt.show()
+
+        if returnAll == True:
+            self.xDimer = xDimer
+            self.yDimer = yDimer
+            self.yDimerSmooth = ySmooth
+            self.x2 = x2
+            self.y2 = y2 
         
 class AggExtDataset:
-
     '''
     Class containing (x, y, t) data and methods for an aggregate extinction timescan
-
+    dSet must be a 2-dimensional h5py.Dataset Object from an open h5py.File('a') Object
     '''
-
     def __init__(self, dSet, dataName = None, exptName = None, startWl = 420, endWl = 950, initSpec = None, startPointPlot = False, startPointThresh = 2, tInit = 15,
                  saveFigs = False):
         self.x = dSet.attrs['wavelengths'][()]
         self.t = dSet.attrs['start times'][()]
+        self.dSet = dSet
 
-        self.dataName = dataName if dataName is not None else dSet.name
+        self.dataName = dataName if dataName is not None else dSet.name.strip('/')
 
         if exptName is not None:
             dSet.attrs['Experiment Name'] = self.exptName = exptName
@@ -587,7 +508,13 @@ class AggExtDataset:
 
         if initSpec == False:
             self.initSpec = None
-        elif initSpec is None:            
+
+        elif initSpec is None:  
+            if 'AuNP Spectrum' in dSet.attrs.keys():
+                x = dSet.attrs['AuNP Wavelengths'][()]
+                y = dSet.attrs['AuNP Spectrum'][()]
+                self.initSpec = ExtinctionSpectrum(x, y)
+
             self.initSpec = findAunpSpectrum(dSet.file.filename)
         else:
             self.initSpec = initSpec
@@ -930,57 +857,267 @@ class AggExtDataset:
 
         print('')
 
-def initialiseDatasets(h5File):
-    print('Initialising timescan data...')
-
-    specNames = getDsetNames(h5File, nDims = 2)
-
-    with h5py.File(h5File, 'a') as f:
-        for dataName in specNames:
-            print(f'\t{dataName}')
-            dataSet = AggExtDataset(f[dataName], dataName = dataName, initSpec = False)
-    print('\n\tData initialised\n')
-
-def getDsetNames(h5File, nDims = 2):
-    with h5py.File(h5File, 'r') as f:
-        names = []
-        f.visit(names.append)
-        names = [i for i in names if isinstance(f[i], h5py.Dataset)]
+    def extractDimerSpectrum(self, plot = True, endWl = 900):
+        x = self.x
+        yData = self.yData[self.startPoint:]
         
-        return [i for i in names if f[i][()].ndim == nDims]
+        dimerWl = None
+        n = 0
+        while dimerWl is None and n < 15:        
+            spectrum = ExtinctionSpectrum(x, yData[n], endWl = endWl, initSpec = self.initSpec)
+            xTrunc, ySub = spectrum.xTrunc, spectrum.ySub
 
-def fitAllSpectra(h5File, initSpec = None, nameDict = {}, dimerPlot = False, saveFigs = True, startWl = 420, endWl = 950, startPointPlot = False, startPointThresh = 2, 
-                  tInit = 15, debug = False):
-    
-    initialiseDatasets(h5File)
+            try:
+                spectrum.fitAggPeaks(dimerWl = dimerWl)
+                spectrum.findDimerIndex(plot = plot)
+                dimerWl = spectrum.dimerWl
 
-    if initSpec is None:
-        initSpec = findAunpSpectrum(h5File)
+            except:
+                print(f'Spectrum {n + self.startPoint} failed for {self.dataName}')
+                dimerWl = None
+                
+            n += 1
+        
+        if n >= 15:
+            print('\tDimer detection failed')
+            
+        elif n > 0:
+            print(f'\tSucceeded for Spectrum {n + self.startPoint}')
+        
+        print(f'\tDimer Wl = {dimerWl} nm\n')
 
-    else:
-        initSpec = ExtinctionSpectrum(*initSpec)
+        self.dimerWl = dimerWl
+        return spectrum
 
-    specNames = getDsetNames(h5File, nDims = 2)
-    with h5py.File(h5File, 'a') as f:
-        for specN, dataName in enumerate(specNames):
-            exptName = nameDict.get(dataName, None)
-            print(dataName)
-            if exptName is not None:
-                print(f'\t(= {exptName})')
-            dSpectra = f[dataName]
-            if len(dSpectra[()]) == 1:
-                continue
+class aggExtH5File():
 
-            dataSet = AggExtDataset(dSpectra, dataName = dataName, exptName = exptName, initSpec = initSpec, startWl = startWl, endWl = endWl, 
-                                    startPointPlot = startPointPlot, startPointThresh = startPointThresh, tInit = tInit)
-            dataSet.fitSpectra(dSpectra, dimerPlot = dimerPlot, debug = debug)
-            makeDir('Plots')
-            dataSet.plotSpectra(saveFig = saveFigs)
-            dataSet.plotOverviews(saveFig = saveFigs)
+    def __init__(self, filename):
+        self.filename = filename
+        self.dSetNames = self.getDsetNames(nDims = 2)
+        self.spectraNames = self.getDsetNames(nDims = 1)
+        self.initialiseDatasets()
+        self.initSpec = self.findAunpSpectrum()
 
-    print('\nAll done')
+    def getDsetNames(self, nDims = 2):
+        with h5py.File(self.filename, 'r') as f:
+            dSetNames = []
+            f.visit(dSetNames.append)
+            dSetNames = [dSetName for dSetName in dSetNames if isinstance(f[dSetName], h5py.Dataset)]
+            
+            return [dSetName for dSetName in dSetNames if f[dSetName][()].ndim == nDims]
+
+    def initialiseDatasets(self):
+        print('Initialising timescan data...')
+
+        with h5py.File(self.filename, 'a') as f:
+            for dSetName in self.dSetNames:
+                if 'Start Point' not in f[dSetName].attrs.keys():
+                    print(f'\t{dSetName}')
+                    dataSet = AggExtDataset(f[dSetName], dataName = dSetName, initSpec = False)
+
+        print('\n\tData initialised\n')
+
+    def updateAunpSpecs(self, x, y):        
+        with h5py.File(self.filename, 'a') as f:
+            for dSetNames in self.dSetNames:
+                f[dSetNames].attrs['AuNP Spectrum'] = y
+                f[dSetNames].attrs['AuNP Wavelengths'] = x
+
+    def findAunpSpectrum(self, reUse = True, extH5File = None):
+        '''
+        searches through h5 file for non-aggregated AuNP spectrum
+        '''
+        h5File = self.filename
+        if extH5File is not None:
+            currH5File = h5File
+            h5File = extH5File
+
+        print(f'Searching for AuNP monomer spectrum candidates in {h5File}...')
+
+        timeScans = self.dSetNames
+        singleSpecs = self.spectraNames
+
+        with h5py.File(h5File, 'a') as f:
+            candidates = []
+
+            for i in timeScans:
+                if reUse == True:
+                    if 'AuNP Spectrum' in f[i].attrs.keys():
+                        y = f[i].attrs['AuNP Spectrum']
+                        x = f[i].attrs['AuNP Wavelengths']
+                        print('\tAuNP monomer spectrum found\n')
+
+                        if extH5File is not None:
+                            updateAunpSpecs(currH5File, x, y)
+                        
+                        return ExtinctionSpectrum(x, y)
+
+                if 'AggInc' not in f[i].attrs.keys():
+                    dataset = AggExtDataset(f[i], initSpec = False)
+
+            allSpecs = sorted([i for i in timeScans if 'AggInc' in f[i].attrs.keys()], key = lambda i: f[i].attrs['AggInc'])
+            allSingles = singleSpecs
+
+            #for specName in allSpecs:
+            #    if 'AuNP Spectrum' in f[specName].attrs.keys():
+            #        return f[specName].attrs['AuNP Spectrum'][()]
+
+            integrals = []
+
+            for i in allSingles:
+                spectrum = f[i]
+                x = spectrum.attrs['wavelengths'][()]
+                y = spectrum[()]
+                bg = spectrum.attrs['background'][()] 
+                ref = spectrum.attrs['reference'][()] 
+                ref -= bg
+                y -= bg
+                y /= ref
+                y = np.log10(1/y)
+
+                candidates.append((x, y))
+                xTrunc, yTrunc = mpf.truncateSpectrum(x, y, startWl = 600, finishWl = 970)
+                integrals.append(np.trapz(yTrunc, x = xTrunc))        
+
+            for dSetName in allSpecs:
+                dSpectra = f[dSetName]
+                x = dSpectra.attrs['wavelengths'][()] 
+                startPoint = dSpectra.attrs['Start Point']
+                y = dSpectra[()][startPoint]
+                bg = dSpectra.attrs['background'][()] 
+                ref = dSpectra.attrs['reference'][()] 
+                ref -= bg
+                y -= bg
+                y /= ref
+                y = np.log10(1/y)
+
+                candidates.append((x, y))
+                xTrunc, yTrunc = mpf.truncateSpectrum(x, y, startWl = 600, finishWl = 970)
+                integrals.append(np.trapz(yTrunc, x = xTrunc))
+
+            candidates = [i[0] for i in sorted(zip(candidates, integrals), key = lambda i: i[1])]
+
+            if len(candidates) == 0:
+                print('agfsfghfsgh')
+
+            for n, (x, y) in enumerate(candidates):
+                xTrunc, yTrunc = mpf.truncateSpectrum(x, y, startWl = 400, finishWl = 950)
+                
+                plt.plot(xTrunc, yTrunc)
+                plt.xlim(xTrunc.min(), xTrunc.max())
+                plt.title(f'Attempt {n}')
+                plt.show()
+
+                query = 'Is this AuNP monomer spectrum acceptable? There should be no visible dimer peak.\n**If any aggregation is visible, enter "n" until you find one without it**  \
+                                  \nEnter y to accept; n to find another spectrum; x to exit; anything else to see more options\n\n'
+
+                if n > 0:
+                    query = 'y to accept; n to find another spectrum; x to exit; anything else to see more options\n\n'
+            
+                decision = input(query)
+
+                if decision == 'y':
+                    for specName in allSpecs:
+                        updateAunpSpecs(h5File, x, y)
+                        if extH5File is not None:
+                            updateAunpSpecs(currH5File, x, y)
+                        f[specName].attrs['AuNP Spectrum'] = y
+                        f[specName].attrs['AuNP Wavelengths'] = x
+                    return ExtinctionSpectrum(x, y)
+                
+                elif decision == 'n':
+                    continue
+                elif decision == 'x':
+                    print(1/0)
+                else:
+                    break
+
+            query = ''.join(['No monomeric AuNP spectrum found. Please select an option to continue:\n',
+                             '\t1. Specify a different .h5 file with a monomeric AuNP spectrum\n', 
+                             '\t2. Manually specify "initSpec = [x, y]" when calling fitAllSpectra\n',
+                             '\t3. Manually add AuNP xy data to the .h5 file before running again\n\n'])
+
+            decision = input(query)
+
+            while decision not in ['1', '2', '3', 1, 2, 3]:
+                if decision == 'x':
+                    break
+                decision = input('Please enter 1, 2 or 3. Enter x to exit:\n\n')            
+
+            if decision in [1, '1']:
+                extH5File = input("Please enter the full path to the .h5 file containing your spectrum:\n\n")
+
+                while not extH5File.endswith('.h5'):
+                    if not extH5File.endswith('.h5'):
+                        extH5File = input('Are you sure this is correct? Please try again:\n\n')
+                    if extH5File == 'x':
+                        break
+
+                extH5File = '/'.join(extH5File.split('\\'))
+            
+                aunpSpec = findAunpSpectrum(h5File, reUse = True, extH5File = extH5File)
+                print('AuNP Spectrum successfully added')
+
+                return aunpSpec
+
+            elif decision in [2, '2']:
+                print('Find some appropriate [x, y] data and run fitAllSpectra again, specifying "initSpec = [x, y]"')
+                print(1/0)
+
+            elif decision in [3, '3']:
+                print("Find some appropriate y data and save it as a new Dataset in the current hdf5 File with Dataset.attrs['wavelengths'] = x, then try again")
+                print(1/0)
+
+            print(1/0)
+
+    def findDimerPeaks(self, plot = True, endWl = 900):
+        specDict = {}
+
+        initSpec = self.initSpec
+
+        with h5py.File(self.filename, 'a') as f:
+            for dSetName in self.dSetNames[:]:
+                print(dSetName)
+                initSpecs = []
+                dimerWls = []
+                dataSet = AggExtDataset(f[dSetName], initSpec = self.initSpec, saveFigs = False, endWl = endWl)
+                
+                dimerSpectrum = dataSet.extractDimerSpectrum(plot = plot, endWl = endWl)
+                dimerWl = dataSet.dimerWl
+                specDict[dSetName] = {'xy' : [dimerSpectrum.xTrunc, dimerSpectrum.ySub], 'dimerWl' : 0 if dimerWl is None else dimerWl}
+
+                f[dSetName].attrs['Dimer Wavelength (t0)'] = dimerWl if dimerWl is not None else np.nan
+
+        print('Done')
+
+        self.dimerSpecDict = specDict
+
+        return specDict
+
+    def fitAllSpectra(self, nameDict = {}, dimerPlot = False, saveFigs = True, startWl = 420, endWl = 950, startPointPlot = False, startPointThresh = 2, 
+                      tInit = 15, debug = False):
+
+        with h5py.File(self.filename, 'a') as f:
+            for specN, dataName in enumerate(self.dSetNames):
+                exptName = nameDict.get(dataName.split('/')[-1], None)
+                print(dataName)
+                if exptName is not None:
+                    print(f'\t(= {exptName})')
+                dSpectra = f[dataName]
+                if len(dSpectra[()]) == 1:
+                    continue
+
+                dataSet = AggExtDataset(dSpectra, dataName = dataName, exptName = exptName, initSpec = self.initSpec, startWl = startWl, endWl = endWl, 
+                                        startPointPlot = startPointPlot, startPointThresh = startPointThresh, tInit = tInit)
+                dataSet.fitSpectra(dSpectra, dimerPlot = dimerPlot, debug = debug)
+                makeDir('Plots')
+                dataSet.plotSpectra(saveFig = saveFigs)
+                dataSet.plotOverviews(saveFig = saveFigs)
+
+        print('\nAll done')
 
 if __name__ == '__main__':
     h5File = mpf.findH5File(os.getcwd(), nameFormat = 'date', mostRecent = True)
+    h5File = aggExtH5File(h5File)
     nameDict = {}#dictionary to name your spectra, if desired
-    fitAllSpectra(h5File)
+    h5File.fitAllSpectra()
