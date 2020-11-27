@@ -889,7 +889,7 @@ class AggExtDataset:
         self.dimerWl = dimerWl
         return spectrum
 
-class aggExtH5File():
+class AggExtH5File():
 
     def __init__(self, filename):
         self.filename = filename
@@ -1121,6 +1121,6 @@ class aggExtH5File():
 
 if __name__ == '__main__':
     h5File = mpf.findH5File(os.getcwd(), nameFormat = 'date', mostRecent = True)
-    h5File = aggExtH5File(h5File)
+    h5File = AggExtH5File(h5File)
     nameDict = {}#dictionary to name your spectra, if desired
     h5File.fitAllSpectra()
