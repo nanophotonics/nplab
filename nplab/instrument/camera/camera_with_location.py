@@ -173,7 +173,14 @@ class CameraWithLocation(Instrument):
         for i in range(self.frames_to_discard):
             self.camera.raw_image(*args, **kwargs)
 
-    def move_to_feature(self, feature, ignore_position=False, ignore_z_pos = False, margin=50, tolerance=0.5, max_iterations = 10):
+    def move_to_feature(self, feature,
+                        ignore_position=False,
+                        ignore_z_pos=False,
+                        margin=50,
+                        tolerance=0.5,
+                        max_iterations=10,
+                        autofocus_first=False,
+                        autofocus_args={}):
         """Bring the feature in the supplied image to the centre of the camera
 
         Strictly, what this aims to do is move the sample such that the datum pixel of the "feature" image is on the
@@ -205,6 +212,7 @@ class CameraWithLocation(Instrument):
                     self.move(feature.datum_location) #initial move to where we recorded the feature was
             except:
                 print("Warning: no position data in feature image, skipping initial move.")
+        if autofocus_first: self.autofocus(**autofocus_args)
         image = self.color_image()
         assert isinstance(image, ImageWithLocation), "CameraWithLocation should return an ImageWithLocation...?"
 
@@ -253,7 +261,7 @@ class CameraWithLocation(Instrument):
         update_progress : function, optional
             This will be called each time we take an image - for use with run_function_modally.
         """
-        self.camera.exposure = old_div(self.camera.exposure,exposure_factor)
+        self.camera.exposure = self.camera.exposure/exposure_factor
         if dz is None:
             dz = (np.arange(self.af_steps) - old_div((self.af_steps - 1),2)) * self.af_step_size # Default value
         here = self.stage.position
@@ -267,6 +275,7 @@ class CameraWithLocation(Instrument):
             self.stage.move(np.array([0, 0, z]) + here)
             self.settle()
             positions.append(self.stage.position)
+            
             if use_thumbnail is True:
                 image = self.thumb_image()
             else:

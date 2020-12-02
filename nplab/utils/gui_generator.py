@@ -94,6 +94,7 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
         if terminal:
             self.menuTerminal()
             self._addActionViewMenu('Terminal')
+        self.terminal = terminal
         self.makeScriptMenu()
 
         self.NightMode = 1
@@ -350,7 +351,8 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
             self.terminalWindow.run_script(scriptname)
         else:
             self._logger.debug('Running %s' % os.path.join(self.scripts_path, scriptname))
-            exec(open(os.path.join(self.scripts_path, scriptname)).read())
+            runfile(scriptname, current_namespace=True)
+            # exec(open(os.path.join(self.scripts_path, scriptname)).read())
             
     def VerboseChanged(self, action):
         """Automatically change the loggers 
