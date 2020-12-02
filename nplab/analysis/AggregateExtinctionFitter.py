@@ -203,12 +203,11 @@ class ExtinctionSpectrum:
         self.startWl = startWl
         self.endWl = endWl
         self.xTrunc, self.yTrunc = mpf.truncateSpectrum(self.xRaw, self.yRaw, startWl = self.startWl, finishWl = self.endWl)
-        self.ySmooth = mpf.butterLowpassFiltFilt(self.yTrunc)
+        self.ySmooth = mpf.butterLowpassFiltFilt(self.yTrunc, cutoff = 1100, fs = 70000)
         self.debug = False
         self.specMaxWl = None
 
-        if initSpec is not None:
-            
+        if initSpec is not None:            
             initX, initY, initYSmooth = initSpec.xTrunc, initSpec.yTrunc, initSpec.ySmooth
             initAunpWl = initX[initYSmooth.argmax()]
 
@@ -225,7 +224,8 @@ class ExtinctionSpectrum:
             scaling = self.ySmooth[aunpIndex]/initYSmooth[aunpIndex]
 
             self.aunpSpec = initY*scaling
-            self.ySub = self.ySmooth - initY*scaling
+            self.ySub = self.yTrunc - initY*scaling
+            self.ySubSmooth = self.ySmooth - initYSmooth*scaling
             
         else:
             self.aunpSpec = None
@@ -587,6 +587,12 @@ class AggExtDataset:
         self.startPoint = startPoint
         self.endPoint = endPoint
 
+    def inputStartPoint(self, startPoint):
+        self.startPoint = startPoint
+
+    def inputEndPoint(self, endPoint):
+        self.endPoint = endPoint
+
     def fitSpectra(self, dSet, dimerPlot = False, debug = False):
         x = self.x
         yData = self.yData
@@ -745,7 +751,7 @@ class AggExtDataset:
         else:
             plt.show()
 
-    def plotSpectra(self, cmap = 'jet', saveFig = None):
+    def plotSpectra(self, cmap = 'jet', saveFig = None, redDots = False):
         print('Plotting...\n')
         makeDir('Plots')
         dataName = self.dataName
@@ -786,8 +792,10 @@ class AggExtDataset:
 
             ax1.plot(xTrunc, yTrunc, color = color, zorder = -n)
             ax2.plot(xTrunc, ySub, color = color, alpha = alpha, zorder = -2*n)
-            ax2.plot(dimerX, dimerY, 'ro', zorder = n)
-            ax2.plot(chainX, chainY, 'o', color = 'darkred', zorder = n)            
+
+            if redDots == True:
+                ax2.plot(dimerX, dimerY, 'ro', zorder = n)
+                ax2.plot(chainX, chainY, 'o', color = 'darkred', zorder = n)            
 
         fig.suptitle(dataName)
         ax1.set_xlim(xTrunc.min(), xTrunc.max())
@@ -1098,6 +1106,7 @@ class AggExtH5File():
 
     def fitAllSpectra(self, nameDict = {}, dimerPlot = False, saveFigs = True, startWl = 420, endWl = 950, startPointPlot = False, startPointThresh = 2, 
                       tInit = 15, debug = False):
+
         print('Beginning fit\n')
 
         with h5py.File(self.filename, 'a') as f:
