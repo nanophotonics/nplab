@@ -46,7 +46,7 @@ def Select_Time_Range(Min,Max):
 		Lower=None
 		while Lower is None:
 			Input=eval(input('Please Enter a Lower Spectrum Number (Type \'Cancel\' to cancel): '))
-			if Input.upper()=='CANCEL':
+			if str(Input).upper()=='CANCEL':
 				return None,None
 			else:
 				try:
@@ -61,7 +61,7 @@ def Select_Time_Range(Min,Max):
 		Upper=None
 		while Upper is None:
 			Input=eval(input('Please Enter a Upper Spectrum Number (Type \'Cancel\' to cancel): '))
-			if Input.upper()=='CANCEL':
+			if str(Input).upper()=='CANCEL':
 				return None,None
 			else:
 				try:
@@ -74,7 +74,7 @@ def Select_Time_Range(Min,Max):
 					print('Invalid')
 
 		Input=eval(input('Continue with range '+str(Lower)+' to '+str(Upper)+'? (Y/N): '))
-		if Input.upper()=='Y':
+		if str(Input).upper()=='Y':
 			Continue=True
 
 	return Lower,Upper
@@ -147,7 +147,7 @@ def Input_Width():
 	Output=None
 	while Output is None:
 		Input=eval(input('Please Enter an Approximate Peak Width in Given X-Axis Units (Type \'Cancel\' to cancel): '))
-		if Input.upper()=='CANCEL':
+		if str(Input).upper()=='CANCEL':
 				return None
 		else:
 			try:
@@ -374,7 +374,7 @@ def Run(Array,x_axis,Threshold=None,colormap='inferno'):
 
 	#----Hold------
 
-	Hold=eval(input('Press Enter to Begin'))
+	#Hold=eval((input('Press Enter to Begin'))) #removed as I found an error I don't know how to fix, but code works fine - Demelza
 
 	#---------Fit Array Sections----------------
 
