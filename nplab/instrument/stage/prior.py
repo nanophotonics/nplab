@@ -26,7 +26,7 @@ class ProScan(serial.SerialInstrument, stage.Stage):
     termination_character = "\r" #: All messages to or from the instrument end with this character.
     termination_line = "END" #: If multi-line responses are recieved, they must end with this string
 
-    def __init__(self, port=None, use_si_units = False, hardware_version = None):
+    def __init__(self, port=None, use_si_units=False, hardware_version=None):
         """
         Set up the serial port and so on. 
         If the controller is a ProScan II not a ProScan III. 
@@ -53,7 +53,7 @@ class ProScan(serial.SerialInstrument, stage.Stage):
         
         self.query("ENCODER 1") #turn on encoders (if present)
         self.query("SERVO 0") #turn off servocontrol
-        self.query("BLSH 0") #turn off backlash control
+        self.query("BLSH 0") #turn off backlash control for xy
         
         self.use_si_units = use_si_units
         self.axis_names = ('x', 'y', 'z')
@@ -140,3 +140,6 @@ class ProScan(serial.SerialInstrument, stage.Stage):
         self.query('H')
     def enable_joy(self):
         self.query('J')
+
+if __name__ == '__main__':
+    stage = ProScan('COM4')

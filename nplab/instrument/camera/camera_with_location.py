@@ -206,12 +206,13 @@ class CameraWithLocation(Instrument):
             
         if not ignore_position:
             try:
-                if ignore_z_pos==True:
+                if ignore_z_pos:
                     self.move(feature.datum_location[:2]) #ignore original z value
                 else:
                     self.move(feature.datum_location) #initial move to where we recorded the feature was
             except:
                 print("Warning: no position data in feature image, skipping initial move.")
+        
         if autofocus_first: self.autofocus(**autofocus_args)
         image = self.color_image()
         assert isinstance(image, ImageWithLocation), "CameraWithLocation should return an ImageWithLocation...?"
