@@ -36,7 +36,11 @@ from scipy.signal import argrelextrema
 from nplab.ui.ui_tools import QuickControlBox, UiTools
 from nplab.utils.notified_property import DumbNotifiedProperty
 import time
+import matplotlib.pyplot as plt
+plt.ion()
 
+def distance(p1, p2): # between two ndarrays
+    return  ((p1-p2)**2).sum()
 # Autofocus merit functions
 def af_merit_squared_laplacian(image):
     """Return the mean squared Laplacian of an image - a sharpness metric.
@@ -124,12 +128,17 @@ class CameraWithLocation(Instrument):
             self.camera.filter_function is not None):
             image = self.camera.filter_function(image)
         return self._add_position_metadata(image)
-    def thumb_image(self,size = (100,100)):
-        """Return a cropped "thumb" from the CWL with size  """
-        image =self.color_image()
-        thumb = image[old_div(image.shape[0],2)-old_div(size[0],2):old_div(image.shape[0],2)+old_div(size[0],2),
+    
+    @staticmethod
+    def crop_centered(image, size=(100,100)):
+        if size is None: return image
+        return image[old_div(image.shape[0],2)-old_div(size[0],2):old_div(image.shape[0],2)+old_div(size[0],2),
                      old_div(image.shape[1],2)-old_div(size[1],2):old_div(image.shape[1],2)+old_div(size[1],2)]
-        return thumb
+    
+    def thumb_image(self, size=(100,100)):
+        """Return a cropped "thumb" from the CWL with size  """
+        image = self.color_image(update_latest_frame=True)
+        return self.crop_centered(image, size=size)
 
     ###### Wrapping functions for the stage ######
     def move(self, *args, **kwargs): # TODO: take account of drift
@@ -140,7 +149,7 @@ class CameraWithLocation(Instrument):
         """Move the stage by a given amount"""
         self.stage.move_rel(*args, **kwargs)
     def move_to_pixel(self,x,y):
-        
+        print(x,y)
         iwl = ImageWithLocation(self.camera.latest_raw_frame)
         iwl.attrs['datum_pixel'] = self.datum_pixel
 #        self.use_previous_datum_location = True
@@ -179,6 +188,8 @@ class CameraWithLocation(Instrument):
                         margin=50,
                         tolerance=0.5,
                         max_iterations=10,
+                        max_allowed_movement=4,
+                        image_size=(600, 600),
                         autofocus_first=False,
                         autofocus_args={}):
         """Bring the feature in the supplied image to the centre of the camera
@@ -215,16 +226,30 @@ class CameraWithLocation(Instrument):
         
         if autofocus_first: self.autofocus(**autofocus_args)
         image = self.color_image()
-        assert isinstance(image, ImageWithLocation), "CameraWithLocation should return an ImageWithLocation...?"
+        # assert isinstance(image, ImageWithLocation), "CameraWithLocation should return an ImageWithLocation...?"
 
+        new_position = feature.datum_location
+        pixel_position = image.datum_pixel
+        to_save = {'2 thumb_before_centering': self.thumb_image()}
+        to_save.update({'1 feature': feature})
+        to_save.update({'3 image': image})
         last_move = np.infty
         for i in range(max_iterations):
             try:
                 self.settle()
-                image = self.color_image()
-                pixel_position = locate_feature_in_image(image, feature, margin=margin, restrict=margin>0)
+                image = self.color_image(update_latest_frame=True)
+               # , image_size
+                pixel_position, also_to_save = locate_feature_in_image(image,
+                                                         feature,
+                                                         margin=margin,
+                                                         restrict=(margin > 0))
              #   pixel_position = locate_feature_in_image(image, feature,margin=margin)
+                to_save.update(also_to_save)
                 new_position = image.pixel_to_location(pixel_position)
+                dist = distance(image.datum_location, new_position)
+                if dist > max_allowed_movement:
+                    self.log('feature identified too far away from camera position')
+                    break
                 self.move(new_position)
                 last_move = np.sqrt(np.sum((new_position - image.datum_location)**2)) # calculate the distance moved
                 self.log("Centering on feature, iteration {}, moved by {}".format(i, last_move))
@@ -234,10 +259,33 @@ class CameraWithLocation(Instrument):
                 self.log("Error centering on feature, iteration {} raised an exception:\n{}\n".format(i, e) +
                          "The feature size was {}\n".format(feature.shape) +
                          "The image size was {}\n".format(image.shape))
+        to_save.update({'3 image_after': self.thumb_image()})
+        g = np.copy(image)
+        og = tuple(image.location_to_pixel(feature.datum_location)[:2].astype(int))
+        # identified = tuple(image.location_to_pixel(new_position)[:2].astype(int))
+        identified = tuple(map(int, pixel_position))
+       
+        def mark(image, point, colour=(0,0,255)):
+            size = np.arange(-8, 9)
+            xs = point[0]+size
+            ys = point[1]+size
+            image[np.meshgrid(xs, ys)] = list(colour)
+        # cv2.circle(g, tog, 10, (0,0,255), 2)
+        # cv2.circle(g, tidentified, 10, (255,255,255), 2)
+        mark(g, og)
+        mark(g, identified, (255,255,255))
+        to_save.update({'initial+final positions': g})
+        print(og, identified, 'OG, identified pixels')
+
         if last_move > tolerance:
             self.log("Error centering on feature, final move was too large.")
+        return to_save
         return last_move < tolerance
-        
+    
+    @staticmethod
+    def transform(point, image_shape):
+        return (image_shape[1]-point[1], point[0])
+    #
     def move_to_feature_pixel(self,x,y,image = None):
         if self.pixel_to_sample_matrix is not None:
             if image is None:

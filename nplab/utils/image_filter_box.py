@@ -64,16 +64,26 @@ class Image_Filter_box(Instrument):
         return self._filter_index
     current_filter_index = NotifiedProperty(fget=get_current_filter_index,fset=set_current_filter_index)
 
-    def STBOC_with_size_filter(self,g,return_centers = False):
+    def STBOC_with_size_filter(self, g, return_centers=False, return_original_with_particles=False):
         try:
+            if return_original_with_particles:
+                return STBOC_with_size_filter(g,
+                                          bin_fac= self.bin_fac,
+                                          bilat_size = self.bilat_size, bilat_height = self.bilat_height,
+                                          threshold =self.threshold,min_size = self.min_size,max_size = self.max_size,
+                                          morph_kernel_size = self.morph_kernel_size, show_particles = self.show_particles,
+                                          return_original_with_particles=True, return_centers=False)
             return STBOC_with_size_filter(g,
                                           bin_fac= self.bin_fac,
                                           bilat_size = self.bilat_size, bilat_height = self.bilat_height,
                                           threshold =self.threshold,min_size = self.min_size,max_size = self.max_size,
                                           morph_kernel_size = self.morph_kernel_size, show_particles = self.show_particles,
                                           return_original_with_particles = self.return_original_with_particles,return_centers = return_centers)
+            
+                
         except Exception as e:
             self.log('Image processing has failed due to: '+str(e),level = 'WARN')
+            print(e, 'Image processsing exception')
     def strided_rescale(self,g):
         try:
             return strided_rescale(g, bin_fac= self.bin_fac)
@@ -164,7 +174,7 @@ def StrBiThresOpen(g,
         strided[strided!=0]=255
         return np.copy(strided)
     except Exception as e:
-        print(e)
+        print('ERROR' ,e)
         
 def STBOC_with_size_filter(g, 
                            bin_fac=4,
@@ -177,52 +187,52 @@ def STBOC_with_size_filter(g,
                            show_particles=False, 
                            return_original_with_particles=False,
                            return_centers=False):
-    try:
-        g = np.copy(g)
-        strided = StrBiThresOpen(g, bin_fac,threshold,bilat_size,bilat_height,morph_kernel_size)
-        contours, hierarchy = cv2.findContours(strided,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)[-2:]
-        centers = []
-        radi = []
-        for cnt in contours:
-            (x,y),radius = cv2.minEnclosingCircle(cnt)
-        #    center = (int(x),int(y))
-            center = (int(x),int(y))
-      #      radius = int(radius)+2
-            if radius>max_size or radius<min_size: # set the binary image to 0
-                radius = int(radius)+2
-                strided[center[1]-radius:center[1]+radius,center[0]-radius:center[0]+radius] = 0
-            else:
-                M = cv2.moments(cnt,binaryImage = True) #find center of mass
-                center = (int(old_div(M['m10'],M['m00'])),int(old_div(M['m01'],M['m00'])))
-                centers.append(center)
-                radi.append(radius)
-        if return_centers:
-            return np.array(centers)[:,::-1]
-        elif return_original_with_particles:
-      #      g = cv2.cvtColor(g,cv2.COLOR_GRAY2RGB)
-       #     g = g#/255.0
-            for cnt,radius in zip(centers,radi):
-                cv2.circle(g, cnt, int(radius*2), (255, 0, 0), 2) # image with a red circle
-            return g
-        elif show_particles:
+    # try:
+   g = np.copy(g)
+   strided = StrBiThresOpen(g, bin_fac,threshold,bilat_size,bilat_height,morph_kernel_size)
+   contours, hierarchy = cv2.findContours(strided,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)[-2:]
+   centers = []
+   radi = []
+   for cnt in contours:
+       (x,y),radius = cv2.minEnclosingCircle(cnt)
+   #    center = (int(x),int(y))
+       center = (int(x),int(y))
+ #      radius = int(radius)+2
+       if radius>max_size or radius<min_size: # set the binary image to 0
+           radius = int(radius)+2
+           strided[center[1]-radius:center[1]+radius,center[0]-radius:center[0]+radius] = 0
+       else:
+           M = cv2.moments(cnt,binaryImage = True) #find center of mass
+           center = (int(old_div(M['m10'],M['m00'])),int(old_div(M['m01'],M['m00'])))
+           centers.append(center)
+           radi.append(radius)
+   if return_centers:
+       return np.array(centers)[:,::-1]
+   elif return_original_with_particles:
+ #      g = cv2.cvtColor(g,cv2.COLOR_GRAY2RGB)
+  #     g = g#/255.0
+       for cnt,radius in zip(centers,radi):
+           cv2.circle(g, cnt, int(radius*2), (255, 0, 0), 2) # image with a red circle
+       return g
+   elif show_particles:
 
-   #         strided =  cv2.cvtColor(strided,cv2.COLOR_GRAY2RGB)
-      #      strided_copy = np.copy(strided)
-            strided = strided[:,:,np.newaxis]
-            strided = strided.repeat(3,axis = 2)
-        #    strided=strided/255.0
-            for cnt,radius in zip(centers,radi):
-          #      print np.shape(strided_copy),  center
-                cv2.circle(strided, cnt, int(radius*2), (255,0,0), 2)
+  #         strided =  cv2.cvtColor(strided,cv2.COLOR_GRAY2RGB)
+ #      strided_copy = np.copy(strided)
+       strided = strided[:,:,np.newaxis]
+       strided = strided.repeat(3,axis = 2)
+   #    strided=strided/255.0
+       for cnt,radius in zip(centers,radi):
+     #      print np.shape(strided_copy),  center
+           cv2.circle(strided, cnt, int(radius*2), (255,0,0), 2)
 
-        strided[strided!=0]=255
-        return strided
-        
-   #     strided=strided.repeat(bin_fac, 0)
-    #    strided=strided.repeat(bin_fac, 1)
- #       return strided
-    except Exception as e:
-        print(e)
+   strided[strided!=0]=255
+   return strided
+   
+  #     strided=strided.repeat(bin_fac, 0)
+   #    strided=strided.repeat(bin_fac, 1)
+#       return strided
+    # except Exception as e:
+    #     print(e)
 
 def find_particles(self,img=None, border_pixels=50):
     """find particles in the supplied image, or in the camera image"""
