@@ -350,6 +350,7 @@ class DataFile(Group):
             except:
                print("Error: could not save version information")
         self.update_current_group = update_current_group
+        
 
     def flush(self):
         self.file.flush()
@@ -454,7 +455,11 @@ def set_current(datafile, **kwargs):
             print("problem opening file:")
             print(e)
             print("trying with mode=r+")
-            kwargs['mode'] = 'r+'  # dirty hack to work around mode=a not working
+            # kwargs['mode'] = 'r+'  # dirty hack to work around mode=a not working
+            
+            if os.path.getsize(datafile) < 100: #1kB/10
+                os.remove(datafile)
+                
             _current_datafile = DataFile(datafile, **kwargs)
 
 def set_temporary_current_datafile():
