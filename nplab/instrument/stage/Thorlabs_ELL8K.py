@@ -421,11 +421,12 @@ class Thorlabs_ELL8K(SerialInstrument,Stage):
         optimize the operating frequencies for backward and forward
         movement. The values then need to be saved
         '''
-        self.query_device('om')
+        reply = self.query_device('om')
         if save_new_params:
             self.save_new_parameters()
+        return reply
     def save_new_parameters(self):
-        self.query_device('us')
+        return self.query_device('us')
 
 class Thorlabs_ELL8K_UI(QtWidgets.QWidget, UiTools):
 
@@ -498,15 +499,15 @@ def test_ui():
     '''
     Run from main to test ui + stage
     '''
-    s = Thorlabs_ELL8K("COM14")
+    s = Thorlabs_ELL8K("COM1")
     app = get_qt_app()
     ui = Thorlabs_ELL8K_UI(stage=s)
     ui.show()
     sys.exit(app.exec_())
 
 if __name__ == "__main__":
-    stage = Thorlabs_ELL8K("COM14",debug=False)
-    test_stage(stage)
+    stage = Thorlabs_ELL8K("COM3",debug=False)
+    # test_stage(stage)
     # test_ui()
 
     
