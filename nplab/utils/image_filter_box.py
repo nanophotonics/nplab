@@ -230,9 +230,7 @@ def STBOC_with_size_filter(g,
   #     strided=strided.repeat(bin_fac, 0)
    #    strided=strided.repeat(bin_fac, 1)
 #       return strided
-    # except Exception as e:
-    #     print(e)
-
+   
 def find_particles(self,img=None, border_pixels=50):
     """find particles in the supplied image, or in the camera image"""
     self.threshold_image(self.denoise_image(

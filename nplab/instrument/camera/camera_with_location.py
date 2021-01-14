@@ -225,7 +225,7 @@ class CameraWithLocation(Instrument):
         
         if autofocus_first: self.autofocus(**autofocus_args)
         image = self.color_image()
-        # assert isinstance(image, ImageWithLocation), "CameraWithLocation should return an ImageWithLocation...?"
+        assert isinstance(image, ImageWithLocation), "CameraWithLocation should return an ImageWithLocation...?"
 
         last_move = np.infty
         for i in range(max_iterations):
