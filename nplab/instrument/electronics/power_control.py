@@ -65,7 +65,7 @@ class PowerControl(Instrument):
     def _initiate_pc(self):
         if isinstance(self.pc, Aom):            
             self.pc.Switch_Mode()
-        self.param = self.mid_param
+        self.param = self.max_param
    
     def _set_to_midpoint(self):
         self.param = self.mid_param
