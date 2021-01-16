@@ -363,6 +363,7 @@ class CameraWithLocation(Instrument):
         threshold_shift = w*0.02 # Require a shift of at least 2% of the image's width ,changed s[0] to w
         target_shift = w*0.1 # Aim for a shift of about 10%
         # Swapping images[-1] for starting_image
+        print(locate_feature_in_image(starting_image, template), self.datum_pixel)
         assert np.sum((locate_feature_in_image(starting_image, template) - self.datum_pixel)**2) < 1, "Template's not centred!"
         update_progress(1)
         if step is None:
@@ -389,7 +390,7 @@ class CameraWithLocation(Instrument):
             self.move(starting_location + np.array(p))
         #        print 'post move'
             self.settle()
-            image = self.color_image()
+            image = self.color_image(update_latest_frame=True)
             pixel_shifts.append(-locate_feature_in_image(image, template) + image.datum_pixel)
             images.append(image)
             # NB the minus sign here: we want the position of the image we just took relative to the datum point of
