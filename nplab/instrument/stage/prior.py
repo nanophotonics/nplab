@@ -136,6 +136,14 @@ class ProScan(serial.SerialInstrument, stage.Stage):
             return True
         else:
             return False
+    @property
+    def max_speed_z(self):
+        return self.query('SMZ')
+    
+    @max_speed_z.setter
+    def max_speed_z(self, speed):
+        return self.query(f'SMZ {int(speed)}')
+    
     def disable_joy(self):
         self.query('H')
     def enable_joy(self):
