@@ -70,7 +70,7 @@ class CameraWithLocation(Instrument):
     disable_live_view = DumbNotifiedProperty(False) # Whether to disable live view while calibrating/autofocusing/etc.
     af_step_size = DumbNotifiedProperty(1) # The size of steps to take when autofocusing
     af_steps = DumbNotifiedProperty(7) # The number of steps to take during autofocus
-
+    use_thumbnail = DumbNotifiedProperty(False)
     def __init__(self, camera=None, stage=None):
         # If no camera or stage is supplied, attempt to retrieve them - but crash with an exception if they don't exist.
         if camera is None:
@@ -271,7 +271,7 @@ class CameraWithLocation(Instrument):
 
     def autofocus(self, dz=None, merit_function=af_merit_squared_laplacian,
                   method="centre_of_mass", noise_floor=0.3,exposure_factor =1.0,
-                  use_thumbnail = False, update_progress=lambda p:p):
+                  use_thumbnail=None, update_progress=lambda p:p):
         """Move to a range of Z positions and measure focus, then move to the best one.
 
         Arguments:
@@ -296,11 +296,10 @@ class CameraWithLocation(Instrument):
             self.stage.move(np.array([0, 0, z]) + here)
             self.settle()
             positions.append(self.stage.position)
-            
-            if use_thumbnail is True:
+            if use_thumbnail or (use_thumbnail is None and self.use_thumbnail):
                 image = self.thumb_image()
             else:
-                image = self.color_image()
+                image = self.color_image(update_latest_frame=True)
             powers.append(merit_function(image))
             update_progress(step_num)
         powers = np.array(powers)
@@ -471,6 +470,7 @@ class CameraWithLocationControlUI(QtWidgets.QWidget):
         fc.add_spinbox("af_steps")
         fc.add_button("autofocus_gui", "Autofocus")
         fc.add_button("quick_autofocus_gui", "Quick Autofocus")
+        fc.add_checkbox('use_thumbnail', 'Use Thumbnail')
         fc.auto_connect_by_name(self.cwl)
         self.focus_controls = fc
 
