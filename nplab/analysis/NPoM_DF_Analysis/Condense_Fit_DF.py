@@ -36,6 +36,7 @@ if __name__ == '__main__':
     npomTypes = ['All NPoMs', 'Non-Weird-Peakers', 'Weird Peakers', 'Aligned NPoMs', 'Ideal NPoMs', 'Doubles', 'Singles']
     consolidateScans = True
     extractFirst = True #set to false if your summary file already exists, true to create another
+    avgZScans = False #if your data ends up with a weird, rising baseline, set this to True and try again
 
     if statsOnly == True:
         outputFileName = mpf.findH5File(os.getcwd(), nameFormat = 'MultiPeakFitOutput', mostRecent = True)#finds the most recent file with given name format
@@ -51,11 +52,10 @@ if __name__ == '__main__':
         if extractFirst == True:
             summaryFile = cdf.extractAllSpectra(os.getcwd(), returnIndividual = True, start = startSpec,
                                                 finish = finishSpec, raiseExceptions = raiseExceptions,
-                                                consolidated = consolidateScans)#condenses Z-stack (inc. background subtraction and referencing) for each particle and makes summary file
+                                                consolidated = consolidateScans, avgScans = avgZScans)#condenses Z-stack (inc. background subtraction and referencing) for each particle and makes summary file
     
             if pl == True:
-                summaryFile = cdf.transferPlSpectra(os.getcwd(), startWl = 505,
-                                                    start = startSpec,
+                summaryFile = cdf.transferPlSpectra(os.getcwd(), startWl = 505, start = startSpec,
                                                     finish = finishSpec)#background subtracts each PL spectra and transfers them to the existing summary file
 
         #summaryFile = 'summary.h5' #use this instead of the above functions if you already have a summary file

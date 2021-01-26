@@ -438,6 +438,23 @@ class ExtinctionSpectrum:
 
         self.dimerWl = xDimer[dimerIndex]
 
+        #try:
+        #    mpf.getFWHM(xDimer, yDimer, maxdex = dimerIndex)
+        #except:
+        #    print('fwhmdfgd failed')
+        fwhm, center, height = mpf.getFWHM(xDimer, ySmooth, maxdex = dimerIndex, fwhmFactor = 1.3)
+        xLorz, yLorz = mpf.truncateSpectrum(xDimer, yDimer, startWl = max(xDimer.min(), center-5-fwhm/2), endWl = min(xDimer.max(), center+5+fwhm/2))
+        lMod = LorentzianModel()
+        lModPars = lMod.guess(ySmooth, x = xDimer)
+        lModPars['center'].set(center, min = center-fwhm/2, max = center+fwhm/2)
+        lModPars['sigma'].set(fwhm/2)
+        lModPars['height'].set(height, max = height*1.5, min = 0)
+        lModPars['amplitude'].set(min = 0)
+        
+        lOut = lMod.fit(yLorz, lModPars, x = xLorz)
+        lFit = lOut.eval(x = xDimer)
+        self.dimerFwhm = lOut.params['fwhm'].value
+
         if plot == True:
             fig, (ax1, ax2) = plt.subplots(2, sharex = True)
             ax1.plot(self.xTrunc, self.yTrunc)
@@ -445,8 +462,9 @@ class ExtinctionSpectrum:
             if self.aunpSpec is not None:
                 ax1.plot(self.xTrunc, self.aunpSpec, 'k--')
 
+            ax2.plot(xDimer, lFit, 'r--')
             ax1.plot(self.xTrunc, self.ySub)
-            ax2.plot(x2, y2, alpha = 0.5)
+            ax2.plot(x2, y2, alpha = 0.5, lw = 5)
             ax2.plot(xDimer, yDimer, alpha = 0.5)
             ax2.plot(xDimer, ySmooth)
             ax2.plot(xDimer[dimerIndex], ySmooth[dimerIndex], 'o', ms = 20, alpha = 0.5)
@@ -865,13 +883,13 @@ class AggExtDataset:
 
         print('')
 
-    def extractDimerSpectrum(self, plot = True, endWl = 900):
+    def extractDimerSpectrum(self, plot = True, endWl = 900, limit = 15):
         x = self.x
         yData = self.yData[self.startPoint:]
         
         dimerWl = None
         n = 0
-        while dimerWl is None and n < 15:        
+        while dimerWl is None and n < limit:        
             spectrum = ExtinctionSpectrum(x, yData[n], endWl = endWl, initSpec = self.initSpec)
             xTrunc, ySub = spectrum.xTrunc, spectrum.ySub
 
@@ -879,22 +897,28 @@ class AggExtDataset:
                 spectrum.fitAggPeaks(dimerWl = dimerWl)
                 spectrum.findDimerIndex(plot = plot)
                 dimerWl = spectrum.dimerWl
+                dimerFwhm = spectrum.dimerFwhm
 
             except:
                 print(f'Spectrum {n + self.startPoint} failed for {self.dataName}')
                 dimerWl = None
+                dimerFwhm = None
                 
             n += 1
+
+        self.dimerWl = dimerWl
+        self.dimerFwhm = dimerFwhm
         
         if n >= 15:
             print('\tDimer detection failed')
+            return spectrum
             
         elif n > 0:
             print(f'\tSucceeded for Spectrum {n + self.startPoint}')
         
-        print(f'\tDimer Wl = {dimerWl} nm\n')
+        print(f'\tDimer Wl = {dimerWl:.2f} nm')
+        print(f'\tFWHM = {dimerFwhm:.2f} nm\n')
 
-        self.dimerWl = dimerWl
         return spectrum
 
 class AggExtH5File():
@@ -1094,7 +1118,8 @@ class AggExtH5File():
                 
                 dimerSpectrum = dataSet.extractDimerSpectrum(plot = plot, endWl = endWl)
                 dimerWl = dataSet.dimerWl
-                specDict[dSetName] = {'xy' : [dimerSpectrum.xTrunc, dimerSpectrum.ySub], 'dimerWl' : 0 if dimerWl is None else dimerWl}
+                dimerFwhm = dataSet.dimerFwhm
+                specDict[dSetName] = {'xy' : [dimerSpectrum.xTrunc, dimerSpectrum.ySub], 'dimerWl' : 0 if dimerWl is None else dimerWl, 'dimerFwhm' : 0 if dimerWl is None else dimerFwhm}
 
                 f[dSetName].attrs['Dimer Wavelength (t0)'] = dimerWl if dimerWl is not None else np.nan
 
