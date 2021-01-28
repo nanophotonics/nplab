@@ -269,7 +269,7 @@ def lInterp(Value1,Value2,Frac):
 
     return (m*Frac)+c
 
-def condenseZscan(zScan, returnMaxs = False, dz = None, threshold = 0.2, Smoothing_width = 1.5, aligned = True):
+def condenseZscan(zScan, returnMaxs = False, dz = None, threshold = 0.2, Smoothing_width = 1.5, aligned = True, avgZScans = False):
     """
     
     zScan is assumed to already be background subtracted and referenced.
@@ -277,8 +277,9 @@ def condenseZscan(zScan, returnMaxs = False, dz = None, threshold = 0.2, Smoothi
     if aligned == False:
         '''
         If NP and/or collection path off-centre, centroid method is inaccurate.
-        Alternative method just takes maximum value for each wavelength.
+        Alternative method takes maximum (or average, if specified) value for each wavelength.
         '''
+
         centroids = np.array([scan[2:].argmax() + 2 for scan in np.transpose(zScan)])
         centroids = np.where(centroids == 0, np.nan, centroids)
         centroids = np.where(centroids == len(dz) - 1, np.nan, centroids).astype(np.float64)
@@ -291,7 +292,6 @@ def condenseZscan(zScan, returnMaxs = False, dz = None, threshold = 0.2, Smoothi
             centroids = centroidsSmuth
 
         centroids = mpf.removeNaNs(centroids)
-        #print(centroids)
 
     else:
         '''
@@ -350,6 +350,10 @@ def condenseZscan(zScan, returnMaxs = False, dz = None, threshold = 0.2, Smoothi
         except Exception as e:
             print(n, lower, upper, frac)
             raise e
+
+    if aligned == False and avgZScans == True:
+        print('Averaging')
+        output = np.average(zScan, axis = 0)
 
     return np.array(output), np.array(zProfile)
 
@@ -443,7 +447,7 @@ def consoliData(rootDir):
                         newDataset.attrs.update(gParticleOld[dataName].attrs)
 
 def extractAllSpectra(rootDir, returnIndividual = True, pl = False, dodgyThreshold = 0.4, start = 0, finish = 0,
-                      raiseExceptions = True, consolidated = False, extractZ = True):
+                      raiseExceptions = True, consolidated = False, extractZ = True, avgZScans = False):
 
     os.chdir(rootDir)
 
@@ -603,7 +607,8 @@ def extractAllSpectra(rootDir, returnIndividual = True, pl = False, dodgyThresho
                             print('Alignment check failed for Particle %s because %s' % (nn, e))
                             centered = False
 
-                    y, zProfile = condenseZscan(z, returnMaxs = extractZ, dz = dz, aligned = centered)
+                    y, zProfile = condenseZscan(z, returnMaxs = extractZ, dz = dz, aligned = centered, avgZScans = avgZScans)
+                    
                     if extractZ == True:
                         zProfiles.append(zProfile)
 
