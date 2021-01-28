@@ -206,6 +206,7 @@ class AndorBase(object):
         :param inputs: inputs required to set the particular parameter. Must be at least one
         :return:
         """
+        
         if len(inputs) == 1 and type(inputs[0]) == tuple:
             if len(np.shape(inputs)) == 2:
                 inputs = inputs[0]
@@ -219,9 +220,10 @@ class AndorBase(object):
             form_in = ()
             if 'Input_params' in func:
                 for input_param in func['Input_params']:
-                    form_in += ({'value': getattr(self, self._parameters['DetectorShape'][0], self._parameters['FVBHBin']), 'type': input_param[1]},)
-            for ii in range(len(inputs)):
-                form_in += ({'value': inputs[ii], 'type': func['Inputs'][ii]},)
+                    form_in += ({'value': getattr(self, self._parameters['DetectorShape'][0], self._parameters['FVBHBin']),
+                                 'type': input_param[1]},)
+            for val, typ in zip(inputs, func['Inputs']):
+                form_in += ({'value':val, 'type': typ},)
 
             form_out = ()
             if 'Outputs' in func:
