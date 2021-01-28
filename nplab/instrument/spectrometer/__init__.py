@@ -42,7 +42,7 @@ class Spectrometer(Instrument):
    
     variable_int_enabled = DumbNotifiedProperty(False)
     filename = DumbNotifiedProperty("spectrum")
-
+    dark = False
     def __init__(self):
         super(Spectrometer, self).__init__()
         self._model_name = None
@@ -272,6 +272,7 @@ class Spectrometer(Instrument):
     _preview_widgets = WeakSet()
     def get_qt_ui(self, control_only=False,display_only = False):
         """Create a Qt interface for the spectrometer"""
+        
         if control_only:
             
             newwidget = SpectrometerControlUI(self)
@@ -612,7 +613,8 @@ class DisplayThread(QtCore.QThread):
 
 
 class SpectrometerDisplayUI(QtWidgets.QWidget,UiTools):
-    def __init__(self, spectrometer,ui_file = os.path.join(os.path.dirname(__file__),'spectrometer_view.ui'), parent=None):
+    def __init__(self, spectrometer,ui_file = os.path.join(os.path.dirname(__file__),'spectrometer_view.ui'),
+                 parent=None):
         assert isinstance(spectrometer, Spectrometer) or isinstance(spectrometer, Spectrometers),\
             "instrument must be a Spectrometer or an instance of Spectrometers"
         super(SpectrometerDisplayUI, self).__init__()
@@ -623,9 +625,11 @@ class SpectrometerDisplayUI(QtWidgets.QWidget,UiTools):
             spectrometer.num_spectrometers = 1
         self.spectrometer = spectrometer
         print(self.spectrometer)
-
-        pg.setConfigOption('background', 'w')
-        pg.setConfigOption('foreground', 'k')
+        if spectrometer.dark:
+            pg.setConfigOption('background', (50, 65, 75))
+        else:
+             pg.setConfigOption('background', 'w')
+             pg.setConfigOption('foreground', 'k')
         self.plotbox = QtWidgets.QGroupBox()
         self.plotbox.setLayout(QtWidgets.QGridLayout())
         self.plotlayout = self.plotbox.layout()          
