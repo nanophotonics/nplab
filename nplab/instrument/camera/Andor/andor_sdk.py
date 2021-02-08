@@ -465,7 +465,7 @@ class AndorBase(object):
         self.set_andor_parameter('ReadMode', 4)
         self.set_andor_parameter('AcquisitionMode', 1)
         self.set_andor_parameter('TriggerMode', 0)
-        self.set_andor_parameter('Exposure', 0.01)
+        self.set_andor_parameter('Exposure', 1)
         detector_shape = self.get_andor_parameter('DetectorShape')
         self.set_andor_parameter('Image', 1, 1, 1, detector_shape[0], 1, detector_shape[1])
         self.set_andor_parameter('Shutter', 1, 0, 0, 0)
