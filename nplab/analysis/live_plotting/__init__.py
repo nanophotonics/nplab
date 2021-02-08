@@ -9,17 +9,24 @@ a gui.
 
 import numpy as np
 import pyqtgraph as pg
+import qdarkstyle
 from qtpy import QtGui, QtWidgets, QtCore
 
 pg.setConfigOption('background', 'w')
 pg.setConfigOption('foreground', 'k')
+
+# pg.setConfigOption('background', (50, 65, 75))#
 
 def remove_inf_and_nan(array_to_test, array_to_remove_from=None):
     '''removes inf and nans from an array'''
     if array_to_remove_from is None: array_to_remove_from = array_to_test
     return np.array(array_to_remove_from)[~np.logical_or(np.isnan(list(array_to_test)),np.isinf(list(array_to_test)))]
 
-Graphs = []
+app = QtGui.QApplication.instance()
+if app is None:
+    app = QtGui.QApplication([])
+    
+graphs = []
 class GraphWidget(pg.PlotWidget):
     '''
     template for an interactive graph
@@ -48,7 +55,7 @@ class GraphWidget(pg.PlotWidget):
         self.ylabel(ylabel)
         self.hasLegend=False
         self.addLegend()
-        Graphs.append(self)
+        graphs.append(self)
     @property
     def xs(self):
         return [remove_inf_and_nan(y, self.x) for y in self.ys]
@@ -129,7 +136,8 @@ class FloatMathMixin():
     def __rpow__(self, other):
         return self.__pow__(other)
     
-Parameters = []                
+parameters = []  
+         
 class Parameter(QtWidgets.QWidget, FloatMathMixin):
     '''
     Representation of a parameter to be varied in an equation.
@@ -145,7 +153,8 @@ class Parameter(QtWidgets.QWidget, FloatMathMixin):
     '''
     
     param_changed = QtCore.Signal(int)
-    def __init__(self, name, Default=1, Min=-100_000, Max=100_000,units=None, slider=False):
+    def __init__(self, name, Default=1, Min=-100_000, Max=100_000, units=None, slider=False):
+        
         super().__init__()
         self.name = name
         self.slider = slider
@@ -160,7 +169,7 @@ class Parameter(QtWidgets.QWidget, FloatMathMixin):
         self.box.setValue(Default)
         self.box.valueChanged.connect(self.changed)
         self.changed()
-        Parameters.append(self)
+        parameters.append(self)
         
     def changed(self):
         if self.slider:
@@ -195,13 +204,15 @@ class LivePlotWindow(QtWidgets.QMainWindow):
     '''Puts the graphing and parameter widgets together'''
     def __init__(self, style='Fusion'):
         app = QtGui.QApplication.instance()
-        if app is None: app = QtGui.QApplication([])
-        app.setStyle(style)
+        if app is None:
+            app = QtGui.QApplication([])
+        app.setStyleSheet(qdarkstyle.load_stylesheet())
+            
         super().__init__()
         layout = QtWidgets.QVBoxLayout()
         self.resize(1500,1500)
-        self.graphing_group = GraphGroup(Graphs)#graphing_group
-        self.parameter_widget = ParameterGroupBox(Parameters)
+        self.graphing_group = GraphGroup(graphs)#graphing_group
+        self.parameter_widget = ParameterGroupBox(parameters)
         layout.addWidget(self.graphing_group)
         # export_button = QtGui.QPushButton('Export values')
         # export_button.clicked.connect(self.export)
@@ -222,17 +233,17 @@ class LivePlotWindow(QtWidgets.QMainWindow):
     
     def export(self):
         self.graphing_group.export()
-        self.parameter_widget.export()
+        self.parameter_widget.export() 
 
 if __name__ == '__main__':
-
+    
+    
     #Initialize all parameters
     A = Parameter('Alpha', 15, Min=0, Max=10, units= 'm')
-    B =  Parameter('Bravo', 6, slider=True, Min=-10, Max=10)
+    B = Parameter('Bravo', 6, slider=True, Min=-10, Max=10)
     C = Parameter('Charlie', 15)
     D = Parameter('Demelza', 6)
 
-    
     #define the equations to be plotted
     def equation1(x):
         return A*x**2 + B*x**2 - C*x + D
@@ -241,7 +252,7 @@ if __name__ == '__main__':
     def eq3(x):
         return A**np.sin(C*x)/D*x
     def eq4(x):
-        return (np.sin(A*x)/B*x) +D
+        return (np.sin(A*x)/B*x) + D
     def eq5(x):
         return eq3(x)[::-1]#reversed
     
@@ -263,6 +274,6 @@ if __name__ == '__main__':
  
     #and then the window!
     live_plotter = LivePlotWindow()
-   
+    
 
 
