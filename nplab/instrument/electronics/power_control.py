@@ -143,7 +143,9 @@ class PowerControl(Instrument):
         if self.measured_power is None:
             group.create_dataset('ref_powers',data=powers, attrs = attrs)
         else:
-            group.create_dataset('ref_powers',data=(powers*self.measured_power/max(powers)), attrs = attrs)
+            group.create_dataset('ref_powers',
+                                 data=powers*self.measured_power/max(powers),
+                                 attrs=attrs)
         
         self.lutter.close_shutter()
         self._set_to_midpoint()
