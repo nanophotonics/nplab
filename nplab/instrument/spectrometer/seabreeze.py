@@ -434,7 +434,7 @@ class OceanOpticsControlUI(SpectrometerControlUI):
             print(e, 'removing cooling functionality')
             tec = False
         if tec:
-            pass
+            
             self.set_tec_temperature_pushButton.clicked.connect(self.gui_set_tec_temperature)
             self.read_tec_temperature_pushButton.clicked.connect(self.gui_read_tec_tempeature)
             self.enable_tec.stateChanged.connect(self.update_enable_tec)

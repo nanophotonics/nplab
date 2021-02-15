@@ -224,10 +224,11 @@ class PowerControl_UI(QtWidgets.QWidget,UiTools):
         self.doubleSpinBox_max_param.setValue(self.PC.max_param)
         self.doubleSpinBox_max_param.valueChanged.connect(self.update_min_max_params)  
         self.doubleSpinBox_min_param.valueChanged.connect(self.update_min_max_params)
-        self.laser_textBrowser.setPlainText('Laser: '+self.PC.laser[1:])    
-        self.pushButton_set_param.clicked.connect(self.set_param)
-        self.doubleSpinBox_measured_power.valueChanged.connect(self.update_measured_power)
-        self.pushButton_set_power.clicked.connect(self.set_power_gui)  
+        self.laser_label.setText('Laser: '+self.PC.laser[1:])    
+        self.doubleSpinBox_set_input_param.valueChanged.connect(self.set_param)
+        self.doubleSpinBox_set_input_param.setValue(self.PC.param)
+        self.measured_power_lineEdit.textChanged.connect(self.update_measured_power)
+        self.doubleSpinBox_set_power.valueChanged.connect(self.set_power_gui)
         self.number_points_spinBox.valueChanged.connect(self.update_number_points)
      
     def update_min_max_params(self):
@@ -235,7 +236,8 @@ class PowerControl_UI(QtWidgets.QWidget,UiTools):
         self.PC.max_param = self.doubleSpinBox_max_param.value()
 
     def update_measured_power(self):
-        self.PC.measured_power = float(self.doubleSpinBox_measured_power.value())
+        if self.doubleSpinBox_measured_power.text().isdigit(): 
+            self.PC.measured_power = float(self.doubleSpinBox_measured_power.value())
     def set_param(self):
         self.PC.param = self.doubleSpinBox_set_input_param.value()
     def set_power_gui(self):
