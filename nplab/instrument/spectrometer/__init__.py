@@ -15,7 +15,7 @@ from collections import deque
 from nplab.ui.ui_tools import UiTools
 import nplab.datafile as df
 from nplab.datafile import DataFile
-from nplab.utils.notified_property import NotifiedProperty, DumbNotifiedProperty, register_for_property_changes
+from nplab.utils.notified_property import DumbNotifiedProperty, register_for_property_changes
 from nplab.utils.array_with_attrs import ArrayWithAttrs
 import h5py
 from multiprocessing.pool import ThreadPool
