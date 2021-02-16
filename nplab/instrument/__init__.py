@@ -195,7 +195,7 @@ class Instrument(ShowGUIMixin):
         data for the spectrometer, including reference/background.  This
         function allows values to be stored in that file."""
         f = self.config_file
-        if name in f:
+        if name in f.keys():
             try: del f[name]
             except: 
                 f[name][...] = data
