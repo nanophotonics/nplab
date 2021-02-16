@@ -207,7 +207,7 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
         if self._config_file is None:
             f = inspect.getfile(self.__class__)
             d = os.path.dirname(f)
-            self._config_file = DataFile(h5py.File(os.path.join(d, self.model_name+'_'+self.serial_number+'_config.h5')))
+            self._config_file = DataFile(h5py.File(os.path.join(d, self.model_name+'_'+self.serial_number+'_config.h5'), 'a'))
             self._config_file.attrs['date'] = datetime.datetime.now().strftime("%H:%M %d/%m/%y")
         return self._config_file
 
@@ -434,7 +434,7 @@ class OceanOpticsControlUI(SpectrometerControlUI):
             print(e, 'removing cooling functionality')
             tec = False
         if tec:
-            pass
+            
             self.set_tec_temperature_pushButton.clicked.connect(self.gui_set_tec_temperature)
             self.read_tec_temperature_pushButton.clicked.connect(self.gui_read_tec_tempeature)
             self.enable_tec.stateChanged.connect(self.update_enable_tec)

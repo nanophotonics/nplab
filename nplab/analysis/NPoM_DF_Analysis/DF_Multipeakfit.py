@@ -155,7 +155,7 @@ def removeCosmicRays(x, y, reference = 1, factor = 15, chonk = 1):
 
     return newY
 
-def truncateSpectrum(x, y, startWl = 450, finishWl = 900, xOnly = False, buff = 0):
+def truncateSpectrum(x, y, startWl = 450, endWl = 900, xOnly = False, buff = 0, **kwargs):
     '''
     Truncates xy data spectrum within a specified wavelength range
     Useful for removing high and low-end noise or analysing certain spectral regions
@@ -167,11 +167,14 @@ def truncateSpectrum(x, y, startWl = 450, finishWl = 900, xOnly = False, buff = 
         Sef buff = False to disable this and only return data inside the x range
     '''
 
+    if 'finishWl' in kwargs.keys():
+        endWl = kwargs['finishWl']
+
     x = np.array(x)
     if buff != 0:
         if buff == None:
             startWl = max(startWl, x.min())
-            finishWl = min(finishWl, x.max())
+            endWl = min(endWl, x.max())
 
     if type(y) == type(None) or xOnly == True:
         xOnly = True
@@ -198,8 +201,8 @@ def truncateSpectrum(x, y, startWl = 450, finishWl = 900, xOnly = False, buff = 
         x = np.concatenate((xStart, x))
         y = np.concatenate((yStart, y))#Adds buffer to start of x and y to ensure the truncated length is still defined by startWl and finishWl
 
-    if x[-1] < finishWl:#if truncation window extends above spectral range:
-        xFin = np.arange(x[-1], finishWl + 2, x[1] - x[0])[1:]
+    if x[-1] < endWl:#if truncation window extends above spectral range:
+        xFin = np.arange(x[-1], endWl + 2, x[1] - x[0])[1:]
         if buff == 0:
             yFin = np.zeros(len(xFin))
         elif buff == 'nan':
@@ -211,7 +214,7 @@ def truncateSpectrum(x, y, startWl = 450, finishWl = 900, xOnly = False, buff = 
         y = np.concatenate((y, yFin))#Adds buffer to end of x and y to ensure the truncated length is still defined by startWl and finishWl
 
     startIndex = (abs(x - startWl)).argmin()#finds index corresponding to startWl
-    finishIndex = (abs(x - finishWl)).argmin()#index corresponding to finishWl
+    finishIndex = (abs(x - endWl)).argmin()#index corresponding to finishWl
 
     xTrunc = np.array(x[startIndex:finishIndex])#truncates x using these indices
     yTrunc = np.array(y[startIndex:finishIndex])#truncates y using these indices
@@ -222,13 +225,13 @@ def truncateSpectrum(x, y, startWl = 450, finishWl = 900, xOnly = False, buff = 
 
     if xTrunc.size <= 10 and x.size <= 100:#sometimes fails for very short arrays; this extra bit works better in those cases
 
-        if startWl > finishWl:
-            wl1 = finishWl
+        if startWl > endWl:
+            wl1 = endWl
             wl2 = startWl
             startWl = wl1
-            finishWl = wl2
+            endWl = wl2
 
-        xTrunc, yTrunc = np.transpose(np.array([[i, y[n]] for n, i in enumerate(x) if startWl < i < finishWl]))
+        xTrunc, yTrunc = np.transpose(np.array([[i, y[n]] for n, i in enumerate(x) if startWl < i < endWl]))
 
     if xOnly == True:
         return xTrunc
@@ -977,7 +980,7 @@ def gaussArea(height, fwhm):
 def findMainPeaks(x, y, fwhmFactor = 1.1, plot = False, midpoint = 680, weirdPeak = True):
     peakFindMetadata = {}
 
-    xy = truncateSpectrum(x, y, finishWl = 987)
+    xy = truncateSpectrum(x, y, finishWl = 800)
     xTrunc = xy[0]
     yTrunc = xy[1]
 
@@ -1635,6 +1638,7 @@ def plotHistogram(outputFileName, npomType = 'All NPoMs', startWl = 450, endWl =
         date = opf['All Spectra (Raw)'].attrs['Date measured']
         gSpectra = opf['NPoMs/%s/Normalised' % npomType]
         gSpecRaw = opf['NPoMs/%s/Raw' % npomType]
+
         spectraNames = sorted([i for i in list(gSpectra.keys())
                                if gSpectra[i].attrs['Coupled mode wavelength'] != 'N/A'
                                and cmLowLim < gSpectra[i].attrs['Coupled mode wavelength'] < endWl],

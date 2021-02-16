@@ -1,5 +1,5 @@
 from __future__ import print_function
-from nplab.utils.gui import QtWidgets, uic, QtCore
+from nplab.utils.gui import QtWidgets, uic, QtCore, get_qt_app
 from nplab.ui.ui_tools import UiTools
 import nplab.datafile as df
 from nplab.utils.log import create_logger, ColoredFormatter
@@ -11,6 +11,7 @@ import numpy as np
 
 import pyqtgraph
 import pyqtgraph.dockarea
+import qdarkstyle
 
 import logging
 
@@ -24,7 +25,8 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
     """
 
     def __init__(self, instrument_dict, parent=None, dock_settings_path=None,
-                 scripts_path=None, working_directory=None, file_path=None, terminal = False):  #
+                 scripts_path=None, working_directory=None, file_path=None,
+                 terminal=False, dark=False):  #
         """Args:
             instrument_dict(dict) :     This is a dictionary containing the
                                         instruments objects where the key is the 
@@ -61,10 +63,13 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
             df.set_current(self.working_directory + '/' + file_path)
             self.data_file = df.current()
 
+        if dark:
+            app = get_qt_app()
+            app.setStyleSheet(qdarkstyle.load_stylesheet())
         self.instr_dict["HDF5"] = self.data_file
         self.setDockNestingEnabled(1)
 
-        uic.loadUi(os.path.join(os.path.dirname(__file__), 'guigenerator.ui'), self)
+        self.load_ui_from_file(__file__, 'guigenerator.ui')
 
         self.allDocks = {}
         self.allWidgets = {}
@@ -94,6 +99,7 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
         if terminal:
             self.menuTerminal()
             self._addActionViewMenu('Terminal')
+        self.terminal = terminal
         self.makeScriptMenu()
 
         self.NightMode = 1
@@ -350,7 +356,8 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
             self.terminalWindow.run_script(scriptname)
         else:
             self._logger.debug('Running %s' % os.path.join(self.scripts_path, scriptname))
-            exec(open(os.path.join(self.scripts_path, scriptname)).read())
+            runfile(scriptname, current_namespace=True)
+            # exec(open(os.path.join(self.scripts_path, scriptname)).read())
             
     def VerboseChanged(self, action):
         """Automatically change the loggers 

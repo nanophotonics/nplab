@@ -37,6 +37,11 @@ from nplab.ui.ui_tools import QuickControlBox, UiTools
 from nplab.utils.notified_property import DumbNotifiedProperty
 import time
 
+
+def distance(p1, p2): # between two ndarrays
+    return  ((p1-p2)**2).sum()
+
+
 # Autofocus merit functions
 def af_merit_squared_laplacian(image):
     """Return the mean squared Laplacian of an image - a sharpness metric.
@@ -65,7 +70,7 @@ class CameraWithLocation(Instrument):
     disable_live_view = DumbNotifiedProperty(False) # Whether to disable live view while calibrating/autofocusing/etc.
     af_step_size = DumbNotifiedProperty(1) # The size of steps to take when autofocusing
     af_steps = DumbNotifiedProperty(7) # The number of steps to take during autofocus
-
+    use_thumbnail = DumbNotifiedProperty(False)
     def __init__(self, camera=None, stage=None):
         # If no camera or stage is supplied, attempt to retrieve them - but crash with an exception if they don't exist.
         if camera is None:
@@ -124,12 +129,17 @@ class CameraWithLocation(Instrument):
             self.camera.filter_function is not None):
             image = self.camera.filter_function(image)
         return self._add_position_metadata(image)
-    def thumb_image(self,size = (100,100)):
-        """Return a cropped "thumb" from the CWL with size  """
-        image =self.color_image()
-        thumb = image[old_div(image.shape[0],2)-old_div(size[0],2):old_div(image.shape[0],2)+old_div(size[0],2),
+    
+    @staticmethod
+    def crop_centered(image, size=(100,100)):
+        if size is None: return image
+        return image[old_div(image.shape[0],2)-old_div(size[0],2):old_div(image.shape[0],2)+old_div(size[0],2),
                      old_div(image.shape[1],2)-old_div(size[1],2):old_div(image.shape[1],2)+old_div(size[1],2)]
-        return thumb
+    
+    def thumb_image(self, size=(100,100)):
+        """Return a cropped "thumb" from the CWL with size  """
+        image = self.color_image()
+        return self.crop_centered(image, size=size)
 
     ###### Wrapping functions for the stage ######
     def move(self, *args, **kwargs): # TODO: take account of drift
@@ -140,7 +150,6 @@ class CameraWithLocation(Instrument):
         """Move the stage by a given amount"""
         self.stage.move_rel(*args, **kwargs)
     def move_to_pixel(self,x,y):
-        
         iwl = ImageWithLocation(self.camera.latest_raw_frame)
         iwl.attrs['datum_pixel'] = self.datum_pixel
 #        self.use_previous_datum_location = True
@@ -173,7 +182,15 @@ class CameraWithLocation(Instrument):
         for i in range(self.frames_to_discard):
             self.camera.raw_image(*args, **kwargs)
 
-    def move_to_feature(self, feature, ignore_position=False, ignore_z_pos = False, margin=50, tolerance=0.5, max_iterations = 10):
+    def move_to_feature(self, feature,
+                        ignore_position=False,
+                        ignore_z_pos=False,
+                        margin=50,
+                        tolerance=0.5,
+                        max_iterations=10,
+                        max_allowed_movement=4,
+                        autofocus_first=False,
+                        autofocus_args={}):
         """Bring the feature in the supplied image to the centre of the camera
 
         Strictly, what this aims to do is move the sample such that the datum pixel of the "feature" image is on the
@@ -199,12 +216,14 @@ class CameraWithLocation(Instrument):
             
         if not ignore_position:
             try:
-                if ignore_z_pos==True:
+                if ignore_z_pos:
                     self.move(feature.datum_location[:2]) #ignore original z value
                 else:
                     self.move(feature.datum_location) #initial move to where we recorded the feature was
             except:
                 print("Warning: no position data in feature image, skipping initial move.")
+        
+        if autofocus_first: self.autofocus(**autofocus_args)
         image = self.color_image()
         assert isinstance(image, ImageWithLocation), "CameraWithLocation should return an ImageWithLocation...?"
 
@@ -212,10 +231,19 @@ class CameraWithLocation(Instrument):
         for i in range(max_iterations):
             try:
                 self.settle()
-                image = self.color_image()
-                pixel_position = locate_feature_in_image(image, feature, margin=margin, restrict=margin>0)
+                image = self.color_image(update_latest_frame=True)
+               # , image_size
+                pixel_position = locate_feature_in_image(image,
+                                                         feature,
+                                                         margin=margin,
+                                                         restrict=(margin > 0))
              #   pixel_position = locate_feature_in_image(image, feature,margin=margin)
+                
                 new_position = image.pixel_to_location(pixel_position)
+                dist = distance(image.datum_location, new_position)
+                if dist > max_allowed_movement:
+                    self.log('feature identified too far away from camera position')
+                    break
                 self.move(new_position)
                 last_move = np.sqrt(np.sum((new_position - image.datum_location)**2)) # calculate the distance moved
                 self.log("Centering on feature, iteration {}, moved by {}".format(i, last_move))
@@ -225,10 +253,11 @@ class CameraWithLocation(Instrument):
                 self.log("Error centering on feature, iteration {} raised an exception:\n{}\n".format(i, e) +
                          "The feature size was {}\n".format(feature.shape) +
                          "The image size was {}\n".format(image.shape))
+
         if last_move > tolerance:
             self.log("Error centering on feature, final move was too large.")
         return last_move < tolerance
-        
+    #
     def move_to_feature_pixel(self,x,y,image = None):
         if self.pixel_to_sample_matrix is not None:
             if image is None:
@@ -242,7 +271,7 @@ class CameraWithLocation(Instrument):
 
     def autofocus(self, dz=None, merit_function=af_merit_squared_laplacian,
                   method="centre_of_mass", noise_floor=0.3,exposure_factor =1.0,
-                  use_thumbnail = False, update_progress=lambda p:p):
+                  use_thumbnail=None, update_progress=lambda p:p):
         """Move to a range of Z positions and measure focus, then move to the best one.
 
         Arguments:
@@ -253,7 +282,7 @@ class CameraWithLocation(Instrument):
         update_progress : function, optional
             This will be called each time we take an image - for use with run_function_modally.
         """
-        self.camera.exposure = old_div(self.camera.exposure,exposure_factor)
+        self.camera.exposure = self.camera.exposure/exposure_factor
         if dz is None:
             dz = (np.arange(self.af_steps) - old_div((self.af_steps - 1),2)) * self.af_step_size # Default value
         here = self.stage.position
@@ -267,10 +296,10 @@ class CameraWithLocation(Instrument):
             self.stage.move(np.array([0, 0, z]) + here)
             self.settle()
             positions.append(self.stage.position)
-            if use_thumbnail is True:
+            if use_thumbnail or (use_thumbnail is None and self.use_thumbnail):
                 image = self.thumb_image()
             else:
-                image = self.color_image()
+                image = self.color_image(update_latest_frame=True)
             powers.append(merit_function(image))
             update_progress(step_num)
         powers = np.array(powers)
@@ -353,6 +382,7 @@ class CameraWithLocation(Instrument):
         threshold_shift = w*0.02 # Require a shift of at least 2% of the image's width ,changed s[0] to w
         target_shift = w*0.1 # Aim for a shift of about 10%
         # Swapping images[-1] for starting_image
+        print(locate_feature_in_image(starting_image, template), self.datum_pixel)
         assert np.sum((locate_feature_in_image(starting_image, template) - self.datum_pixel)**2) < 1, "Template's not centred!"
         update_progress(1)
         if step is None:
@@ -379,7 +409,7 @@ class CameraWithLocation(Instrument):
             self.move(starting_location + np.array(p))
         #        print 'post move'
             self.settle()
-            image = self.color_image()
+            image = self.color_image(update_latest_frame=True)
             pixel_shifts.append(-locate_feature_in_image(image, template) + image.datum_pixel)
             images.append(image)
             # NB the minus sign here: we want the position of the image we just took relative to the datum point of
@@ -440,6 +470,7 @@ class CameraWithLocationControlUI(QtWidgets.QWidget):
         fc.add_spinbox("af_steps")
         fc.add_button("autofocus_gui", "Autofocus")
         fc.add_button("quick_autofocus_gui", "Quick Autofocus")
+        fc.add_checkbox('use_thumbnail', 'Use Thumbnail')
         fc.auto_connect_by_name(self.cwl)
         self.focus_controls = fc
 

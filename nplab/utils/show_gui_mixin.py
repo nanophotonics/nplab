@@ -10,7 +10,7 @@ author: Richard Bowman
 """
 from __future__ import print_function
 from builtins import object
-
+import qdarkstyle
 
 class ShowGUIMixin(object):
     """A mixin class to provide standard GUI functionality.
@@ -19,7 +19,7 @@ class ShowGUIMixin(object):
     either a supplied Qt widget or using TraitsUI.
     """
     __gui_instance = None
-    def show_gui(self, blocking=None, block=None, force_new_window=False):
+    def show_gui(self, blocking=None, block=None, force_new_window=False, dark=False):
         """Display a GUI window for the class.
 
         You may override this method to display a window to control the
@@ -60,6 +60,7 @@ class ShowGUIMixin(object):
             # nplab with dependencies on Qt.
             from nplab.utils.gui import QtCore, QtGui, QtWidgets, get_qt_app
             app = get_qt_app()
+            if dark: app.setStyleSheet(qdarkstyle.load_stylesheet())
             if force_new_window or not isinstance(self.__gui_instance, QtWidgets.QWidget):
                 # create the widget if it doesn't exist already, or if we've been
                 # told to make a new one

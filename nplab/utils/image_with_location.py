@@ -245,14 +245,17 @@ def locate_feature_in_image(image, feature, margin=0, restrict=False):
         image_shift = np.array(lower_margin - margin,dtype = int)
         image = image[image_shift[0]:image_shift[0] + feature.shape[0] + 2 * margin + 1,
                       image_shift[1]:image_shift[1] + feature.shape[1] + 2 * margin + 1, ...]
-
     corr = cv2.matchTemplate(image, feature,
                              cv2.TM_SQDIFF_NORMED)  # correlate them: NB the match position is the MINIMUM
+    
     corr = -corr # invert the image so we can find a peak
     corr += (corr.max() - corr.min()) * 0.1 - corr.max()  # background-subtract 90% of maximum
+    
     corr = cv2.threshold(corr, 0, 0, cv2.THRESH_TOZERO)[
         1]  # zero out any negative pixels - but there should always be > 0 nonzero pixels
+   
     assert np.sum(corr) > 0, "Error: the correlation image doesn't have any nonzero pixels."
     peak = ndimage.measurements.center_of_mass(corr)  # take the centroid (NB this is of grayscale values, not binary)
     pos = np.array(peak) + image_shift + datum_pixel(feature) # return the position of the feature's datum point.
     return pos
+    
