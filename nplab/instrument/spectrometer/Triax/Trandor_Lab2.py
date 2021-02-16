@@ -404,7 +404,7 @@ class Trandor(Andor):#Andor
     ''' Wrapper class for the Triax and the andor
     ''' 
     # Calibration_Arrays = Calibration_Arrays
-    def __init__(self, white_shutter=None, triax_address='GPIB0::1::INSTR', use_shifts = False, laser = '_633'):
+    def __init__(self, white_shutter=None, triax_address='GPIB0::1::INSTR', use_shifts = False, laser_wavelength=632.8):
         print ('Triax Information:, 2')
         super(Trandor,self).__init__()
         self.triax = Triax(triax_address, Calibration_Arrays=Calibration_Arrays, CCD_Horizontal_Resolution=CCD_Size) #Initialise triax
@@ -412,7 +412,7 @@ class Trandor(Andor):#Andor
         self.white_shutter = white_shutter
         self.triax.ccd_size = CCD_Size
         self.use_shifts = use_shifts
-        self.laser = laser
+        self.laser_wavelength = laser_wavelength
         
         print ('Current Grating:'+str(self.triax.Grating()))
         print ('Current Slit Width:'+str(self.triax.Slit())+'um')
@@ -427,10 +427,9 @@ class Trandor(Andor):#Andor
         if use_shifts is None:
             use_shifts = self.use_shifts
         if use_shifts:
-            if self.laser == '_633': centre_wl = 632.8
-            elif self.laser == '_785': centre_wl = 784.81
+            
             wavelengths = np.array(self.triax.Get_Wavelength_Array())
-            return ( 1./(centre_wl*1e-9)- 1./(wavelengths*1e-9))/100    
+            return ( 1./(self.laser_wavelength*1e-9)- 1./(wavelengths*1e-9))/100    
         else:
             return self.triax.Get_Wavelength_Array()
     x_axis = property(Generate_Wavelength_Axis)
@@ -441,6 +440,9 @@ class Trandor(Andor):#Andor
     @property
     def slit_width(self):
         return self.triax.Slit()
+    @slit_width.setter
+    def slit_width(self, val):
+        self.triax.Slit(val)
 
     def Test_Notch_Alignment(self):
         	Accepted=False
