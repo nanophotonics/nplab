@@ -73,7 +73,7 @@ class ELL18K(object):
 		Seperate=[]
 		Format=''
 		for i in String:
-			Seperate.append(i)
+			Seperate.append(bytes(i, "utf-8"))
 			Format+='c'
 		Packer=struct.Struct(format=Format)
 		self.Port.write(Packer.pack(*Seperate))

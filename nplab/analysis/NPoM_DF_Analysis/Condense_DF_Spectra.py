@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 """
 Created on Fri Aug 31 17:45:06 2018
+Last updated 2020-09-03
 
 @author: car72
 Condenses particle tracking output file into summary file.
 Uses functions from Analyse_Z_Scan code (Jack Griffiths).
-Output (summary) is directly compatible with Igor (Bart de Nijs) and Python (Charlie Readman) multipeakfit codes.
+Output (summary) is directly compatible with Igor (Bart de Nijs) and Python (Charlie Readman) DF multipeakfit codes.
+requires lmfit (available via pip install lmfit)
 """
+
 from __future__ import division
 from __future__ import print_function
 
@@ -25,6 +28,7 @@ from scipy.signal import butter, filtfilt
 import matplotlib.pyplot as plt
 import scipy.optimize as spo
 import nplab.analysis.NPoM_DF_Analysis.DF_Multipeakfit as mpf
+from lmfit.models import ExponentialModel, PowerLawModel, GaussianModel
 
 if __name__ == '__main__':
     print('Modules imported\n')
@@ -97,17 +101,17 @@ def printEnd():
     print('%s%swow' % ('\n' * randint(2, 5), ' ' * randint(5, 55)))
     print('\n' * randint(0, 7))
 
-def detectMinima(array):
+def detectMinima(array, threshold = 0, returnBool = False):
     '''
     detectMinima(array) -> mIndices
-    Finds the minima in a 1D array and returns the indices as a 1D array.
+    Finds the turning points within a 1D array and returns the indices of the minima.
     '''
     mIndices = []
 
     if (len(array) < 3):
         return mIndices
 
-    neutral, rising, falling = list(range(3))
+    neutral, rising, falling = np.arange(3)
 
     def getState(a, b):
         if a < b: return rising
@@ -125,10 +129,18 @@ def detectMinima(array):
             if ps != neutral and ps != s:
 
                 if s != falling:
-                    mIndices.append((begin + i - 1) // 2)
+                    mIndices.append((begin + i - 1)//2)
 
             begin = i
             ps = s
+
+    if threshold > 0:
+        yRange = array.max() - array.min()
+        threshold = array.max() - threshold*yRange
+        mIndices = [i for i in mIndices if array[i] < threshold]
+
+    if returnBool == True and len(mIndices) == 0:
+        return False
 
     return np.array(mIndices)
 
@@ -202,17 +214,17 @@ def truncateSpectrum(x, y, startWl = 450, finishWl = 900):
 
     return np.array([xTrunc, yTrunc])
 
-def checkCentering(zScan, pl = False):
+def checkCentering(zScan, dz = None):
+
+    if dz is None:
+        dz = np.linspace(-3, 3, len(zScan))
+
     zScanTransposed = np.transpose(zScan) #Transpose to look at scan at each wavelength
 
-    startDex = 68
-    finDex = 553
+    startDex = 132 #500 nm; np.where(x > 500)[0][0]
+    finDex = 553 #820 nm; np.where(x > 820)[0][0] - 1
 
-    if pl == True:
-        startDex = 130
-
-    scanMaxs = np.max(zScanTransposed[startDex:finDex], axis = 1) #Find total intensity of each scan in region 450 (500 if pl taken) - 820 nm
-    #Higher than 825 is unreliable for this
+    scanMaxs = np.max(zScanTransposed[startDex:finDex], axis = 1) #Find total intensity of each scan in region 500 - 820 nm; too much noise at longer wavelengths
     fs = 50000
     scanMaxsSmooth = butterLowpassFiltFilt(scanMaxs, cutoff = 1500, fs = fs) #Smoothes the 'spectrum'
     maxWlIndices = detectMinima(-scanMaxsSmooth) + startDex #finds indices of main spectral 'peaks'
@@ -223,62 +235,31 @@ def checkCentering(zScan, pl = False):
         scanMaxsSmooth = butterLowpassFiltFilt(scanMaxs, cutoff = 1500, fs = fs)
         maxWlIndices = detectMinima(-scanMaxsSmooth) + startDex
 
-    maxWlIndices = np.array([list(range(i - 2, i + 3)) for i in maxWlIndices]).flatten()
+    maxWlIndices = np.array([np.arange(i - 2, i + 3) for i in maxWlIndices]).flatten()
     #adds a few either side of each peak for luck
 
-    brightScansRaw = np.array([scan[1:] for scan in zScanTransposed[maxWlIndices]])
+    brightScans = np.array([scan for scan in zScanTransposed[maxWlIndices]])
     #List of corresponding z-stacks
-    #1st + 2nd data points unreliable because of spectrometer memory cache quirks
+    testFactor = 0
+    dZInterp = np.linspace(-3, 3, 41)
 
-    for n, scan in enumerate(brightScansRaw):#The second point can also suffer from this
-        if abs(scan[1] - scan[0]) >= (scan.max() - scan.min()) * 0.2:
-            #If so, set it equal to the next data point
-            scan[0] = scan[1]
+    for z in brightScans:
+        z[0] = z[1]
+        z -= z.min()
+        z = np.interp(dZInterp, dz, z)     
 
-    brightScans = np.array([butterLowpassFiltFilt(scan) for scan in brightScansRaw])
+        iEdge = np.trapz(z[:10]) + np.trapz(z[-(10):])
+        iMid = np.trapz(z[10:-10])
+        testFactor += iMid/iEdge
 
-    #identifies the corresponding z stack for each and smoothes it
-    #removes first data point from each
-    centered = []
-
-    for n, scan in enumerate(brightScans):
-        maxdices = np.array([i for i in detectMinima(-scan) if
-                             scan[i] - scan.min() > 0.2 * (scan.max() - scan.min()) and
-                             1 < i < len(scan) - 1])
-        #list of indices of distinct maxima in smoothed z-stack data
-        edgeThresh = 0.4
-
-        if len(maxdices) > 0:
-            if (scan[0] - scan.min()) > edgeThresh * (scan[maxdices].max() - scan.min()):
-                if (scan[0] - scan.min()) > edgeThresh * (scan[maxdices][0] - scan.min()):
-                    if scan[1] - scan[0] < 0:
-                        maxdices = np.insert(maxdices, 0, 0)
-
-            if (scan[-1] - scan.min()) > edgeThresh * (scan[maxdices].max() - scan.min()):
-                if (scan[-1] - scan.min()) > edgeThresh * (scan[maxdices][-1] - scan.min()):
-                    if scan[-1] - scan[-2] > 0:
-                        maxdices = np.append(maxdices, len(scan) - 1)
-            #test if any obvious maxima exist at either end of the stack
-
-        if len(maxdices) >= 2 and maxdices[-1] - maxdices[0] >= 5:
-            #if more than maxima 2 exist in a z-stack, collection was probably off-centre
-            #otherwise, probably too close to another bright object
-            #intensity data not reliable in this case, so we flag it
-            centered.append(False)
-
-        elif (np.argmax(scan) <= 0  or np.argmax(scan) >= len(scan) - 1) and len(maxdices) == 0:
-            #if the z-stack has a big dip in the middle, we can assume the same
-            centered.append(False)
-
-        else:
-            centered.append(True)
-
-    if centered.count(False) > old_div(len(centered),3):
-        return False
-        #if this happens more than a handful of times, the particle is probably off centre
-
-    else:
+    testFactor /= len(maxWlIndices)
+    
+    if testFactor > 3.6:      
+        #print(f'Aligned ({testFactor:.2f})')
         return True
+    else:      
+        #print(f'Misaligned ({testFactor:.2f})')
+        return False
 
 def lInterp(Value1,Value2,Frac):
     #Value 1 and 2 are two numbers. Frac is between 0 and 1 and tells you fractionally how far between the two values you want ot interpolate
@@ -314,14 +295,13 @@ def condenseZscan(zScan, returnMaxs = False, dz = None, threshold = 0.2, Smoothi
 
     else:
         '''
-        Z Scan is threesholded and the centrod taken for each wavelength
+        Z Scan is thresholded and the centroid taken for each wavelength
         '''
-        zThresh = np.nan_to_num(zScan)
+        zThresh = mpf.removeNaNs(zScan, buff = True)
         zThresh = zThresh.astype(np.float64)
-        zThresh = old_div((zThresh - zThresh.min(axis = 0)), (zThresh.max(axis = 0) - zThresh.min(axis = 0)))
+        zThresh = (zThresh - zThresh.min(axis = 0))/(zThresh.max(axis = 0) - zThresh.min(axis = 0))
         zThresh -= threshold
-        zThresh *= (zThresh > 0)       #Normalise and Threshold array
-
+        zThresh *= (zThresh > 0) #Normalise and Threshold array
         ones = np.zeros([zScan.shape[1]]) + 1
         positions = np.array([ones*n for n in np.arange(zScan.shape[0])]).astype(np.float64)
 
@@ -334,8 +314,15 @@ def condenseZscan(zScan, returnMaxs = False, dz = None, threshold = 0.2, Smoothi
     zProfile = []
 
     for n, centroid in enumerate(centroids):
-        if len(zT[n]) < len(dz):
-            print('Wl %s z stack too short' % n)
+        
+        try:
+            if len(zT[n]) < len(dz):
+                print('Wl %s z stack too short' % n)
+        except Exception as e:
+            print(dz, zT)
+            print(f'{n} failed in z stack')
+            if len(zT[n]) < len(dz):
+                print('Wl %s z stack too short' % n)
         
         if not np.isfinite(centroid):
             if n == 0:
@@ -448,7 +435,11 @@ def consoliData(rootDir):
                     gParticleNew = consolidatedScan.create_group(newGroupName)
                     gParticleNew.attrs.update(gParticleOld.attrs)
                     for dataName in gParticleOld.keys():
-                        newDataset = gParticleNew.create_dataset(dataName, data = gParticleOld[dataName])
+                        print(type(gParticleOld[dataName]))
+                        try:
+                            newDataset = gParticleNew.create_dataset(dataName, data = gParticleOld[dataName])
+                        except:
+                            print(type(gParticleOld[dataName]))
                         newDataset.attrs.update(gParticleOld[dataName].attrs)
 
 def extractAllSpectra(rootDir, returnIndividual = True, pl = False, dodgyThreshold = 0.4, start = 0, finish = 0,
@@ -467,6 +458,7 @@ def extractAllSpectra(rootDir, returnIndividual = True, pl = False, dodgyThresho
     outputFile = createOutputFile('summary')
 
     with h5py.File(inputFile, 'a') as ipf:
+        
         if 'particleScans' in ipf.keys():
             fileType = 'pre-2018'
 
@@ -480,6 +472,7 @@ def extractAllSpectra(rootDir, returnIndividual = True, pl = False, dodgyThresho
         with h5py.File(outputFile, 'a') as opf:
 
             gAllOut = opf.create_group('particleScanSummaries')
+            dParticleFormat = None
 
             if returnIndividual == True:
                 gInd = opf.create_group('Individual NPoM Spectra')
@@ -498,9 +491,14 @@ def extractAllSpectra(rootDir, returnIndividual = True, pl = False, dodgyThresho
                               key = lambda groupName: len(list(ipf[groupName].keys())))[::-1]
 
             if fileType == 'post-2018':
-                for dSetName in list(ipf[allScans[0]]['Particle_0'].keys()):
-                    if dSetName.startswith('alinger.z_scan') or dSetName.startswith('zScan'):
-                        dParticleFormat = dSetName
+                particleN = 0
+                while dParticleFormat is None:                    
+                    for dSetName in list(ipf[allScans[0]][f'Particle_{particleN}'].keys()):
+                        if dSetName.startswith('alinger.z_scan') or dSetName.startswith('zScan'):
+                            dParticleFormat = dSetName
+                            break
+                    
+                    particleN += 1
 
             for n, scanName in enumerate(allScans):
 
@@ -545,7 +543,7 @@ def extractAllSpectra(rootDir, returnIndividual = True, pl = False, dodgyThresho
                 for nn, groupName in enumerate(particleGroups):
                     nn += cancelled
 
-                    if int(old_div(100 * nn, len(particleGroups))) in nummers:
+                    if 100 * nn//len(particleGroups) in nummers:
                         currentTime = time.time() - scanStart
                         mins = int(old_div(currentTime, 60))
                         secs = old_div((np.round((currentTime % 60)*100)),100)
@@ -579,7 +577,15 @@ def extractAllSpectra(rootDir, returnIndividual = True, pl = False, dodgyThresho
                         x = zScan.attrs['wavelengths']
                         bg = zScan.attrs['background']
                         ref = zScan.attrs['reference']
-                        dz = zScan.attrs['dz']
+                        ref -= bg
+                        ref = np.where(ref != 0, ref, 1)
+                        try:
+                            dz = zScan.attrs['dz']
+                        except:
+                            if len(zScan) == 10:
+                                dz = np.linspace(-3, 3, 10)
+                            else:
+                                dz = np.linspace(-2.7, 2.7, (len(zScan)))
 
                         referenced = True
 
@@ -587,11 +593,11 @@ def extractAllSpectra(rootDir, returnIndividual = True, pl = False, dodgyThresho
                     z /= ref #Normalise to reference
 
                     if raiseExceptions == True:
-                        centered = checkCentering(z, pl = pl)
+                        centered = checkCentering(z, dz = dz)
 
                     else:
                         try:
-                            centered = checkCentering(z, pl = pl)
+                            centered = checkCentering(z, dz = dz)
 
                         except Exception as e:
                             print('Alignment check failed for Particle %s because %s' % (nn, e))
@@ -751,134 +757,160 @@ def trapInt(x, y):
 
     return area
 
-def subtractPlBg(xPl, yPl, plBg, xDf, yDf, remove0 = False, returnArea = True):
-    plBg = truncateSpectrum(xPl, plBg, startWl = 505, finishWl = 1000)[1]
-    yDf = truncateSpectrum(xDf, yDf, startWl = 505, finishWl = 1000)[1]
+def boltzmann(x, height, center, x0 = 0):
+    '''
+    Maxwell-Boltzmann probability density function with xmax (center), ymax (height) and x offset (x0) as inputs
+    '''
+    X = x - x0
+    center = center - x0
+    a = center/np.sqrt(2)
+    A = height*np.sqrt(np.pi/2)*(a*np.exp(1)/2)
+    return A*np.sqrt(2/np.pi)*(X**2*np.exp(-X**2/(2*a**2)))/a**3
+
+from scipy import sparse
+from scipy.sparse.linalg import spsolve
+
+def baseline_als(y, lam, p, niter=10):
+    L = len(y)
+    D = sparse.diags([1,-2,1],[0,-1,-2], shape=(L,L-2))
+    w = np.ones(L)
+    for i in range(niter):
+        W = sparse.spdiags(w, 0, L, L)
+        Z = W + lam * D.dot(D.transpose())
+        z = spsolve(Z, w*y)
+        w = p * (y > z) + (1-p) * (y < z)
+    return z
+
+def approximateLaserBg(xPl, yPl, yDf, plRange = [540, 820], plot = False):
+    xTrunc, yTrunc = truncateSpectrum(xPl, yPl, startWl = 505, finishWl = plRange[1])#removes spike from laser leak
+    x2, y2 = truncateSpectrum(xPl, yPl, startWl = plRange[1], finishWl = 900)
+    xDfTrunc, yDfTrunc = truncateSpectrum(xPl, yDf, startWl = 505)
+    yDfSmooth = mpf.butterLowpassFiltFilt(yDfTrunc)
+    
+    dfMax = yDfSmooth.max()
+    
+    if np.isfinite(dfMax):
+        yDfNorm = yDf/dfMax
+    else:
+        dfMax = yDfTrunc.max()
+        yDfNorm = yDf/dfMax
+    
+    for xN, yN in zip(xDfTrunc, yDfTrunc):
+        if not np.isfinite(yN):
+            print(f'nan value at {xN} nm for {groupName}')
+            plt.plot(xDfTrunc, yDfTrunc)
+            plt.title(groupName)
+            plt.show()
+        
+    yDfNorm = np.where(yDfNorm >= 0, np.sqrt(abs(yDfNorm)), -np.sqrt(abs(yDfNorm)))
+    yDfNorm = np.where(yDfNorm != 0, yDfNorm, np.nan)
+    yPl /= yDfNorm
+    yRef = mpf.removeNaNs(yPl)
+    
+    x1, y1 = truncateSpectrum(xPl, yRef, startWl = 505, finishWl = plRange[0])
+    
+    xJoin = np.concatenate((x1, x2))
+    yJoin = np.concatenate((y1, y2))
+    yJoinMin = np.average(y2[-len(y2)//5:])
+    yJoin -= max(yJoinMin, 1e-4)
+    #xJoin = x2
+    #yJoin = y2
+
+    expMod0 = ExponentialModel(prefix = 'Exp0_')
+    expPars = expMod0.make_params(Exp0_amplitude = 1.6e23, Exp0_decay = 8.5)
+    expPars['Exp0_amplitude'].set(min = 0)
+
+    expMod1 = ExponentialModel(prefix = 'Exp1_')
+    expPars1 = expMod1.make_params(Exp1_amplitude = 2, Exp1_decay = 90)
+    expPars1['Exp1_amplitude'].set(min = 0)
+
+    expMod = expMod0 + expMod1
+    expPars.update(expPars1)
+    initFit = expMod.eval(expPars, x = xTrunc)
+
+    expOut = expMod.fit(yJoin, expPars, x = xJoin, nan_policy = 'propagate')
+    yFit = expOut.eval(x = xPl)
+    yFit += yJoinMin
+    yOut = yPl - yFit
+    yOut = mpf.removeNaNs(yOut)
+
+    if plot == True:
+        fig, ax1 = plt.subplots()
+        ax2 = ax1.twinx()
+        yTruncSub = truncateSpectrum(xPl, yOut, startWl = 505, finishWl = plRange[1])[1]
+        ax1.plot(xTrunc, yTruncSub, label = 'Processed')
+        ax1.plot(x2, y2)
+        yTruncFit = truncateSpectrum(xPl, yFit, startWl = 505, finishWl = plRange[1])[1]
+        ax1.plot(xTrunc, yTrunc, label = 'Raw')
+        yTruncRef = truncateSpectrum(xPl, yPl, startWl = 505, finishWl = plRange[1])[1]
+        ax1.plot(xTrunc, yTruncRef, label = 'Referenced')
+        ax1.plot(xTrunc, yTruncFit, label = 'Exponential Fit')
+        xDf, yDf = truncateSpectrum(xPl, yDf, startWl = 505, finishWl = plRange[1])
+        ax2.plot(xDf, yDf, 'k', alpha = 0.5)
+        comps = expOut.eval_components()
+        print(expOut.params)
+        for compName in comps.keys():
+            ax1.plot(xJoin, comps[compName], '--', label = compName)
+        #ax1.plot(xTrunc, initFit, 'k--', label = 'init')
+
+        ax1.legend()
+        plt.show()
+
+    return yOut, yRef
+
+def subtractPlBg(xPl, yPl, plBg, xDf, yDf, remove0 = False, returnArea = True, startWl = 505):
+
+    plBg = truncateSpectrum(xPl, plBg, startWl = startWl, finishWl = 1000)[1]
+    xDf, yDf = truncateSpectrum(xDf, yDf, startWl = startWl, finishWl = 1000)
     yDf = threshold(yDf, 2e-4)
-    xPl, yPl = truncateSpectrum(xPl, yPl, startWl = 505, finishWl = 1000)
+    xPl, yPl = truncateSpectrum(xPl, yPl, startWl = startWl, finishWl = 1000)
+
+
+    fig, ax1 = plt.subplots()
+    ax2 = ax1.twinx()
+
+    
+    ax2.plot(xDf, yDf, 'k', alpha = 0.5)
+    #ax1.plot(xPl, plBg)
 
     bgMin = np.average(plBg[-10:])
-    yMin = np.average(yPl[-10:])
+    yMin = np.average(yPl[-10:])    
 
     bgScaled = plBg - bgMin
-    ySub = yPl - yMin
 
-    bgScale = old_div(ySub[0],bgScaled[0])
+    ySub = yPl - yMin
+    ax1.plot(xPl, ySub, 'k', lw = 2)
+
+    bgScale = ySub[0]/bgScaled[0]
 
     bgScaled *= bgScale
     bgScaled += yMin
+    ax1.plot(xPl, bgScaled)
+
     ySub = yPl - bgScaled
-    yRef = old_div(ySub,np.sqrt(old_div(yDf,yDf.max())))
+    yRef = ySub/np.sqrt(yDf/yDf.max())
+
+    ySmooth = butterLowpassFiltFilt(yRef, cutoff = 1000, fs = 90000)
+    xTrunc, yTrunc = truncateSpectrum(xPl, ySmooth, startWl = startWl, finishWl = 600)
+
+    fwhm, center, height = getFWHM(xTrunc, yTrunc, smooth = True, peakpos = 545)
+    yBoltz = boltzmann(xPl, height, center, x0 = startWl)
 
     if remove0 == True:
-        ySmooth = butterLowpassFiltFilt(yRef, cutoff = 1000, fs = 90000)
-        xTrunc, yTrunc = truncateSpectrum(xPl, ySmooth, startWl = 505, finishWl = 600)
+        yRef -= yBoltz
 
-        fwhm, center, height = getFWHM(xTrunc, yTrunc, smooth = True, peakpos = 545)
-        yGauss = gaussian(xPl, height, center, fwhm)
-
-        yRef -= yGauss
+    plt.show()
 
     if returnArea == True:
         area = trapInt(xPl, yPl)
-        return xPl, yRef, area, bgScale
+        return xPl, yRef, yBoltz, area, bgScale
 
-    return xPl, yRef
+    return xPl, yRef, yBoltz
 
 def exponential(x, amp, shift, decay, const):
     '''y = const + amp when x = 0'''
     '''stepth of curve inversely proportional to decay'''
     return const + (amp*np.exp(old_div(-(x-shift),decay)))
-
-def approximateLaserBg(x, y, decays = [50, 50, 50], plRange = [580, 850], optimise = False, plot = False):
-    xRaw = x
-    yRaw = y
-
-    if plot == True:
-        fig, (ax0, ax1, ax2, ax3, ax4) = plt.subplots(5, 1, sharex = True, figsize = (7, 12))
-        ax0.plot(xRaw, yRaw)
-
-    x, y = truncateSpectrum(xRaw, yRaw, startWl = 505, finishWl = 1100)
-
-    const = np.average(y[-10:])
-    amp = np.average(y[:5]) - const
-    shift = x[0]
-    yBg1 = exponential(x, amp, shift, decays[0], const)
-
-    if plot == True:
-        ax1.plot(x, y, label = 'data')
-        ax1.plot(x, yBg1, label = 'bg 1')
-        ax1.legend(title = 'init')
-
-    ySub1 = y - yBg1
-
-    ySmooth = butterLowpassFiltFilt(ySub1)
-
-    maxdices = detectMinima(-ySmooth)
-
-    if len(maxdices) > 0:
-        maxdex = maxdices[0]
-        xMax = x[maxdex]
-        yMax = ySmooth[maxdex]
-
-    else:
-        xMax = 542
-        yMax = ySmooth[abs(x - xMax).argmin()]
-
-    const = np.average(ySub1[-10:])
-    amp = yMax - const
-    shift = xMax
-    xTrunc, ySub1 = truncateSpectrum(x, ySub1, startWl = xMax + 10, finishWl = 1100)
-    yBg2 = exponential(xTrunc, amp, shift, decays[1], const)
-
-    if plot == True:
-        ax2.plot(xTrunc, ySub1, label = 'Baselined Data')
-        ax2.plot(xTrunc, yBg2, label = 'bg 2')
-        ax2.legend(title = '1 Baseline')
-
-    ySub2 = ySub1 - yBg2
-    const = np.average(ySub2[-10:])
-    amp = np.average(ySub2[:20]) - const
-    shift = xTrunc[0]
-    yBg3 = exponential(xTrunc, amp, shift, decays[2], const)
-
-    if plot == True:
-        ax3.plot(xTrunc, ySub2, label = 'Baselined Data')
-        ax3.plot(xTrunc, yBg3, label = 'bg 2')
-        ax3.legend(title = '2 baselines')
-
-    ySub3 = ySub2 - yBg3
-
-    base0 = np.linspace(xTrunc[0], plRange[0], 10)
-    base1 = np.linspace(plRange[1], xTrunc[-1], 5)
-
-    zPts = np.append(base0, base1)
-
-    y0s = [0]
-
-    for zPt in zPts:
-        mindex = abs(xTrunc - zPt).argmin()
-        y0 = np.average(ySub3[mindex-3:mindex+3])
-        y0s.append(y0)
-
-    yEnd = np.average(ySub3[-10:])
-    y0s.append(yEnd)
-
-    if plot == True:
-        ax4.plot(xTrunc, ySub3, label = 'Baselined Data')
-        ax4.plot(zPts, y0s[1:-1], 'o')
-        ax4.legend(title = '3 baselines')
-        ax4.set_xlabel('Wavelength (nm)')
-
-        plt.subplots_adjust(hspace = 0.05)
-        plt.show()
-
-    if optimise == True:
-        diff = np.std(y0s)
-        return xTrunc, ySub3, diff
-
-    else:
-        return xTrunc, ySub3
 
 def removeLaserLeak(x, y, plotAll = False, plotFinal = False, plRange = [580, 850]):
 
@@ -898,12 +930,12 @@ def removeLaserLeak(x, y, plotAll = False, plotFinal = False, plRange = [580, 85
 
     return xTrunc, yBld
 
-def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [580, 850]):
+def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [580, 820], plGroupName = 'PL Spectra'):
 
     os.chdir(rootDir)
 
     try:
-        inputFile = findH5File(rootDir, nameFormat = 'date')
+        inputFile = mpf.findH5File(rootDir, nameFormat = 'date')
     except:
         print('File not found')
         return
@@ -911,7 +943,7 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
     print('\nAbout to extract PL data from %s' % inputFile)
     print('\tLooking for summary file...')
 
-    outputFile = findH5File(rootDir, nameFormat = 'summary')
+    outputFile = mpf.findH5File(rootDir, nameFormat = 'summary')
 
     if outputFile == None:
         print('\tNo summary file exists; creating a new one')
@@ -922,7 +954,7 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
         if 'particleScans' in ipf.keys():
             fileType = 'pre-2018'
 
-        elif 'nplab.log' in list(ipf.keys()):
+        elif 'nplab_log' in list(ipf.keys()):
             fileType = 'post-2018'
 
         else:
@@ -946,15 +978,19 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
                 gScanFormat = 'ParticleScannerScan_'
                 gParticleFormat = 'Particle_'
 
-            plGroupName = 'dark field with irradiation'
 
             allScans = sorted([groupName for groupName in list(ipf.keys()) if groupName.startswith(gScanFormat)],
                               key = lambda groupName: len(list(ipf[groupName].keys())))[::-1]
-
+            dParticleFormat = None
             if fileType == 'post-2018':
-                for dSetName in list(ipf[allScans[0]]['Particle_0'].keys()):
-                    if dSetName.startswith('alinger.z_scan') or dSetName.startswith('zScan'):
-                        dParticleFormat = dSetName
+                particleN = 0
+                while dParticleFormat is None:                    
+                    for dSetName in list(ipf[allScans[0]][f'Particle_{particleN}'].keys()):
+                        if dSetName.startswith('alinger.z_scan') or dSetName.startswith('zScan'):
+                            dParticleFormat = dSetName
+                            break
+                    
+                    particleN += 1
 
             for n, scanName in enumerate(allScans):
 
@@ -991,6 +1027,17 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
                 for nn, groupName in enumerate(particleGroups):
 
                     particleGroup = scan[groupName]
+                    plGroupNames = [i for i in ['dark field with irradiation', 'PL Spectra'] if i in particleGroup.keys()]
+                    
+                    if len(plGroupNames) > 0:
+                        plGroupName = plGroupNames[0]
+                        if nn == 0:
+                            print(plGroupName)
+                            
+                    if dParticleFormat not in particleGroup.keys():
+                        print(f'No Z-Stack in {groupName}')
+                        continue
+
                     bg = particleGroup[dParticleFormat].attrs['background']
                     ref = particleGroup[dParticleFormat].attrs['reference']
 
@@ -1001,7 +1048,8 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
                         print('%s%% (%s spectra) transferred in %s min %s sec' % (nummers[0], nn, mins, secs))
                         nummers = nummers[1:]
 
-                    if plGroupName not in list(particleGroup.keys()):
+                    if plGroupName not in particleGroup.keys():
+                        print(f'{plGroupName} not found in {groupName}')
                         print('No PL spectra in %s' % (groupName))
                         continue
 
@@ -1027,7 +1075,7 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
                         x = plData.attrs['wavelengths']
                         y = plData[()]
 
-                        xTrunc, yTrunc = truncateSpectrum(x, y, startWl = 520, finishWl = 800)
+                        xTrunc, yTrunc = truncateSpectrum(x, y, startWl = plRange[0], finishWl = plRange[1])
                         ySmooth = butterLowpassFiltFilt(y)
                         maxima = detectMinima(-ySmooth)
 
@@ -1037,72 +1085,65 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
                         yAvg = np.average(ySmooth[maxima])
                         maxDict[yAvg] = specName
 
-                    if len(list(maxDict.keys())) > 0:
+                    if len(maxDict.keys()) > 0:
                         maxPlName = maxDict[max(maxDict.keys())]
                     else:
-                        print(groupName, list(plGroup.keys()))
+                        print(groupName, plGroup.keys())
                         maxPlName = plSpecNames[0]
 
                     plData = plGroup[maxPlName]
-                    xPl = plData.attrs['wavelengths']
-                    timeStamp = plData.attrs['creation_timestamp']
-                    plSpecName = 'PL Spectrum %s' % nn
+                    
+                    try:
+                        bg = plData.attrs.get('background', bg)
+                        ref = plData.attrs.get('reference', ref)
+                        xPl = plData.attrs['wavelengths']
+                        timeStamp = plData.attrs['creation_timestamp']
+                        laserPower = plData.attrs['laser_power']
+                        plSpecName = f'PL Spectrum {nn}'
+                    except Exception as e:
+                        plSpecName = f'PL Spectrum {nn}'
+                        print(f'{plSpecName} transfer failed because {e}')
 
-                    if 'PL Background' not in list(ipf.keys()):
-                        rootDir = os.getcwd()
-                        powerDir = r'C:\Users\car72\University Of Cambridge\OneDrive - University Of Cambridge\Documents\PhD\Data\NP\Porphyrins\NPoM\DF\2019-09-18 Zn-MTPP Cl 48 h 80 nm + PL'
-                        os.chdir(powerDir)
-                        h5File = '2019-09-18.h5'
-                        with h5py.File(h5File, 'r') as powerFile:
-                            plBgDict = collectPlBackgrounds(powerFile)
-
-                        os.chdir(rootDir)
-
-                    else:
-                        plBgDict = collectPlBackgrounds(ipf)
-
-                    laserPower = plData.attrs['laser_power']
-                    plBg = plBgDict[laserPower]
-
-                    #try:
-                    #    xTrunc, yBld = removeLaserLeak(x, plData[()], plRange = plRange)
-
-                    #except Exception as e:
-                    #    print 'Laser leak removal failed for groupName because %s' % (e)
-                    #    yBld = plData[()]
-                    #    xTrunc = x
-
-                    #xTrunc, plTrunc = truncateSpectrum(xTrunc, yBld, startWl = plRange[0], finishWl = plRange[1])
-
-                    y = plData[()]
-                    dfBefore = opf['Individual NPoM Spectra/scan0/Spectrum %s' % nn]
+                    yRaw = (plData[()] - bg)/ref
+                    dfBefore = opf[f'Individual NPoM Spectra/scan0/Spectrum {nn}']
                     xDf = dfBefore.attrs['wavelengths']
                     yDf = dfBefore[()]
 
-                    xPl, yRef, area, bgScale = subtractPlBg(xPl, y, plBg, xDf, yDf, remove0 = False, returnArea = True)
-                    plSpectra.append(yRef)
+                    yPl, yRef = approximateLaserBg(xPl, yRaw, yDf, plRange = plRange, plot = False)
+                    
+                    #xPl, yRef, yBoltz, area, bgScale = subtractPlBg(xPl, y, plBg, xDf, yDf, remove0 = False, returnArea = True)
+                    plSpectra.append(yPl)
 
                     if plSpecName not in list(gPlScan.keys()):
-                        gPlScan.create_dataset(plSpecName, data = yRef)
+                        gPlScan.create_dataset(plSpecName, data = yPl)
 
                     dPl = gPlScan[plSpecName]
                     dPl.attrs['wavelengths'] = xPl
-                    dPl.attrs['Raw Spectrum'] = plData[()]
-                    dPl.attrs['Total Area'] = area
-                    dPl.attrs['Background Scale Factor'] = bgScale
+                    dPl.attrs['Raw Spectrum'] = yRef
+                    #dPl.attrs['Total Area'] = area
+                    #dPl.attrs['Background Scale Factor'] = bgScale
 
                     attrNames = ['creation_timestamp', 'integration_time', 'laser_power', 'model_name', 'serial_number', 'tec_temperature']
 
                     for attrName in attrNames:
-                        dPl.attrs[attrName] = plData.attrs[attrName]
+                        if attrName in plData.attrs.keys():
+                            dPl.attrs[attrName] = plData.attrs[attrName]
 
-                    if dParticleFormat in list(particleGroup.keys()):
+                    '''if dParticleFormat in particleGroup.keys():
                         dfData = particleGroup[dParticleFormat]
 
                         x = dfData.attrs['wavelengths']
-                        z = dfData - bg
+                        z = dfData[()] - bg
                         z /= ref
-                        dfData = condenseZscan(z)
+                        try:
+                            dz = dfData.attrs['dz']
+                        except:
+                            if len(z) == 10:
+                                dz = np.linspace(-3, 3, 10)
+                            else:
+                                dz = np.linspace(-2.7, 2.7, (len(z)))
+                                
+                        dfData = condenseZscan(z, dz = dz)
 
                     else:
                         dfSpecNames = [specName for specName in list(plGroup.keys()) if specName.startswith('DF') and
@@ -1117,14 +1158,14 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
                                 dfData /= ref #Normalise to reference
 
                         else:
-                            dfData = 'N/A'
+                            dfData = 'N/A' 
 
-                    dPl.attrs['DF After'] = dfData#truncateSpectrum(x, dfData, startWl = startWl, finishWl = 1000)[1]
+                    dPl.attrs['DF After'] = dfData#truncateSpectrum(x, dfData, startWl = startWl, finishWl = 1000)[1]'''
 
                 plSpectra = np.array(plSpectra)
                 dAll = gAllPlScan.create_dataset('PL spectra', data = plSpectra)
                 dAll.attrs['laser_power'] = laserPower
-                dAll.attrs['Average PL Background'] = plBgDict[laserPower]
+                #dAll.attrs['Average PL Background'] = plBgDict[laserPower]
                 dAll.attrs['wavelengths'] = xPl
 
     currentTime = time.time() - scanStart

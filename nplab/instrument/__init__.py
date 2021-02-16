@@ -24,6 +24,7 @@ import inspect
 import os
 import h5py
 import datetime
+from contextlib import contextmanager
 LOGGER = create_logger('Instrument')
 LOGGER.setLevel('INFO')
 
@@ -201,3 +202,24 @@ class Instrument(ShowGUIMixin):
                 f.flush()    
         else:
             f.create_dataset(name, data=data ,attrs = attrs)
+
+    @contextmanager
+    def temporarily_set(self, **kwargs):
+        """Utility function for temporarily setting instrument parameters
+
+        :Example:
+        >>> with camera.temporarily_set(exposure=1, backgrounded=False):
+        >>>     image = camera.get_image()
+
+        :param kwargs: dict
+        :return:
+        """
+        try:
+            original_settings = dict()
+            for key, value in kwargs.items():
+                original_settings[key] = getattr(self, key)
+                setattr(self, key, value)
+            yield original_settings
+        finally:
+            for key, value in original_settings.items():
+                setattr(self, key, value)

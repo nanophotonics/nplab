@@ -186,12 +186,16 @@ class ExtendedImageView(pg.ImageView):
     # Percentile functions
     def getProcessedImage(self):
         """Checks if we want to autolevel for each image and does it"""
-        image = super(ExtendedImageView, self).getProcessedImage()
+        if self.imageDisp is None:
+            image = self.normalize(self.image)
+            self.imageDisp = image
+            self.levelMin, self.levelMax = self.quickMinMax(self.imageDisp)
+            
         if self.levelGroup.checkbox_singleimagelevel.isChecked() and self.hasTimeAxis():
-            cur_image = image[self.currentIndex]
+            cur_image = self.imageDisp[self.currentIndex]
             self.levelMin, self.levelMax = self.quickMinMax(cur_image)
             self.autoLevels()  # sets the histogram setLevels(self.levelMin, self.levelMax)
-        return image
+        return self.imageDisp
 
     def set_level_percentiles(self):
         """
@@ -221,14 +225,15 @@ class ExtendedImageView(pg.ImageView):
         :return:
         """
         mm = super(ExtendedImageView, self).quickMinMax(data)
-        while type(mm[0]) in [list, tuple]: # 3.7 vs 3.8 fix
+        while type(mm) is list: # 3.7 vs 3.8 fix
             mm = mm[0]
         minval, maxval = mm
         rng = maxval - minval
         levelmin = minval + rng * self.level_percentiles[0] / 100.
         levelmax = minval + rng * self.level_percentiles[1] / 100.
 
-        return [(levelmin, levelmax)]
+        return (levelmin, levelmax)
+    
 
     # Crosshairs
     def pos_to_unit(self, positions):
