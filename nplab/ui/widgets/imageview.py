@@ -189,11 +189,14 @@ class ExtendedImageView(pg.ImageView):
         if self.imageDisp is None:
             image = self.normalize(self.image)
             self.imageDisp = image
-            self.levelMin, self.levelMax = self.quickMinMax(self.imageDisp)
-            
+            mm = self.quickMinMax(image)
+            self.levelMin, self.levelMax = self.quickMinMax(image)[0] if type(mm) is list else mm
+            self._imageLevels = self.quickMinMax(self.imageDisp)
         if self.levelGroup.checkbox_singleimagelevel.isChecked() and self.hasTimeAxis():
             cur_image = self.imageDisp[self.currentIndex]
-            self.levelMin, self.levelMax = self.quickMinMax(cur_image)
+            mm = self.quickMinMax(cur_image)
+            self.levelMin, self.levelMax = self.quickMinMax(cur_image)[0] if type(mm) is list else mm
+            self._imageLevels = self.quickMinMax(self.imageDisp)
             self.autoLevels()  # sets the histogram setLevels(self.levelMin, self.levelMax)
         return self.imageDisp
 
@@ -232,7 +235,7 @@ class ExtendedImageView(pg.ImageView):
         levelmin = minval + rng * self.level_percentiles[0] / 100.
         levelmax = minval + rng * self.level_percentiles[1] / 100.
 
-        return (levelmin, levelmax)
+        return [(levelmin, levelmax)]
     
 
     # Crosshairs
