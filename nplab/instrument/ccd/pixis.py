@@ -6,7 +6,7 @@ __author__ = 'alansanders'
 import ctypes as ct
 import os
 
-pvcam=PVCAM = ct.WinDLL(os.path.dirname(__file__) +"/DLL/Pvcam32.dll")
+pvcam=PVCAM = ct.WinDLL(os.path.dirname(__file__) +"/DLL/Picam.dll")
 
 import nplab.instrument.ccd.pvcam_h as pv
 import numpy as np

@@ -569,7 +569,7 @@ class Stepper_APT_trinamics(APT_VCP_motor):
 if __name__ == '__main__':
     print("pass")
     # microscope_stage = APT_VCP_motor(port='COM12', source=0x01, destination=0x21)
-    r = DC_APT(port = 'COM13', destination = 0x01, stage_type = 'PRM' )
+    r = DC_APT(port = 'COM1', destination = 0x01, stage_type = 'MLS' )
     DEBUG = True
 
     # tdc_cube = Stepper_APT_trinamics(port='/dev/ttyUSB1', source=0x01, destination=0x50)

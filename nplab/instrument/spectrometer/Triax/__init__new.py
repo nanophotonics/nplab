@@ -284,10 +284,10 @@ class Triax(VisaInstrument):
                 break
 
     #-------------------------------------------------------------------------------------------------
-
-    """
+"""
+    
 	Held here are functions from the original code that, at this point in time, I do not wish to touch
-    """
+    
 
     def reset(self):
         self.instr.write_raw('\xde')
@@ -342,3 +342,4 @@ class TriaxUI(QtWidgets.QWidget,UiTools):
             self.triax.Grating(2)
         else:
             raise ValueError('radio buttons not connected!')
+"""

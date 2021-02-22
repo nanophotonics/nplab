@@ -34,10 +34,15 @@ from matplotlib import pyplot as plt
 from nplab.instrument.camera import Camera
 import sys,os, time
 
-from .picam_constants import PicamSensorTemperatureStatus,PicamParameter,PicamValueType,PicamError,transpose_dictionary,PI_V,PicamConstraintType
+from picam_constants import PicamSensorTemperatureStatus,PicamParameter,PicamValueType,PicamError,transpose_dictionary,PI_V,PicamConstraintType
 
+from nplab.utils.log import create_logger
 import logging
+
+LOGGER = create_logger('Pixis256E')
+
 PARENT_DIR = os.path.dirname(os.path.realpath(__file__))
+
 
 
 class clsPicamReadoutStruct(ct.Structure):
@@ -51,6 +56,7 @@ class Pixis(Camera):
         self.bolRunning = False
         self.y_max = 0
         self.x_max = 0
+        self._logger = LOGGER
         if with_start_up == True:
             self.StartUp()
             self.SetExposureTime(10)
@@ -268,7 +274,7 @@ class Pixis(Camera):
         cint_temp = ct.c_int()
         # Find DLL
         try:
-            self.picam = ct.WinDLL(os.path.normpath('{}/picam_64bit.dll'.format(PARENT_DIR)))
+            self.picam = ct.WinDLL(os.path.normpath('{}/Picam.dll'.format(PARENT_DIR)))
         except Exception as e:
             logging.warning("Error:",e)
             logging.info("Could not find picam dll")
@@ -315,13 +321,13 @@ class Pixis(Camera):
 
     def SetTemperatureWithLock(self,temperature):
         self.__SetSensorTemperatureSetPoint(temperature)
-        status_code = p.GetTemperatureStatus()
+        status_code = self.GetTemperatureStatus()
         while PicamSensorTemperatureStatus[status_code] != "PicamSensorTemperatureStatus_Locked":
-            print("TemperatureStatus: {3}[{2}] (current: {0}, target:{1})".format(p.GetSensorTemperatureReading(), temperature,status_code, PicamSensorTemperatureStatus[status_code]))
+            print("TemperatureStatus: {3}[{2}] (current: {0}, target:{1})".format(self.GetSensorTemperatureReading(), temperature,status_code, PicamSensorTemperatureStatus[status_code]))
             time.sleep(0.5)
-            status_code = p.GetTemperatureStatus()
+            status_code = self.GetTemperatureStatus()
 
-        status_code = p.GetTemperatureStatus()
+        status_code = self.GetTemperatureStatus()
         print("TemperatureStatus: {0} [{1}]".format(PicamSensorTemperatureStatus[status_code], status_code))
         return
 
@@ -399,7 +405,7 @@ if __name__ == "__main__":
     # print p.GetExposureTime()
     # print p.GetTemperature()
     
-    p.SetTemperatureWithLock(-75)
+    #p.SetTemperatureWithLock(-75)
     # import time
 
     # for i in range(500):
@@ -427,7 +433,7 @@ if __name__ == "__main__":
     # p.SetExposureTime(50.0)
     # print p.GetExposureTime()
     
-    # _,Frame = p.raw_snapshot()
+    _,Frame = p.raw_snapshot()
     # print p.GetExposureTime()
 
     # p.SetExposureTime(100.0)
@@ -446,7 +452,7 @@ if __name__ == "__main__":
     # _,Frame = p.raw_snapshot()
     # print p.GetExposureTime()
 
-    p.ShutDown()
+    #p.ShutDown()
     
-    # plt.imshow(Frame, cmap='gray')
+    plt.imshow(Frame, cmap='gray')
     # plt.show()
