@@ -43,7 +43,7 @@ class SP2750(VisaInstrument):
             self._logger.warn("Message  %s" % full_reply)
 
         if status == "ok":
-            return reply.rstrip("").lstrip("")
+            return reply.strip()
         else:
             self._logger.info("Multiple reads")
             read = str(full_reply)
@@ -104,7 +104,7 @@ class SP2750(VisaInstrument):
         :return:
         """
         string = self.query("?NM")
-        wvl = float(re.findall(" ([0-9]+\.[0-9]+) ", string)[0])
+        wvl = float(re.findall("([0-9]+\.[0-9]+) ", string)[0])
         return self.calibrate(wvl, False)
 
     def set_speed(self, rate):
