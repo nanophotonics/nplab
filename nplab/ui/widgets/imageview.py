@@ -184,19 +184,6 @@ class ExtendedImageView(pg.ImageView):
                 ax.show()
 
     # Percentile functions
-    def getProcessedImage(self):
-        """Checks if we want to autolevel for each image and does it"""
-        if self.imageDisp is None:
-            image = self.normalize(self.image)
-            self.imageDisp = image
-            self.levelMin, self.levelMax = self.quickMinMax(self.imageDisp)
-
-        if self.levelGroup.checkbox_singleimagelevel.isChecked() and self.hasTimeAxis():
-            cur_image = self.imageDisp[self.currentIndex]
-            self.levelMin, self.levelMax = self.quickMinMax(cur_image)
-            self.autoLevels()  # sets the histogram setLevels(self.levelMin, self.levelMax)
-        return self.imageDisp
-
     def set_level_percentiles(self):
         """
         Reads the GUI lineEdits and sets the level percentiles. If not normalising each image, it also finds the levels
@@ -207,11 +194,9 @@ class ExtendedImageView(pg.ImageView):
         max_level = float(self.levelGroup.lineEdit_maxLevel.text())
 
         self.level_percentiles = [min_level, max_level]
-        if not self.levelGroup.checkbox_singleimagelevel.isChecked():
-            image = self.getProcessedImage()
-            self.levelMin, self.levelMax = self.quickMinMax(image)
-            self.autoLevels()
+        self.imageDisp = None
         self.updateImage()
+        self.autoLevels()
 
     def reset(self):
         self.levelGroup.lineEdit_minLevel.setText('0')
@@ -225,14 +210,8 @@ class ExtendedImageView(pg.ImageView):
         :return:
         """
         mm = super(ExtendedImageView, self).quickMinMax(data)
-        while type(mm) is list:  # 3.7 vs 3.8 fix
-            mm = mm[0]
-        minval, maxval = mm
-        rng = maxval - minval
-        levelmin = minval + rng * self.level_percentiles[0] / 100.
-        levelmax = minval + rng * self.level_percentiles[1] / 100.
-
-        return (levelmin, levelmax)
+        return [(np.percentile(x, self.level_percentiles[0]),
+                 np.percentile(x, self.level_percentiles[1])) for x in mm]
 
     # Crosshairs
     def pos_to_unit(self, positions):
@@ -338,3 +317,4 @@ def test():
 
 if __name__ == "__main__":
     test()
+
