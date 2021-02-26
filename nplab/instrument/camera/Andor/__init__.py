@@ -99,9 +99,7 @@ class Andor(CameraRoiScale, AndorBase):
         try:
             self.set_andor_parameter(parameter_name, *parameter_value)
         except Exception as e:
-            self.log('parameter %s could not be set with the value %s due to error %s' % (parameter_name,
-                                                                                          parameter_value, e))
-
+            self.log(f'parameter {parameter_name} could not be set with the value {parameter_value} due to error {e}')             
     @property
     def roi(self):
         return tuple([x - 1 for x in self.Image[2:]])

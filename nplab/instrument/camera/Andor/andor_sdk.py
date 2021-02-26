@@ -206,6 +206,7 @@ class AndorBase(object):
         :param inputs: inputs required to set the particular parameter. Must be at least one
         :return:
         """
+        
         if len(inputs) == 1 and type(inputs[0]) == tuple:
             if len(np.shape(inputs)) == 2:
                 inputs = inputs[0]
@@ -219,9 +220,10 @@ class AndorBase(object):
             form_in = ()
             if 'Input_params' in func:
                 for input_param in func['Input_params']:
-                    form_in += ({'value': getattr(self, self._parameters['DetectorShape'][0], self._parameters['FVBHBin'][0]), 'type': input_param[1]},)
-            for ii in range(len(inputs)):
-                form_in += ({'value': inputs[ii], 'type': func['Inputs'][ii]},)
+                    form_in += ({'value': getattr(self, input_param[0]),
+                                  'type': input_param[1]},)
+            for val, typ in zip(inputs, func['Inputs']):
+                form_in += ({'value':val, 'type': typ},)
 
             form_out = ()
             if 'Outputs' in func:
@@ -459,11 +461,28 @@ class AndorBase(object):
         if self.CurrentCamera not in self._initialized_cameras:
             self._initialized_cameras += [self.CurrentCamera]
             self._dll_wrapper('Initialize', outputs=(c_char(),))
+# <<<<<<< HEAD
         detector_shape = self.get_andor_parameter('DetectorShape')
         self.set_andor_parameter('Image', 1, 1, 1, detector_shape[0], 1, detector_shape[1])
         if self.get_andor_parameter('NumAmp') > 1:
             self.set_andor_parameter('OutAmp', 1)  # This means EMCCD off - which is default just for safety
         else:
+# =======
+#         self.channel = 0
+#         self.set_andor_parameter('ReadMode', 4)
+#         self.set_andor_parameter('AcquisitionMode', 1)
+#         self.set_andor_parameter('TriggerMode', 0)
+#         self.set_andor_parameter('Exposure', 1)
+#         detector_shape = self.get_andor_parameter('DetectorShape')
+#         self.set_andor_parameter('Image', 1, 1, 1, detector_shape[0], 1, detector_shape[1])
+#         self.set_andor_parameter('Shutter', 1, 0, 0, 0)
+#         self.set_andor_parameter('SetTemperature', -90)
+#         self.set_andor_parameter('CoolerMode', 0)
+#         self.set_andor_parameter('FanMode', 0)
+#         try:
+#             self.set_andor_parameter('OutAmp', 1)  # This means EMCCD off - this is the default mode
+#         except AndorWarning:
+# >>>>>>> 642d2633a1fc31a24d017cb97b8427f0125f9387
             self.set_andor_parameter('OutAmp', 0)
         if self.get_andor_parameter('NumADChannels') > 1:
             self._logger.info('Andor has more than one ADC channel. Default settings is 0')

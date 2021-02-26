@@ -67,7 +67,7 @@ class Crosshair(pg.GraphicsObject):
 
     def boundingRect(self):
         """Makes a clickable rectangle around the center, which is half the size of the cross hair"""
-        return QtCore.QRectF(-self._size, -self._size, 2*self._size, 2*self._size)
+        return QtCore.QRectF(-self._size, -self._size, 2 * self._size, 2 * self._size)
 
     def mouseDragEvent(self, ev):
         # Ensures the Crosshair always remains in the center of a pixel, which makes the ROI selection easier
@@ -94,6 +94,7 @@ class ExtendedImageView(pg.ImageView):
 
     # TODO: link the histogram region with the lineedit levels
     """
+
     def __init__(self, *args, **kwargs):
         self.axis_values = dict(bottom=None, left=None, top=None, right=None)
         self.axis_units = dict(bottom=None, left=None, top=None, right=None)
@@ -145,12 +146,11 @@ class ExtendedImageView(pg.ImageView):
             self.ui.roiBtn.hide()
             self.ui.menuBtn.hide()
 
-    
     def roiClicked(self):
         """Ensures that the new widget in the splitter is displayed"""
         super(ExtendedImageView, self).roiClicked()
         if self.hasTimeAxis() and not self.ui.roiBtn.isChecked():
-            self.ui.splitter.setSizes([self.height()-70, 35, 35])
+            self.ui.splitter.setSizes([self.height() - 70, 35, 35])
 
     def buildMenu(self):
         """Adds an action to the existing pg.ImageView menu to toggle the visibility of the new GUI"""
@@ -186,12 +186,16 @@ class ExtendedImageView(pg.ImageView):
     # Percentile functions
     def getProcessedImage(self):
         """Checks if we want to autolevel for each image and does it"""
-        image = super(ExtendedImageView, self).getProcessedImage()
+        if self.imageDisp is None:
+            image = self.normalize(self.image)
+            self.imageDisp = image
+            self.levelMin, self.levelMax = self.quickMinMax(self.imageDisp)
+
         if self.levelGroup.checkbox_singleimagelevel.isChecked() and self.hasTimeAxis():
-            cur_image = image[self.currentIndex]
+            cur_image = self.imageDisp[self.currentIndex]
             self.levelMin, self.levelMax = self.quickMinMax(cur_image)
             self.autoLevels()  # sets the histogram setLevels(self.levelMin, self.levelMax)
-        return image
+        return self.imageDisp
 
     def set_level_percentiles(self):
         """
@@ -221,14 +225,14 @@ class ExtendedImageView(pg.ImageView):
         :return:
         """
         mm = super(ExtendedImageView, self).quickMinMax(data)
-        while type(mm[0]) in [list, tuple]: # 3.7 vs 3.8 fix
+        while type(mm) is list:  # 3.7 vs 3.8 fix
             mm = mm[0]
         minval, maxval = mm
         rng = maxval - minval
         levelmin = minval + rng * self.level_percentiles[0] / 100.
         levelmax = minval + rng * self.level_percentiles[1] / 100.
 
-        return [(levelmin, levelmax)]
+        return (levelmin, levelmax)
 
     # Crosshairs
     def pos_to_unit(self, positions):
@@ -247,9 +251,9 @@ class ExtendedImageView(pg.ImageView):
             axs = axs[:2]
         for ax, pos in zip(axs, positions):
             if hasattr(ax, 'pos_to_unit'):
-                units += (ax.pos_to_unit(pos), )
+                units += (ax.pos_to_unit(pos),)
             else:
-                units += (pos, )
+                units += (pos,)
 
         return units
 
@@ -267,7 +271,7 @@ class ExtendedImageView(pg.ImageView):
                 pos = tuple(xhair.referenced_pos())
                 positions += pos
             diff = np.linalg.norm(np.array(positions[:2]) - np.array(positions[2:]))
-            positions += (diff, )
+            positions += (diff,)
 
             display_string = "Pixels: <span style='color: red'>[%i,%i] </span> " \
                              "<span style='color: green'> [%i,%i] </span> " \
@@ -283,7 +287,7 @@ class ExtendedImageView(pg.ImageView):
                 units = ()
                 for ax in ['bottom', 'left']:
                     if self.axis_units[ax] is None:
-                        units += ('px', )
+                        units += ('px',)
                     else:
                         units += (self.axis_units[ax],)
                 display_string += "\t(%s, %s):" \
@@ -334,4 +338,3 @@ def test():
 
 if __name__ == "__main__":
     test()
-

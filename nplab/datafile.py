@@ -213,9 +213,8 @@ class Group(h5py.Group, ShowGUIMixin):
         """Return a subgroup, creating it if it does not exist."""
         return Group(super(Group, self).require_group(name).id)  # wrap the returned group
 
-    def create_dataset(self, name, data=None, attrs=None, auto_increment=True,
-                       shape=None, dtype=None, timestamp=True, autoflush=True,
-                       *args, **kwargs):
+    def create_dataset(self, name, auto_increment=True, shape=None, dtype=None,
+                       data=None, attrs=None, timestamp=True,autoflush = True, *args, **kwargs):
         """Create a new dataset, optionally with an auto-incrementing name.
 
         :param name: the name of the new dataset
@@ -351,6 +350,7 @@ class DataFile(Group):
             except:
                print("Error: could not save version information")
         self.update_current_group = update_current_group
+        
 
     def flush(self):
         self.file.flush()
@@ -455,7 +455,11 @@ def set_current(datafile, **kwargs):
             print("problem opening file:")
             print(e)
             print("trying with mode=r+")
-            kwargs['mode'] = 'r+'  # dirty hack to work around mode=a not working
+            # kwargs['mode'] = 'r+'  # dirty hack to work around mode=a not working
+            
+            if os.path.getsize(datafile) < 100: #1kB/10
+                os.remove(datafile)
+                
             _current_datafile = DataFile(datafile, **kwargs)
 
 def set_temporary_current_datafile():

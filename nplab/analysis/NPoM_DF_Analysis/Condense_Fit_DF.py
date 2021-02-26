@@ -24,36 +24,39 @@ from nplab.analysis.NPoM_DF_Analysis import Condense_DF_Spectra as cdf
 os.chdir(rootDir) #Important
 
 if __name__ == '__main__':
-    absoluteStartTime = time.time()
     print('\tModules imported')
+    absoluteStartTime = time.time()
 
-    '''Set raiseExceptions = True if the anaylsis fails; this will return the traceback'''
-    raiseExceptions = False #Setting this to True will stop the analysis return the traceback if an individual spectrum fails
-
-    statsOnly = False #if you have already analysed the spectra and want to re-plot histograms (etc)
-    pl = False #Set to True if your dataset contains PL
+    '''Set raiseExceptions = True if the analysis fails; this will return the traceback'''
+    raiseExceptions = False #Setting this to True will stop the analysis and return the traceback if an individual spectrum fails. Useful for debugging
+    intensityRatios = False #Plots CM peak positions against CM/TM intensity ratio. Useful for determining gap size and RI
+    statsOnly = False #Set to True if you have already analysed the spectra and want to re-plot histograms (etc)
+    pl = False #Set to True if your dataset contains PL measurments
     npSize = 80 #Peak analysis uses different values for different NP sizes. Valid inputs are 50, 60, 70, 80
-    npomTypes = ['All NPoMs', 'Ideal NPoMs'] # Valid entries: ['All NPoMs', 'Non-Weird-Peakers', 'Weird Peakers', 'Ideal NPoMs', 'Doubles', 'Singles']
+    npomTypes = ['All NPoMs', 'Non-Weird-Peakers', 'Weird Peakers', 'Aligned NPoMs', 'Ideal NPoMs', 'Doubles', 'Singles']
     consolidateScans = True
+    extractFirst = True #set to false if your summary file already exists, true to create another
+    avgZScans = False #if your data ends up with a weird, rising baseline, set this to True and try again
 
     if statsOnly == True:
         outputFileName = mpf.findH5File(os.getcwd(), nameFormat = 'MultiPeakFitOutput', mostRecent = True)#finds the most recent file with given name format
-        mpf.doStats(outputFileName, stacks = False, pl = pl, npomTypes = npomTypes)
+        mpf.doStats(outputFileName, stacks = False, pl = pl, npomTypes = npomTypes, intensityRatios = intensityRatios)
 
     else:
         startSpec = 0
         finishSpec = 0
 
-        if consolidateScans == True:
-            cdf.consoliData(os.getcwd())
-
-        summaryFile = cdf.extractAllSpectra(os.getcwd(), returnIndividual = True, start = startSpec,
-                                            finish = finishSpec, raiseExceptions = raiseExceptions,
-                                            consolidated = consolidateScans)#condenses Z-stack (inc. background subtraction and referencing) for each particle and makes summary file
-
-        if pl == True:
-            summaryFile = cdf.transferPlSpectra(os.getcwd(), startWl = 505, start = startSpec,
-                                                finish = finishSpec)#background subtracts each PL spectra and transfers them to the existing summary file
+        #if consolidateScans == True:
+        #    cdf.consoliData(os.getcwd())
+        
+        if extractFirst == True:
+            summaryFile = cdf.extractAllSpectra(os.getcwd(), returnIndividual = True, start = startSpec,
+                                                finish = finishSpec, raiseExceptions = raiseExceptions,
+                                                consolidated = consolidateScans, avgScans = avgZScans)#condenses Z-stack (inc. background subtraction and referencing) for each particle and makes summary file
+    
+            if pl == True:
+                summaryFile = cdf.transferPlSpectra(os.getcwd(), startWl = 505, start = startSpec,
+                                                    finish = finishSpec)#background subtracts each PL spectra and transfers them to the existing summary file
 
         #summaryFile = 'summary.h5' #use this instead of the above functions if you already have a summary file
 
@@ -61,7 +64,7 @@ if __name__ == '__main__':
             outputFileName = mpf.createOutputFile('MultiPeakFitOutput')
             mpf.fitAllSpectra(os.getcwd(), outputFileName, npSize = npSize, first = startSpec, last = finishSpec,
                               pl = pl, closeFigures = True, stats = True, npomTypes = npomTypes,
-                              raiseExceptions = raiseExceptions, raiseSpecExceptions = raiseExceptions)
+                              raiseExceptions = raiseExceptions, raiseSpecExceptions = raiseExceptions, intensityRatios = intensityRatios)
 
 
             print('\nData fitting complete')
@@ -71,7 +74,7 @@ if __name__ == '__main__':
                 outputFileName = mpf.createOutputFile('MultiPeakFitOutput')
                 mpf.fitAllSpectra(os.getcwd(), outputFileName, npSize = npSize, first = startSpec, last = finishSpec,
                                   pl = pl, closeFigures = True, stats = True, npomTypes = npomTypes,
-                                  raiseExceptions = raiseExceptions, raiseSpecExceptions = raiseExceptions)
+                                  raiseExceptions = raiseExceptions, raiseSpecExceptions = raiseExceptions, intensityRatios = intensityRatios)
 
                 print('\nData fitting complete')
 

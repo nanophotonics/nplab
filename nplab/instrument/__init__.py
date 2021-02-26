@@ -25,11 +25,15 @@ import inspect
 import os
 import h5py
 import datetime
+# <<<<<<< HEAD
 import json
 import numpy as np
 import tempfile
 
 
+# =======
+from contextlib import contextmanager
+# >>>>>>> 642d2633a1fc31a24d017cb97b8427f0125f9387
 LOGGER = create_logger('Instrument')
 LOGGER.setLevel('INFO')
 
@@ -259,6 +263,7 @@ class Instrument(ShowGUIMixin):
         if not os.path.isabs(filename):
             f = inspect.getfile(self.__class__)
             d = os.path.dirname(f)
+# <<<<<<< HEAD
             filename = os.path.join(d, filename)
         return filename
 
@@ -348,3 +353,46 @@ class Instrument(ShowGUIMixin):
                 f.create_dataset(name, data=data)
         else:
             raise ValueError('Unrecognised extension: %s' % ext)
+# =======
+#             self._config_file = nplab.datafile.DataFile(h5py.File(os.path.join(d, 'config.h5')), mode='a')
+#             self._config_file.attrs['date'] = datetime.datetime.now().strftime("%H:%M %d/%m/%y")
+#         return self._config_file
+#
+#     config_file = property(open_config_file)
+#
+#     def update_config(self, name, data, attrs= None):
+#         """Update the configuration file for this spectrometer.
+#
+#         A file is created in the nplab directory that holds configuration
+#         data for the spectrometer, including reference/background.  This
+#         function allows values to be stored in that file."""
+#         f = self.config_file
+#         if name in f:
+#             try: del f[name]
+#             except:
+#                 f[name][...] = data
+#                 f.flush()
+#         else:
+#             f.create_dataset(name, data=data ,attrs = attrs)
+
+    @contextmanager
+    def temporarily_set(self, **kwargs):
+        """Utility function for temporarily setting instrument parameters
+
+        :Example:
+        >>> with camera.temporarily_set(exposure=1, backgrounded=False):
+        >>>     image = camera.get_image()
+
+        :param kwargs: dict
+        :return:
+        """
+        try:
+            original_settings = dict()
+            for key, value in kwargs.items():
+                original_settings[key] = getattr(self, key)
+                setattr(self, key, value)
+            yield original_settings
+        finally:
+            for key, value in original_settings.items():
+                setattr(self, key, value)
+# >>>>>>> 642d2633a1fc31a24d017cb97b8427f0125f9387

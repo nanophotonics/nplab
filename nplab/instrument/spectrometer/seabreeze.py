@@ -203,11 +203,23 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
             check_error(e)
             self._isOpen = False
 
+# <<<<<<< HEAD
     def _config_filename(self, name=None, extension=None):
         if name is None:
             name = self.model_name+'_'+self.serial_number+'_config'
         return super(OceanOpticsSpectrometer, self)._config_filename(name, extension)
 
+# =======
+#     def open_config_file(self):
+#         if self._config_file is None:
+#             f = inspect.getfile(self.__class__)
+#             d = os.path.dirname(f)
+#             self._config_file = DataFile(h5py.File(os.path.join(d, self.model_name+'_'+self.serial_number+'_config.h5'), 'a'))
+#             self._config_file.attrs['date'] = datetime.datetime.now().strftime("%H:%M %d/%m/%y")
+#         return self._config_file
+#
+#     config_file = property(open_config_file)
+# >>>>>>> 642d2633a1fc31a24d017cb97b8427f0125f9387
     def get_API_version(self):
         N = 32  # make a buffer for the DLL to return a string into
         s = ctypes.create_string_buffer(N)
@@ -430,7 +442,7 @@ class OceanOpticsControlUI(SpectrometerControlUI):
             print(e, 'removing cooling functionality')
             tec = False
         if tec:
-            pass
+            
             self.set_tec_temperature_pushButton.clicked.connect(self.gui_set_tec_temperature)
             self.read_tec_temperature_pushButton.clicked.connect(self.gui_read_tec_tempeature)
             self.enable_tec.stateChanged.connect(self.update_enable_tec)
