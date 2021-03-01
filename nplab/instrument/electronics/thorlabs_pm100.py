@@ -7,7 +7,7 @@ Created on Thu Dec 19 16:24:49 2019
 import numpy as np
 from nplab.instrument.electronics.power_meter import PowerMeter
 from nplab.instrument.visa_instrument import VisaInstrument
-import visa
+
 
 
 class ThorlabsPowermeter(PowerMeter, VisaInstrument):
@@ -56,5 +56,6 @@ class ThorlabsPowermeter(PowerMeter, VisaInstrument):
         
 
 if __name__ == '__main__':
+    import pyvisa as visa
     pm = ThorlabsPowermeter(visa.ResourceManager().list_resources()[0])
     pm.show_gui(blocking = False)
