@@ -89,7 +89,7 @@ def suitable_renderers(h5object, return_scores=False):
             try:
                 renderers_and_scores.append((r.is_suitable(h5object), r))
             except Exception as e:
-                print("renderer {0} failed when checking suitability for {1}".format(r, h5object))
+                print("renderer {0} failed when checking suitability for {1} due to error: {2}".format(r, h5object,e))
                 pass # renderers that cause exceptions shouldn't be used!
         
     renderers_and_scores.sort(key=lambda score_r: score_r[0], reverse=True)
@@ -306,16 +306,18 @@ class DataRenderer1DPG(FigureRendererPG):
         if not hasattr(h5object, "values"):
             # If we have only one item, treat it as a group containing that item.
             h5object = {h5object.name: h5object}
-
-        for dataset in list(h5object.values()):
-            # Check that all datasets selected are either 1D or Nx2 or 2xN
-            if not (dataset.shape and isinstance(dataset, h5py.Dataset)):
-                return -1#we can only render datasets
-            try:
-                assert len(dataset.shape) == 1
-            except:
-                assert len(dataset.shape) == 2
-                assert np.any(np.array(dataset.shape) == 2)
+        try:
+            for dataset in list(h5object.values()):
+                # Check that all datasets selected are either 1D or Nx2 or 2xN
+                if not (dataset.shape and isinstance(dataset, h5py.Dataset)):
+                    return -1#we can only render datasets
+                try:
+                    assert len(dataset.shape) == 1
+                except:
+                    assert len(dataset.shape) == 2
+                    assert np.any(np.array(dataset.shape) == 2)
+        except:
+            return -1
         return 14
             
 add_renderer(DataRenderer1DPG)
@@ -745,7 +747,7 @@ class JPEGRenderer(DataRenderer2or3DPG):
             return 50
         if len(h5object.shape)==1:
             # Detect the JPEG header directly.  NB this is a work in progress, I don't think it works currently.
-            if h5object[:4] == np.array([255,216,255,224],dtype=np.uint8):
+            if all(np.array(h5object[:4]) == np.array([255,216,255,224],dtype=np.uint8)):
                 return 50
         return -1
 
