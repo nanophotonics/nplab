@@ -90,7 +90,6 @@ def suitable_renderers(h5object, return_scores=False):
                 renderers_and_scores.append((r.is_suitable(h5object), r))
             except Exception as e:
                 print("renderer {0} failed when checking suitability for {1}".format(r, h5object))
-                raise e
                 pass # renderers that cause exceptions shouldn't be used!
         
     renderers_and_scores.sort(key=lambda score_r: score_r[0], reverse=True)
@@ -365,7 +364,7 @@ class Scatter_plot1DPG(FigureRendererPG):
 add_renderer(Scatter_plot1DPG)
 
 
-class Normalised_Parameter_renderer(FigureRendererPG):
+class NormalisedParameterRenderer(FigureRendererPG):
     """ A renderer for multiple parameters plotted agains the same x-axis, normalised for easy comparison
         author: ee306
     """
@@ -409,14 +408,16 @@ class Normalised_Parameter_renderer(FigureRendererPG):
     def is_suitable(cls, h5object):
         
         if h5object.shape and len(h5object)>1:
-            if h5object.hasattr('parameter_renderer') and h5object.hasattr('x-axis'):
+            if hasattr(h5object, 'parameter_renderer') and hasattr(h5object, 'x-axis'):
                 return 5
+            else:
+                return -1
         else:
             return -1
 
-add_renderer(Normalised_Parameter_renderer)
+add_renderer(NormalisedParameterRenderer)
 
-class Parameter_renderer(FigureRendererPG):
+class ParameterRenderer(FigureRendererPG):
     """ A renderer for multiple parameters plotted agains the same x-axis
         author: ee306
     """
@@ -459,13 +460,15 @@ class Parameter_renderer(FigureRendererPG):
     @classmethod
     def is_suitable(cls, h5object):
         if h5object.shape and len(h5object)>1:
-            if h5object.hasattr('parameter_renderer') and h5object.hasattr('x-axis'):
+            if hasattr(h5object, 'parameter_renderer') and hasattr(h5object, 'x-axis'):
                 return 5
+            else:
+                return -1
         else:
             return -1
 
 
-add_renderer(Parameter_renderer)
+add_renderer(ParameterRenderer)
 
 class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
     """ A renderer for large spectral datasets experessing them in a colour map using
