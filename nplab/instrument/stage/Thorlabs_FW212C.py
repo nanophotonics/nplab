@@ -8,7 +8,7 @@ Created on Thu Nov 19 18:00:32 2015
 from builtins import range
 from builtins import str
 from nplab.instrument import Instrument
-import visa
+import pyvisa as visa
 from nplab.ui.ui_tools import UiTools
 from nplab.utils.gui import QtWidgets, uic
 import os

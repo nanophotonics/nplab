@@ -143,12 +143,13 @@ class HDF5ItemViewer(QtWidgets.QWidget, UiTools):
         
     @data.setter
     def data(self, newdata):
-        if newdata == None:
+        if newdata is None:
             return None
         
         self._data = newdata
 
         # When data changes, update the list of renderers
+        
         renderers = suitable_renderers(self.data)
         combobox = self.renderer_combobox
         previous_selection = combobox.currentIndex() # remember previous choice
@@ -573,11 +574,14 @@ class HDF5Browser(QtWidgets.QWidget, UiTools):
         """Callback function to update the displayed item when the tree selection changes."""
         try:
             self.viewer.data = self.treeWidget.selected_h5item()
+            print(self.viewer.data)
             if self.data_file.update_current_group == True:
                 df.set_current_group(self.treeWidget.selected_h5item())
 
         except Exception as e:
+            
             print(e, 'That could be corrupted')
+         
             
 
     def __del__(self):
