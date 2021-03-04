@@ -47,7 +47,7 @@ class ArbitraryAxis(pg.AxisItem):
         except Exception as e:
             # pg throws out a TypeError/RuntimeWarning when there's no ticks. We ignore it
             returnval = [''] * len(values)
-            print(e)
+            # print(e)
         return returnval
 
 
@@ -204,22 +204,25 @@ class ExtendedImageView(pg.ImageView):
         self.set_level_percentiles()
 
     def getProcessedImage(self):
+        """Reimplements the ImageView.getProcessedImage to allow leveling of each image in a time series"""
         rtrn = super(ExtendedImageView, self).getProcessedImage()
         if self.levelGroup.checkbox_singleimagelevel.isChecked() and self.hasTimeAxis():
+            if self.axes['c'] is not None:
+                # axes['c'] keeps track of what dimension is the colour. And since we are taking one dimension out when
+                # doing quickMinMax of each image in the time series:
+                self.axes['c'] -= 1
             self._imageLevels = self.quickMinMax(self.imageDisp[self.currentIndex])
             self.levelMin = min([level[0] for level in self._imageLevels])
             self.levelMax = max([level[1] for level in self._imageLevels])
             self.autoLevels()
+            if self.axes['c'] is not None:
+                # Now we bring it back to where it was before
+                self.axes['c'] += 1
         return rtrn
 
     def quickMinMax(self, data):
-        """Reimplements the ImageView.quickMinMax to set level percentiles
-
-        :param data:
-        :return:
-        """
+        """Reimplements the ImageView.quickMinMax to set level percentiles"""
         mm = super(ExtendedImageView, self).quickMinMax(data)
-
         return [(np.percentile(x, self.level_percentiles[0]),
                  np.percentile(x, self.level_percentiles[1])) for x in mm]
 
