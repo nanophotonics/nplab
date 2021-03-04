@@ -203,6 +203,15 @@ class ExtendedImageView(pg.ImageView):
         self.levelGroup.lineEdit_maxLevel.setText('100')
         self.set_level_percentiles()
 
+    def getProcessedImage(self):
+        rtrn = super(ExtendedImageView, self).getProcessedImage()
+        if self.levelGroup.checkbox_singleimagelevel.isChecked() and self.hasTimeAxis():
+            self._imageLevels = self.quickMinMax(self.imageDisp[self.currentIndex])
+            self.levelMin = min([level[0] for level in self._imageLevels])
+            self.levelMax = max([level[1] for level in self._imageLevels])
+            self.autoLevels()
+        return rtrn
+
     def quickMinMax(self, data):
         """Reimplements the ImageView.quickMinMax to set level percentiles
 
@@ -210,6 +219,7 @@ class ExtendedImageView(pg.ImageView):
         :return:
         """
         mm = super(ExtendedImageView, self).quickMinMax(data)
+
         return [(np.percentile(x, self.level_percentiles[0]),
                  np.percentile(x, self.level_percentiles[1])) for x in mm]
 
