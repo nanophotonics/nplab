@@ -11,7 +11,7 @@ from nplab.instrument.serial_instrument import SerialInstrument
 from nplab.instrument.light_sources import LightSource
 import serial
 import sys
-from PyQt4 import QtGui
+from PyQt5 import QtGui
 
 class CubeLaser(SerialInstrument, LightSource):
     def __init__(self, port=None):

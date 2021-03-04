@@ -69,6 +69,8 @@ class APT_VCP(serial_instrument.SerialInstrument):
     serial_num_to_device_types = {0: ['Filter flipper', 'MFF002'],
                                   20: ['Legacy Single channel stepper driver', 'BSC001'],
                                   25: ['Legacy single channel mini stepper driver', 'BMS001'],
+                                  27: ['K - Cube brushed DC servo driver', 'KDCT101'],
+                                  28: ['K - Cube brushless DC servo driver', 'KBD101'],
                                   30: ['Legacy dual channel stepper driver', 'BSC002'],
                                   35: ['Legacy dual channel mini stepper driver', 'BMS002'],
                                   40: ['Single channel stepper driver', 'BSC101'],
