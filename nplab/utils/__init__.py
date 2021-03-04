@@ -28,8 +28,9 @@ def monitor_property(instance, property_name, how_long, how_often, warn_limits=N
             value = getattr(instance, property_name)
             if warn_limits is not None:
                 if value < warn_limits[0] or value > warn_limits[1]:
+                    setattr(instance, '_monitoring_' + property_name, False)
                     raise ValueError('%s=%g is outside of range' % (property_name, value))
-            getattr(instance, property_name + '_history').append(value)
+            getattr(instance, property_name + '_history').append([time.time(), value])
             time.sleep(how_often)
 
     monitor_thread = threading.Thread(target=monitor)
