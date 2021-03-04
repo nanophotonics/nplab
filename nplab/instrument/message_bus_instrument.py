@@ -74,13 +74,13 @@ class MessageBusInstrument(nplab.instrument.Instrument):
             self._communications_lock = threading.RLock()
         return self._communications_lock
 
-    def write(self, query_string, timeout=None):
+    def write(self, query_string, timeout=None, *args, **kwargs):
         """Write a string to the unerlying communications port"""
         with self.communications_lock:
-            self._write(query_string)
+            self._write(query_string, *args, **kwargs)
             self._check_echo(query_string, timeout)
 
-    def _write(self, query_string):
+    def _write(self, query_string, *args, **kwargs):
         raise NotImplementedError("Subclasses of MessageBusInstrument must override the _write method!")
 
     def flush_input_buffer(self):

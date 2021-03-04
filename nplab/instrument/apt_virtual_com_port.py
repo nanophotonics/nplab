@@ -162,7 +162,7 @@ class APT_VCP(serial_instrument.SerialInstrument):
                                     'source': source}
             return returned_message
 
-    def write(self, message_id, param1=0x00, param2=0x00, data=None, destination_id = None):
+    def _write(self, message_id, param1=0x00, param2=0x00, data=None, destination_id = None):
         """Overwrite the serial write command to combine message_id,
             two possible paramters (set to 0 if not given)
             with the source and destinations """
@@ -191,7 +191,7 @@ class APT_VCP(serial_instrument.SerialInstrument):
             message_ids and paramaters """
         with self.communications_lock:
             self.flush_input_buffer()
-            self.write(message_id, param1, param2, data=data,destination_id=destination_id)
+            self._write(message_id, param1, param2, data=data,destination_id=destination_id)
             time.sleep(0.1)
             if blocking == True:
                 reply = self._waitForReply()
@@ -224,14 +224,14 @@ class APT_VCP(serial_instrument.SerialInstrument):
 
     def disconnect(self,destination_id = None):
         """Disconnect the controller from the usb bus"""
-        self.write(0x002,destination_id)
+        self.write(0x002, destination_id=destination_id)
 
     def enable_updates(self, enable_state, update_rate=10,destination_id = None):
         '''Enable or disable hardware updates '''
         if enable_state == True:
-            self.write(0x0011, param1=update_rate,destination_id = destination_id)
+            self.write(0x0011, param1=update_rate, destination_id = destination_id)
         if enable_state == False:
-            self.write(0x0012,destination_id)
+            self.write(0x0012, destination_id=destination_id)
 
     def get_hardware_info(self,destination_id = None):
         '''Manually get a status update '''
