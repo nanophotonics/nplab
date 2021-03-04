@@ -59,12 +59,13 @@ class MessageBusInstrument(nplab.instrument.Instrument):
     blocked for a long time.  The lock is reentrant so there's no issue with
     acquiring it twice.
     """
-    termination_character = "\n" #: All messages to or from the instrument end with this character.
+    termination_character = "\n"  #: All messages to or from the instrument end with this character.
     termination_read = None  #: Can be used if the writing and reading termination characters are different. Currently implemented in serial_instrument
-    termination_line = None #: If multi-line responses are recieved, they must end with this string
+    termination_line = None  #: If multi-line responses are recieved, they must end with this string
     ignore_echo = False
 
     _communications_lock = None
+
     @property
     def communications_lock(self):
         """A lock object used to protect access to the communications bus"""
@@ -74,11 +75,11 @@ class MessageBusInstrument(nplab.instrument.Instrument):
             self._communications_lock = threading.RLock()
         return self._communications_lock
 
-    def write(self, query_string, timeout=None, *args, **kwargs):
+    def write(self, write_string, timeout=None, *args, **kwargs):
         """Write a string to the unerlying communications port"""
         with self.communications_lock:
-            self._write(query_string, *args, **kwargs)
-            self._check_echo(query_string, timeout)
+            self._write(write_string, *args, **kwargs)
+            self._check_echo(write_string, timeout)
 
     def _write(self, query_string, *args, **kwargs):
         raise NotImplementedError("Subclasses of MessageBusInstrument must override the _write method!")
@@ -105,24 +106,20 @@ class MessageBusInstrument(nplab.instrument.Instrument):
         with self.communications_lock:
             if termination_line is None:
                 termination_line = self.termination_line
-            
-            # assert isinstance(termination_line, basestring), "If you perform a multiline query, you must specify a termination line either through the termination_line keyword argument or the termination_line property of the NPSerialInstrument."
-           
-            # assert type(termination_line) == types.StringType , "If you perform a multiline query, you must specify a termination line either through the termination_line keyword argument or the termination_line property of the NPSerialInstrument."        
+
             try:
                 assert isinstance(termination_line, basestring), "If you perform a multiline query, you must specify a termination line either through the termination_line keyword argument or the termination_line property of the NPSerialInstrument."
             except NameError:
                 assert isinstance(termination_line, str), "If you perform a multiline query, you must specify a termination line either through the termination_line keyword argument or the termination_line property of the NPSerialInstrument."
-            
-            
+
             response = ""
             last_line = "dummy"
-            while termination_line not in last_line and len(last_line) > 0: #read until we get the termination line.
+            while termination_line not in last_line and len(last_line) > 0:  # read until we get the termination line.
                 last_line = self.readline(timeout)
                 response += last_line
             return response
-            
-    def query(self,queryString,multiline=False,termination_line=None,timeout=None):
+
+    def query(self, query_string, multiline=False, termination_line=None, timeout=None):
         """
         Write a string to the stage controller and return its response.
 
@@ -131,14 +128,14 @@ class MessageBusInstrument(nplab.instrument.Instrument):
         """
         with self.communications_lock:
             self.flush_input_buffer()
-            self.write(queryString, timeout)
+            self.write(query_string, timeout)
 
             if termination_line is not None:
                 multiline = True
             if multiline:
                 return self.read_multiline(termination_line)
             else:
-                return self.readline(timeout).strip() #question: should we strip the final newline?
+                return self.readline(timeout).strip()  # question: should we strip the final newline?
 
     def _check_echo(self, echo_string, timeout=None):
         if self.ignore_echo:
@@ -168,6 +165,7 @@ class MessageBusInstrument(nplab.instrument.Instrument):
                 return list(map(parse_function,res.groups()))
         except ValueError:
             raise ValueError("Stage response to %s ('%s') couldn't be parsed by the supplied function" % (query_string, reply))
+
     def parsed_query(self, query_string, response_string=r"%d", re_flags=0, parse_function=None, **kwargs):
         """
         Perform a query, returning a parsed form of the response.
@@ -187,36 +185,36 @@ class MessageBusInstrument(nplab.instrument.Instrument):
         """
 
         response_regex = response_string
-        noop = lambda x: x #placeholder null parse function
-        placeholders = [ #tuples of (regex matching placeholder, regex to replace it with, parse function)
-            (r"%c",r".", noop),
-            (r"%(\\d+)c",r".{\1}", noop), #TODO support %cn where n is a number of chars
-            (r"%d",r"[-+]?\\d+", int),
-            (r"%[eEfg]",r"[-+]?(?:\\d+(?:\.\\d*)?|\.\\d+)(?:[eE][-+]?\\d+)?", float),
+        noop = lambda x: x  # placeholder null parse function
+        placeholders = [  # tuples of (regex matching placeholder, regex to replace it with, parse function)
+            (r"%c", r".", noop),
+            (r"%(\\d+)c", r".{\1}", noop),  # TODO support %cn where n is a number of chars
+            (r"%d", r"[-+]?\\d+", int),
+            (r"%[eEfg]", r"[-+]?(?:\\d+(?:\.\\d*)?|\.\\d+)(?:[eE][-+]?\\d+)?", float),
             # (r"%(\\d+)c",r".{\\1}", noop), #TODO support %cn where n is a number of chars
             # (r"%d",r"[-+]?\\d+", int),
             # (r"%[eEfg]",r"[-+]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?", float),
-            (r"%i",r"[-+]?(?:0[xX][\\dA-Fa-f]+|0[0-7]*|\\d+)", lambda x: int(x, 0)), #0=autodetect base
-            (r"%o",r"[-+]?[0-7]+", lambda x: int(x, 8)), #8 means octal
-            (r"%s",r"\\S+",noop),
-            (r"%u",r"\\d+",int),
-            (r"%[xX]",r"[-+]?(?:0[xX])?[\\dA-Fa-f]+",lambda x: int(x, 16)), #16 forces hexadecimal
+            (r"%i", r"[-+]?(?:0[xX][\\dA-Fa-f]+|0[0-7]*|\\d+)", lambda x: int(x, 0)),  # 0=autodetect base
+            (r"%o", r"[-+]?[0-7]+", lambda x: int(x, 8)),  # 8 means octal
+            (r"%s", r"\\S+", noop),
+            (r"%u", r"\\d+", int),
+            (r"%[xX]", r"[-+]?(?:0[xX])?[\\dA-Fa-f]+", lambda x: int(x, 16)),  # 16 forces hexadecimal
         ]
         matched_placeholders = []
         for placeholder, regex, parse_fun in placeholders:
-            response_regex = re.sub(placeholder, '('+regex+')', response_regex) #substitute regex for placeholder
-            matched_placeholders.extend([(parse_fun, m.start()) for m in re.finditer(placeholder, response_string)]) #save the positions of the placeholders
+            response_regex = re.sub(placeholder, '(' + regex + ')', response_regex)  # substitute regex for placeholder
+            matched_placeholders.extend([(parse_fun, m.start()) for m in re.finditer(placeholder, response_string)])  # save the positions of the placeholders
         if parse_function is None:
-            parse_function = [f for f, s in sorted(matched_placeholders, key=lambda m: m[1])] #order parse functions by their occurrence in the original string
-        if not hasattr(parse_function,'__iter__'):
-            parse_function = [parse_function] #make sure it's a list.
+            parse_function = [f for f, s in sorted(matched_placeholders, key=lambda m: m[1])]  # order parse functions by their occurrence in the original string
+        if not hasattr(parse_function, '__iter__'):
+            parse_function = [parse_function]  # make sure it's a list.
 
-        reply = self.query(query_string, **kwargs) #do the query
+        reply = self.query(query_string, **kwargs)  # do the query
         res = re.search(response_regex, reply, flags=re_flags)
         if res is None:
             raise ValueError("Stage response to '%s' ('%s') wasn't matched by /%s/ (generated regex /%s/" % (query_string, reply, response_string, response_regex))
         try:
-            parsed_result= [f(g) for f, g in zip(parse_function, res.groups())] #try to apply each parse function to its argument
+            parsed_result = [f(g) for f, g in zip(parse_function, res.groups())]  # try to apply each parse function to its argument
             if len(parsed_result) == 1:
                 return parsed_result[0]
             else:
@@ -226,9 +224,11 @@ class MessageBusInstrument(nplab.instrument.Instrument):
             print("Matched Groups:", res.groups())
             print("Parsing Functions:", parse_function)
             raise ValueError("Stage response to %s ('%s') couldn't be parsed by the supplied function" % (query_string, reply))
+
     def int_query(self, query_string, **kwargs):
         """Perform a query and return the result(s) as integer(s) (see parsedQuery)"""
         return self.parsed_query(query_string, "%d", **kwargs)
+
     def float_query(self, query_string, **kwargs):
         """Perform a query and return the result(s) as float(s) (see parsedQuery)"""
         return self.parsed_query(query_string, "%f", **kwargs)
@@ -352,8 +352,10 @@ class EchoInstrument(MessageBusInstrument):
     def __init__(self):
         super(EchoInstrument, self).__init__()
         self._last_write = ""
-    def write(self, msg):
+
+    def _write(self, msg, *args, **kwargs):
         self._last_write = msg
+
     def readline(self, timeout=None):
         return self._last_write
 
