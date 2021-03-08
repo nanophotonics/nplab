@@ -16,13 +16,14 @@ class Kandor(Andor):
                  use_shifts=False, 
                  laser_wl=632.8,
                  white_shutter=None):
+        
+        super().__init__()
         self.kymera = Kymera()
         self.kymera.pixel_number = pixel_number
         self.kymera.pixel_width = pixel_width
         self.use_shifts = use_shifts
         self.laser_wl = laser_wl
         self.white_shutter = white_shutter
-        super().__init__()
         self.metadata_property_names += ('slit_width', 'wavelengths')
         self.ImageFlip = 0
     
