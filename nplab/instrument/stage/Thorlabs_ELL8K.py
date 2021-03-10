@@ -69,7 +69,26 @@ def int_to_twos_complement(integer, padded_length=16,debug = 0):
             print("twos comp (int):", int(twos_complement,base=2)) 
         return int("0b"+twos_complement,base=2)
 
-class Thorlabs_ELL8K(SerialInstrument,Stage):
+class BusDistributor(SerialInstrument):
+    ''' a class to handle the port settings of a thorlabs ELLB distributor bus.
+    Each of these can have several devices attached. They are assigned device
+    indices by the thorlabs Ello software - otherwise they all default to 0 and
+    don't work separately. 
+    '''
+    def __init__(self, port):
+        self.termination_character = '\n'
+        self.port_settings = dict(baudrate=9600,
+                                  bytesize=8,
+                                  stopbits=1,
+                                  parity='N',
+                                  timeout=2,
+                                  writeTimeout=2,
+                                  xonxoff=False)
+        super().__init__(port)
+        
+
+
+class Thorlabs_ELL8K(Stage):
 
     #default id is 0, but if multiple devices of same type connected may have others
     VALID_DEVICE_IDs = [str(v) for v in list(range(0,11)) + ["A","B","C","D","E","F"]]
@@ -102,19 +121,15 @@ class Thorlabs_ELL8K(SerialInstrument,Stage):
             "OutOfBounds" : "Reserved"
         }
 
-    def __init__(self,port=None,device_index=0,debug=0):
+    def __init__(self, serial_device, device_index=0, debug=0):
+        '''can be passed either a BusDistributor instance, or  "COM5"  '''
+        if type(serial_device) is str:
+            self.serial_device = BusDistributor(serial_device)
+        else:
+            self.serial_device = serial_device
+        self.serial_device = serial_device
         self.debug = debug
-        self.termination_character = '\n'
-        self.port_settings = dict(baudrate=9600,
-                                  bytesize=8,
-                                  stopbits=1,
-                                  parity='N',
-                                  timeout=2,
-                                  writeTimeout=2,
-                                  xonxoff=False
-        )
 
-        SerialInstrument.__init__(self, port)
         Stage.__init__(self)
         self.ui = None
 
@@ -141,7 +156,7 @@ class Thorlabs_ELL8K(SerialInstrument,Stage):
         raw_query = "{0}{1}".format(self.device_index,query)
         if self.debug > 0:
             print("raw_query",raw_query)
-        raw_response = self.query(raw_query) 
+        raw_response = self.serial_device.query(raw_query) 
         if self.debug > 0:
             print("raw_response",raw_response)
         return raw_response
@@ -506,8 +521,7 @@ def test_ui():
     sys.exit(app.exec_())
 
 if __name__ == "__main__":
+
     stage = Thorlabs_ELL8K("COM3",debug=False)
-    # test_stage(stage)
-    # test_ui()
 
     
