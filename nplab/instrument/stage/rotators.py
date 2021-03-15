@@ -11,11 +11,29 @@ from nplab.instrument import Instrument
 from itertools import zip_longest
 import re
 import winsound, random
+import numpy as np
 
 def squawk():
     for i in range(5):
         winsound.Beep(random.randrange(37,3500),random.randrange(70,750)) 
+    return 'I did a thing'
+
 class Rotators(QtWidgets.QWidget, Instrument):
+    ''' takes a list of rotators (must have a move function, should be a subclass of Stage),
+    and makes a simple gui for them. Enter a list of angles to turn to, and they will be
+    iterated through according to the rules of itertools.zip_longest, and the payload 
+    function called, and its results saved. payload should return the data to be saved. 
+    allowed formats:
+        A: 0, 10, 20
+        B: 0, 45, 90
+        C: 
+            #will not move rotator c
+        A: np.linspace(0, 360, 10)
+        B: np.arange(0, 360, 10)
+        C: 45
+        # will set C to 45 deg, B will continue moving and taking measurements 
+        # after A runs out
+        '''
     def __init__(self, rotators, payload=squawk):
         QtWidgets.QWidget.__init__(self)
         Instrument.__init__(self)
@@ -49,7 +67,8 @@ class Rotators(QtWidgets.QWidget, Instrument):
         if text:
             if text.startswith('np.'):
                 return eval(text.strip()).tolist()
-            return list(map(float, re.split(r',| |;', text)))
+            split = (s for s in re.split(r',| |;', text) if s)
+            return list(map(float, split))
         else:
             return []
         
