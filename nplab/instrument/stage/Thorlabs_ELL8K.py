@@ -127,7 +127,6 @@ class Thorlabs_ELL8K(Stage):
             self.serial_device = BusDistributor(serial_device)
         else:
             self.serial_device = serial_device
-        self.serial_device = serial_device
         self.debug = debug
 
         Stage.__init__(self)
@@ -522,6 +521,6 @@ def test_ui():
 
 if __name__ == "__main__":
 
-    stage = Thorlabs_ELL8K("COM3",debug=False)
+    stage = Thorlabs_ELL8K("COM14",debug=False)
 
     
