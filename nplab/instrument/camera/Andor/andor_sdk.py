@@ -606,7 +606,8 @@ class AndorBase(object):
     
     
     @locked_action    
-    def SetRandomTracks(self, number_tracks, pixels):
+    def SetRandomTracks(self, number_tracks_and_pixels):
+        number_tracks, pixels = number_tracks_and_pixels
         assert len(pixels)/number_tracks == 2
         self._RandomTracks = number_tracks, pixels
         number_tracks = c_int(number_tracks)

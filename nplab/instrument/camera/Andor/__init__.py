@@ -196,7 +196,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         assert not len(pixels) % 2, 'must be even number of inputs'
         tracks = len(pixels)//2
         print(tracks, pixels)
-        self.Andor.SetRandomTracks(tracks, pixels)
+        self.Andor.RandomTracks = tracks, pixels
         print('set')
         
     def init_gui(self):
