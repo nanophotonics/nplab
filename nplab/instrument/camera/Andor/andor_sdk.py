@@ -605,7 +605,7 @@ class AndorBase(object):
         self.set_andor_parameter('FastKinetics', n_rows, series_Length, expT, mode, hbin, vbin, offset)
     
     
-        
+    @locked_action    
     def SetRandomTracks(self, number_tracks, pixels):
         assert len(pixels)/number_tracks == 2
         self._number_random_tracks = number_tracks
