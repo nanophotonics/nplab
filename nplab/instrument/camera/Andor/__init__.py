@@ -8,6 +8,7 @@ from nplab.utils.notified_property import register_for_property_changes
 import nplab.datafile as df
 
 import os
+import re
 import numpy as np
 from nplab.ui.ui_tools import UiTools
 from weakref import WeakSet
@@ -162,6 +163,7 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         self.spinBoxNumAccum.valueChanged.connect(self.number_accumulations)
         self.spinBoxNumRows.valueChanged.connect(self.number_rows)
         self.spinBoxCenterRow.valueChanged.connect(self.number_rows)
+        self.randomtrack_pixels_lineEdit.editingFinished.connect(self.randomtrack_pixels)
         for box in ['Tracks', 'Height', 'Offset']:
             eval(f'self.spinBox{box}.valueChanged.connect(self.set_multitrack)')
         self.checkBoxROI.stateChanged.connect(self.ROI)
@@ -188,7 +190,15 @@ class AndorUI(QtWidgets.QWidget, UiTools):
     
     def set_multitrack(self):
         self.Andor.MultiTrack = self.spinBoxTracks.value(), self.spinBoxHeight.value(), self.spinBoxOffset.value()
-
+    def randomtrack_pixels(self):
+        numbers = [i  for i in re.split(r',| ', self.randomtrack_pixels_lineEdit.text()) if i]
+        pixels = list(map(int, numbers))
+        assert not len(pixels) % 2, 'must be even number of inputs'
+        tracks = len(pixels)//2
+        print(tracks, pixels)
+        self.Andor.SetRandomTracks(tracks, pixels)
+        print('set')
+        
     def init_gui(self):
         trig_modes = {0: 0, 1: 1, 6: 2}
         self.comboBoxAcqMode.setCurrentIndex(self.Andor._parameters['AcquisitionMode'] - 1)
@@ -287,6 +297,10 @@ class AndorUI(QtWidgets.QWidget, UiTools):
             for box in ['Tracks', 'Height', 'Offset']:
                 eval(f'self.label{box}.hide()')
                 eval(f'self.spinBox{box}.hide()')
+        if currentMode == 'Random track':
+            self.randomtrack_pixels_lineEdit.show()
+        else:
+            self.randomtrack_pixels_lineEdit.hide()
 
     def update_ReadMode(self, index):
         self.comboBoxReadMode.setCurrentIndex(index)
