@@ -515,7 +515,7 @@ class AndorBase(object):
             elif self._parameters['ReadMode'] == 1:  # random track
                 image_shape = (self.MultiTrack[0], self._parameters['DetectorShape'][0] // self._parameters['FVBHBin'])
             elif self._parameters['ReadMode'] == 2:
-                image_shape = ( self._number_random_tracks, self._parameters['DetectorShape'][0]// self._parameters['FVBHBin'])
+                image_shape = ( self.RandomTracks[0], self._parameters['DetectorShape'][0]// self._parameters['FVBHBin'])
                  
             elif self._parameters['ReadMode'] == 3:
                 image_shape = (self._parameters['DetectorShape'][0],)
@@ -608,12 +608,15 @@ class AndorBase(object):
     @locked_action    
     def SetRandomTracks(self, number_tracks, pixels):
         assert len(pixels)/number_tracks == 2
-        self._number_random_tracks = number_tracks
+        self._RandomTracks = number_tracks, pixels
         number_tracks = c_int(number_tracks)
         arr = c_int * len(pixels)
         c_pixels = arr(*pixels)
         return self.dll.SetRandomTracks(number_tracks, byref(c_pixels))
-        
+    
+    def GetRandomTracks(self):
+        return self._RandomTracks
+    RandomTracks = property(GetRandomTracks, SetRandomTracks)
 
     @property
     def status(self):
