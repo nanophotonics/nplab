@@ -228,32 +228,16 @@ class DisplayWidgetRoiScale(ExtendedImageView):
         if len(newimage.shape) == 1:
             self.toggle_displays(True)
             self.plot[0].setData(x=self.x_axis, y=newimage)
-        elif len(newimage.shape) == 2:
-            if newimage.shape[0] > self._max_num_line_plots:
-                self.toggle_displays(False)
-                # levels = [np.percentile(newimage, x) for x in self.levels()]
-                self.setImage(newimage.astype(float),
-                              pos=offset,
-                              autoRange=self.checkbox_autorange.isChecked(),
-                              # levels=levels,
-                              scale=scale)
-            else:
-                self.toggle_displays(True)
-                for ii, ydata in enumerate(newimage):
-                    self.plot[ii].setData(x=self.x_axis, y=ydata)
-        elif len(newimage.shape) == 3:
+        elif len(newimage.shape) == 2 and newimage.shape[0] < self._max_num_line_plots:
+            self.toggle_displays(True)
+            for ii, ydata in enumerate(newimage):
+                self.plot[ii].setData(x=self.x_axis, y=ydata)
+        else:
             self.toggle_displays(False)
-            zvals = 0.99 * np.linspace(0, newimage.shape[0] - 1, newimage.shape[0])
-            if newimage.shape[0] == 1:
-                newimage = newimage[0]
-            # levels = [np.percentile(newimage, x) for x in self.levels()]
-            self.setImage(newimage.astype(float), xvals=zvals,
+            self.setImage(newimage.astype(float),
                           pos=offset,
                           autoRange=self.checkbox_autorange.isChecked(),
-                          # levels=levels,
                           scale=scale)
-        else:
-            raise ValueError('Cannot display. Array shape unrecognised')
 
     def update_image(self, newimage):
         self.update_data_signal.emit(newimage)
@@ -264,15 +248,23 @@ class DummyCameraRoiScale(CameraRoiScale):
 
     def __init__(self, data='spectrum'):
         super(DummyCameraRoiScale, self).__init__()
-        self.data = data
+        self.data_type = data
 
     def raw_snapshot(self, update_latest_frame=True):
         """Returns a True, stating a succesful snapshot, followed by a (100,100)
         picture randomly generated image"""
-        if self.data == 'spectrum':
+        if self.data_type == 'spectrum':
             ran = 100 * ArrayWithAttrs(np.random.random(1600))
-        else:
+        elif self.data_type == 'color_time':
+            ran = 100 * np.array([np.random.random((200, 1600, 3)) * x for x in np.arange(1, 11)])
+        elif self.data_type == 'time':
+            ran = 100 * np.array([np.random.random((200, 1600, 3)) * x for x in np.arange(1, 11)])
+        elif self.data_type == 'image':
             ran = 100 * np.random.random((200, 1600))
+        elif self.data_type == 'color':
+            ran = 100 * np.random.random((200, 1600, 3))
+        else:
+            raise NotImplementedError
         self._latest_raw_frame = ran
         return True, ran
 
@@ -286,10 +278,14 @@ class DummyCameraRoiScale(CameraRoiScale):
 
 
 if __name__ == '__main__':
+    import sys
+    from nplab.utils.gui import get_qt_app
+    app = get_qt_app()
 
     dcrd = DummyCameraRoiScale()
-    dcrd.data = 1
+    dcrd.data_type = 'color_time'
     gui = dcrd.show_gui(blocking=False)
-    dw = gui.preview_widget
-    dw.setImage(np.random.random((200, 1600)))
-
+    dcrd.raw_snapshot()
+    # dw = gui.preview_widget
+    # dw.setImage(np.random.random((200, 1600)))
+    sys.exit(app.exec_())
