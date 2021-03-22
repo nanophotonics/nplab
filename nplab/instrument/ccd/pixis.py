@@ -29,6 +29,8 @@ class PixisError(Exception):
 
 
 class Pixis256E(CCD,Camera):
+    _CONFIG_EXTENSION = '.h5'
+
     def __init__(self):
         super(Pixis256E, self).__init__()
         try:

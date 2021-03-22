@@ -42,7 +42,9 @@ class Spectrometer(Instrument):
    
     variable_int_enabled = DumbNotifiedProperty(False)
     filename = DumbNotifiedProperty("spectrum")
+    _CONFIG_EXTENSION = '.h5'
     dark = False
+
     def __init__(self):
         super(Spectrometer, self).__init__()
         self._model_name = None
@@ -60,7 +62,6 @@ class Spectrometer(Instrument):
         self.averaging_enabled = False
         self.spectra_deque = deque(maxlen = 1)
         self.absorption_enabled = False
-        self._config_file = None
 
         self.stored_references = {}
         self.stored_backgrounds = {}
@@ -71,38 +72,6 @@ class Spectrometer(Instrument):
         self.num_spectra = 1
         self.delay = 0
         self.time_series_name = 'time_series_%d'
-
-
-    def __del__(self):
-        try:
-            self._config_file.close()
-        except AttributeError:
-            pass #if it's not present, we get an exception - which doesn't matter.
-
-    def open_config_file(self):
-        """Open the config file for the current spectrometer and return it, creating if it's not there"""
-        if self._config_file is None:
-            f = inspect.getfile(self.__class__)
-            d = os.path.dirname(f)
-            self._config_file = DataFile(h5py.File(os.path.join(d, 'config.h5')))
-            self._config_file.attrs['date'] = datetime.datetime.now().strftime("%H:%M %d/%m/%y")
-        return self._config_file
-
-    config_file = property(open_config_file)
-
-    def update_config(self, name, data, attrs= None):
-        """Update the configuration file for this spectrometer.
-        
-        A file is created in the nplab directory that holds configuration
-        data for the spectrometer, including reference/background.  This
-        function allows values to be stored in that file."""
-        f = self.config_file
-        if name not in f:
-            f.create_dataset(name, data=data ,attrs = attrs)
-        else:
-            dset = f[name]
-            dset[...] = data
-            f.flush()
 
     def get_model_name(self):
         """The model name of the spectrometer."""

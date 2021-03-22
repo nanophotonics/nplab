@@ -16,8 +16,11 @@ import time
 
 class Andor(CameraRoiScale, AndorBase):
     metadata_property_names = ('Exposure', 'x_axis', 'CurrentTemperature',)
+    config_property_names = CameraRoiScale.config_property_names + ('ReadMode', 'AcquisitionMode', 'TriggerMode',
+                                                                    'Exposure', 'Shutter', 'SetTemperature',
+                                                                    'CoolerMode', 'FanMode', 'cooler')
 
-    def __init__(self, settings_filepath=None, camera_index=None, **kwargs):
+    def __init__(self, settings_filepath=None, camera_index=None, config_file=None, **kwargs):
         super(Andor, self).__init__()
         self.start(camera_index)
 
@@ -30,6 +33,10 @@ class Andor(CameraRoiScale, AndorBase):
         self.isAborted = False
 
         self.detector_shape = self.DetectorShape  # passing the Andor parameter to the CameraRoiScale class
+        if config_file is not None:
+            self.config = self.load_config(config_file)
+        else:
+            self.config = self.load_config('default_config')
 
     def __del__(self):
         # Need to explicitly call this method so that the shutdown procedure is followed correctly

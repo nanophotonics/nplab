@@ -461,22 +461,32 @@ class AndorBase(object):
         if self.CurrentCamera not in self._initialized_cameras:
             self._initialized_cameras += [self.CurrentCamera]
             self._dll_wrapper('Initialize', outputs=(c_char(),))
-        self.channel = 0
-        self.set_andor_parameter('ReadMode', 4)
-        self.set_andor_parameter('AcquisitionMode', 1)
-        self.set_andor_parameter('TriggerMode', 0)
-        self.set_andor_parameter('Exposure', 1)
+# <<<<<<< HEAD
         detector_shape = self.get_andor_parameter('DetectorShape')
         self.set_andor_parameter('Image', 1, 1, 1, detector_shape[0], 1, detector_shape[1])
-        self.set_andor_parameter('Shutter', 1, 0, 0, 0)
-        self.set_andor_parameter('SetTemperature', -90)
-        self.set_andor_parameter('CoolerMode', 0)
-        self.set_andor_parameter('FanMode', 0)
-        try:
-            self.set_andor_parameter('OutAmp', 1)  # This means EMCCD off - this is the default mode
-        except AndorWarning:
+        if self.get_andor_parameter('NumAmp') > 1:
+            self.set_andor_parameter('OutAmp', 1)  # This means EMCCD off - which is default just for safety
+        else:
+# =======
+#         self.channel = 0
+#         self.set_andor_parameter('ReadMode', 4)
+#         self.set_andor_parameter('AcquisitionMode', 1)
+#         self.set_andor_parameter('TriggerMode', 0)
+#         self.set_andor_parameter('Exposure', 1)
+#         detector_shape = self.get_andor_parameter('DetectorShape')
+#         self.set_andor_parameter('Image', 1, 1, 1, detector_shape[0], 1, detector_shape[1])
+#         self.set_andor_parameter('Shutter', 1, 0, 0, 0)
+#         self.set_andor_parameter('SetTemperature', -90)
+#         self.set_andor_parameter('CoolerMode', 0)
+#         self.set_andor_parameter('FanMode', 0)
+#         try:
+#             self.set_andor_parameter('OutAmp', 1)  # This means EMCCD off - this is the default mode
+#         except AndorWarning:
+# >>>>>>> 642d2633a1fc31a24d017cb97b8427f0125f9387
             self.set_andor_parameter('OutAmp', 0)
-        self.cooler = 1
+        if self.get_andor_parameter('NumADChannels') > 1:
+            self._logger.info('Andor has more than one ADC channel. Default settings is 0')
+            self.set_andor_parameter('ADChannel', 0)
 
     @locked_action
     def capture(self):
@@ -668,8 +678,7 @@ parameters = dict(
     AvailableCameras=dict(Get=dict(cmdName='GetAvailableCameras', Outputs=(c_uint,)), value=None),
     CurrentCamera=dict(Get=dict(cmdName='GetCurrentCamera', Outputs=(c_uint,)),
                        Set=dict(cmdName='SetCurrentCamera', Inputs=(c_uint,))),
-    channel=dict(value=0),
-    CameraHandle=dict(Get=dict(cmdName='GetCameraHandle', Outputs=(c_uint,), Input_params=(('camera_index', c_int), ))),
+    CameraHandle=dict(Get=dict(cmdName='GetCameraHandle', Outputs=(c_uint,), Input_params=(('camera_index', c_int),))),
     PixelSize=dict(Get=dict(cmdName='GetPixelSize', Outputs=(c_float, c_float))),
     SoftwareWaitBetweenCaptures=dict(value=0),
     SoftwareVersion=dict(Get=dict(cmdName='GetSoftwareVersion', Outputs=(c_int, c_int, c_int, c_int, c_int, c_int))),
@@ -714,20 +723,21 @@ parameters = dict(
     Spool=dict(Set=dict(cmdName='SetSpool', Inputs=(c_int, c_int, c_char, c_int)), value=None),
     NumVSSpeed=dict(Get=dict(cmdName='GetNumberVSSpeeds', Outputs=(c_int,)), value=None),
     NumHSSpeed=dict(Get=dict(cmdName='GetNumberHSSpeeds', Outputs=(c_int,),
-                             Input_params=(('channel', c_int), ('OutAmp', c_int))), value=None),
+                             Input_params=(('ADChannel', c_int), ('OutAmp', c_int))), value=None),
     VSSpeed=dict(Set=dict(cmdName='SetVSSpeed', Inputs=(c_int,)), Get_from_prop='VSSpeeds'),
     VSSpeeds=dict(Get=dict(cmdName='GetVSSpeed', Inputs=(c_int,), Outputs=(c_float,), Iterator='NumVSSpeed')),
     # why no work?
     HSSpeed=dict(Set=dict(cmdName='SetHSSpeed', Inputs=(c_int,), Input_params=(('OutAmp', c_int),)),
                  Get_from_prop='HSSpeeds'),
     HSSpeeds=dict(Get=dict(cmdName='GetHSSpeed', Inputs=(c_int,) * 2, Iterator='NumHSSpeed', Outputs=(c_float,),
-                           Input_params=(('channel', c_int), ('OutAmp', c_int),))),
+                           Input_params=(('ADChannel', c_int), ('OutAmp', c_int),))),
     NumPreAmp=dict(Get=dict(cmdName='GetNumberPreAmpGains', Outputs=(c_int,))),
     PreAmpGains=dict(Get=dict(cmdName='GetPreAmpGain', Inputs=(c_int,), Outputs=(c_float,), Iterator='NumPreAmp')),
     PreAmpGain=dict(Set=dict(cmdName='SetPreAmpGain', Inputs=(c_int,)), Get_from_prop='PreAmpGains'),
     NumADChannels=dict(Get=dict(cmdName='GetNumberADChannels', Outputs=(c_int,))),
     ADChannel=dict(Set=dict(cmdName='SetADChannel', Inputs=(c_int,))),
-    BitDepth=dict(Get=dict(cmdName='GetBitDepth', Inputs=(c_int,), Outputs=(c_int,), Iterator='NumADChannels'))
+    BitDepth=dict(Get=dict(cmdName='GetBitDepth', Inputs=(c_int,), Outputs=(c_int,), Iterator='NumADChannels')),
+    NumAmp=dict(Get=dict(cmdName='GetNumberAmp', Outputs=(c_int,)))
 )
 for param_name in parameters:
     if param_name != 'Image':
