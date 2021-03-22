@@ -47,7 +47,7 @@ class ArbitraryAxis(pg.AxisItem):
         except Exception as e:
             # pg throws out a TypeError/RuntimeWarning when there's no ticks. We ignore it
             returnval = [''] * len(values)
-            print(e)
+            # print(e)
         return returnval
 
 
@@ -184,22 +184,6 @@ class ExtendedImageView(pg.ImageView):
                 ax.show()
 
     # Percentile functions
-    def getProcessedImage(self):
-        """Checks if we want to autolevel for each image and does it"""
-        if self.imageDisp is None:
-            image = self.normalize(self.image)
-            self.imageDisp = image
-            mm = self.quickMinMax(image)
-            self.levelMin, self.levelMax = self.quickMinMax(image)[0] if type(mm) is list else mm
-            self._imageLevels = self.quickMinMax(self.imageDisp)
-        if self.levelGroup.checkbox_singleimagelevel.isChecked() and self.hasTimeAxis():
-            cur_image = self.imageDisp[self.currentIndex]
-            mm = self.quickMinMax(cur_image)
-            self.levelMin, self.levelMax = self.quickMinMax(cur_image)[0] if type(mm) is list else mm
-            self._imageLevels = self.quickMinMax(self.imageDisp)
-            self.autoLevels()  # sets the histogram setLevels(self.levelMin, self.levelMax)
-        return self.imageDisp
-
     def set_level_percentiles(self):
         """
         Reads the GUI lineEdits and sets the level percentiles. If not normalising each image, it also finds the levels
@@ -210,33 +194,37 @@ class ExtendedImageView(pg.ImageView):
         max_level = float(self.levelGroup.lineEdit_maxLevel.text())
 
         self.level_percentiles = [min_level, max_level]
-        if not self.levelGroup.checkbox_singleimagelevel.isChecked():
-            image = self.getProcessedImage()
-            self.levelMin, self.levelMax = self.quickMinMax(image)
-            self.autoLevels()
+        self.imageDisp = None
         self.updateImage()
+        self.autoLevels()
 
     def reset(self):
         self.levelGroup.lineEdit_minLevel.setText('0')
         self.levelGroup.lineEdit_maxLevel.setText('100')
         self.set_level_percentiles()
 
+    def getProcessedImage(self):
+        """Reimplements the ImageView.getProcessedImage to allow leveling of each image in a time series"""
+        rtrn = super(ExtendedImageView, self).getProcessedImage()
+        if self.levelGroup.checkbox_singleimagelevel.isChecked() and self.hasTimeAxis():
+            if self.axes['c'] is not None:
+                # axes['c'] keeps track of what dimension is the colour. And since we are taking one dimension out when
+                # doing quickMinMax of each image in the time series:
+                self.axes['c'] -= 1
+            self._imageLevels = self.quickMinMax(self.imageDisp[self.currentIndex])
+            self.levelMin = min([level[0] for level in self._imageLevels])
+            self.levelMax = max([level[1] for level in self._imageLevels])
+            self.autoLevels()
+            if self.axes['c'] is not None:
+                # Now we bring it back to where it was before
+                self.axes['c'] += 1
+        return rtrn
+
     def quickMinMax(self, data):
-        """Reimplements the ImageView.quickMinMax to set level percentiles
-
-        :param data:
-        :return:
-        """
+        """Reimplements the ImageView.quickMinMax to set level percentiles"""
         mm = super(ExtendedImageView, self).quickMinMax(data)
-        while type(mm) is list:  # 3.7 vs 3.8 fix
-            mm = mm[0]
-        minval, maxval = mm
-        rng = maxval - minval
-        levelmin = minval + rng * self.level_percentiles[0] / 100.
-        levelmax = minval + rng * self.level_percentiles[1] / 100.
-
-        return [(levelmin, levelmax)]
-    
+        return [(np.percentile(x, self.level_percentiles[0]),
+                 np.percentile(x, self.level_percentiles[1])) for x in mm]
 
     # Crosshairs
     def pos_to_unit(self, positions):
@@ -342,3 +330,4 @@ def test():
 
 if __name__ == "__main__":
     test()
+

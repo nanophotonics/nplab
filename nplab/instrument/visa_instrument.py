@@ -13,7 +13,7 @@ class VisaInstrument(MessageBusInstrument):
     An instrument primarily using VISA communications
     """
 
-    def __init__(self, address, settings={}):
+    def __init__(self, address, settings=None):
         """
         :param address: VISA address as a string
         :param settings: dictionary of instrument settings, including:
@@ -30,6 +30,8 @@ class VisaInstrument(MessageBusInstrument):
             print('Available equipment:', rm.list_resources())
         self.instr = rm.open_resource(address, **settings)
         self._address = address
+        if settings is None:
+            settings = dict()
         self._settings = settings
 
     def __del__(self):
@@ -38,7 +40,7 @@ class VisaInstrument(MessageBusInstrument):
         except Exception as e:
             print("The serial port didn't close cleanly:", e)
 
-    def write(self, *args, **kwargs):
+    def _write(self, *args, **kwargs):
         with self.communications_lock:
             return self.instr.write(*args, **kwargs)
 
@@ -52,14 +54,13 @@ class VisaInstrument(MessageBusInstrument):
 
     def clear_read_buffer(self):
         empty_buffer = False
-        while empty_buffer == False:
+        while not empty_buffer:
             try:
                 self.instr.read()
             except Exception:
                 print("Buffer emptied")
                 empty_buffer = True
                 
-    #idn = property(fget=partial(query, message='*idn?'))
     idn = queried_property('*idn?', dtype='str')
 
 
