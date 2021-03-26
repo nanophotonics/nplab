@@ -1703,13 +1703,11 @@ class AutocorrelationRenderer(FigureRendererPG):
 add_renderer(AutocorrelationRenderer)
 
 if __name__ == '__main__':
-    import sys
 
-    print(os.getcwd())
     app = get_qt_app()
-    f = h5py.File('test.h5', 'w')
-    dset = f.create_dataset('dset1', data=np.linspace(-1, 1, 100))
-    ui = HDF5InfoRenderer(dset)
-    ui.show()
-    sys.exit(app.exec_())
-    f.close()
+    with h5py.File('test.h5', 'w') as f:
+        dset = f.create_dataset('dset1', data=np.linspace(-1, 1, 100))
+        
+        ui = HDF5InfoRenderer(dset)
+        ui.show()
+        app.exec_()
