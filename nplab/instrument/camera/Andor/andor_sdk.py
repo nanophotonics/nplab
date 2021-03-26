@@ -506,6 +506,9 @@ class AndorBase(object):
                     image_shape = (self._parameters['DetectorShape'][0] // self._parameters['FVBHBin'], )
             elif self._parameters['ReadMode'] == 1:  # random track
                 image_shape = (self.MultiTrack[0], self._parameters['DetectorShape'][0] // self._parameters['FVBHBin'])
+            elif self._parameters['ReadMode'] == 2:
+                image_shape = ( self.RandomTracks[0], self._parameters['DetectorShape'][0]// self._parameters['FVBHBin'])
+                 
             elif self._parameters['ReadMode'] == 3:
                 image_shape = (self._parameters['DetectorShape'][0],)
             elif self._parameters['ReadMode'] == 4:
@@ -592,6 +595,21 @@ class AndorBase(object):
         offset = self._parameters['DetectorShape'][1] - n_rows
 
         self.set_andor_parameter('FastKinetics', n_rows, series_Length, expT, mode, hbin, vbin, offset)
+    
+    
+    @locked_action    
+    def SetRandomTracks(self, number_tracks_and_pixels):
+        number_tracks, pixels = number_tracks_and_pixels
+        assert len(pixels)/number_tracks == 2
+        self._RandomTracks = number_tracks, pixels
+        number_tracks = c_int(number_tracks)
+        arr = c_int * len(pixels)
+        c_pixels = arr(*pixels)
+        return self.dll.SetRandomTracks(number_tracks, byref(c_pixels))
+    
+    def GetRandomTracks(self):
+        return self._RandomTracks
+    RandomTracks = property(GetRandomTracks, SetRandomTracks)
 
     @property
     def status(self):
@@ -702,6 +720,7 @@ parameters = dict(
     FrameTransferMode=dict(Set=dict(cmdName='SetFrameTransferMode', Inputs=(c_int,)), value=None),
     SingleTrack=dict(Set=dict(cmdName='SetSingleTrack', Inputs=(c_int,) * 2), value=None),
     MultiTrack=dict(Set=dict(cmdName='SetMultiTrack', Inputs=(c_int,) * 3, Outputs=(c_int,) * 2)),
+    
     FVBHBin=dict(Set=dict(cmdName='SetFVBHBin', Inputs=(c_int,)), value=1),
     Spool=dict(Set=dict(cmdName='SetSpool', Inputs=(c_int, c_int, c_char, c_int)), value=None),
     NumVSSpeed=dict(Get=dict(cmdName='GetNumberVSSpeeds', Outputs=(c_int,)), value=None),
