@@ -64,7 +64,10 @@ class Image_Filter_box(Instrument):
         return self._filter_index
     current_filter_index = NotifiedProperty(fget=get_current_filter_index,fset=set_current_filter_index)
 
-    def STBOC_with_size_filter(self, g, return_centers=False, return_original_with_particles=False):
+    def STBOC_with_size_filter(self, g,
+                               return_centers=False,
+                               return_centers_and_radii=False,
+                               return_original_with_particles=False):
         try:
             if return_original_with_particles:
                 return STBOC_with_size_filter(g,
@@ -74,11 +77,17 @@ class Image_Filter_box(Instrument):
                                           morph_kernel_size = self.morph_kernel_size, show_particles = self.show_particles,
                                           return_original_with_particles=True, return_centers=False)
             return STBOC_with_size_filter(g,
-                                          bin_fac= self.bin_fac,
-                                          bilat_size = self.bilat_size, bilat_height = self.bilat_height,
-                                          threshold =self.threshold,min_size = self.min_size,max_size = self.max_size,
-                                          morph_kernel_size = self.morph_kernel_size, show_particles = self.show_particles,
-                                          return_original_with_particles = self.return_original_with_particles,return_centers = return_centers)
+                                          bin_fac=self.bin_fac,
+                                          bilat_size=self.bilat_size,
+                                          bilat_height=self.bilat_height,
+                                          threshold=self.threshold,
+                                          min_size=self.min_size,
+                                          max_size=self.max_size,
+                                          morph_kernel_size=self.morph_kernel_size,
+                                          show_particles=self.show_particles,
+                                          return_original_with_particles=self.return_original_with_particles,
+                                          return_centers=return_centers,
+                                          return_centers_and_radii=return_centers_and_radii)
             
                 
         except Exception as e:
@@ -186,12 +195,13 @@ def STBOC_with_size_filter(g,
                            morph_kernel_size=3,
                            show_particles=False, 
                            return_original_with_particles=False,
-                           return_centers=False):
+                           return_centers=False, 
+                           return_centers_and_radii=False):
    g = np.copy(g)
    strided = StrBiThresOpen(g, bin_fac,threshold,bilat_size,bilat_height,morph_kernel_size)
    contours, hierarchy = cv2.findContours(strided,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)[-2:]
    centers = []
-   radi = []
+   radii = []
    for cnt in contours:
        (x,y),radius = cv2.minEnclosingCircle(cnt)
    #    center = (int(x),int(y))
@@ -204,13 +214,15 @@ def STBOC_with_size_filter(g,
            M = cv2.moments(cnt,binaryImage = True) #find center of mass
            center = (int(old_div(M['m10'],M['m00'])),int(old_div(M['m01'],M['m00'])))
            centers.append(center)
-           radi.append(radius)
+           radii.append(radius)
    if return_centers:
        return np.array(centers)[:,::-1]
+   if return_centers_and_radii:
+      np.array(centers)[:,::-1] , np.array(radii)
    elif return_original_with_particles:
  #      g = cv2.cvtColor(g,cv2.COLOR_GRAY2RGB)
   #     g = g#/255.0
-       for cnt,radius in zip(centers,radi):
+       for cnt,radius in zip(centers,radii):
            cv2.circle(g, cnt, int(radius*2), (255, 0, 0), 2) # image with a red circle
        return g
    elif show_particles:
