@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-from past.utils import old_div
-
 from nplab.utils.gui import QtGui, QtWidgets, get_qt_app, uic
 from nplab.utils.array_with_attrs import ArrayWithAttrs
 import matplotlib
@@ -419,7 +417,7 @@ class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
         elif len(self.h5object.shape) == 1 and len(self.h5object.attrs['wavelengths'])<len(self.h5object) and len(self.h5object)%len(self.h5object.attrs['wavelengths']) == 0:
             RawData = np.array(self.h5object,dtype = float)
             Xlen = len(np.array(self.h5object.attrs['wavelengths']))
-            Ylen = old_div(len(RawData),Xlen)
+            Ylen = len(RawData)//Xlen
             data = [RawData.reshape((Ylen,Xlen))]
             self.h5object = {self.h5object.name : self.h5object}
             ListData = False
@@ -446,9 +444,9 @@ class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
                             and (list(self.h5object.values())[i].attrs['reference_int'] != None)))):
                 if list(self.h5object.values())[i].attrs['background_int'] != None:
                     if list(self.h5object.values())[i].attrs['reference_int'] != None:
-                        data[i] = (old_div((data[i]-(list(self.h5object.values())[i].attrs['background_constant']+list(self.h5object.values())[i].attrs['background_gradient']*list(self.h5object.values())[i].attrs['integration_time'])),
-                                        (old_div((list(self.h5object.values())[i].attrs['reference']-(list(self.h5object.values())[i].attrs['background_constant']+list(self.h5object.values())[i].attrs['background_gradient']*list(self.h5object.values())[i].attrs['reference_int']))
-                                        *list(self.h5object.values())[i].attrs['integration_time'],list(self.h5object.values())[i].attrs['reference_int']))))
+                        data[i] = (((data[i]-(list(self.h5object.values())[i].attrs['background_constant']+list(self.h5object.values())[i].attrs['background_gradient']*list(self.h5object.values())[i].attrs['integration_time']))/
+                                        (((list(self.h5object.values())[i].attrs['reference']-(list(self.h5object.values())[i].attrs['background_constant']+list(self.h5object.values())[i].attrs['background_gradient']*list(self.h5object.values())[i].attrs['reference_int']))
+                                        *list(self.h5object.values())[i].attrs['integration_time']/list(self.h5object.values())[i].attrs['reference_int']))))
                     else:
                         data[i] = data[i]-(list(self.h5object.values())[i].attrs['background_constant']+list(self.h5object.values())[i].attrs['background_gradient']*list(self.h5object.values())[i].attrs['integration_time'])
                         reference_counter = reference_counter +1
@@ -467,10 +465,10 @@ class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
                 if 'reference' in list(list(self.h5object.values())[i].attrs.keys()):
                     if ListData == True:
                         if len(np.array(data[i])) == len(np.array(list(self.h5object.values())[i].attrs['reference'])):
-                            data[i] = old_div(data[i],(np.array(list(self.h5object.values())[i].attrs['reference'])- np.array(list(self.h5object.values())[i].attrs['background'])))   
+                            data[i] = (data[i]/(np.array(list(self.h5object.values())[i].attrs['reference'])- np.array(list(self.h5object.values())[i].attrs['background'])))   
                     else:
                         if len(np.array(data)) == len(np.array(list(self.h5object.values())[i].attrs['reference'])):
-                            data = old_div(data,(np.array(list(self.h5object.values())[i].attrs['reference'])[:,np.newaxis]- np.array(list(self.h5object.values())[i].attrs['background'])[:,np.newaxis]))
+                            data = (data/(np.array(list(self.h5object.values())[i].attrs['reference'])[:,np.newaxis]- np.array(list(self.h5object.values())[i].attrs['background'])[:,np.newaxis]))
                     Title = Title + " referenced"
                 else:
                     reference_counter = reference_counter +1
@@ -509,7 +507,7 @@ class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
         img = pg.ImageItem(data)
 
         ConvertionC= list(self.h5object.values())[0].attrs['wavelengths'][0]
-        ConvertionM = old_div((list(self.h5object.values())[0].attrs['wavelengths'][-1] - list(self.h5object.values())[0].attrs['wavelengths'][0]),len(list(self.h5object.values())[0].attrs['wavelengths']))
+        ConvertionM = ((list(self.h5object.values())[0].attrs['wavelengths'][-1] - list(self.h5object.values())[0].attrs['wavelengths'][0])/len(list(self.h5object.values())[0].attrs['wavelengths']))
 
 
 
@@ -528,7 +526,7 @@ class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
         suitability = 0
         if isinstance(h5object,dict) == False and isinstance(h5object,h5py.Group) == False:
             try:
-                if len(h5object.shape) == 1 and old_div(len(h5object),len(h5object.attrs['wavelengths'])) == 1:
+                if len(h5object.shape) == 1 and (len(h5object)/len(h5object.attrs['wavelengths'])) == 1:
                     return -1
             except:
                 return -1
@@ -549,7 +547,7 @@ class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
                         suitability = suitability + len(h5object)-20
                     else:
                         return 1
-                elif (old_div(len(np.array(dataset)),len(dataset.attrs['wavelengths'])))>1 and (len(np.array(dataset))%len(dataset.attrs['wavelengths'])) == 0 :           
+                elif ((len(np.array(dataset))/len(dataset.attrs['wavelengths'])))>1 and (len(np.array(dataset))%len(dataset.attrs['wavelengths'])) == 0 :           
                     suitability = suitability + 50
                 elif len(dataset.attrs['wavelengths']) != len(np.array(dataset)):
                     print("the number of bins does not equal the number of wavelengths!")
@@ -787,9 +785,9 @@ class SpectrumRenderer(FigureRendererPG):
                 Title = Title + " variable"
                 if h5object.attrs['background_int'] != None:
                     if h5object.attrs['reference_int'] != None:
-                        Data = (old_div((Data-(h5object.attrs['background_constant']+h5object.attrs['background_gradient']*h5object.attrs['integration_time'])), 
-                                        (old_div((h5object.attrs['reference']-(h5object.attrs['background_constant']+h5object.attrs['background_gradient']*h5object.attrs['reference_int']))
-                                        *h5object.attrs['integration_time'],h5object.attrs['reference_int']))))
+                        Data = (((Data-(h5object.attrs['background_constant']+h5object.attrs['background_gradient']*h5object.attrs['integration_time']))/ 
+                                        (((h5object.attrs['reference']-(h5object.attrs['background_constant']+h5object.attrs['background_gradient']*h5object.attrs['reference_int']))
+                                        *h5object.attrs['integration_time']/h5object.attrs['reference_int']))))
                         Title = Title + " referenced and background subtracted"
                     else:
                         Data = Data-(h5object.attrs['background_constant']+h5object.attrs['background_gradient']*h5object.attrs['integration_time'])
@@ -801,11 +799,11 @@ class SpectrumRenderer(FigureRendererPG):
                         Title = Title + " background subtracted"
                     if 'reference' in list(h5object.attrs.keys()):
                         if len(np.array(h5object)) == len(np.array(h5object.attrs['reference'])):
-                            Data = old_div(Data,(np.array(h5object.attrs['reference'])- np.array(h5object.attrs['background'])))
+                            Data = (Data/(np.array(h5object.attrs['reference'])- np.array(h5object.attrs['background'])))
                             Title = Title + " referenced"
             if 'absorption_enabled' in list(h5object.attrs.keys()):
                 if h5object.attrs['absorption_enabled']:
-                    Data = np.log10(old_div(1,np.array(Data)))
+                    Data = np.log10((1/np.array(Data)))
             plot.plot(x = np.array(h5object.attrs['wavelengths']), y = np.array(Data),name = h5object.name, pen =(icolour,len(self.h5object)) )
             Title = Title + " spectrum"
                 
@@ -882,7 +880,7 @@ class HyperSpec(DataRenderer, QtWidgets.QWidget):
         
         for dim in range(dims-1):
             Images.append(pg.ImageView(view=pg.PlotItem()))
-            midpoints.append(int(old_div(np.shape(data)[dim],2)))
+            midpoints.append(int((np.shape(data)[dim]/2)))
 
      
         Imagedata = []
@@ -1006,8 +1004,8 @@ class HyperSpec_Alan(DataRenderer, QtWidgets.QWidget):
         #Creating a list of hyperspec images to put into a the layout
         Images = []
         #Calculate the X,Y scales for the images
-        XConvertionM = old_div((self.h5object['x'][-1] - self.h5object['x'][0]),len(self.h5object['x']))
-        YConvertionM = old_div((self.h5object['y'][-1] - self.h5object['y'][0]),len(self.h5object['y']))
+        XConvertionM = ((self.h5object['x'][-1] - self.h5object['x'][0])/len(self.h5object['x']))
+        YConvertionM = ((self.h5object['y'][-1] - self.h5object['y'][0])/len(self.h5object['y']))
         #creating an iterator for the number of hyperspectral images
         for hyperspec_nom in range(1,num_hyperspec):
             if hyperspec_nom == 1:
@@ -1089,7 +1087,7 @@ class ScannedParticle(FigureRenderer):
             spectrum -= background #we'll fail here if there was no background recorded
             reference = zscan.attrs.get("reference")
             spectrum /= (reference - background) #if there's a reference, apply it
-            spectrum_range = reference > old_div(np.max(reference),10)
+            spectrum_range = reference > (np.max(reference)/10)
         except:
             pass # if reference/background are missing, ignore them.
         import matplotlib.gridspec as gridspec
