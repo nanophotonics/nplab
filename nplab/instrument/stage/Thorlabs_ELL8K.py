@@ -1,12 +1,6 @@
 '''
 author: im354
 '''
-from __future__ import division
-from __future__ import print_function
-
-from builtins import str
-from builtins import range
-from past.utils import old_div
 import struct,sys,math
 from bitarray import bitarray
 import numpy as np 

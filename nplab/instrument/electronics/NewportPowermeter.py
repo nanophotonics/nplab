@@ -3,10 +3,7 @@
 Modified from https://github.com/plasmon360/python_newport_1918_powermeter
 
 """
-from __future__ import division
-from __future__ import print_function
 
-from builtins import str
 from past.utils import old_div
 from nplab.instrument import Instrument
 from ctypes import *

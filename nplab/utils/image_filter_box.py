@@ -4,14 +4,6 @@ Created on Tue Jul 25 10:18:49 2017
 
 @author: wmd22
 """
-from __future__ import division
-from __future__ import print_function
-
-
-from builtins import zip
-from builtins import str
-from builtins import range
-from past.utils import old_div
 from numpy.lib.stride_tricks import as_strided
 import cv2
 import numpy as np
@@ -166,7 +158,7 @@ def StrBiThresOpen(g,
      #       cv2.THRESH_BINARY,3,2)
         strided = cv2.adaptiveThreshold(strided,255,cv2.ADAPTIVE_THRESH_MEAN_C,cv2.THRESH_BINARY,101,-1*threshold)
         
-        strided = cv2.bilateralFilter(np.uint8(strided),bilat_size,old_div(bilat_height,4),50)
+        strided = cv2.bilateralFilter(np.uint8(strided),bilat_size,bilat_height/4,50)
       #  strided[strided>threshold]-=threshold
         kernel = np.ones((morph_kernel_size,morph_kernel_size),np.uint8)
         strided = cv2.morphologyEx(strided, cv2.MORPH_OPEN, kernel)
@@ -202,7 +194,7 @@ def STBOC_with_size_filter(g,
            strided[center[1]-radius:center[1]+radius,center[0]-radius:center[0]+radius] = 0
        else:
            M = cv2.moments(cnt,binaryImage = True) #find center of mass
-           center = (int(old_div(M['m10'],M['m00'])),int(old_div(M['m01'],M['m00'])))
+           center = int(M['m10'],M['m00'])//int(M['m01']/M['m00'])
            centers.append(center)
            radi.append(radius)
    if return_centers:

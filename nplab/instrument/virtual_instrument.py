@@ -10,9 +10,6 @@ A control mechanism for running a 32-bit instrument from a 64-bit python console
 
 @author: Will
 """
-from __future__ import print_function
-from builtins import str
-from builtins import object
 import numpy as np
 import mmap
 import time

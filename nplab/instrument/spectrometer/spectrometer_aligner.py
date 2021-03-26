@@ -2,17 +2,7 @@
 """
 Auto-aligning spectrometer: centres in on a nanoparticle after a short scan
 """
-from __future__ import division
-from __future__ import print_function
-#import traits
-#from traits.api import HasTraits, Property, Instance, Float, Range, Array, Int, String, Button, Bool, on_trait_change
-##import traitsui
-#from traitsui.api import View, Item, HGroup, VGroup, Tabbed
-#from traitsui.table_column import ObjectColumn
-#import chaco
-#from chaco.api import ArrayPlotData, Plot
-#from enable.component_editor import ComponentEditor
-from builtins import range
+
 from past.utils import old_div
 import threading
 import numpy as np
@@ -28,39 +18,7 @@ import scipy.optimize
 #from scipy.odr import odrpack as odr
 
 class SpectrometerAligner(Instrument):
-#    spectrum_mask=None #a mask to set which pixels to align to
-#    align_to_raw_spectra=False
-#    spectrometer=None
-#    stage=None
-#    settling_time=Float(0.3)
-#    step_size=Range(0.01,100.,0.5)
-#    tolerance=Range(0.01,10.,0.05)
-#    number_of_points = Range(2,20,5)
-#    do_circle_iteration = Button()
-#    do_focus_iteration = Button()
-#    do_XY_optimisation = Button()
-#    figure = Instance(Figure, ())
-#    last_alignment_positions = Array(shape=(3,None),dtype=np.float)
-#    last_alignment_powers = Array(shape=(None,),dtype=np.float)
-#    
-#    traits_view = View(
-#                    Tabbed(
-#                        VGroup(
-#                            Item(name="settling_time"),
-#                            Item(name="step_size"),
-#                            HGroup(
-#                                Item(name="do_circle_iteration",show_label=False),
-#                                Item(name="do_focus_iteration",show_label=False),
-#                            ),
-#                            Item(name="tolerance"),
-#                            Item(name="do_XY_optimisation",show_label=False),
-#                            label="Controls",
-#                        ),
-#                        Item('figure', editor=MPLFigureEditor(),
-#                               show_label=False, label="Last Alignment"),
-#                    ),
-#                    resizable=True, title="Spectrometer Aligner",
-#                )
+#   
     def __init__(self,spectrometer,stage):
         super(SpectrometerAligner,self).__init__()
         self.spectrometer = spectrometer
@@ -68,18 +26,7 @@ class SpectrometerAligner(Instrument):
         self.align_to_raw_spectra=False
         self.settling_time=0.3
         self.spectrum_mask = None
-        
-#        self.step_size=Range(0.01,100.,0.5)
-#        self.tolerance=Range(0.01,10.,0.05)
-#        self.number_of_points = Range(2,20,5)
-#        self.figure = 
-#        self.figure.add_subplot(111)
-        self._action_lock=threading.RLock() #reentrant lock, so that it doesn't matter that both optimise, and iterate_points (which it calls) acquire the lock
-#        self._plot_data = ArrayPlotData(xpos=[],ypos=[])
-#        self.plot = Plot(self._plot_data)
-#        self.plot.plot("xpos","ypos",type="scatter",color="red")
-#        self.plot.plot(("across","middle"),color="yellow")
-#        self.plot.plot(("middle","across"),color="yellow")
+        self._action_lock=threading.RLock() 
     def merit_function(self):
         """this is what we optimise"""
         spectrum = self.spectrometer.read_spectrum()

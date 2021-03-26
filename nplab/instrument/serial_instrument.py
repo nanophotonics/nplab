@@ -4,10 +4,6 @@ Serial Instrument interface
 
 @author: Richard Bowman
 """
-
-from __future__ import print_function
-# from traits.api import HasTraits, Bool, Int, Str, Button, Array, Enum, List
-from builtins import str
 from nplab.instrument.message_bus_instrument import MessageBusInstrument
 import threading
 import serial

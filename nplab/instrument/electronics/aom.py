@@ -1,8 +1,3 @@
-from __future__ import division
-from __future__ import print_function
-from builtins import str
-from builtins import range
-from builtins import object
 from past.utils import old_div
 import pyvisa as visa
 import numpy as np
@@ -15,7 +10,7 @@ def Sigmoid(x,Shift=0.68207277,Scale=8.49175969):
     Output=(x-Shift)*Scale
     Output=np.exp(-Output)+1
     Output=1./Output
-    return old_div((Output-Zero),(One-Zero))
+    return (Output-Zero)/(One-Zero)
     
 def Inverse_Sigmoid(x,Shift=0.68207277,Scale=8.49175969):
     Zero=1./(np.exp(Shift*Scale)+1)

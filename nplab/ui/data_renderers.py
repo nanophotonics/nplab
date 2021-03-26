@@ -1,10 +1,5 @@
 # -*- coding: utf-8 -*-
-from __future__ import division
-from __future__ import print_function
-from builtins import str
-from builtins import range
 from past.utils import old_div
-from builtins import object
 
 from nplab.utils.gui import QtGui, QtWidgets, get_qt_app, uic
 from nplab.utils.array_with_attrs import ArrayWithAttrs
@@ -364,113 +359,6 @@ class Scatter_plot1DPG(FigureRendererPG):
         return DataRenderer1DPG.is_suitable(h5object) - 2
 
 add_renderer(Scatter_plot1DPG)
-
-
-class NormalisedParameterRenderer(FigureRendererPG):
-    """ A renderer for multiple parameters plotted agains the same x-axis, normalised for easy comparison
-        author: ee306
-    """
-
-    def display_data(self):
-        if not hasattr(self.h5object, "values"):
-            # If we have only one item, treat it as a group containing that item.
-            self.h5object = {self.h5object.name: self.h5object}
-       
-        self.figureWidget.addLegend(offset = (-1,1))
-        icolor = 0
-        for h5object in list(self.h5object.values()): 
-            icolor+=1
-            try: x_axis = h5object.attrs['x_axis']
-            except: print('x-axis not found')
-            for index, Ydata in enumerate(h5object):
-                try:    
-                    Max = float(np.max(Ydata))
-                    
-                    self.figureWidget.plot(x = x_axis,
-                                           y = old_div(Ydata,Max),
-                                           pen = (icolor,len(self.h5object)),
-                                           name = h5object.name)
-                    icolor+=1
-                
-                except: print('failed')
-            
-            
-        labelStyle = {'font-size': '24pt'}
-        try:
-            self.figureWidget.setLabel('bottom', h5object.attrs['x-axis'], **labelStyle)
-        except:
-            self.figureWidget.setLabel('bottom', 'An X axis', **labelStyle)
-            
-        try:
-            self.figureWidget.setLabel('left', h5object.attrs['Y label'], **labelStyle)
-        except:
-            self.figureWidget.setLabel('left', 'Normalised y-axis', **labelStyle)
-          
-    @classmethod
-    def is_suitable(cls, h5object):
-        
-        if h5object.shape and len(h5object)>1:
-            if hasattr(h5object, 'parameter_renderer') and hasattr(h5object, 'x-axis'):
-                return 5
-            else:
-                return -1
-        else:
-            return -1
-
-add_renderer(NormalisedParameterRenderer)
-
-class ParameterRenderer(FigureRendererPG):
-    """ A renderer for multiple parameters plotted agains the same x-axis
-        author: ee306
-    """
-
-    def display_data(self):
-        if not hasattr(self.h5object, "values"):
-            # If we have only one item, treat it as a group containing that item.
-            self.h5object = {self.h5object.name: self.h5object}
-       
-        self.figureWidget.addLegend(offset = (-1,1))
-        icolor = 0
-        for h5object in list(self.h5object.values()): 
-            icolor+=1
-            try: x_axis = h5object.attrs['x_axis']
-            except: print('x-axis not found')
-            for index, Ydata in enumerate(h5object):
-                try:    
-                
-                    
-                    self.figureWidget.plot(x = x_axis,
-                                           y = Ydata,
-                                           pen = (icolor,len(self.h5object)),
-                                           name = h5object.name)
-                    icolor+=1
-                
-                except: print('failed')
-            
-            
-        labelStyle = {'font-size': '24pt'}
-        try:
-            self.figureWidget.setLabel('bottom', h5object.attrs['x-axis'], **labelStyle)
-        except:
-            self.figureWidget.setLabel('bottom', 'An X axis', **labelStyle)
-            
-        try:
-            self.figureWidget.setLabel('left', h5object.attrs['Y label'], **labelStyle)
-        except:
-            self.figureWidget.setLabel('left', 'Normalised y-axis', **labelStyle)
-          
-    @classmethod
-    def is_suitable(cls, h5object):
-        if h5object.shape and len(h5object)>1:
-            if hasattr(h5object, 'parameter_renderer') and hasattr(h5object, 'x-axis'):
-                return 5
-            else:
-                return -1
-        else:
-            return -1
-
-
-add_renderer(ParameterRenderer)
 
 class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
     """ A renderer for large spectral datasets experessing them in a colour map using

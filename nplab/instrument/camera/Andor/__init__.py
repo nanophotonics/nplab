@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from builtins import str
 from nplab.utils.gui import QtWidgets, QtCore, uic, QtGui
 from nplab.instrument.camera.camera_scaled_roi import CameraRoiScale
 from nplab.instrument.camera.Andor.andor_sdk import AndorBase
