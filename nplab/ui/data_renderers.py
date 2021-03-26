@@ -1,14 +1,10 @@
 # -*- coding: utf-8 -*-
-from nplab.utils.gui import QtGui, QtWidgets, get_qt_app, uic
+from nplab.utils.gui import QtCore, QtGui, QtWidgets, get_qt_app, uic
 from nplab.utils.array_with_attrs import ArrayWithAttrs
 import matplotlib
 
-try:
-    from matplotlib.backends.qt_compat import is_pyqt5
-except (AttributeError, ImportError): 
-    from matplotlib.backends.qt_compat import QT_API
-    def is_pyqt5():
-        return (QT_API[:5] == 'PyQt5')
+def is_pyqt5():
+    return QtCore.qVersion().startswith('5')
     
 if is_pyqt5():
     matplotlib.use('Qt5Agg')
