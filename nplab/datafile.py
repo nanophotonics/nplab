@@ -335,7 +335,7 @@ class DataFile(Group):
         :param save_version_info: If True (default), save a string attribute at top-level
         with information about the current module and system.
         """
-        if isinstance(name, h5py.File):
+        if isinstance(name, h5py.Group):
             f=name #if it's already an open file, just use it
         else:
             f = h5py.File(name, mode, *args, **kwargs)  # open the file
