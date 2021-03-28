@@ -39,7 +39,7 @@ class Andor(CameraRoiScale, AndorBase):
         else:
             filename = 'default_config'
             if not os.path.isabs(filename):
-                f = inspect.getfile(self.__class__)
+                f = inspect.getfile(Andor)
                 d = os.path.dirname(f)
                 filename = os.path.join(d, filename)
             self.config = self.load_config(filename)
