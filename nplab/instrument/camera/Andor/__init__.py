@@ -12,6 +12,7 @@ import numpy as np
 from nplab.ui.ui_tools import UiTools
 from weakref import WeakSet
 import time
+import inspect
 
 
 class Andor(CameraRoiScale, AndorBase):
@@ -36,7 +37,12 @@ class Andor(CameraRoiScale, AndorBase):
         if config_file is not None:
             self.config = self.load_config(config_file)
         else:
-            self.config = self.load_config('default_config')
+            filename = 'default_config'
+            if not os.path.isabs(filename):
+                f = inspect.getfile(self.__class__)
+                d = os.path.dirname(f)
+                filename = os.path.join(d, filename)
+            self.config = self.load_config(filename)
 
     def __del__(self):
         # Need to explicitly call this method so that the shutdown procedure is followed correctly
