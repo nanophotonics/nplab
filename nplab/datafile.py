@@ -111,14 +111,20 @@ def wrap_h5py_item(item):
         return Group(item.id)
     else:
         return item  # for now, don't bother wrapping datasets
-        
+
+def ensure_str(str_or_bytes):
+    if type(str_or_bytes) is bytes:
+        return str_or_bytes.decode()
+    return str(str_or_bytes)
+
 def sort_by_timestamp(hdf5_group):
     """a quick function for sorting hdf5 groups (or files or dictionarys...) by timestamp """
     keys = list(hdf5_group.keys())
     try:
         time_stamps = []
         for value in list(hdf5_group.values()):
-            time_stamp_str = value.attrs['creation_timestamp'].decode()
+
+            time_stamp_str = ensure_str(value.attrs['creation_timestamp'])
             try:
                 time_stamp_float = datetime.datetime.strptime(time_stamp_str,"%Y-%m-%dT%H:%M:%S.%f")
             except ValueError:
