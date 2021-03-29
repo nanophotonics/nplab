@@ -142,7 +142,7 @@ class ValueRenderer(DataRenderer, QtWidgets.QWidget):
         
     def text(self, h5object):
         """Return the text that is displayed in the label"""
-        return str(h5object.value)
+        return str(h5object[()])
 
     @classmethod
     def is_suitable(cls, h5object):

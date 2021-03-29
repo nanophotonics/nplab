@@ -118,7 +118,7 @@ def sort_by_timestamp(hdf5_group):
     try:
         time_stamps = []
         for value in list(hdf5_group.values()):
-            time_stamp_str = value.attrs['creation_timestamp']
+            time_stamp_str = value.attrs['creation_timestamp'].decode()
             try:
                 time_stamp_float = datetime.datetime.strptime(time_stamp_str,"%Y-%m-%dT%H:%M:%S.%f")
             except ValueError:
