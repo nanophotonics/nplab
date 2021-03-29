@@ -76,6 +76,7 @@ class Image_Filter_box(Instrument):
                                           threshold =self.threshold,min_size = self.min_size,max_size = self.max_size,
                                           morph_kernel_size = self.morph_kernel_size, show_particles = self.show_particles,
                                           return_original_with_particles=True, return_centers=False)
+        
             return STBOC_with_size_filter(g,
                                           bin_fac=self.bin_fac,
                                           bilat_size=self.bilat_size,
@@ -218,7 +219,7 @@ def STBOC_with_size_filter(g,
    if return_centers:
        return np.array(centers)[:,::-1]
    if return_centers_and_radii:
-      np.array(centers)[:,::-1] , np.array(radii)
+      return np.array(centers)[:,::-1], np.array(radii)
    elif return_original_with_particles:
  #      g = cv2.cvtColor(g,cv2.COLOR_GRAY2RGB)
   #     g = g#/255.0
@@ -232,10 +233,9 @@ def STBOC_with_size_filter(g,
        strided = strided[:,:,np.newaxis]
        strided = strided.repeat(3,axis = 2)
    #    strided=strided/255.0
-       for cnt,radius in zip(centers,radi):
+       for cnt,radius in zip(centers,radii):
      #      print np.shape(strided_copy),  center
            cv2.circle(strided, cnt, int(radius*2), (255,0,0), 2)
-
    strided[strided!=0]=255
    return strided
    
