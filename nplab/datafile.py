@@ -133,7 +133,7 @@ def sort_by_timestamp(hdf5_group):
             time_stamps.append(time_stamp_float)
         keys = np.array(keys)[np.argsort(time_stamps)]
     except KeyError:
-        keys.sort(key=split_number_from_name)
+        keys.sort(key=lambda n: n.split('_')[-1] if '_' in n else n)
     items_lists = [[key,hdf5_group[key]] for key in keys]
     return items_lists
 
