@@ -18,9 +18,6 @@ import time
 import matplotlib.pyplot as plt
 from nplab.analysis.NPoM_DF_Analysis import DF_Multipeakfit as mpf
 from nplab.analysis.NPoM_DF_Analysis import Condense_DF_Spectra as cdf
-#charDir = r'C:\Users\car72\Documents\GitHub\charlie\charlie'
-#os.chdir(charDir)
-#import DF_PL_Multipeakfit as mpf
 os.chdir(rootDir) #Important
 
 if __name__ == '__main__':
@@ -30,7 +27,7 @@ if __name__ == '__main__':
     '''Set raiseExceptions = True if the analysis fails; this will return the traceback'''
     raiseExceptions = False #bool; Setting this to True will stop the analysis and return the traceback if an individual spectrum fails. Useful for debugging
     intensityRatios = False #bool; Plots CM peak positions against CM/TM intensity ratio. Useful for determining gap size and RI
-    statsOnly = False #bool; Set to True if you have already analysed the spectra and want to re-plot histograms (etc)
+    statsOnly = False #bool; Set to True if the spectra have already been analysed and want to re-plot histograms (etc)
     pl = False #bool; Set to True if your dataset contains PL measurments
     npSize = 80 #int (50, 60, 70, 80); Specify np diameter (nm) to ensure analysis looks for peaks in the right place
     npomTypes = ['All NPoMs', 'Ideal NPoMs', 'Doubles', 'Singles']
@@ -38,12 +35,13 @@ if __name__ == '__main__':
     customScan = None #int; if your file contains multiple particle tracks from different samples, use this to specify the correct one
     extractFirst = True #bool; set to false if your summary file already exists, true to create another
     avgZScans = False #bool; if your data ends up with a weird, rising baseline, set this to True and try again
-    upperCutoff = 900
+    upperCutoff = 900 #int; upper wavelength limit (nm) for peak detection; fiddle with this if the code keeps finding "peaks" in the noisy longer-wavelength region
+    lowerCutoff = 580 #int; lower wavelength limit (nm) for peak detection; fiddle with this if you have crap in the shorter-wavelength region
 
     if statsOnly == True:
         outputFileName = mpf.findH5File(os.getcwd(), nameFormat = 'MultiPeakFitOutput', mostRecent = True)#finds the most recent file with given name format
         mpf.doStats(outputFileName, stacks = False, pl = pl, npomTypes = npomTypes, intensityRatios = intensityRatios, 
-                    upperCutoff = upperCutoff)
+                    upperCutoff = upperCutoff, lowerCutoff = lowerCutoff)
 
     else:
         startSpec = 0
@@ -68,7 +66,7 @@ if __name__ == '__main__':
             mpf.fitAllSpectra(os.getcwd(), outputFileName, npSize = npSize, first = startSpec, last = finishSpec,
                               pl = pl, closeFigures = True, stats = True, npomTypes = npomTypes, customScan = customScan,
                               raiseExceptions = raiseExceptions, raiseSpecExceptions = raiseExceptions, 
-                              intensityRatios = intensityRatios, upperCutoff = upperCutoff)
+                              intensityRatios = intensityRatios, upperCutoff = upperCutoff, lowerCutoff = lowerCutoff)
 
 
             print('\nData fitting complete')
@@ -77,8 +75,9 @@ if __name__ == '__main__':
             try:
                 outputFileName = mpf.createOutputFile('MultiPeakFitOutput')
                 mpf.fitAllSpectra(os.getcwd(), outputFileName, npSize = npSize, first = startSpec, last = finishSpec,
-                                  pl = pl, closeFigures = True, stats = True, npomTypes = npomTypes,
-                                  raiseExceptions = raiseExceptions, raiseSpecExceptions = raiseExceptions, intensityRatios = intensityRatios)
+                                  pl = pl, closeFigures = True, stats = True, npomTypes = npomTypes, lowerCutoff = lowerCutoff,
+                                  raiseExceptions = raiseExceptions, raiseSpecExceptions = raiseExceptions, 
+                                  intensityRatios = intensityRatios, upperCutoff = upperCutoff)
 
                 print('\nData fitting complete')
 
