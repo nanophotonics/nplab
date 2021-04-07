@@ -2450,7 +2450,7 @@ def plotHistComb1D(outputFileName, npomType = 'All NPoMs', dfStartWl = 450, dfEn
     print('\tHistogram plotted\n')
 
 def plotAllHists(outputFileName, closeFigures = True, irThreshold = 8, minBinFactor = 5, plotAll = True, pl = False,
-                 npomTypes = 'all', upperCutoff = 900):
+                 npomTypes = 'all', upperCutoff = 900, lowerCutoff = 580):
     histPlotStart = time.time()
 
     if npomTypes == 'all':
@@ -2458,7 +2458,7 @@ def plotAllHists(outputFileName, closeFigures = True, irThreshold = 8, minBinFac
 
     for npomType in npomTypes:
         plotHistAndFit(outputFileName, npomType = npomType, irThreshold = irThreshold, minBinFactor = minBinFactor,
-                       closeFigures = closeFigures, endWl = upperCutoff)
+                       closeFigures = closeFigures, endWl = upperCutoff, startWl = lowerCutoff)
 
         if pl == True:
              plotPlHistAndFit(outputFileName, npomType = npomType, minBinFactor = minBinFactor*10, closeFigures = closeFigures, peak = 'all')
@@ -2922,11 +2922,11 @@ def doStats(outputFileName, closeFigures = True, stacks = True, hist = True, all
         plotAll = allHists
         if raiseExceptions == True:
             plotAllHists(outputFileName, closeFigures = closeFigures, irThreshold = irThreshold, minBinFactor = minBinFactor,
-                         plotAll = plotAll, pl = pl, npomTypes = npomTypes, upperCutoff = upperCutoff, cmLowLim = lowerCutoff)
+                         plotAll = plotAll, pl = pl, npomTypes = npomTypes, upperCutoff = upperCutoff, lowerCutoff = lowerCutoff)
         else:
             try:
                 plotAllHists(outputFileName, closeFigures = closeFigures, irThreshold = irThreshold, minBinFactor = minBinFactor,
-                         plotAll = plotAll, pl = pl, npomTypes = npomTypes, upperCutoff = upperCutoff, cmLowLim = lowerCutoff)
+                         plotAll = plotAll, pl = pl, npomTypes = npomTypes, upperCutoff = upperCutoff, lowerCutoff = lowerCutoff)
             except Exception as e:
                 print('Histogram plot failed becuse %s' % e)
 
