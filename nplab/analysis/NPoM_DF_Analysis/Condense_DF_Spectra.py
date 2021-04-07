@@ -500,7 +500,6 @@ def extractAllSpectra(rootDir, returnIndividual = True, pl = False, dodgyThresho
                     for dSetName in list(ipf[allScans[0]]['Particle_'+str(particleN)].keys()):
                         if dSetName.startswith('alinger.z_scan') or dSetName.startswith('zScan') or dSetName.startswith('z_scan_0'):
                             dParticleFormat = dSetName
-                            print(dSetName)
                             break
                     
                     particleN += 1
@@ -559,7 +558,7 @@ def extractAllSpectra(rootDir, returnIndividual = True, pl = False, dodgyThresho
                     
                     if dParticleFormat not in particleGroup.keys():
                         for dSetName in particleGroup.keys():
-                            if dSetName.startswith('alinger.z_scan') or dSetName.startswith('zScan'):
+                            if dSetName.startswith('alinger.z_scan') or dSetName.startswith('zScan') or 'z_scan_0':
                                 dParticleFormat = dSetName
                                 
                     try:
