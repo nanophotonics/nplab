@@ -2868,7 +2868,7 @@ def analyseRepresentative(outputFileName, peakFindMidpoint = 680, npTypes = 'all
                     dAvg = gBin['Sum']
                     x = dAvg.attrs['wavelengths']
                     y = dAvg[()]
-                    avgMetadata = analyseNpomSpeactrum(x, y, avg = True, peakFindMidpoint = peakFindMidpoint)
+                    avgMetadata = analyseNpomSpectrum(x, y, avg = True, peakFindMidpoint = peakFindMidpoint)
                     gBin.attrs.update(avgMetadata)
                     dAvg.attrs.update(avgMetadata)
 
