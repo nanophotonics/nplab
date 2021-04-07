@@ -1070,7 +1070,7 @@ def findMainPeaks(x, y, fwhmFactor = 1.1, plot = False, midpoint = 680, weirdPea
 
     return peakFindMetadata, weirdGauss, cmGauss
 
-def analyseNpomSpectrum(x, y, cutoff = 1500, fs = 60000, doublesThreshold = 2, cmLowLim = 600, raiseExceptions = False, plot = False,
+def analyseNpomSpectrum(x, y, cutoff = 1500, fs = 60000, doublesThreshold = 2, cmLowLim = 580, raiseExceptions = False, plot = False,
                         weirdFactor = 1.4, transPeakPos = 533, peakFindMidpoint = 680, avg = False, upperCutoff = 900):
     yRaw = np.array(y)
     xRaw = np.array(x)
@@ -1627,7 +1627,7 @@ def reduceNoise(y, factor = 10, cutoff = 1500, fs = 60000):
     return y
 
 def plotHistogram(outputFileName, npomType = 'All NPoMs', startWl = 450, endWl = 987, binNumber = 80, plot = True, minBinFactor = 5, closeFigures = False,
-                  irThreshold = 8, cmLowLim = 600, density = False, nPeaks = 1, peaks = None):
+                  irThreshold = 8, cmLowLim = 580, density = False, nPeaks = 1, peaks = None):
 
     plotStart = time.time()
 
@@ -2257,7 +2257,7 @@ def plotPlHistAndFit(outputFileName, npomType = 'All NPoMs', startWl = 504, endW
 
 def plotHistComb1D(outputFileName, npomType = 'All NPoMs', dfStartWl = 450, dfEndWl = 987, plStartWl = 504,
                    plEndWl = 900, binNumber = 80, plot = True, minBinFactor = 5, closeFigures = False, plRange = [540, 820],
-                   irThreshold = 8, cmLowLim = 600):
+                   irThreshold = 8, cmLowLim = 580):
 
     with h5py.File(outputFileName, 'a') as opf:
         date = opf['All Spectra (Raw)'].attrs['Date measured']
@@ -2470,7 +2470,7 @@ def plotAllHists(outputFileName, closeFigures = True, irThreshold = 8, minBinFac
 
 def plotHistComb2D(outputFileName, npomType = 'All NPoMs', dfStartWl = 450, dfEndWl = 987, plStartWl = 504,
                    plEndWl = 900, binNumber = 80, plot = True, minBinFactor = 5, closeFigures = False,
-                   irThreshold = 8, cmLowLim = 600):
+                   irThreshold = 8, cmLowLim = 580):
 
     with h5py.File(outputFileName, 'a') as opf:
 
@@ -2907,7 +2907,7 @@ def analyseRepresentative(outputFileName, peakFindMidpoint = 680, npTypes = 'all
 def doStats(outputFileName, closeFigures = True, stacks = True, hist = True, allHists = True, irThreshold = 8,
             minBinFactor = 5, intensityRatios = False, npomTypes = 'all', peakAvgs = True, analRep = True,
             peakFindMidpoint = 680, pl = False, groupAvgs = True, histAvgs = True, raiseExceptions = True,
-            upperCutoff = 850):
+            upperCutoff = 850, lowerCutoff = 580):
 
     if stacks == True:
         if raiseExceptions == True:
@@ -2922,11 +2922,11 @@ def doStats(outputFileName, closeFigures = True, stacks = True, hist = True, all
         plotAll = allHists
         if raiseExceptions == True:
             plotAllHists(outputFileName, closeFigures = closeFigures, irThreshold = irThreshold, minBinFactor = minBinFactor,
-                         plotAll = plotAll, pl = pl, npomTypes = npomTypes, upperCutoff = upperCutoff)
+                         plotAll = plotAll, pl = pl, npomTypes = npomTypes, upperCutoff = upperCutoff, cmLowLim = lowerCutoff)
         else:
             try:
                 plotAllHists(outputFileName, closeFigures = closeFigures, irThreshold = irThreshold, minBinFactor = minBinFactor,
-                         plotAll = plotAll, pl = pl, npomTypes = npomTypes, upperCutoff = upperCutoff)
+                         plotAll = plotAll, pl = pl, npomTypes = npomTypes, upperCutoff = upperCutoff, cmLowLim = lowerCutoff)
             except Exception as e:
                 print('Histogram plot failed becuse %s' % e)
 
@@ -3146,10 +3146,9 @@ def sortSpectra(rootDir, outputFileName, stats = True, closeFigures = True, npSi
         
         print('')
              
-
 def fitAllSpectra(rootDir, outputFileName, npSize = 80, summaryAttrs = False, first = 0, last = 0, stats = True, pl = False, raiseExceptions = False,
                   raiseSpecExceptions = False, closeFigures = True, customScan = None, npomTypes = 'all', stacks = 'all', sortOnly = False, intensityRatios = False,
-                  upperCutoff = 900):
+                  upperCutoff = 900, lowerCutoff = None):
     
     if sortOnly == True:
         sortSpectra(rootDir, outputFileName, stats = stats, npomTypes = npomTypes)
@@ -3165,9 +3164,12 @@ def fitAllSpectra(rootDir, outputFileName, npSize = 80, summaryAttrs = False, fi
         plotInitPlStack(xPl, plData, imgName = 'Initial PL Stack', closeFigures = closeFigures)
 
     peakFindMidpointDict = {80: 680, 70 : 630, 60 : 580, 50 : 550, 40 : 540}
-    peakFindMidpoint = peakFindMidpointDict[npSize]
+    peakFindMidpoint = peakFindMidpointDict[npSize
     cmLowLimDict = {80: 580, 70 : 560, 60 : 540, 50 : 520, 40 : 500}
     cmLowLim = cmLowLimDict[npSize]
+
+    if lowerCutoff is not NoneL
+        cmLowLim = lowerCutoff
 
     #if last == 0:
     #    last = len(yData)
