@@ -18,6 +18,7 @@ from nplab.instrument.stage.Thorlabs_ELL8K import Thorlabs_ELL8K as RStage
 from nplab.instrument.electronics.power_meter import PowerMeter
 from nplab.instrument.electronics.thorlabs_pm100 import ThorlabsPowermeter
 from nplab import datafile, current_datafile
+from past.utils import old_div
 
 def isMonotonic(A): 
   
@@ -143,7 +144,9 @@ class PowerControl(Instrument):
         if self.measured_power is None:
             group.create_dataset('ref_powers',data=powers, attrs = attrs)
         else:
-            group.create_dataset('ref_powers',data=(old_div(powers*self.measured_power,max(powers))), attrs = attrs)
+            group.create_dataset('ref_powers',
+                                 data=powers*self.measured_power/max(powers),
+                                 attrs=attrs)
         
         self.lutter.close_shutter()
         self._set_to_midpoint()
@@ -222,10 +225,11 @@ class PowerControl_UI(QtWidgets.QWidget,UiTools):
         self.doubleSpinBox_max_param.setValue(self.PC.max_param)
         self.doubleSpinBox_max_param.valueChanged.connect(self.update_min_max_params)  
         self.doubleSpinBox_min_param.valueChanged.connect(self.update_min_max_params)
-        self.laser_textBrowser.setPlainText('Laser: '+self.PC.laser[1:])    
-        self.pushButton_set_param.clicked.connect(self.set_param)
-        self.doubleSpinBox_measured_power.valueChanged.connect(self.update_measured_power)
-        self.pushButton_set_power.clicked.connect(self.set_power_gui)  
+        self.laser_label.setText('Laser: '+self.PC.laser[1:])    
+        self.doubleSpinBox_set_input_param.valueChanged.connect(self.set_param)
+        self.doubleSpinBox_set_input_param.setValue(self.PC.param)
+        self.measured_power_lineEdit.textChanged.connect(self.update_measured_power)
+        self.doubleSpinBox_set_power.valueChanged.connect(self.set_power_gui)
         self.number_points_spinBox.valueChanged.connect(self.update_number_points)
      
     def update_min_max_params(self):
@@ -233,7 +237,8 @@ class PowerControl_UI(QtWidgets.QWidget,UiTools):
         self.PC.max_param = self.doubleSpinBox_max_param.value()
 
     def update_measured_power(self):
-        self.PC.measured_power = float(self.doubleSpinBox_measured_power.value())
+        if self.doubleSpinBox_measured_power.text().isdigit(): 
+            self.PC.measured_power = float(self.doubleSpinBox_measured_power.value())
     def set_param(self):
         self.PC.param = self.doubleSpinBox_set_input_param.value()
     def set_power_gui(self):
@@ -254,7 +259,7 @@ if __name__ == '__main__':
     FW = RStage() 
     lutter.set_mode(1)
     aom = Aom()
-    pometer = Thorlabs_powermeter()
+    pometer = ThorlabsPowermeter()
     wutter = Uniblitz("COM4")
     PC = PowerControl(FW, wutter, lutter, pometer)
     PC.show_gui(blocking = False)

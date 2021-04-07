@@ -682,4 +682,4 @@ class DummyCamera(Camera):
 
 if __name__ == '__main__':
     cam = DummyCamera()
-    g=cam.show_gui(blocking=False)
+    g=cam.show_gui(blocking=False, dark=True)

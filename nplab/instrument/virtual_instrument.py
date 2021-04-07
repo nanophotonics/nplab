@@ -157,7 +157,7 @@ class VirtualInstrument_speaker(MessageBusInstrument):
             return None
 
     #     return lines
-    def write(self, command):
+    def _write(self, command):
         """
         Write the command name and arguments to the In memory map
         """

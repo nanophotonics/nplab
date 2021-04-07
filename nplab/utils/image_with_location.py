@@ -256,6 +256,6 @@ def locate_feature_in_image(image, feature, margin=0, restrict=False):
    
     assert np.sum(corr) > 0, "Error: the correlation image doesn't have any nonzero pixels."
     peak = ndimage.measurements.center_of_mass(corr)  # take the centroid (NB this is of grayscale values, not binary)
-    pos = np.array(peak)# + image_shift + datum_pixel(feature) # return the position of the feature's datum point.
+    pos = np.array(peak) + image_shift + datum_pixel(feature) # return the position of the feature's datum point.
     return pos
     

@@ -4,7 +4,7 @@ from __future__ import print_function
 __author__ = 'alansanders'
 
 from nplab.instrument.message_bus_instrument import MessageBusInstrument, queried_property, queried_channel_property
-import visa
+import pyvisa as visa
 from functools import partial
 
 
@@ -13,7 +13,7 @@ class VisaInstrument(MessageBusInstrument):
     An instrument primarily using VISA communications
     """
 
-    def __init__(self, address, settings={}):
+    def __init__(self, address, settings=None):
         """
         :param address: VISA address as a string
         :param settings: dictionary of instrument settings, including:
@@ -28,6 +28,8 @@ class VisaInstrument(MessageBusInstrument):
             assert address in rm.list_resources(), "The instrument was not found"
         except AssertionError:
             print('Available equipment:', rm.list_resources())
+        if settings is None:
+            settings = dict()
         self.instr = rm.open_resource(address, **settings)
         self._address = address
         self._settings = settings
@@ -38,25 +40,27 @@ class VisaInstrument(MessageBusInstrument):
         except Exception as e:
             print("The serial port didn't close cleanly:", e)
 
-    def write(self, *args, **kwargs):
-        return self.instr.write(*args, **kwargs)
+    def _write(self, *args, **kwargs):
+        with self.communications_lock:
+            return self.instr.write(*args, **kwargs)
 
     def read(self, *args, **kwargs):
-        return self.instr.read(*args, **kwargs)
+        with self.communications_lock:
+            return self.instr.read(*args, **kwargs)
 
     def query(self, *args, **kwargs):
-        return self.instr.query(*args, **kwargs)
+        with self.communications_lock:
+            return self.instr.query(*args, **kwargs)
 
     def clear_read_buffer(self):
         empty_buffer = False
-        while empty_buffer == False:
+        while not empty_buffer:
             try:
                 self.instr.read()
             except Exception:
                 print("Buffer emptied")
                 empty_buffer = True
                 
-    #idn = property(fget=partial(query, message='*idn?'))
     idn = queried_property('*idn?', dtype='str')
 
 

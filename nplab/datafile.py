@@ -111,14 +111,20 @@ def wrap_h5py_item(item):
         return Group(item.id)
     else:
         return item  # for now, don't bother wrapping datasets
-        
+
+def ensure_str(str_or_bytes):
+    if type(str_or_bytes) is bytes:
+        return str_or_bytes.decode()
+    return str(str_or_bytes)
+
 def sort_by_timestamp(hdf5_group):
     """a quick function for sorting hdf5 groups (or files or dictionarys...) by timestamp """
     keys = list(hdf5_group.keys())
     try:
         time_stamps = []
         for value in list(hdf5_group.values()):
-            time_stamp_str = value.attrs['creation_timestamp']
+
+            time_stamp_str = ensure_str(value.attrs['creation_timestamp'])
             try:
                 time_stamp_float = datetime.datetime.strptime(time_stamp_str,"%Y-%m-%dT%H:%M:%S.%f")
             except ValueError:
@@ -127,7 +133,7 @@ def sort_by_timestamp(hdf5_group):
             time_stamps.append(time_stamp_float)
         keys = np.array(keys)[np.argsort(time_stamps)]
     except KeyError:
-        keys.sort(key=split_number_from_name)
+        keys.sort(key=lambda n: n.split('_')[-1] if '_' in n else n)
     items_lists = [[key,hdf5_group[key]] for key in keys]
     return items_lists
 
@@ -335,7 +341,7 @@ class DataFile(Group):
         :param save_version_info: If True (default), save a string attribute at top-level
         with information about the current module and system.
         """
-        if isinstance(name, h5py.File):
+        if isinstance(name, h5py.Group):
             f=name #if it's already an open file, just use it
         else:
             f = h5py.File(name, mode, *args, **kwargs)  # open the file
@@ -452,13 +458,10 @@ def set_current(datafile, **kwargs):
             _current_datafile = DataFile(datafile, **kwargs)  # open a new datafile
             return _current_datafile
         except Exception as e:
-            print("problem opening file:")
-            print(e)
-            print("trying with mode=r+")
-            # kwargs['mode'] = 'r+'  # dirty hack to work around mode=a not working
-            
+            print("problem opening file")            
             if os.path.getsize(datafile) < 100: #1kB/10
-                os.remove(datafile)
+                os.remove(datafile) # dirty hack to work around mode=a not working
+                                    # if the file is empty
                 
             _current_datafile = DataFile(datafile, **kwargs)
 
