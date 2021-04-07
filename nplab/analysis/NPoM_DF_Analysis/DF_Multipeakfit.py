@@ -3164,11 +3164,11 @@ def fitAllSpectra(rootDir, outputFileName, npSize = 80, summaryAttrs = False, fi
         plotInitPlStack(xPl, plData, imgName = 'Initial PL Stack', closeFigures = closeFigures)
 
     peakFindMidpointDict = {80: 680, 70 : 630, 60 : 580, 50 : 550, 40 : 540}
-    peakFindMidpoint = peakFindMidpointDict[npSize
+    peakFindMidpoint = peakFindMidpointDict[npSize]
     cmLowLimDict = {80: 580, 70 : 560, 60 : 540, 50 : 520, 40 : 500}
     cmLowLim = cmLowLimDict[npSize]
 
-    if lowerCutoff is not NoneL
+    if lowerCutoff is not None:
         cmLowLim = lowerCutoff
 
     #if last == 0:
