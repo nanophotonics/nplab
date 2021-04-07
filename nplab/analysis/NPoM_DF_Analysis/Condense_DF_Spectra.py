@@ -497,9 +497,10 @@ def extractAllSpectra(rootDir, returnIndividual = True, pl = False, dodgyThresho
             if fileType == 'post-2018':
                 particleN = 0
                 while dParticleFormat is None:                    
-                    for dSetName in list(ipf[allScans[0]][f'Particle_{particleN}'].keys()):
+                    for dSetName in list(ipf[allScans[0]]['Particle_'+str(particleN)].keys()):
                         if dSetName.startswith('alinger.z_scan') or dSetName.startswith('zScan') or dSetName.startswith('z_scan_0'):
                             dParticleFormat = dSetName
+                            print(dSetName)
                             break
                     
                     particleN += 1
