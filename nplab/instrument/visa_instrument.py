@@ -28,10 +28,10 @@ class VisaInstrument(MessageBusInstrument):
             assert address in rm.list_resources(), "The instrument was not found"
         except AssertionError:
             print('Available equipment:', rm.list_resources())
-        self.instr = rm.open_resource(address, **settings)
-        self._address = address
         if settings is None:
             settings = dict()
+        self.instr = rm.open_resource(address, **settings)
+        self._address = address
         self._settings = settings
 
     def __del__(self):
