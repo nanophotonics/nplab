@@ -317,7 +317,7 @@ class HDF5TreeItem(object):
                 for value in self.data_file[self.name].values():
                    
                     time_stamp_str = value.attrs['creation_timestamp']
-                    if type(time_stamp_str) is bytes:
+                    if type(time_stamp_str) in (bytes, np.bytes_):
                         time_stamp_str = time_stamp_str.decode()
                     try:
                         time_stamp_float = datetime.datetime.strptime(time_stamp_str, "%Y-%m-%dT%H:%M:%S.%f")
