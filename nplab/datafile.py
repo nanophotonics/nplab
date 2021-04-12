@@ -113,7 +113,7 @@ def wrap_h5py_item(item):
         return item  # for now, don't bother wrapping datasets
 
 def ensure_str(str_or_bytes):
-    if type(str_or_bytes) is bytes:
+    if type(str_or_bytes) in (bytes, np.bytes_):
         return str_or_bytes.decode()
     return str(str_or_bytes)
 
