@@ -207,7 +207,7 @@ def remove_cosmic_ray(spectrum, thresh=5, smooth=30, max_iterations=10):
                     else:
                         break
         rays = list(rays) # convert to list for indexing
-        if spikes: # if there are any cosmic rays
+        if rays: # if there are any cosmic rays
             cleaned[rays] = gaussian_filter(cleaned, smooth)[rays]
             # replace the regions with the smooothed spectrum
             continue # and repeat, as the smoothed spectrum will still be 
