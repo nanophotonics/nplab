@@ -131,11 +131,16 @@ class ValueRenderer(DataRenderer, QtWidgets.QWidget):
         
     def text(self, h5object):
         """Return the text that is displayed in the label"""
-        return str(h5object.value)
+        v = h5object[()]
+        if type(v) is bytes:
+            return v.decode()
+        return str(v)
 
     @classmethod
     def is_suitable(cls, h5object):
         try:
+            if getattr(h5object, 'is_note', False):
+                return 11
             if len(h5object.shape)==0:
                 return 10
             else:
@@ -155,7 +160,6 @@ class TextRenderer(DataRenderer, QtWidgets.QWidget):
         layout = QtWidgets.QFormLayout(self)
         layout.addWidget(self.label)
         self.setLayout(layout)
-        
         self.label.setText(self.text(h5object))
         
     def text(self, h5object):
@@ -164,8 +168,6 @@ class TextRenderer(DataRenderer, QtWidgets.QWidget):
 
     @classmethod
     def is_suitable(cls, h5object):
-        if getattr(h5object, 'is_note', False):
-            return 10
         return 1
     
 
@@ -296,6 +298,8 @@ class DataRenderer1DPG(FigureRendererPG):
             # If we have only one item, treat it as a group containing that item.
             h5object = {h5object.name: h5object}
         try:
+            if not len(list(h5object.values())):
+                return -1
             for dataset in list(h5object.values()):
                 # Check that all datasets selected are either 1D or Nx2 or 2xN
                 if not (dataset.shape and isinstance(dataset, h5py.Dataset)):
@@ -627,7 +631,7 @@ class JPEGRenderer(DataRenderer2or3DPG):
     def is_suitable(cls, h5object):
         if h5object.attrs.get('compressed_image_format', None) in ['JPEG', 'PNG', ]:
             return 50
-        if len(h5object.shape)==1:
+        if len(getattr(h5object, 'shape', [])) == 1: 
             # Detect the JPEG header directly.  NB this is a work in progress, I don't think it works currently.
             if all(np.array(h5object[:4]) == np.array([255,216,255,224],dtype=np.uint8)):
                 return 50
@@ -815,6 +819,8 @@ class SpectrumRenderer(FigureRendererPG):
         suitability = 0
         if isinstance(h5object,dict) == False and isinstance(h5object,h5py.Group) == False:
             h5object = {h5object.name : h5object}
+        if not len(list(h5object.values())):
+                return -1
         for dataset in list(h5object.values()):
             if not isinstance(dataset, h5py.Dataset):
                 return -1
@@ -1567,7 +1573,8 @@ class AutocorrelationRenderer(FigureRendererPG):
         if not hasattr(h5object, "values"):
             # If we have only one item, treat it as a group containing that item.
             h5object = {h5object.name: h5object}
-
+        if not len(list(h5object.values())):
+            return -1
         for dataset in list(h5object.values()):
             # Check that all datasets selected are either 1D or Nx2 or 2xN
             assert isinstance(dataset, h5py.Dataset)

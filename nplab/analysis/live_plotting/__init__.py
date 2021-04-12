@@ -17,10 +17,10 @@ pg.setConfigOption('foreground', 'k')
 
 # pg.setConfigOption('background', (50, 65, 75))#
 
-def remove_inf_and_nan(array_to_test, array_to_remove_from=None):
-    '''removes inf and nans from an array'''
-    if array_to_remove_from is None: array_to_remove_from = array_to_test
-    return np.array(array_to_remove_from)[~np.logical_or(np.isnan(list(array_to_test)),np.isinf(list(array_to_test)))]
+# def remove_inf_and_nan(array_to_test, array_to_remove_from=None):
+#     '''removes inf and nans from an array'''
+#     if array_to_remove_from is None: array_to_remove_from = array_to_test
+#     return array_to_remove_from[np.isfinite(array_to_test)]
 
 app = QtGui.QApplication.instance()
 if app is None:
@@ -56,15 +56,14 @@ class GraphWidget(pg.PlotWidget):
         self.hasLegend=False
         self.addLegend()
         graphs.append(self)
-    @property
-    def xs(self):
-        return [remove_inf_and_nan(y, self.x) for y in self.ys]
+    
     @property
     def x(self):
-        return np.linspace(*self.xlim, num=100)
+        return np.linspace(*self.xlim, num=200)
+    
     @property
     def ys(self):
-        return [remove_inf_and_nan(equation(self.x)) for equation in self.equations]
+        return [equation(self.x).astype(np.float64) for equation in self.equations]
         
     def update(self):
         def name(eq): # takes the name of the function the first time,
@@ -73,8 +72,8 @@ class GraphWidget(pg.PlotWidget):
             return str(eq).split(' ')[1]
             
         self.clearPlots() 
-        for i,(x, y, eq) in enumerate(zip(self.xs, self.ys, self.equations)): 
-            self.plot(x, y, pen=(i,len(self.ys)),name=name(eq))
+        for i, (y, eq) in enumerate(zip( self.ys, self.equations)):  
+            self.plot(self.x, y, pen=(i,len(self.equations)), name=name(eq))
 
     def xlabel(self, label):
         self.setLabel('bottom', label)
@@ -125,9 +124,9 @@ class FloatMathMixin():
     def __pow__(self, other):
         return float(self)**np.array(other)
     
-    def __radd__(self,other):
+    def __radd__(self, other):
         return self.__add__(other)
-    def __rsub__(self,other):
+    def __rsub__(self, other):
         return self.__sub__(other)
     def __rmul__(self,other):
         return self.__mul__(other)
@@ -152,7 +151,7 @@ class Parameter(QtWidgets.QWidget, FloatMathMixin):
         
     '''
     
-    param_changed = QtCore.Signal(int)
+    param_changed = QtCore.Signal(float)
     def __init__(self, name, Default=1, Min=-100_000, Max=100_000, units=None, slider=False):
         
         super().__init__()
@@ -188,7 +187,7 @@ class ParameterGroupBox(QtGui.QGroupBox):
     feed me parameters and i'll add spinBoxes for them, and 
     emit a signal when they're changed to update the graphs. 
     '''
-    param_changed = QtCore.Signal(int)
+    param_changed = QtCore.Signal(float)
     def __init__(self, parameters):
         super().__init__('Parameter controls')
         self.parameters = parameters
@@ -248,14 +247,17 @@ if __name__ == '__main__':
     def equation1(x):
         return A*x**2 + B*x**2 - C*x + D
     def equation2(x):
-        return A*x**3 - (B/C)*x**2 + D
+        return (A/x**2)**(B/C)
     def eq3(x):
         return A**np.sin(C*x)/D*x
     def eq4(x):
         return (np.sin(A*x)/B*x) + D
-    def eq5(x):
+    def eq5(x):  
+        y = np.arange(len(x), dtype=np.float64)
+        y[len(x)//2]=np.nan
+        return y
         return eq3(x)[::-1]#reversed
-    
+
     #create the graphs
     GraphWidget(equation1, equation2, title='1st')
     GraphWidget(equation2, xlim=(-5,5), title='2nd')
@@ -265,7 +267,7 @@ if __name__ == '__main__':
     GraphWidget(equation1, equation2, title='1st')
     GraphWidget(equation2, xlim=(-5,5), title='2nd')
     GraphWidget(eq3, eq5, title='etc,', xlabel = ':)')
-    GraphWidget(eq4, title='etc.')
+    GraphWidget(eq5, title='etc.')
     
     GraphWidget(equation1, equation2, title='1st')
     GraphWidget(equation2, xlim=(-5,5), title='2nd')

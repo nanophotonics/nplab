@@ -297,6 +297,7 @@ class HDF5TreeItem(object):
     def has_children(self):
         """Whether or not this item has children"""
         if self._has_children is None:
+            #print(self.name)
             self._has_children = hasattr(self.data_file[self.name], "keys")
         return self._has_children
 
@@ -311,7 +312,17 @@ class HDF5TreeItem(object):
             try:
                 time_stamps = []
                 for value in self.data_file[self.name].values():
-                    time_stamp_str = value.attrs['creation_timestamp']
+                   
+                    try:
+                        time_stamp_str = value.attrs['creation_timestamp']
+                    except AttributeError:
+                        print(value)
+                        print('has no creation_timestamp attribute.')
+                        time_stamp_str = '2021-01-01T01:01:01.000001'
+                    #if type(time_stamp_str) is bytes:
+                    if isinstance(time_stamp_str, bytes):
+                        time_stamp_str = time_stamp_str.decode() #b'somestring'.decode('UTF-8')
+                    #print(time_stamp_str)
                     try:
                         time_stamp_float = datetime.datetime.strptime(time_stamp_str, "%Y-%m-%dT%H:%M:%S.%f")
                     except ValueError:

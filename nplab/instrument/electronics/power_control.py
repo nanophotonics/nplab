@@ -18,6 +18,7 @@ from nplab.instrument.stage.Thorlabs_ELL8K import Thorlabs_ELL8K as RStage
 from nplab.instrument.electronics.power_meter import PowerMeter
 from nplab.instrument.electronics.thorlabs_pm100 import ThorlabsPowermeter
 from nplab import datafile, current_datafile
+from past.utils import old_div
 
 def isMonotonic(A): 
   
