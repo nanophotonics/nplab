@@ -143,12 +143,13 @@ class HDF5ItemViewer(QtWidgets.QWidget, UiTools):
         
     @data.setter
     def data(self, newdata):
-        if newdata == None:
+        if newdata is None:
             return None
         
         self._data = newdata
 
         # When data changes, update the list of renderers
+        
         renderers = suitable_renderers(self.data)
         combobox = self.renderer_combobox
         previous_selection = combobox.currentIndex() # remember previous choice
@@ -300,6 +301,7 @@ class HDF5TreeItem(object):
     def has_children(self):
         """Whether or not this item has children"""
         if self._has_children is None:
+            #print(self.name)
             self._has_children = hasattr(self.data_file[self.name], "keys")
         return self._has_children
 
@@ -313,8 +315,18 @@ class HDF5TreeItem(object):
             keys = list(self.data_file[self.name].keys())
             try:
                 time_stamps = []
-                for value in list(self.data_file[self.name].values()):
-                    time_stamp_str = value.attrs['creation_timestamp'].decode('UTF-8')
+                for value in self.data_file[self.name].values():
+                   
+                    try:
+                        time_stamp_str = value.attrs['creation_timestamp']
+                    except AttributeError:
+                        print(value)
+                        print('has no creation_timestamp attribute.')
+                        time_stamp_str = '2021-01-01T01:01:01.000001'
+                    #if type(time_stamp_str) is bytes:
+                    if isinstance(time_stamp_str, bytes):
+                        time_stamp_str = time_stamp_str.decode() #b'somestring'.decode('UTF-8')
+                    #print(time_stamp_str)
                     try:
                         time_stamp_float = datetime.datetime.strptime(time_stamp_str, "%Y-%m-%dT%H:%M:%S.%f")
                     except ValueError:
@@ -523,26 +535,23 @@ class HDF5TreeWidget(QtWidgets.QTreeView):
         self.model.set_up_treeview(self)
         self.sizePolicy().setHorizontalStretch(0)
 
-
     def selected_h5item(self):
         """Return the current selection as an HDF5 item."""
         return self.model.selected_h5item_from_view(self)
 
     def __del__(self):
         del self.model # is this needed?  I'm never sure...
-    
+        
 
 class HDF5Browser(QtWidgets.QWidget, UiTools):
-    """A Qt Widget for browsing an HDF5 file and graphing the data.
+    """A Qt Widget for fbrowsing an HDF5 file and graphing the data.
     """
 
     def __init__(self, data_file, parent=None):
         super(HDF5Browser, self).__init__(parent)
-        self.data_file = data_file
-
+        self.data_file = df.DataFile(data_file)
         self.treeWidget = HDF5TreeWidget(data_file,
-                                         parent=self,
-                                         )
+                                         parent=self)
         self.selection_model = self.treeWidget.selectionModel() 
         self.selection_model.selectionChanged.connect(self.selection_changed)
         self.viewer = HDF5ItemViewer(parent=self, 
@@ -573,59 +582,34 @@ class HDF5Browser(QtWidgets.QWidget, UiTools):
         """Callback function to update the displayed item when the tree selection changes."""
         try:
             self.viewer.data = self.treeWidget.selected_h5item()
-            if self.data_file.update_current_group == True:
+            print(self.viewer.data)
+            if self.data_file.update_current_group:
                 df.set_current_group(self.treeWidget.selected_h5item())
 
         except Exception as e:
+            
             print(e, 'That could be corrupted')
+         
             
 
     def __del__(self):
         pass  # self.data_file.close()
     
-    
-#    def on_click(self, item, column):
-#        """Handle clicks on items in the tree."""
-#        item.setExpanded(True) # auto expand the item upon click
-#        if len(self.treeWidget.selectedItems())>1: 
-#            self.viewer.data = DummyHDF5Group({treeitem.data(column, QtCore.Qt.UserRole).name : treeitem.data(column, QtCore.Qt.UserRole) \
-#                                                for treeitem in self.tree.treeWidget.selectedItems() })
-#        else:
-#            self.viewer.data = item.data(column, QtCore.Qt.UserRole)
-#             
              
 if __name__ == '__main__':
-    import sys, h5py, os, numpy as np
-    import nplab
+    
     from nplab.utils.gui import get_qt_app
 
     app = get_qt_app()
-    
-    data_file = h5py.File('test.h5', 'w')
-    data_file.create_dataset('dset1', data=np.linspace(-1, 1, 100))
-    data_file.create_dataset('dset2', data=np.linspace(-1, 1, 100) ** 3)
-    g = data_file.create_group('group1')
-    g.create_dataset('dset2', data=np.linspace(-1, 1, 100) ** 2)
-    g = g.create_group('group2')
-    g.create_dataset('dset3', data=np.linspace(-1, 1, 100).reshape(10, 10))
-    ui = HDF5Browser(data_file)
-    ui.show()
-    sys.exit(app.exec_())
-    data_file.close()
+    with h5py.File('test.h5', 'w') as data_file: 
+        data_file.create_dataset('dset1', data=np.linspace(-1, 1, 100))
+        data_file.create_dataset('dset2', data=np.linspace(-1, 1, 100) ** 3)
+        g = data_file.create_group('group1')
+        g.create_dataset('dset2', data=np.linspace(-1, 1, 100) ** 2)
+        g = g.create_group('group2')
+        g.create_dataset('dset3', data=np.linspace(-1, 1, 100).reshape(10, 10))
+        ui = HDF5Browser(df.DataFile(data_file))
+        ui.show()
+        app.exec_()
+        
 
-#    data_file = h5py.File('C:/Users/Ana Andres/Documents/Python Scripts/2016-05-17.h5', 'r')
-#    data_file = nplab.datafile.open_file()
-#    ui = HDF5Browser(data_file)
-#    ui.show()
-#    app.exec_()
-#    data_file.close()
-#    datafile = nplab.current_datafile() #datafile.DataFile("/Users/rwb27/Desktop/test.h5", mode="r")
- #   datafle.create_dataset()
-#    tree = QtWidgets.QTreeView()
-#    model = HDF5ItemModel(datafile)
-#    model.set_up_treeview(tree)
-#    tree.show()
-#    app.exec_()
-    #print_tree(model.root_item) (don't, it's recursive...)
-  #  datafile.show_gui()
-  #  datafile.close()

@@ -47,7 +47,7 @@ class ArbitraryAxis(pg.AxisItem):
         except Exception as e:
             # pg throws out a TypeError/RuntimeWarning when there's no ticks. We ignore it
             returnval = [''] * len(values)
-            print(e)
+            # print(e)
         return returnval
 
 
@@ -67,7 +67,7 @@ class Crosshair(pg.GraphicsObject):
 
     def boundingRect(self):
         """Makes a clickable rectangle around the center, which is half the size of the cross hair"""
-        return QtCore.QRectF(-self._size, -self._size, 2*self._size, 2*self._size)
+        return QtCore.QRectF(-self._size, -self._size, 2 * self._size, 2 * self._size)
 
     def mouseDragEvent(self, ev):
         # Ensures the Crosshair always remains in the center of a pixel, which makes the ROI selection easier
@@ -94,6 +94,7 @@ class ExtendedImageView(pg.ImageView):
 
     # TODO: link the histogram region with the lineedit levels
     """
+
     def __init__(self, *args, **kwargs):
         self.axis_values = dict(bottom=None, left=None, top=None, right=None)
         self.axis_units = dict(bottom=None, left=None, top=None, right=None)
@@ -145,12 +146,11 @@ class ExtendedImageView(pg.ImageView):
             self.ui.roiBtn.hide()
             self.ui.menuBtn.hide()
 
-    
     def roiClicked(self):
         """Ensures that the new widget in the splitter is displayed"""
         super(ExtendedImageView, self).roiClicked()
         if self.hasTimeAxis() and not self.ui.roiBtn.isChecked():
-            self.ui.splitter.setSizes([self.height()-70, 35, 35])
+            self.ui.splitter.setSizes([self.height() - 70, 35, 35])
 
     def buildMenu(self):
         """Adds an action to the existing pg.ImageView menu to toggle the visibility of the new GUI"""
@@ -184,22 +184,6 @@ class ExtendedImageView(pg.ImageView):
                 ax.show()
 
     # Percentile functions
-    def getProcessedImage(self):
-        """Checks if we want to autolevel for each image and does it"""
-        if self.imageDisp is None:
-            image = self.normalize(self.image)
-            self.imageDisp = image
-            mm = self.quickMinMax(image)
-            self.levelMin, self.levelMax = self.quickMinMax(image)[0] if type(mm) is list else mm
-            self._imageLevels = self.quickMinMax(self.imageDisp)
-        if self.levelGroup.checkbox_singleimagelevel.isChecked() and self.hasTimeAxis():
-            cur_image = self.imageDisp[self.currentIndex]
-            mm = self.quickMinMax(cur_image)
-            self.levelMin, self.levelMax = self.quickMinMax(cur_image)[0] if type(mm) is list else mm
-            self._imageLevels = self.quickMinMax(self.imageDisp)
-            self.autoLevels()  # sets the histogram setLevels(self.levelMin, self.levelMax)
-        return self.imageDisp
-
     def set_level_percentiles(self):
         """
         Reads the GUI lineEdits and sets the level percentiles. If not normalising each image, it also finds the levels
@@ -210,33 +194,37 @@ class ExtendedImageView(pg.ImageView):
         max_level = float(self.levelGroup.lineEdit_maxLevel.text())
 
         self.level_percentiles = [min_level, max_level]
-        if not self.levelGroup.checkbox_singleimagelevel.isChecked():
-            image = self.getProcessedImage()
-            self.levelMin, self.levelMax = self.quickMinMax(image)
-            self.autoLevels()
+        self.imageDisp = None
         self.updateImage()
+        self.autoLevels()
 
     def reset(self):
         self.levelGroup.lineEdit_minLevel.setText('0')
         self.levelGroup.lineEdit_maxLevel.setText('100')
         self.set_level_percentiles()
 
+    def getProcessedImage(self):
+        """Reimplements the ImageView.getProcessedImage to allow leveling of each image in a time series"""
+        rtrn = super(ExtendedImageView, self).getProcessedImage()
+        if self.levelGroup.checkbox_singleimagelevel.isChecked() and self.hasTimeAxis():
+            if self.axes['c'] is not None:
+                # axes['c'] keeps track of what dimension is the colour. And since we are taking one dimension out when
+                # doing quickMinMax of each image in the time series:
+                self.axes['c'] -= 1
+            self._imageLevels = self.quickMinMax(self.imageDisp[self.currentIndex])
+            self.levelMin = min([level[0] for level in self._imageLevels])
+            self.levelMax = max([level[1] for level in self._imageLevels])
+            self.autoLevels()
+            if self.axes['c'] is not None:
+                # Now we bring it back to where it was before
+                self.axes['c'] += 1
+        return rtrn
+
     def quickMinMax(self, data):
-        """Reimplements the ImageView.quickMinMax to set level percentiles
-
-        :param data:
-        :return:
-        """
+        """Reimplements the ImageView.quickMinMax to set level percentiles"""
         mm = super(ExtendedImageView, self).quickMinMax(data)
-        while type(mm) is list: # 3.7 vs 3.8 fix
-            mm = mm[0]
-        minval, maxval = mm
-        rng = maxval - minval
-        levelmin = minval + rng * self.level_percentiles[0] / 100.
-        levelmax = minval + rng * self.level_percentiles[1] / 100.
-
-        return [(levelmin, levelmax)]
-    
+        return [(np.percentile(x, self.level_percentiles[0]),
+                 np.percentile(x, self.level_percentiles[1])) for x in mm]
 
     # Crosshairs
     def pos_to_unit(self, positions):
@@ -255,9 +243,9 @@ class ExtendedImageView(pg.ImageView):
             axs = axs[:2]
         for ax, pos in zip(axs, positions):
             if hasattr(ax, 'pos_to_unit'):
-                units += (ax.pos_to_unit(pos), )
+                units += (ax.pos_to_unit(pos),)
             else:
-                units += (pos, )
+                units += (pos,)
 
         return units
 
@@ -275,7 +263,7 @@ class ExtendedImageView(pg.ImageView):
                 pos = tuple(xhair.referenced_pos())
                 positions += pos
             diff = np.linalg.norm(np.array(positions[:2]) - np.array(positions[2:]))
-            positions += (diff, )
+            positions += (diff,)
 
             display_string = "Pixels: <span style='color: red'>[%i,%i] </span> " \
                              "<span style='color: green'> [%i,%i] </span> " \
@@ -291,7 +279,7 @@ class ExtendedImageView(pg.ImageView):
                 units = ()
                 for ax in ['bottom', 'left']:
                     if self.axis_units[ax] is None:
-                        units += ('px', )
+                        units += ('px',)
                     else:
                         units += (self.axis_units[ax],)
                 display_string += "\t(%s, %s):" \

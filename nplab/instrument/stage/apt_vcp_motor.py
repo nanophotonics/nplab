@@ -17,7 +17,7 @@ from nplab.utils.notified_property import NotifiedProperty, DumbNotifiedProperty
 import types
 import time
 
-DC_status_motors = {'BBD102/BBD103': [], 'TDC001': []}
+DC_status_motors = {'BBD102/BBD103': [], 'TDC001': [], 'KDCT101': []}
 DEBUG = False
 
 class APT_parameter(NotifiedProperty):
@@ -103,6 +103,7 @@ class APT_VCP_motor(APT_VCP, Stage):
             self.axis_names = tuple(destination.keys())
             self.destination = destination
         self.make_all_parameters()
+        self._recusive_move_num = 0
 
     '''MOVEMENT'''
 
@@ -176,13 +177,14 @@ class APT_VCP_motor(APT_VCP, Stage):
                 self.write(0x0453, data=data,destination_id=axis)
                 if block ==True:
                     self._waitFinishMove()
-                self._recusive_move_num = 0
             except struct.error as e:
                 self.log('Move failed with '+str(e),'warning')
                 self._recusive_move_num+=1
                 if self._recusive_move_num>10:
-                    raise Exception('Stage mode failed!')
+                    self._recusive_move_num = 0
+                    raise Exception('Stage move failed!')
                 self.move(pos[axis_number],axis=axis,channel_number=channel_number,block = block)
+            self._recusive_move_num = 0
             axis_number += 1
 
 
@@ -208,14 +210,14 @@ class APT_VCP_motor(APT_VCP, Stage):
             N = len(returned_message)
             print("returned_message length:",N)
         if self.model[1] in DC_status_motors:
-            channel, position, velocity, Reserved, status_bits = struct.unpack('<HLHHI', returned_message)
+            channel, position, velocity, Reserved, status_bits = struct.unpack(r'<HLHHI', returned_message)
             #HLHHI
             #H - 2, L - 4, I - 4
             # self.position = position
             # self.velocity = velocity / self.velocity_scaling_factor
         else:
             
-            channel, position, EncCnt,status_bits, ChanIdent2,_,_,_ = struct.unpack('<HILIHLLL',returned_message)
+            channel, position, EncCnt,status_bits, ChanIdent2,_,_,_ = struct.unpack(r'<HILIHLLL', returned_message)
             # print "Status bits",status_bits
             # print "self.status_bit_mask",self.status_bit_mask[:, 0]
         bitmask = self._bit_mask_array(status_bits, [int(i) for i in self.status_bit_mask[:, 0]])
@@ -253,7 +255,7 @@ class APT_VCP_motor(APT_VCP, Stage):
             returned_message = self.query(0x0411, param1=self.channel_number_to_identity[channel_number],
                                           destination_id = axis)
             data = returned_message['data']
-            channel_id, position = struct.unpack('<HL', data)
+            channel_id, position = struct.unpack(r'<HL', data)
         # position = self.convert_to_SI_position(position)
             return self.convert(position,'counts','position')
 
@@ -382,7 +384,7 @@ class DC_APT(APT_VCP_motor):
         #Setup up conversion factors
         if self.model[1] == 'BBD102/BBD103': #Once the TBD001 controller is added it needs to be added here
             self.t_constant = 102.4E-6
-        elif self.model[1] == 'TDC001':
+        elif self.model[1] in ['TDC001', 'KDCT101']:
             self.t_constant = 2048.0/(6.0E6)
         else:
             self.t_constant = None

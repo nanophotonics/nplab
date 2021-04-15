@@ -88,9 +88,10 @@ def suitable_renderers(h5object, return_scores=False):
         for r in renderers:
             try:
                 renderers_and_scores.append((r.is_suitable(h5object), r))
-            except:
-                # print("renderer {0} failed when checking suitability for {1}".format(r, h5object))
+            except Exception as e:
+                print("renderer {0} failed when checking suitability for {1} due to error: {2}".format(r, h5object,e))
                 pass # renderers that cause exceptions shouldn't be used!
+        
     renderers_and_scores.sort(key=lambda score_r: score_r[0], reverse=True)
     if return_scores:
         return [(score, r) for score, r in renderers_and_scores if score >= 0]
@@ -141,11 +142,16 @@ class ValueRenderer(DataRenderer, QtWidgets.QWidget):
         
     def text(self, h5object):
         """Return the text that is displayed in the label"""
-        return str(h5object.value)
+        v = h5object[()]
+        if type(v) is bytes:
+            return v.decode()
+        return str(v)
 
     @classmethod
     def is_suitable(cls, h5object):
         try:
+            if getattr(h5object, 'is_note', False):
+                return 11
             if len(h5object.shape)==0:
                 return 10
             else:
@@ -165,7 +171,6 @@ class TextRenderer(DataRenderer, QtWidgets.QWidget):
         layout = QtWidgets.QFormLayout(self)
         layout.addWidget(self.label)
         self.setLayout(layout)
-        
         self.label.setText(self.text(h5object))
         
     def text(self, h5object):
@@ -175,6 +180,7 @@ class TextRenderer(DataRenderer, QtWidgets.QWidget):
     @classmethod
     def is_suitable(cls, h5object):
         return 1
+    
 
 add_renderer(TextRenderer)
 add_group_renderer(TextRenderer)
@@ -302,15 +308,20 @@ class DataRenderer1DPG(FigureRendererPG):
         if not hasattr(h5object, "values"):
             # If we have only one item, treat it as a group containing that item.
             h5object = {h5object.name: h5object}
-
-        for dataset in list(h5object.values()):
-            # Check that all datasets selected are either 1D or Nx2 or 2xN
-            assert isinstance(dataset, h5py.Dataset) #we can only render datasets
-            try:
-                assert len(dataset.shape) == 1
-            except:
-                assert len(dataset.shape) == 2
-                assert np.any(np.array(dataset.shape) == 2)
+        try:
+            if not len(list(h5object.values())):
+                return -1
+            for dataset in list(h5object.values()):
+                # Check that all datasets selected are either 1D or Nx2 or 2xN
+                if not (dataset.shape and isinstance(dataset, h5py.Dataset)):
+                    return -1#we can only render datasets
+                try:
+                    assert len(dataset.shape) == 1
+                except:
+                    assert len(dataset.shape) == 2
+                    assert np.any(np.array(dataset.shape) == 2)
+        except:
+            return -1
         return 14
             
 add_renderer(DataRenderer1DPG)
@@ -359,7 +370,7 @@ class Scatter_plot1DPG(FigureRendererPG):
 add_renderer(Scatter_plot1DPG)
 
 
-class Normalised_Parameter_renderer(FigureRendererPG):
+class NormalisedParameterRenderer(FigureRendererPG):
     """ A renderer for multiple parameters plotted agains the same x-axis, normalised for easy comparison
         author: ee306
     """
@@ -401,15 +412,18 @@ class Normalised_Parameter_renderer(FigureRendererPG):
           
     @classmethod
     def is_suitable(cls, h5object):
-        if len(h5object)>1:
-            if h5object.hasattr('parameter_renderer') and h5object.hasattr('x-axis'):
+        
+        if h5object.shape and len(h5object)>1:
+            if hasattr(h5object, 'parameter_renderer') and hasattr(h5object, 'x-axis'):
                 return 5
+            else:
+                return -1
         else:
             return -1
 
-add_renderer(Normalised_Parameter_renderer)
+add_renderer(NormalisedParameterRenderer)
 
-class Parameter_renderer(FigureRendererPG):
+class ParameterRenderer(FigureRendererPG):
     """ A renderer for multiple parameters plotted agains the same x-axis
         author: ee306
     """
@@ -451,14 +465,16 @@ class Parameter_renderer(FigureRendererPG):
           
     @classmethod
     def is_suitable(cls, h5object):
-        if len(h5object)>1:
-            if h5object.hasattr('parameter_renderer') and h5object.hasattr('x-axis'):
+        if h5object.shape and len(h5object)>1:
+            if hasattr(h5object, 'parameter_renderer') and hasattr(h5object, 'x-axis'):
                 return 5
+            else:
+                return -1
         else:
             return -1
 
 
-add_renderer(Parameter_renderer)
+add_renderer(ParameterRenderer)
 
 class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
     """ A renderer for large spectral datasets experessing them in a colour map using
@@ -645,7 +661,7 @@ class MultiSpectrum2D(DataRenderer, QtWidgets.QWidget):
       
             if 'wavelengths' in list(dataset.attrs.keys()):
                 if len(dataset.shape) == 2:
-                    if len(np.array(dataset)[:,0])<100:
+                    if len(np.array(dataset)[:,0]) < 100:
                         suitability = suitability + len(h5object)-20
                     else:
                         return 1
@@ -731,11 +747,11 @@ class JPEGRenderer(DataRenderer2or3DPG):
 
     @classmethod
     def is_suitable(cls, h5object):
-        if h5object.attrs['compressed_image_format'] in ['JPEG', 'PNG', ]:
+        if h5object.attrs.get('compressed_image_format', None) in ['JPEG', 'PNG', ]:
             return 50
-        if len(h5object.shape)==1:
+        if len(getattr(h5object, 'shape', [])) == 1: 
             # Detect the JPEG header directly.  NB this is a work in progress, I don't think it works currently.
-            if h5object[:4] == np.array([255,216,255,224],dtype=np.uint8):
+            if all(np.array(h5object[:4]) == np.array([255,216,255,224],dtype=np.uint8)):
                 return 50
         return -1
 
@@ -765,7 +781,7 @@ class DataRenderer1D(FigureRenderer):
             return 10
         elif len(h5object.shape) > 1:
             return -1
-            
+        return -1
 add_renderer(DataRenderer1D)
 
 
@@ -921,6 +937,8 @@ class SpectrumRenderer(FigureRendererPG):
         suitability = 0
         if isinstance(h5object,dict) == False and isinstance(h5object,h5py.Group) == False:
             h5object = {h5object.name : h5object}
+        if not len(list(h5object.values())):
+                return -1
         for dataset in list(h5object.values()):
             if not isinstance(dataset, h5py.Dataset):
                 return -1
@@ -1173,7 +1191,7 @@ class HyperSpec_Alan(DataRenderer, QtWidgets.QWidget):
             
         return suitability
 
-add_renderer(HyperSpec_Alan)
+# add_renderer(HyperSpec_Alan)
 
 class ScannedParticle(FigureRenderer):
     """A renderer for individual particles from a particle scan."""
@@ -1220,12 +1238,16 @@ class ScannedParticle(FigureRenderer):
 
         # First, make sure we've got the right datasets (NB this also raises an exception if it's not a group)
         g = h5object
-        keys = list(g.keys())
+        keys = getattr(g, 'keys', list)()
         for k in ['camera_image', 'z_scan']:
-            assert k in keys, "missing dataset {}, can't be a particle...".format(k)
-        assert g['camera_image'].shape[0] > 10
-        assert g['camera_image'].shape[1] > 10
-        assert len(g['z_scan'].shape) == 2
+            if k not in keys:
+                # print("missing dataset {}, can't be a particle...".format(k))
+                return -1
+        try:
+            assert g['camera_image'].shape[0] > 10
+            assert g['camera_image'].shape[1] > 10
+            assert len(g['z_scan'].shape) == 2
+        except: return -1
         return 500
 add_renderer(ScannedParticle)
 
@@ -1669,12 +1691,14 @@ class AutocorrelationRenderer(FigureRendererPG):
         if not hasattr(h5object, "values"):
             # If we have only one item, treat it as a group containing that item.
             h5object = {h5object.name: h5object}
-
+        if not len(list(h5object.values())):
+            return -1
         for dataset in list(h5object.values()):
             # Check that all datasets selected are either 1D or Nx2 or 2xN
             assert isinstance(dataset, h5py.Dataset)
             #autocorrelation functions are only for the adlink9812 card
-            assert(dataset.attrs["device"]=="adlink9812") 
+            if not (dataset.attrs.get("device", None)=="adlink9812"):
+                return -1
             try:
                 assert len(dataset.shape) == 1
             except:
@@ -1686,13 +1710,11 @@ class AutocorrelationRenderer(FigureRendererPG):
 add_renderer(AutocorrelationRenderer)
 
 if __name__ == '__main__':
-    import sys
 
-    print(os.getcwd())
     app = get_qt_app()
-    f = h5py.File('test.h5', 'w')
-    dset = f.create_dataset('dset1', data=np.linspace(-1, 1, 100))
-    ui = HDF5InfoRenderer(dset)
-    ui.show()
-    sys.exit(app.exec_())
-    f.close()
+    with h5py.File('test.h5', 'w') as f:
+        dset = f.create_dataset('dset1', data=np.linspace(-1, 1, 100))
+        
+        ui = HDF5InfoRenderer(dset)
+        ui.show()
+        app.exec_()

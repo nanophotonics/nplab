@@ -10,7 +10,7 @@ import struct
 import time
 import numpy as np
 import re
-import visa
+import pyvisa as visa
 
 
 PrettyPrinter = pprint.PrettyPrinter(indent=4)

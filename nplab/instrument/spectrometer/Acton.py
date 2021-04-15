@@ -5,6 +5,9 @@ from nplab.instrument.visa_instrument import VisaInstrument
 import re
 import time
 from visa import VisaIOError
+import os
+import json
+import numpy as np
 
 
 class SP2750(VisaInstrument):
@@ -20,10 +23,11 @@ class SP2750(VisaInstrument):
     def wavelength(self, value):
         self.set_wavelength_fast(value)
 
-    def __init__(self, address):
+    def __init__(self, address, calibration_file=None):
         port_settings = dict(baud_rate=9600, read_termination="\r\n", write_termination="\r", timeout=10000)
         super(SP2750, self).__init__(address, port_settings)
         self.clear_read_buffer()
+        self._calibration_file = calibration_file
 
         self.metadata_property_names += ('wavelength', )
 
@@ -43,7 +47,7 @@ class SP2750(VisaInstrument):
             self._logger.warn("Message  %s" % full_reply)
 
         if status == "ok":
-            return reply.rstrip("").lstrip("")
+            return reply.strip()
         else:
             self._logger.info("Multiple reads")
             read = str(full_reply)
@@ -104,7 +108,7 @@ class SP2750(VisaInstrument):
         :return:
         """
         string = self.query("?NM")
-        wvl = float(re.findall(" ([0-9]+\.[0-9]+) ", string)[0])
+        wvl = float(re.findall("([0-9]+\.[0-9]+) ", string)[0])
         return self.calibrate(wvl, False)
 
     def set_speed(self, rate):
@@ -147,3 +151,94 @@ class SP2750(VisaInstrument):
         :return:
         """
         return self.query("?GRATINGS")
+
+    # DIVERTER MIRRORS
+    @property
+    def exit_mirror(self):
+        self.query('EXIT-MIRROR')
+        return self.query('?MIRROR')
+
+    @exit_mirror.setter
+    def exit_mirror(self, value):
+        assert value in ['SIDE', 'FRONT']
+        self.query('EXIT-MIRROR')
+        self.query(value)
+
+    @property
+    def entrance_mirror(self):
+        self.query('ENT-MIRROR')
+        return self.query('?MIRROR')
+
+    @entrance_mirror.setter
+    def entrance_mirror(self, value):
+        assert value in ['SIDE', 'FRONT']
+        self.query('ENT-MIRROR')
+        self.query(value)
+
+    # CALIBRATED MEASUREMENT
+    @property
+    def calibration_file(self):
+        """Path to the calibration file"""
+        if self._calibration_file is None:
+            self._calibration_file = os.path.join(os.path.dirname(__file__), 'default_calibration.json')
+        return self._calibration_file
+
+    @calibration_file.setter
+    def calibration_file(self, path):
+        """Ensures the path is absolute and points to a .json file"""
+        if not os.path.isabs(path):
+            default_directory = os.path.dirname(__file__)
+            path, ext = os.path.splitext(path)
+            if ext != 'json':
+                if ext != '':
+                    self._logger.warn('Changing file type to JSON')
+                ext = 'json'
+                path = os.path.join(default_directory, path + '.' + ext)
+        self._calibration_file = path
+
+    def get_wavelengths(self):
+        """Returns the current wavelength range being shown on a detector attached to the SP2750
+
+        Reads from a calibration file that contains the detector size being used, and the dispersion. Example JSONs:
+            {
+              "detector_size": 100,
+              "dispersion": 0.01
+            }
+            {
+              "detector_size": 100,
+              "dispersion": [0.0001, 0.02]
+            }
+            {
+              "detector_size": 2048,
+              "dispersion": {"1": 0.014, "2": [0.0001, 0.02]},
+              "offset": {"1": [0.00001, 1]}
+            }
+        :return:
+        """
+        central_wavelength = self.wavelength
+
+        with open(self.calibration_file, 'r') as dfile:
+            calibration = json.load(dfile)
+        detector_size = calibration['detector_size']
+
+        dispersion = calibration['dispersion']
+        if isinstance(dispersion, dict):
+            current_grating = self.get_grating()
+            dispersion = dispersion[current_grating]
+        poly = np.poly1d(dispersion)  # poly1d handles it whether you give it a number on an iterable
+        dispersion_value = poly(central_wavelength)
+
+        offset_value = 0
+        if 'offset' in calibration:
+            offset = calibration['offset']
+            if isinstance(offset, dict):
+                current_grating = self.get_grating()
+                offset = offset[current_grating]
+
+            poly = np.poly1d(offset)
+            offset_value = poly(central_wavelength)
+
+        pixels = np.arange(detector_size, dtype=np.float)
+        pixels -= np.mean(pixels)
+        delta_wvl = pixels * dispersion_value
+        return central_wavelength + delta_wvl + offset_value

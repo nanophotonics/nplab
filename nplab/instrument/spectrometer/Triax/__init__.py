@@ -346,7 +346,7 @@ class TriaxUI(QtWidgets.QWidget,UiTools):
         super(TriaxUI, self).__init__()
         uic.loadUi(ui_file, self)
         self.triax = triax
-        self.centre_wl_lineEdit.returnPressed.connect(self.set_wl_gui)
+        self.centre_wl_lineEdit.textChanged.connect(self.set_wl_gui)
         self.slit_lineEdit.returnPressed.connect(self.set_slit_gui)     
         self.centre_wl_lineEdit.setText(str(np.around(self.triax.center_wavelength)))
         self.slit_lineEdit.setText(str(self.triax.Slit()))
