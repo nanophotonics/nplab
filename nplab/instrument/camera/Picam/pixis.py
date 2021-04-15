@@ -65,7 +65,8 @@ class Pixis(Camera):
     def __del__(self):
         if self.bolRunning == True:
             self.ShutDown()
-
+    
+    
 
     def raw_snapshot(self, suppress_errors=False):
         """
@@ -293,7 +294,8 @@ class Pixis(Camera):
         if self.picam.Picam_OpenFirstCamera(ct.byref(self.CameraHandle)) != 0:
             print("Could not find camera")
             return
-
+        
+        print(self.get_parameter(parameter_name="PicamParameter_PicamModel", label="shutter"))
         self.x_max = self.FrameWidth = self.get_parameter(parameter_name="PicamParameter_SensorActiveWidth", label="frame width")
         self.y_max = self.FrameHeight = self.get_parameter(parameter_name="PicamParameter_SensorActiveHeight", label="frame height")
         print("Frame size:", self.x_max, self.y_max)
@@ -433,7 +435,7 @@ if __name__ == "__main__":
     # p.SetExposureTime(50.0)
     # print p.GetExposureTime()
     
-    _,Frame = p.raw_snapshot()
+    # _,Frame = p.raw_snapshot()
     # print p.GetExposureTime()
 
     # p.SetExposureTime(100.0)
@@ -454,5 +456,5 @@ if __name__ == "__main__":
 
     #p.ShutDown()
     
-    plt.imshow(Frame, cmap='gray')
+    #plt.imshow(Frame, cmap='gray')
     # plt.show()

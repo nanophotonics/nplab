@@ -50,26 +50,26 @@ class Piezoconcept(si.SerialInstrument,Stage):
             multiplier=0.001
         if self.unit == "u":
             multiplier=1.0
-        print(value)
         if relative ==False:
             if value*multiplier < 1E2 and value*multiplier >=0:
                 if (value*multiplier-0.2*multiplier)>0:
                     value=value-0.2*multiplier
-                    value = np.float32(value)
-                    self.write("MOVEX "+str(value)+self.unit)
+                    value = np.float32(value) 
+                    self.write("MOVEZ "+str(value)+self.unit)
             else:
                 self.log("The value is out of range! 0-100 um (0-1E8 nm) (Z)",level = 'WARN')
         elif relative == True:
             if (value*multiplier+self.position) < 1E2 and (value*multiplier+self.position) >= 0:
-                self.write("MOVRX "+str(value)+self.unit)
+                self.write("MOVRZ "+str(value)+self.unit)
             else:
                 self.log("The value is out of range! 0-100 um (0-1E8 nm) (Z)",level = 'WARN')
         time.sleep(0.1)
-        print(value,self.position)
+        print(self.position)
+        
     def get_position(self):
-        str_pos = self.query('GET_X')[:-3]
+        str_pos = self.query('GET_Z')[:-3]
         print("'"+str_pos+"'")
-        return float(self.query('GET_X')[:-3])
+        return float(self.query('GET_Z')[:-3])
                 
     def move_step(self,direction):
         '''Move a predefined step in either direction

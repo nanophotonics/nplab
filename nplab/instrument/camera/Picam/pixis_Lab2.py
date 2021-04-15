@@ -31,13 +31,13 @@ from past.utils import old_div
 import ctypes as ct
 import numpy as np
 from matplotlib import pyplot as plt
+import nplab.datafile as df
 from nplab.instrument.camera.camera_scaled_roi import CameraRoiScale
 from nplab.instrument.camera import Camera
 from nplab.ui.ui_tools import UiTools
 from nplab.utils.gui import QtWidgets, QtCore, uic, QtGui
 import sys,os, time
 from nplab.utils.log import create_logger
-
 from picam_constants import PicamSensorTemperatureStatus,PicamParameter,PicamValueType,PicamError,transpose_dictionary,PI_V,PicamConstraintType
 
 import logging
@@ -68,14 +68,20 @@ class Pixis(CameraRoiScale):
         self.boundary_cut = 5
         self.background = None
         self.backgrounded = False
+        self.current_frame = None
+        self.data_file = None
         
     def __del__(self):
         if self.bolRunning == True:
             self.ShutDown()
 
     def Capture(self, suppress_errors = False):
+        """ 
+            Basic camera snapshot function
+        """
         try:
-            image  = np.array(self.GetCurrentFrame()).T
+            image  = np.array(self.GetCurrentFrame())
+            self.current_frame = image
             return image
         except Exception as e:
             if suppress_errors==True:
@@ -90,14 +96,18 @@ class Pixis(CameraRoiScale):
         if self.aquisition_mode == 'Image':
                 image  = self.Capture()
         elif self.aquisition_mode == 'Spectrum':
-                image = self.get_spectrum()
+                raw_snapshot = self.Capture()
+                image = self.get_spectrum(raw_snapshot)
         elif self.aquisition_mode == 'ROI':
-                image = self.get_roi()
+                raw_snapshot = self.Capture()
+                image = self.get_roi(raw_snapshot)
         return True, image
           
 
-    def get_roi(self,x_min=None, x_max = None, y_min=None,y_max = None, suppress_errors=False,debug=0):
-        raw_image = self.Capture()
+    def get_roi(self,raw_snapshot, x_min=None, x_max = None, y_min=None,y_max = None, suppress_errors=False,debug=0):
+        """ 
+            Takes input of raw snapshot an outputs ROI image
+        """
         if x_min is None:
             x_min = self.x_min
         if y_min is None:
@@ -106,21 +116,23 @@ class Pixis(CameraRoiScale):
             x_max = self.x_max
         if y_max is None:
             y_max = self.y_max
-        print(x_min,x_max,y_min,y_max)
         if debug > 0:
             print("Pixis.get_roi region of interest:",x_min,x_max,y_min,y_max)
-        roi_image = raw_image[y_min:y_max, x_min:x_max]
+        roi_image = raw_snapshot[y_min:y_max, x_min:x_max]
         if debug > 0:
             print("Pixis.roi_image.shape:",roi_image.shape)
         return roi_image
 
-    def get_spectrum(self, x_min=0, x_max = None, y_min=0,y_max = None,with_boundary_cut = True, suppress_errors=False):    
-        _, roi_image = self.get_roi(x_min,x_max,y_min,y_max,suppress_errors)
+    def get_spectrum(self, raw_snapshot, x_min= None, x_max = None, y_min=None,y_max = None ,with_boundary_cut = True, suppress_errors=False):  
+        """ 
+            Takes input of raw snapshot an outputs ROI defined spectrum
+        """
+        roi_image = self.get_roi(raw_snapshot, x_min,x_max,y_min,y_max,suppress_errors)
         #cut edge values from raw spectrum - remove edge effects
         raw_spectrum = np.mean(roi_image,axis=0)
         pixel_offsets = np.array(list(range(0,len(raw_spectrum))))-int(self.FrameWidth/2)
         if with_boundary_cut == True:
-            return True, raw_spectrum[self.boundary_cut:-self.boundary_cut]
+            return raw_spectrum[self.boundary_cut:-self.boundary_cut]
 
         else:
             return raw_spectrum
@@ -411,7 +423,7 @@ class Pixis(CameraRoiScale):
         ctarr = (ct.c_uint16*(self.FrameWidth*self.FrameHeight)) # Create ctypes array
         ctarr = ctarr.from_address(structReadout.ptr) # Read in array from pointer
         nparr = np.array(ctarr) # Convert to numpy array
-        nparr = nparr.reshape((self.FrameWidth, self.FrameHeight)) # Reshape numpy array
+        nparr = nparr.reshape((self.FrameHeight, self.FrameWidth)) # Reshape numpy array
         
         return nparr
     
@@ -433,8 +445,8 @@ class PixisUI(QtWidgets.QWidget, UiTools):
         
         uic.loadUi(os.path.normpath('{}/pixis_ui.ui'.format(PARENT_DIR)), self)
         self.Pixis = pixis
-        self.gui_params = ['ReadMode', 'Exposure',
-                           'AcquisitionMode', 'OutAmp', 'TriggerMode']
+        self.DisplayWidget = None
+        self.data_file = None
         
         self.Pixis.StartUp()
         self._setup_signals()
@@ -442,38 +454,24 @@ class PixisUI(QtWidgets.QWidget, UiTools):
         #self.data_file = None
         
     def _setup_signals(self):
-        #self.comboBoxAcqMode.activated.connect(self.acquisition_mode)
         #self.comboBoxBinning.activated.connect(self.binning)
         self.comboBoxReadMode.activated.connect(self.read_mode)
-        #self.comboBoxTrigMode.activated.connect(self.trigger)
         self.spinBoxNumFrames.valueChanged.connect(self.number_frames)
         self.spinBoxNumFrames.setRange(1, 1000000)
-        #self.spinBoxNumAccum.valueChanged.connect(self.number_accumulations)
         self.spinBoxNumRows.valueChanged.connect(self.number_rows)
         self.spinBoxCenterRow.valueChanged.connect(self.number_rows)
-        #for box in ['Tracks', 'Height', 'Offset']:
-            #eval(f'self.spinBox{box}.valueChanged.connect(self.set_multitrack)')
-        #self.checkBoxROI.stateChanged.connect(self.ROI)
-        #self.checkBoxCrop.stateChanged.connect(self.isolated_crop)
-        #self.checkBoxCooler.stateChanged.connect(self.cooler)
-        #self.checkBoxEMMode.stateChanged.connect(self.output_amplifier)
-        #self.spinBoxEMGain.valueChanged.connect(self.em_gain)
         self.lineEditExpT.editingFinished.connect(self.exposure)
         self.lineEditExpT.setValidator(QtGui.QDoubleValidator())
         self.pushButtonDiv5.clicked.connect(lambda: self.exposure('/'))
         self.pushButtonTimes5.clicked.connect(lambda: self.exposure('x'))
-
         self.pushButtonCapture.clicked.connect(self.Capture)
         self.pushButtonLive.clicked.connect(self.Live)
         self.pushButtonAbort.clicked.connect(self.Abort)
         #self.save_pushButton.clicked.connect(self.Save)
         self.pushButtonTakeBG.clicked.connect(self.take_background)
         self.checkBoxRemoveBG.stateChanged.connect(self.remove_background)
-        #self.referesh_groups_pushButton.clicked.connect(self.update_groups_box)
-       # self.keep_shutter_open_checkBox.stateChanged.connect(self.update_shutter_mode)
         self.read_temperature_pushButton.clicked.connect(self.update_temperature_display)
-        #self.live_temperature_checkBox.clicked.connect(self.temperature_gui)
-        #self.temperature_display_thread.ready.connect(self.update_temperature_display)
+        self.save_pushButton.clicked.connect(self.Save)
         
     def Capture(self):
         #print('capture')
@@ -489,6 +487,8 @@ class PixisUI(QtWidgets.QWidget, UiTools):
             ExTime = float(self.lineEditExpT.text()) / 5
             self.update_Exposure(ExTime)
         self.Pixis.SetExposureTime(ExTime)
+        print(self.Pixis.GetExposureTime())
+        
     
     def update_Exposure(self, value):
         self.lineEditExpT.setText(str(value))
@@ -520,15 +520,38 @@ class PixisUI(QtWidgets.QWidget, UiTools):
     def number_rows(self):
         num_rows = self.spinBoxNumRows.value()
         center_row = self.spinBoxCenterRow.value()
-        self.Pixis.y_min = int(center_row +128 - (num_rows/2))
-        print(self.Pixis.y_min)
-        self.Pixis.y_max = int(center_row+128 + (num_rows/2))
+        self.Pixis.y_min = int(center_row - (num_rows/2))
+        self.Pixis.y_max = int(center_row + (num_rows/2))
     
     def read_mode(self):
-        self.Pixis.aquisition_mode = self.comboBoxReadMode.currentText()
+        if self.Pixis.aquisition_mode != self.comboBoxReadMode.currentText():
+            if self.comboBoxReadMode.currentText() == "Image":
+                self.latest_raw_frame = self.Pixis.current_frame
+            elif self.comboBoxReadMode.currentText() == "Spectrum":
+                self.latest_raw_frame = self.Pixis.get_spectrum(self.Pixis.current_frame)
+            elif self.comboBoxReadMode.currentText() == "ROI":
+                self.latest_raw_frame = self.Pixis.get_roi(self.Pixis.current_frame)
+                
+            self.Pixis.aquisition_mode = self.comboBoxReadMode.currentText()
         print(self.Pixis.aquisition_mode)
         
+    def Save(self):
+        if self.data_file is None:
+            self.data_file = df.current()
+        data = self.Pixis.current_frame
+        if self.filename_lineEdit.text() != 'Filename....':
+            filename = self.filename_lineEdit.text()
+        else:
+            filename = 'Pixis_data'      
         
+        group = self.data_file.create_group('PixisData')
+        try:
+            data_set = group.create_dataset(name=filename, data=data)
+        except Exception as e:
+            self.Pixis._logger.info(e)
+        attrs = dict()
+        df.attributes_from_dict(data_set, attrs)   
+            
     def __del__(self):
         self.Pixis.ShutDown()
         if self.DisplayWidget is not None:
@@ -539,4 +562,4 @@ if __name__ == "__main__":
     
     pixis = Pixis(debug = 0)
     #pixis.StartUp()
-    gui = pixis.show_gui(False)
+    gui = pixis.show_gui(blocking = False)
