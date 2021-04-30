@@ -14,7 +14,7 @@ from nplab.utils.notified_property import NotifiedProperty, DumbNotifiedProperty
 from nplab.utils.thread_utils import locked_action
 
 class Rolera(Camera):
-    exposure = DumbNotifiedProperty(1000)
+    
     def __init__(self):
         super().__init__()
         pvc.init_pvcam()
@@ -32,6 +32,15 @@ class Rolera(Camera):
     @gain.setter
     def gain(self, value):
         self._cam.gain = int(value)
+    
+    @NotifiedProperty
+    def exposure(self):
+        return self._cam.exp_time
+   
+    @locked_action
+    @exposure.setter
+    def exposure(self, value):
+        self._cam.exposure = value
     
     def get_control_widget(self):
         return RoleraCameraControlWidget(self)
