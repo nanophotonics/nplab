@@ -97,12 +97,13 @@ from scipy import constants as constants
 from scipy.interpolate import interp1d as interp
 from scipy.optimize import curve_fit
 import pywt
-from nplab.analysis import Auto_Gaussian_Smooth as sm
-from scipy.ndimage.filters import gaussian_filter as sm2
+from scipy.ndimage.filters import gaussian_filter
 from scipy.signal import argrelextrema
+def sm(spec, sigma=3):
+    return gaussian_filter(spec, sigma)
 
 DUMMY = False
-
+PEAKWIDTH = 16
 
 def truncate(counts, wavelengths, lower_cutoff, upper_cutoff, return_indices_only=False):
     '''
@@ -138,15 +139,6 @@ def find_closest(value_to_match, array):
     # value, index, residual
     return array[np.argmin(residual)], np.argmin(residual), min(residual)
 
-
-def Grad(Array):
-    """
-    Returns something prop to the grad of 1D array Array. Does central difference method with mirroring.
-    """
-
-    A = np.array(list(Array)+[Array[-1], Array[-2]])
-    B = np.array([Array[1], Array[0]]+Array.tolist())
-    return (A-B)[1:-1]
 
 
 def cm_to_omega(cm):
@@ -282,18 +274,17 @@ class fullfit(object):
         results = []
         loss_results = []
 
-        # -------What does the curve look like with the current peaks?-------
+        
         if not len(self.peaks):
             Current = np.array(self.shifts)*0
         else:
             Current = self.multi_line(self.peaks)
 
-        # -------Set up Loss function--------
+   
+
         def loss(params):
             # *self.multi_L(self.shifts,*self.peaks))# if this overlaps with another lorentzian it's biased against it
             return np.sum(np.abs(Current+self.line(*params)-self.signal))
-
-        # -----Minimise loss in each region---------
 
         for i in range(int(self.regions)):
             bounds = [(0, np.inf), (i*sectionsize+Start, (i+1) *
@@ -343,21 +334,6 @@ class fullfit(object):
         if not self.peak_added and self.verbose:
             print('no suitable peaks to add')
 
-    def Wavelet_Estimate_Width(self, Smooth_Loss_Function=2):
-        # Uses the CWT to estimate the typical peak FWHM in the signal
-        # First, intepolates the signal onto a linear x_scale with the smallest spacing present in the signal
-        # Completes CWT and sums over the position coordinate, leaving scale
-        # Does minor smooth, and takes scale at maximum as FWHM
-        Int = scint.splrep(self.shifts, self.spec)
-        Step = np.min(np.abs(np.diff(self.shifts)))
-        New = scint.splev(
-            np.arange(self.shifts[0], self.shifts[-1], Step), Int)
-        Scales = np.arange(1, np.ceil(old_div(self.maxwidth, Step)), 1)
-        Score = np.diff(np.sum(pywt.cwt(New, Scales, 'gaus1')[0], axis=1))
-        Score = ndimf.gaussian_filter(Score, Smooth_Loss_Function)
-        Scale = Scales[np.argmax(Score)]*Step
-        return Scale
-
     def initial_bg_poly(self):
         '''
         takes an inital guess at the background.
@@ -366,10 +342,7 @@ class fullfit(object):
 
         '''
 
-        try:
-            smoothed = sm.Run(self.spec)
-        except:
-            smoothed = smoothed = sm2(self.spec, 2)
+        smoothed = sm(self.spec)
         self.bg_indices = argrelextrema(smoothed, np.less)[0]
         while len(self.bg_indices) < 3*self.order:
             self.bg_indices = np.append(self.bg_indices,
@@ -670,13 +643,13 @@ class fullfit(object):
 
         return np.sum([self.asymm_line(asymmpeak) for asymmpeak in params], axis=0)
 
-    def dummyRun(self,
+    def dummy_run(self,
                  initial_fit=None,
                  add_peaks=True,
                  allow_asymmetry=False,
                  minwidth=8,
                  maxwidth=30,
-                 regions=20, noise_factor=0.01,
+                 regions=20, noise_factor=2,
                  min_peak_spacing=5,
                  comparison_thresh=0.05,
                  verbose=False):
@@ -693,17 +666,14 @@ class fullfit(object):
 #            self.optimize_heights
 #            #self.optimize_centre_and_width()
 
-        try:
-            smoothed = np.array(sm.Run(self.signal))
-        except:
-            smoothed = sm2(self.spec, 2)
+        smoothed = sm(self.spec)
         maxima = argrelextrema(smoothed, np.greater)[0]
         heights = smoothed[maxima]
         maxima = maxima[np.argsort(heights)[-5:]]
         heights = smoothed[maxima]
 
         centres = self.shifts[maxima]
-        widths = np.ones(len(maxima))*17
+        widths = np.ones(len(maxima))*PEAKWIDTH
 
         self.peaks = np.transpose(np.stack([heights, centres, widths]))
 
@@ -711,13 +681,13 @@ class fullfit(object):
         self.optimize_centre_and_width()
         print("I'm a dummy!")
 
-    def Run(self, *args, **kwargs):
+    def run(self, *args, **kwargs):
         if DUMMY:
-            self.dummyRun(*args, **kwargs)
+            self.dummy_run(*args, **kwargs)
         else:
-            self._Run(*args, **kwargs)
+            self._run(*args, **kwargs)
 
-    def _Run(self,
+    def _run(self,
              initial_fit=None,
              add_peaks=True,
              allow_asymmetry=False,
@@ -739,9 +709,11 @@ class fullfit(object):
             self.minwidth = minwidth/0.95
         self.verbose = verbose
         self.min_peak_spacing = min_peak_spacing
-        self.width = 4*self.Wavelet_Estimate_Width()  # a guess for the peak width
-        # peaks must be above this to be accepted
-        self.noise_threshold = noise_factor*np.std(Grad(self.spec))
+        self.width = PEAKWIDTH  # a guess for the peak width
+        
+        noise = np.sqrt(np.var(self.spec/gaussian_filter(self.spec, 40))).mean()
+
+        self.noise_threshold = noise_factor*noise
 
         # number of regions the spectrum will be split into to add a new peak
         self.regions = regions
@@ -750,7 +722,10 @@ class fullfit(object):
             self.regions = len(self.spec)//2
 
         self.initial_bg_poly()  # takes a guess at the background
+        if self.noise_threshold>np.max(self.signal):
+            self.noise_threshold=np.min(self.signal)
         height_bound = (self.noise_threshold, np.max(self.signal))
+        
         pos_bound = (np.min(self.shifts), np.max(self.shifts))
         width_bound = (self.minwidth, self.maxwidth)
 
@@ -852,7 +827,7 @@ if __name__ == '__main__':
     spec = SERS_and_shifts[0]
     shifts = SERS_and_shifts[1]
     spec, shifts = truncate(spec, shifts, 190, np.inf)
-    ff = fullfit(spec, shifts, lineshape='G', order=15)
+    ff = fullfit(spec, shifts, lineshape='G', order=9)
     ff.Run(verbose=True)
     ff.plot_result()
     plt.figure()

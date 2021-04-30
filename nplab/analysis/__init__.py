@@ -83,7 +83,6 @@ class Spectrum(np.ndarray):
         '''smooth using scipy.ndimage.guassian_smooth'''
         return self.__class__(gaussian_filter(self, sigma), self.x)
     
-    
     def remove_cosmic_ray(self,
                           thresh=5,
                           smooth=30,
@@ -121,8 +120,8 @@ class RamanSpectrum(Spectrum):
     laser_wavelength = 632.8
     def __new__(cls, 
                 spectrum,
-                wavelengths=None,
                 shifts=None,
+                wavelengths=None,
                 *args, **kwargs):
         assert not (shifts is None and wavelengths is None),\
         'must supply shifts or wavelengths'
@@ -150,7 +149,16 @@ class RamanSpectrum(Spectrum):
                                    np.arange(obj.shape[-1]))
         self._shifts = getattr(obj, '_shifts', None)
         
-
+    @classmethod
+    def from_h5(cls, dataset):
+        '''create instance using a h5 dataset.
+        will background-subtract and reference the spectrum if these
+        attributes are saved'''    
+        attrs = dataset.attrs
+        ref = attrs.get('reference', 1)
+        bg = attrs.get('background', 0)
+        return cls((dataset[()]-bg)/(ref-bg), wavelengths=dataset.attrs['wavelengths'])
+    
     @cached_property # only ever calculated once per instance
     def shifts(self):
         if self._shifts is None:
@@ -215,31 +223,22 @@ def remove_cosmic_ray(spectrum, thresh=5, smooth=30, max_iterations=10):
                      
         # until no cosmic rays are found
         return cleaned
+    return cleaned
 
 
 if __name__ ==  '__main__':
-    import matplotlib.pyplot as plt
     
-    file = load_h5()
-    spec = Spectrum.from_h5(file['particle_0']['z_scan'])
-    spec = spec.max(axis=0).remove_cosmic_ray().smooth(4).split(500, 900)
-    plt.plot(spec.wl, spec.norm())
     
 
-    RamanSpectrum.laser_wavelength = 785
-    spec = RamanSpectrum(spectrum, wavelengths) # also works with load_h5
-    Stokes = spec.split(lower=0)
-    AntiStokes = spec.split(upper=0)
-    plt.plot(Stokes.shifts, Stokes)
-    
+    import matplotlib.pyplot as plt
     wls = np.linspace(633, 750, 1600)
     spec = np.random.randint(300, 600, size=1600)
     
-    rspec = RamanSpectrum(spec, wls)
+    rspec = RamanSpectrum(spec, wavelengths=wls)
     
     RamanSpectrum.laser_wavelength = 700
     plt.figure()
     plt.plot(rspec.shifts, rspec, label='shifts')
-    rspec2 = RamanSpectrum(spec, wls)
+    rspec2 = RamanSpectrum(spec, wavelengths=wls)
     plt.plot(rspec2.shifts, rspec2, label='center of 700')
     plt.legend()
