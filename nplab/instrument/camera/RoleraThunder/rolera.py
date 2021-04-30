@@ -8,20 +8,29 @@ Created on Fri Apr 30 12:10:10 2021
 from nplab.instrument.camera import Camera, CameraControlWidget
 from nplab.instrument.camera.camera_scaled_roi import CameraRoiScale
 from pyvcam import pvc
-from pyvcam.camera import Camera as Cam
+from pyvcam.camera import Camera as PyVCam
 from nplab.ui.ui_tools import QuickControlBox
+from nplab.utils.notified_property import NotifiedProperty, DumbNotifiedProperty
 
 class Rolera(CameraRoiScale):
+    exposure = DumbNotifiedProperty(1000)
     def __init__(self):
         super().__init__()
         pvc.init_pvcam()
-        self._cam = next(Cam.detect_camera())
+        self._cam = next(PyVCam.detect_camera())
         self._cam.open()
-        self.exposure=1000
-        self.gain=1
+    
     def raw_snapshot(self):
-        im = self._cam.get_frame(self.exposure)
-        return True, im
+        return True, self._cam.get_frame(self.exposure)
+    
+    @NotifiedProperty
+    def gain(self):
+        return self._cam.gain
+    
+    @gain.setter
+    def gain(self, value):
+        self._cam.gain = value
+    
     def get_control_widget(self):
         return RoleraCameraControlWidget(self)
     
