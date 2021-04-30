@@ -11,8 +11,9 @@ from pyvcam import pvc
 from pyvcam.camera import Camera as PyVCam
 from nplab.ui.ui_tools import QuickControlBox
 from nplab.utils.notified_property import NotifiedProperty, DumbNotifiedProperty
+from nplab.utils.thread_utils import locked_action
 
-class Rolera(CameraRoiScale):
+class Rolera(Camera):
     exposure = DumbNotifiedProperty(1000)
     def __init__(self):
         super().__init__()
@@ -26,10 +27,11 @@ class Rolera(CameraRoiScale):
     @NotifiedProperty
     def gain(self):
         return self._cam.gain
-    
+   
+    @locked_action
     @gain.setter
     def gain(self, value):
-        self._cam.gain = value
+        self._cam.gain = int(value)
     
     def get_control_widget(self):
         return RoleraCameraControlWidget(self)
@@ -40,7 +42,7 @@ class RoleraCameraControlWidget(CameraControlWidget):
         super(RoleraCameraControlWidget, self).__init__(camera, auto_connect=False)
         gb = QuickControlBox()
         gb.add_doublespinbox("exposure")
-        gb.add_doublespinbox("gain")
+        gb.add_spinbox('gain')
         gb.add_button("show_camera_properties_dialog", title="Camera Setup")
         gb.add_button("show_video_format_dialog", title="Video Format")
         self.layout().insertWidget(1, gb) # put the extra settings in the middle
