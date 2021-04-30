@@ -22,7 +22,7 @@ class Rolera(Camera):
         self._cam.open()
     
     def raw_snapshot(self):
-        return True, self._cam.get_frame(self.exposure)
+        return True, self._cam.get_frame()
     
     @NotifiedProperty
     def gain(self):
