@@ -12,6 +12,7 @@ from pyvcam.camera import Camera as PyVCam
 from nplab.ui.ui_tools import QuickControlBox
 from nplab.utils.notified_property import NotifiedProperty, DumbNotifiedProperty
 from nplab.utils.thread_utils import locked_action
+import numpy as np
 
 class Rolera(Camera):
     
@@ -20,9 +21,56 @@ class Rolera(Camera):
         pvc.init_pvcam()
         self._cam = next(PyVCam.detect_camera())
         self._cam.open()
+
     
     def raw_snapshot(self):
         return True, self._cam.get_frame()
+
+    @property
+    def roi(self):
+        return self._cam.roi
+
+    @roi.setter
+    def roi(self, value):
+        # Takes in a tuple following (x_start, x_end, y_start, y_end), and
+        # sets self.__roi if valid
+        if (isinstance(value, tuple) and all(isinstance(x, int) for x in value)
+                and len(value) == 4):
+
+            if (value[0] in range(0, self._cam.sensor_size[0] + 1) and
+                    value[1] in range(0, self._cam.sensor_size[0] + 1) and
+                    value[2] in range(0, self._cam.sensor_size[1] + 1) and
+                    value[3] in range(0, self._cam.sensor_size[1] + 1)):
+                self._cam.roi = value
+                self._cam._calculate_reshape()
+                return
+
+            else:
+                raise ValueError('Invalid ROI paramaters for {}'.format(self))
+
+        raise ValueError('{} ROI expects a tuple of 4 integers'.format(self))
+
+    
+    def get_roi_image(self, value=None,debug=0):
+        x,raw_image = self.raw_snapshot()
+        if value is not None:
+            self.roi=value
+        else:
+            pass
+        roi = self.roi
+        if debug > 0:
+            print("Region of interest:",roi)
+        roi_image = raw_image[roi[0]:roi[1],roi[2]:roi[3]]
+        if debug > 0:
+            print("roi_image.shape:",roi_image.shape)
+        return roi_image
+
+    def get_spectrum(self, value=None):    
+        roi_image = self.get_roi_image(value)
+        raw_spectrum = np.mean(roi_image,axis=0)
+        #pixel_offsets = np.array(list(range(0,len(raw_spectrum))))-int(self.FrameWidth/2)
+        return raw_spectrum#,pixel_offsets
+
     
     @NotifiedProperty
     def gain(self):
