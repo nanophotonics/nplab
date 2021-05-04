@@ -53,11 +53,10 @@ class Rolera(Camera):
     
     def get_roi_image(self, value=None,debug=0):
         x,raw_image = self.raw_snapshot()
-        if value is not None:
-            self.roi=value
+        if value is None:
+            roi = self.roi
         else:
-            pass
-        roi = self.roi
+            roi=value
         if debug > 0:
             print("Region of interest:",roi)
         roi_image = raw_image[roi[0]:roi[1],roi[2]:roi[3]]
