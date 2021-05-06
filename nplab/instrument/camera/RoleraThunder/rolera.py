@@ -51,21 +51,21 @@ class Rolera(Camera):
         raise ValueError('{} ROI expects a tuple of 4 integers'.format(self))
 
     
-    def get_roi_image(self, value=None,debug=0):
-        x,raw_image = self.raw_snapshot()
-        if value is None:
-            roi = self.roi
-        else:
-            roi=value
-        if debug > 0:
-            print("Region of interest:",roi)
-        roi_image = raw_image[roi[0]:roi[1],roi[2]:roi[3]]
-        if debug > 0:
-            print("roi_image.shape:",roi_image.shape)
-        return roi_image
+#    def get_roi_image(self, value=None,debug=0):
+#        x,raw_image = self.raw_snapshot()
+#        if value is None:
+#            roi = self.roi
+#        else:
+#            roi=value
+#        if debug > 0:
+#            print("Region of interest:",roi)
+#        roi_image = raw_image[roi[0]:roi[1],roi[2]:roi[3]]
+#        if debug > 0:
+#            print("roi_image.shape:",roi_image.shape)
+#        return roi_image
 
     def get_spectrum(self, value=None):    
-        roi_image = self.get_roi_image(value)
+        x,roi_image = self.raw_snapshot()
         raw_spectrum = np.mean(roi_image,axis=0)
         #pixel_offsets = np.array(list(range(0,len(raw_spectrum))))-int(self.FrameWidth/2)
         return raw_spectrum#,pixel_offsets
@@ -87,7 +87,7 @@ class Rolera(Camera):
     @locked_action
     @exposure.setter
     def exposure(self, value):
-        self._cam.exposure = value
+        self._cam.exp_time = value
     
     def get_control_widget(self):
         return RoleraCameraControlWidget(self)
