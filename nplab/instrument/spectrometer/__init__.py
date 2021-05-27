@@ -592,6 +592,8 @@ class DisplayThread(QtCore.QThread):
         self.parent = parent
         self.single_shot = False
         self.refresh_rate = 30.
+        self.spectrum = None
+
 
     def run(self):
         t0 = time.time()
@@ -606,11 +608,16 @@ class DisplayThread(QtCore.QThread):
                 t0 = time.time()
             if type(spectrum) == np.ndarray:
                 self.spectrum_ready.emit(spectrum)
+                #sunny added below
+                #self.spectrum = spectrum
             elif type(spectrum) == list:
                 self.spectra_ready.emit(spectrum)
+                #sunnyadded below
+#                self.spectrum = spectrum[0]
             if self.single_shot:
                 break
         self.finished.emit()
+        
 
 
 class SpectrometerDisplayUI(QtWidgets.QWidget,UiTools):
@@ -632,6 +639,7 @@ class SpectrometerDisplayUI(QtWidgets.QWidget,UiTools):
         self.plotbox.setLayout(QtWidgets.QGridLayout())
         self.plotlayout = self.plotbox.layout()          
         self.plots =[]
+        self.spectrum = None
 
         for spectrometer_nom in range(self.spectrometer.num_spectrometers):
             self.plots.append(pg.PlotWidget(labels = {'bottom':'Wavelength (nm)'}))
@@ -654,6 +662,7 @@ class SpectrometerDisplayUI(QtWidgets.QWidget,UiTools):
         register_for_property_changes(self.spectrometer,'filename',self.filename_changed)
     def button_pressed(self, *args, **kwargs):
         sender = self.sender()
+        #print(type(self._display_thread.spectrum))
         if sender is self.take_spectrum_button:
             #if self._display_thread.is_alive():
             if self._display_thread.isRunning():
@@ -664,10 +673,20 @@ class SpectrometerDisplayUI(QtWidgets.QWidget,UiTools):
             self._display_thread.start()
             #self.update_spectrum()
         elif sender is self.save_button:
+            
             save_spectrum = self.spectrometer.save_spectra \
                 if isinstance(self.spectrometer, Spectrometers) \
                 else self.spectrometer.save_spectrum
             save_spectrum(attrs={'description':str(self.description.text())})
+            
+            
+#            spectrum = ArrayWithAttrs(self._display_thread.spectrum, attrs=self.metadata) #added by sunny
+#            #sunny added (self._display_thread.spectrum) in 3 places in the following 4 lines.
+#            save_spectrum = self.spectrometer.save_spectra(self._display_thread.spectrum) \
+#                if isinstance(self.spectrometer, Spectrometers) \
+#                else self.spectrometer.save_spectrum(self._display_thread.spectrum)
+#            print(self.description.text())
+#            save_spectrum(self._display_thread.spectrum,attrs={'description':str(self.description.text())})
         elif sender is self.live_button:
             if self.live_button.isChecked():
                 #if self._display_thread.is_alive():

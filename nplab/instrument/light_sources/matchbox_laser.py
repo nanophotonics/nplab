@@ -80,7 +80,7 @@ class MatchboxLaser(SerialInstrument, LightSource):
         return self.get_power()
         
 if __name__ == "__main__":
-    laser = MatchboxLaser("/dev/ttyUSB0")
+    laser = MatchboxLaser("COM3")
     laserID=laser.query("ID?")
     laserName=laser.query("NM?")
     laser.show_gui()

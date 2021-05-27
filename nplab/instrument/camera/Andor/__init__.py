@@ -398,14 +398,20 @@ class AndorUI(QtWidgets.QWidget, UiTools):
         attrs['Description'] = self.description_plainTextEdit.toPlainText()
         if hasattr(self.Andor, 'x_axis'):
             attrs['wavelengths'] = self.Andor.x_axis
+            
+        if self.Andor.backgrounded == False: #and 'background' in list(data_set.attrs.keys()):
+            None#del data_set.attrs['background']
+        else: #added by Sunny
+            attrs['background'] = self.Andor.background#added by Sunny
+#moved df.attributes_from... from above line 401  if self.Andor.backgrounded            
         try:
             data_set = group.create_dataset(name=filename, data=data)
         except Exception as e:
             self.Andor._logger.info(e)
+            
         df.attributes_from_dict(data_set, attrs)
-        if self.Andor.backgrounded == False and 'background' in list(data_set.attrs.keys()):
-            del data_set.attrs['background']
-
+#end of the moved part        
+            
     def update_groups_box(self):
         if self.data_file is None:
             self.data_file = df.current()

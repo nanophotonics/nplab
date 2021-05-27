@@ -17,7 +17,7 @@ from nplab.instrument.serial_instrument import SerialInstrument
 from nplab.instrument.stage import Stage
 
 # never wait for more than this e.g. during wait_states
-MAX_WAIT_TIME_SEC = 20
+MAX_WAIT_TIME_SEC = 300
 
 # time to wait after sending a command. This number has been arrived at by
 # trial and error
@@ -103,6 +103,8 @@ class SMC100(SerialInstrument, Stage):
 
         SerialInstrument.__init__(self, port)
         Stage.__init__(self)
+        
+
         # self._logger.debug('Connecting to SMC100 on %s' % (port))
 
         self.software_home = None
@@ -111,6 +113,7 @@ class SMC100(SerialInstrument, Stage):
             smcID = (smcID, )
         self._smcID = list(smcID)
         self.axis_names = ()
+        print('found controllers: ')
         for id in self._smcID:
             self.axis_names += (str(id), )
             self._send_cmd('ID', id, '?', True)  # Just testing the connection
@@ -164,8 +167,8 @@ class SMC100(SerialInstrument, Stage):
 
                 self.ser.flushOutput()
 
-                self.ser.write(tosend)
-                self.ser.write('\r\n')
+                self.ser.write(bytes(tosend,'utf-8'))
+                self.ser.write(bytes('\r\n','utf-8')) #converted to bytes by sunny
 
                 self.ser.flush()
 
@@ -195,6 +198,7 @@ class SMC100(SerialInstrument, Stage):
                     self._last_sendcmd_time = now
                     done = True
                     # return None
+        print(str(reply))
         return reply
 
     def _readline(self):
@@ -217,7 +221,8 @@ class SMC100(SerialInstrument, Stage):
         line = str()
         # print 'reading line',
         while not done:
-            c = self.ser.read()
+            c = self.ser.read().decode('utf-8') #decode added by sunny
+            #print(c)
             # ignore \r since it is part of the line terminator
             if len(c) == 0:
                 raise SMC100ReadTimeOutException()
@@ -288,24 +293,38 @@ class SMC100(SerialInstrument, Stage):
 
         self._wait_states(STATE_NOT_REFERENCED_FROM_RESET, ignore_disabled_states=True)
 
-        stage = self._send_cmd('ID', '?', True)
+        stage = str(self._send_cmd('ID', None,'?', True))
         self._logger.info('Found stage %s' %stage)
-
+        print(str(stage))
         # enter config mode
-        self._send_cmd('PW', 1)
+        self._send_cmd('PW1', 1) #'PW1' added by sunny
+        self._send_cmd('PW1',2)
+        self._send_cmd('PW1',3) #'PW3' #added by Asia for 3rd axis
         self._wait_states(STATE_CONFIGURATION)
-
+        
         # load stage parameters
-        self._send_cmd('ZX', 1)
-
+        self._send_cmd('ZX2', 1)
+        time.sleep(2)
         # enable stage ID check
-        self._send_cmd('ZX', 2)
-
+        self._send_cmd('ZX2', 2)
+        time.sleep(2)
+        
+        self._send_cmd('ZX2', 3) #added by Asia for 3rd axis
+        time.sleep(2) #added by Asia for 3rd axis
+        
         # exit configuration mode
-        self._send_cmd('PW', 0)
-
-        # wait for us to get back into NOT REFERENCED state
+        self._send_cmd('PW0', 1)
+        time.sleep(5)
+        self._send_cmd('PW0', 2)
+        time.sleep(5) #added by Asia for 3rd axis
+        self._send_cmd('PW0', 3) #added by Asia for 3rd axis
         self._wait_states(STATE_NOT_REFERENCED_FROM_CONFIGURATION)
+        #homing part to make box flash green.
+        self._send_cmd('OR',1)
+        self._send_cmd('OR',2)
+        self._send_cmd('OR',3) #added by Asia for 3rd axis
+        # wait for us to get back into NOT REFERENCED state
+        
 
     def get_position(self, axis=None):
         pos = self._send_cmd('TP', axes=axis, argument='?', expect_response=True, retry=10)
@@ -359,7 +378,7 @@ class SMC100(SerialInstrument, Stage):
         if relative:
             index = 0
             for ax in axis:
-                self._send_cmd('PR', axes=ax, argument=pos[index])
+                self._send_cmd('PR', axes=ax, argument=pos[index]*1000)
                 index += 1
         else:
             index = 0
@@ -616,15 +635,20 @@ class SMC100(SerialInstrument, Stage):
 
 
 if __name__ == '__main__':
-    smc100 = SMC100('COM13', (1,2))
-    print('Axes: ', smc100.axis_names)
+    smc100 = SMC100('COM1', (1,2))
+#    smc100.reset_and_configure()
+#    smc100._send_cmd('RS')
+#    smc100._send_cmd('PW1')
+#    smc100._send_cmd('PW0')
+#    smc100._send_cmd('PW0')
+#    print('Axes: ', smc100.axis_names)
+#
+#    print(smc100.get_position()) #_mm() #get_position()
+#    print(smc100.get_status())
 
-    print(smc100.get_position()) #_mm() #get_position()
-    print(smc100.get_status())
-
+#    smc100.show_gui()
+#smc100.get_status
     smc100.show_gui()
-
-    # smc100.show_gui()
     # test_configure()
 
     # test_general()

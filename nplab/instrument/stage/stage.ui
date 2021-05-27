@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>226</width>
-    <height>255</height>
+    <width>349</width>
+    <height>321</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -95,6 +95,22 @@
      </property>
      <layout class="QGridLayout" name="axes_layout"/>
     </widget>
+   </item>
+   <item>
+    <layout class="QVBoxLayout" name="verticalLayout_2">
+     <item>
+      <widget class="QPushButton" name="initialise_button">
+       <property name="font">
+        <font>
+         <pointsize>11</pointsize>
+        </font>
+       </property>
+       <property name="text">
+        <string>Initialise (20 seconds)</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
   </layout>
  </widget>

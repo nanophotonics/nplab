@@ -102,8 +102,6 @@ class Arduino_tri_shutter(SerialInstrument):
         """Usable close flip mirror 1 function that updates GUI when used"""
         self.Flipper_1_State = False
         
-        
-        
     def _open_shutter_1(self):
         """do not use! Hidden access to open shutter """
         self.query('A')
@@ -140,7 +138,6 @@ class Arduino_tri_shutter(SerialInstrument):
         return self.states[0]
     def get_state_2(self):
         return self.states[1]    
-
     def get_state_3(self):
         return self.states[2]
 

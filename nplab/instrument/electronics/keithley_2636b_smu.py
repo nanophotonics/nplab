@@ -8,11 +8,13 @@ from nplab.instrument.visa_instrument import VisaInstrument, queried_property
 import numpy as np
 from nplab.utils.gui import *
 from nplab.utils.gui import uic
+import time as time
+import matplotlib.pyplot as plt
 
 
 class Keithley2636B(VisaInstrument):
     """Interface to the Keithley 2636B SMU."""
-    def __init__(self, address='USB0::0x05E6::0x2636::4439367::INSTR'):
+    def __init__(self, address='USB0::0x05E6::0x2634::4454529::INSTR'):
         super(Keithley2636B, self).__init__(address)
         self.instr.read_termination = '\n'
         self.instr.write_termination = '\n'
@@ -28,7 +30,17 @@ class Keithley2636B(VisaInstrument):
     source = queried_property('print(smua.source.func)', 'smua.source.func={0}',
                               validate=['smua.OUTPUT_DCVOLTS', 'smua.OUTPUT_DCAMPS', 0, 1], dtype='str',
                               doc='Set the source type, either voltage or current')
-
+    
+    
+    delay = queried_property('print(smua.source.delay)', 'smua.source.delay={0}',
+                              dtype='str',
+                              doc='Remove delay') #added by sunny
+    measurementdelay = queried_property('print(smua.measure.delay)', 'smua.measure.delay={0}',
+                              dtype='str',
+                              doc='Remove delay') #added by sunny
+    speed = queried_property('print(smua.measure.nplc)', 'smua.measure.nplc={0}',
+                                  doc='Set Measure Speed') #added by sunny
+    
     # def set_src_voltage(self, voltage):
     #    self.instr.write('smua.source.levelv=%s' % voltage)
     #    self.check_voltage_range(voltage)
@@ -85,6 +97,9 @@ class Keithley2636B(VisaInstrument):
         """Measure the voltage."""
         return float(self.instr.query('print(smua.measure.v())'))
 
+
+
+
     def read_current(self):
         """Measure the current."""
         #return self.instr.query('print(smua.measure.i())')
@@ -98,12 +113,47 @@ class Keithley2636B(VisaInstrument):
     def read_power(self):
         """Measure the power."""
         return float(self.instr.query('print(smua.measure.p())'))
+    
+    
+    def read_measuredelay(self):
+        """Measure the power."""
+        return float(self.instr.query('print(smua.measure.delay)'))
 
     def read_iv(self):
         """Measure the voltage and the current."""
         self.instr.write('i,v = smua.measure.iv()')
         return float(self.instr.query('print(i)')), \
                float(self.instr.query('print(v)'))
+    
+    def listsweep(self):
+        voltages = ','.join(str(x) for x in self.voltagelist)
+        voltagestring = '{' + voltages + '}'
+        voltagestring = voltagestring.replace('\n','')
+        self.instr.write('SweepVListMeasureI(smua,'+voltagestring+','+str(0)+','+str(len(self.voltagelist))+')')
+#        return self.instr.query('print(printbuffer(1,'+str(len(voltagelist))+','+'smua.nvbuffer1.readings))')
+    
+    def listsweepresult(self):
+        resultstring = self.instr.query('print(printbuffer(1,'+str(len(self.voltagelist))+','+'smua.nvbuffer1.readings))')
+#        resultsstrlist = resultstring.split(',')
+#        resultlist = [float(x) for x in resultsstrlist ]
+        return resultstring
+    
+    def load_script(self, command_list, script_name='', ):
+        """
+        Load a set of commands into a script kept in the instrument runtime (volatile) memory.
+        The script is NOT run automatically upon loading, use run_script function for that.
+        The script will be deleted upon instrument restart or reset.
+        :command_list: list of strings, each is one command to be executed by the instrument
+        :script_name: string, name to be assigned to the script
+        """
+        self.write('loadscript')
+        for command in command_list:
+            self.write(command)
+        self.write('endscript')
+        
+    def run_script(self, script_name='script.anonymous'):
+        self.write(script_name + '.run()')
+        
 
     @property
     def error(self):
@@ -112,6 +162,9 @@ class Keithley2636B(VisaInstrument):
         code = self.instr.query('print(errorCode)')
         msg = self.instr.query('print(message)')
         return '{0:s}: {1:s}'.format(code, msg)
+    
+    def clearerrors(self):
+        self.instr.write('errorqueue.clear()')
 
     def check_current_range(self, i):
         i_range = self.get_meas_current_range()
@@ -270,11 +323,54 @@ class SmuUI(QtWidgets.QWidget):
 
 
 if __name__ == '__main__':
+#    f = open("C:/Users/hera/Documents/jks68/Sunny/1000Hz_0.0010ramp 0.0010delay.txt", "r")
+#    nopoints = int(f.readline()[:-1]) #first line describes how many points there are.
+#    timedelay = float(f.readline()[:-1]) #second line describes time delay in ms
+#    voltages = np.zeros(nopoints)
+#    for x in range(nopoints):
+#        voltages[x] = float(f.readline()[:-1])
+#        
+#    f.close()
+    n=0
+    voltages=[]
+    for i in range(40):
+        voltages.append(n)
+        n+=2.5
+    for i in range(40):
+        voltages.append(n)
+        n-=2.5
+    for i in range(40):
+        voltages.append(n)
+        n-=2.5
+    for i in range(40):
+        voltages.append(n)
+        n+=2.5
+    
+    voltages = np.asarray(voltages)
+    vmax = 10
+    ##    
     smu = Keithley2636B()
+##    smu.clearerrors()
+##    smu.reset()
+    smu.voltagelist = voltages * vmax/100
+#    smu.listdelay = 0.001
+#    measurementtime = smu.listdelay*len(smu.voltagelist)
     smu.output = 1
-    smu.src_voltage = 10e-3
-    print(smu.read_iv())
-    print(smu.read_resistance())
+    smu.delay = 0
+    smu.measurementdelay = 0
+    smu.speed = 0.001
+#    smu.src_current_limit = 10
+    smu.listsweep()
+#    time.sleep(10)
+    result = smu.listsweepresult()
+#    
+#    
+#    
     smu.output = 0
-
-    smu.show_gui()
+    
+    result = result.split(',')
+    result = list(map(float, result))
+#
+##    smu.show_gui()
+    
+    plt.plot(smu.voltagelist,result)

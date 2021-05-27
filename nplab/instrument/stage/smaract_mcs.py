@@ -9,10 +9,10 @@ __author__ = 'alansanders, chrisgrosse'
 import ctypes, time
 from ctypes import byref, c_int, c_uint
 #from nplab.instrument import Instrument
-from nplab.instrument.stage import PiezoStage, StageUI, PiezoStageUI
+from nplab.instrument.stage import PiezoStage, StageUI, PiezoStageUI, BlueStageUI
 import os
 from nplab.utils.gui import *
-from nplab.utils.gui import uic
+from nplab.utils.gui import QtCore, QtWidgets, uic
 from nplab.ui.ui_tools import UiTools
 
 
@@ -71,7 +71,7 @@ class MCSError(Exception):
 class SmaractMCS(PiezoStage):
     """
     Smaract MCS controller interface for Smaract stages.
-    Check SmarAct's MCS Progammer's Guide for mor information.
+    Check SmarAct's MCS Progammer's Guide for more information.
     """
 
     @staticmethod
@@ -660,7 +660,7 @@ class SmaractMCS(PiezoStage):
     piezo_position = property(get_piezo_position)
 
 
-class SmaractStageUI(StageUI):
+class SmaractStageUI(BlueStageUI):
     def __init__(self, stage):
         super(SmaractStageUI, self).__init__(stage, stage_step_min=50e-9)
 
@@ -735,11 +735,12 @@ class SmaractMCSSerial(SerialInstrument,PiezoStage):
                         writeTimeout=1, #similarly, fail if writing takes >1s
                         xonxoff=False, rtscts=False, dsrdtr=False,
                     )
-    def __init__(self,port):
+    def __init__(self,port,numch):
         self.initial_character = ':'
         self.termination_character = '\n'
         super(SmaractMCSSerial, self).__init__(port=port)
-        self._num_ch = None
+        self._num_ch = numch
+        self.mcs_id = 'serial:id:2241008657'
         self.unit="m"
         self.axis_names = tuple(i for i in range(self.num_ch))
         self.positions = [0 for ch in range(self.num_ch)]
@@ -1175,7 +1176,7 @@ class SmaractMCSSerial(SerialInstrument,PiezoStage):
 
     def multi_set_piezo_level(self, levels, axes, speeds, relative=False):
         for i in range(len(axes)):
-            self.set_piezo_level(levels[i],axes[i],speed[i],relative)
+            self.set_piezo_level(levels[i],axes[i],speeds[i],relative)
 
 
     ### additional useful methods to control the piezo scanners
@@ -1226,7 +1227,10 @@ class SmaractMCSSerial(SerialInstrument,PiezoStage):
         return position
 
     def get_qt_ui(self):
+        self._num_ch=3
         return SmaractMCSUI(self)
+    def reset_and_configure(self):
+        None
 
 
     ### Useful Properties ###
@@ -1273,12 +1277,16 @@ class SmaractScanStageUI(PiezoStageUI):
 
 class SmaractMCSUI(QtWidgets.QWidget, UiTools):
     def __init__(self, mcs, parent=None):
-        assert isinstance(mcs, SmaractMCS) or isinstance(mcs, SmaractMCSSerial) , "system must be a Smaract MCS"
+        assert isinstance(mcs, SmaractMCSSerial) 
+        #or isinstance(mcs, SmaractMCSSerial) , "system must be a Smaract MCS"
         super(SmaractMCSUI, self).__init__()
         self.mcs = mcs
         uic.loadUi(os.path.join(os.path.dirname(__file__), 'smaract_mcs.ui'), self)
         self.mcs_id.setText(str(mcs.mcs_id))
         self.num_ch.setText(str(mcs.num_ch))
+       # print('mcs_id = ' + str(self.SmarAct_stage.mcs_id))
+        #print(self.mcs.num_ch)
+
         self.reference_button.clicked.connect(self.mcs.find_references)
         self.calibrate_button.clicked.connect(self.mcs.calibrate_system)
         self.step_stage_widget = self.replace_widget(self.step_stage_layout, self.step_stage_widget, SmaractStageUI(self.mcs))
@@ -1288,19 +1296,20 @@ class SmaractMCSUI(QtWidgets.QWidget, UiTools):
 if __name__ == '__main__':
 
     #smaract = SmaractMCSSerial('COM10')
-    #smaract = SmaractMCSSerial('COM3')
+    #smaract = SmaractMCSSerial('COM6')
 
     # print SA_OK
-    system_id = SmaractMCS.find_mcs_systems()
 #
-    stage1 = SmaractMCS(system_id)
-    stage1.show_gui()
+    stage1 = SmaractMCSSerial('COM6',3)
+ #   stage2 = SmaractMCSSerial('COM6',4)
+    #print(isinstance(stage1,SmaractMCS))
+    #stage1.show_gui()
 
     #print stage.position
     #print stage.get_position()
     #print stage.get_position(0)
 
-    import sys
+   # import sys
     #from nplab.utils.gui import get_qt_app
     #app = get_qt_app()
     #ui = stage1.get_qt_ui()
