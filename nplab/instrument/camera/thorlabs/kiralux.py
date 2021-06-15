@@ -35,9 +35,9 @@ os.add_dll_directory(dll_path.absolute())
 
 
 def disarmer(f, wait=0.1):
-    '''some properties like roi and binning and  frames_per_capture.. need the camera to be "disarmed" to
+    '''some properties like roi and binning and frames_per_capture.. need the camera to be "disarmed" to
     be set. This decorator disarms and re-arms the camera before and after the
-    funciton is called. Particularly for binning, it seems like the camera 
+    function is called. Particularly for binning, it seems like the camera 
     needs a few secs before it can be changed, hence the time.sleep.
     '''
     @wraps(f)
@@ -69,7 +69,6 @@ class Kiralux(Camera):
         
         if self._camera.camera_sensor_type != SENSOR_TYPE.BAYER:
             # Sensor type is not compatible with the color processing library
-            self._is_color = False
             self.process_frame = lambda f: f # no processing for grey images
         else:
             self._mono_to_color_sdk = MonoToColorProcessorSDK()
@@ -82,9 +81,7 @@ class Kiralux(Camera):
                 self._camera.get_default_white_balance_matrix(),
                 self._camera.bit_depth
             )
-            self._is_color = True
             self.process_frame = self.process_color_frame
-
         self._bit_depth = self._camera.bit_depth
         self._camera.image_poll_timeout_ms = 0  
         self._populate_properties()
@@ -97,7 +94,6 @@ class Kiralux(Camera):
         ''' adds all the properties from TLCamera to Kiralux, for easy access.
         
         '''
-        
         def prop_factory(thor_prop, disarmed=False, notified=False): # to get around late binding
             def fget(self):
                 return thor_prop.fget(self._camera)
@@ -173,7 +169,7 @@ class Kiralux(Camera):
         
 class KiraluxCameraControlWidget(CameraControlWidget):
     """A control widget for the Thorlabs camera, with extra buttons."""
-    def __init__(self, camera, auto_connect=True):
+    def __init__(self, camera):
         super().__init__(camera, auto_connect=False)
         gb = QuickControlBox()
         gb.add_doublespinbox("exposure",
@@ -183,8 +179,7 @@ class KiraluxCameraControlWidget(CameraControlWidget):
         gb.add_button("show_video_format_dialog", title="Video Format")
         self.layout().insertWidget(1, gb) # put the extra settings in the middle
         self.quick_settings_groupbox = gb        
-        
-        self.auto_connect_by_name(controlled_object=self.camera, verbose=False)
+        self.auto_connect_by_name(controlled_object=self.camera)
         
 if __name__ == '__main__':        
                 
