@@ -1874,7 +1874,7 @@ def plotHistogram(outputFileName, npomType = 'All NPoMs', startWl = 450, endWl =
             ax2.yaxis.set_label_coords(1.11, 0.5)
             ax2.set_yticks([int(tick) for tick in ax2.get_yticks() if tick > 0][:-1])
             ax2.tick_params(labelsize = 15)            
-            plt.title('%s: %s\nRes = %s $\pm$ %s\nFWHM = %s' % (date.decode(), npomType, str(resonance), str(stderr), str(fwhm)))
+            #plt.title('%s: %s\nRes = %s $\pm$ %s\nFWHM = %s' % (date.decode(), npomType, str(resonance), str(stderr), str(fwhm)))
 
             fig.tight_layout()
 
