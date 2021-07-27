@@ -53,7 +53,7 @@ if __name__ == '__main__':
         if extractFirst == True:
             summaryFile = cdf.extractAllSpectra(os.getcwd(), returnIndividual = True, start = startSpec,
                                                 finish = finishSpec, raiseExceptions = raiseExceptions,
-                                                consolidated = consolidateScans, avgScans = avgZScans)#condenses Z-stack (inc. background subtraction and referencing) for each particle and makes summary file
+                                                consolidated = consolidateScans, avgZScans = avgZScans)#condenses Z-stack (inc. background subtraction and referencing) for each particle and makes summary file
     
             if pl == True:
                 summaryFile = cdf.transferPlSpectra(os.getcwd(), startWl = 505, start = startSpec,
