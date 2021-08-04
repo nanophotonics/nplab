@@ -9,7 +9,8 @@ from pathlib import Path
 
 from mim import MIM
 from widgets import Parameter, GraphWithPinAndClearButtons, LivePlotWindow
-
+from PyQt5.QtWidgets import QApplication
+import qdarkstyle  # dark theme
 
 def ev_to_wl(eV):
     return 1239.8419300923943/eV
@@ -20,21 +21,24 @@ def norm(arr):
     return arr/arr.max()
 
 
-
 def Lorentz(wl, center_wl, eff):
     ev, center_ev = map(wl_to_ev, (wl, center_wl))
     width = MIM(center_ev, n, t)/(1-eff)
-    lor = width**2/(width**2 + (ev-center_ev)**2)
-    return norm(lor)*eff
+    return norm(width**2/(width**2 + (ev-center_ev)**2))*eff
+   
 
 
 if __name__ == '__main__':
 
-
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication([])
+    app.setStyleSheet(qdarkstyle.load_stylesheet())
+    
     f = Parameter('Facet', 0.3, Min=0.1, Max=0.4)
     D = Parameter('Diameter', 80.,  Min=40, Max=100, units='nm')
-    t = Parameter('gap thickness', 1.,  Min=0.75, Max=6, units='nm')
-    n = Parameter('gap refractive index', 1.5, Min=1.25, Max=2.)
+    t = Parameter('gap thickness', 1.,  Min=0.75, Max=6., units='nm')
+    n = Parameter('gap refractive index', 1.5, Min=1., Max=2.,)
 
     def file_to_mode_name(file):
         return file.stem.replace('=', '_').split('_')[1]
@@ -100,7 +104,7 @@ if __name__ == '__main__':
             reals = [mode['real'](f, D, t, n) for mode in modes.values()]
             return min(reals)*0.8, max(reals)*1.1
         return GraphWithPinAndClearButtons(modes, xlim_func, title=folder.stem,
-                                           resolution=200)
+                                           resolution=100)
 
     root = Path('geometries')
     graphs = []
@@ -109,3 +113,4 @@ if __name__ == '__main__':
             graphs.append(make_graph_widget(folder))
 
     live_plotter = LivePlotWindow(graphs, (f, D, t, n))
+    app.exec_()

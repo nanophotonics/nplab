@@ -6,18 +6,17 @@ Created on Wed Jun 23 12:37:43 2021
 """
 import numpy as np
 from PyQt5 import QtGui, QtWidgets, QtCore
-import qdarkstyle  # dark theme
 
 import pyqtgraph as pg
 pg.setConfigOption('background', 'w')
 pg.setConfigOption('foreground', 'k')
 
 
-class DoubleSlider(QtGui.QSlider):
+class DoubleSlider(QtWidgets.QSlider):
     '''' A Qt slider that works with floats (doubles) - taken from
     https://stackoverflow.com/questions/42820380/use-float-for-qslider'''
     # create our our signal that we can connect to if necessary
-    doubleValueChanged = QtCore.Signal(float)
+    doubleValueChanged = QtCore.pyqtSignal(float)
 
     def __init__(self, *args, decimals=3, **kwargs):
         super().__init__(*args, **kwargs)
@@ -119,19 +118,20 @@ class PinAndClearButtons(QtWidgets.QGroupBox):
     def __init__(self, graph):
         super().__init__('graph pinning buttons')
         self.setLayout(QtWidgets.QHBoxLayout())
-        pin = QtGui.QPushButton('pin')
+        pin = QtWidgets.QPushButton('pin')
         pin.clicked.connect(graph.pin_plot)
         self.layout().addWidget(pin)
-        clear = QtGui.QPushButton('clear')
+        clear = QtWidgets.QPushButton('clear')
         clear.clicked.connect(graph._clear)
         self.layout().addWidget(clear)
 
 
 class GraphWithPinAndClearButtons(QtWidgets.QGroupBox):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, layout='V', **kwargs):
         super().__init__(kwargs.get('title', ''))
         self.graph = LorentzGraphWidget(*args, **kwargs)
-        self.setLayout(QtWidgets.QVBoxLayout())
+        layout = QtWidgets.QHBoxLayout() if layout == 'H' else QtWidgets.QVBoxLayout()
+        self.setLayout(layout)
         self.layout().addWidget(self.graph)
         buttons = PinAndClearButtons(self.graph)
         self.layout().addWidget(buttons)
@@ -140,20 +140,19 @@ class GraphWithPinAndClearButtons(QtWidgets.QGroupBox):
         self.graph.update()
 
 
-class GraphGroup(QtGui.QGroupBox):
+class GraphGroup(QtWidgets.QGroupBox):
     '''
     feed me GraphWidget objects and 
     I'll lay them out horizontally
     '''
 
-    def __init__(self, graphs):
+    def __init__(self, graphs, layout='H'):
         super().__init__('Graphs')
-        self.setLayout(QtWidgets.QGridLayout())
+        layout = QtWidgets.QHBoxLayout() if layout == 'H' else QtWidgets.QVBoxLayout()
+        self.setLayout(layout)
         self.graphs = graphs
-        graphs_per_row = 5 if len(graphs) > 12 else 4
         for i, g in enumerate(graphs):
-            self.layout().addWidget(
-                graphs[i], i//graphs_per_row, i % graphs_per_row)
+            self.layout().addWidget(g)
 
     def update_graphs(self):
         for g in self.graphs:
@@ -216,7 +215,7 @@ class Parameter(QtWidgets.QWidget, FloatMathMixin):
         
     '''
 
-    param_changed = QtCore.Signal()
+    param_changed = QtCore.pyqtSignal()
 
     def __init__(self, name, default=1., Min=-100_000., Max=100_000., units=None, slider=True):
 
@@ -228,9 +227,9 @@ class Parameter(QtWidgets.QWidget, FloatMathMixin):
         if slider:
             self.box = DoubleSlider(QtCore.Qt.Horizontal)
         else:
-            self.box = QtGui.QDoubleSpinBox()
+            self.box = QtWidgets.QDoubleSpinBox()
         self.box.setSingleStep((Max-Min)/20.)
-        self.label = QtGui.QLabel(self.name+self.units)
+        self.label = QtWidgets.QLabel(self.name+self.units)
         self.layout().addWidget(self.label)
         self.box.setMinimum(float(Min))
         self.box.setMaximum(float(Max))
@@ -255,12 +254,12 @@ class Parameter(QtWidgets.QWidget, FloatMathMixin):
         return f'{self.name}: {float(self)}{self.units}'
 
 
-class ParameterGroupBox(QtGui.QGroupBox):
+class ParameterGroupBox(QtWidgets.QGroupBox):
     '''
     feed me parameters and i'll add spinBoxes for them, and 
     emit a signal when they're changed to update the graphs. 
     '''
-    param_changed = QtCore.Signal()
+    param_changed = QtCore.pyqtSignal()
 
     def __init__(self, parameters):
         super().__init__('Parameter controls')
@@ -275,10 +274,6 @@ class LivePlotWindow(QtWidgets.QMainWindow):
     '''Puts the graphing and parameter widgets together'''
 
     def __init__(self, graphs, parameters, style='Fusion'):
-        app = QtGui.QApplication.instance()
-        if app is None:
-            app = QtGui.QApplication([])
-        app.setStyleSheet(qdarkstyle.load_stylesheet())
 
         super().__init__()
         layout = QtWidgets.QVBoxLayout()
@@ -289,7 +284,7 @@ class LivePlotWindow(QtWidgets.QMainWindow):
         layout.addWidget(self.parameter_widget)
         self.setWindowTitle('Live Plotting')
         self.setWindowIcon(QtGui.QIcon('maxwell.png'))
-        self.widget = QtGui.QWidget()
+        self.widget = QtWidgets.QWidget()
         self.widget.setLayout(layout)
         self.setCentralWidget(self.widget)
         self.parameter_widget.param_changed.connect(self.update_graphs)
