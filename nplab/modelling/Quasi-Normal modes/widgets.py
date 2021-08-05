@@ -84,27 +84,27 @@ class LorentzGraphWidget(pg.PlotWidget):
     def update(self, remove=True):
         while self.plots_to_remove:  # remove all the stored plots
             self.plot_item.removeItem(self.plots_to_remove.pop())
-
-        _sum = np.zeros(self.resolution)
+       
         xs = np.linspace(*self.xlim_func(), self.resolution)  # x axis changes
+        ys = np.empty((len(self.modes), self.resolution))
         for i, (name, mode) in enumerate(self.modes.items()):
-            y = mode['Lorentz'](xs)
-            _sum += y
-
+            y =  mode['Lorentz'](xs)
+            ys[i] = y
             wl, eff = mode['annotate']()
             label = f'{name}, wl={round(wl)}nm, efficiency={np.around(eff, 2)}'
-
             self._plot(xs, y,
                        pen=pg.mkPen(pg.intColor(i,
                                                 len(self.modes),
                                                 alpha=100+155*remove),
                                     width=5),
-                       name=label, remove=remove)
-        self._plot(xs, _sum,
+                       name=label,
+                       remove=remove)
+        self._plot(xs, (ys**2/ys.sum(axis=0)).sum(axis=0),
                    pen=pg.mkPen(color=pg.mkColor((0, 0, 0, 100+155*remove)),
                                 width=5,
                                 style=QtCore.Qt.DotLine),
-                   name='sum', remove=remove)
+                   name='sum',
+                   remove=remove)
 
     def pin_plot(self):
        self.update(False)
