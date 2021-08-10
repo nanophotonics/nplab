@@ -182,7 +182,7 @@ class Instrument(ShowGUIMixin):
         if not hasattr(self, '_config_file'):
             f = inspect.getfile(self.__class__)
             d = os.path.dirname(f)
-            self._config_file = nplab.datafile.DataFile(h5py.File(os.path.join(d, 'config.h5')), mode='a')
+            self._config_file = nplab.datafile.DataFile(h5py.File(os.path.join(d, 'config.h5'), mode='a'))
             self._config_file.attrs['date'] = datetime.datetime.now().strftime("%H:%M %d/%m/%y")
         return self._config_file
 
@@ -201,7 +201,7 @@ class Instrument(ShowGUIMixin):
                 f[name][...] = data
                 f.flush()    
         else:
-            f.create_dataset(name, data=data ,attrs = attrs)
+            f.create_dataset(name, data=data, attrs=attrs)
 
     @contextmanager
     def temporarily_set(self, **kwargs):
