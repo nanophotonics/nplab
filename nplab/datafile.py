@@ -467,17 +467,9 @@ def set_current(datafile, **kwargs):
         return _current_datafile
     else:
         print("opening file: ", datafile)
-        try:
-            _current_datafile = DataFile(datafile, **kwargs)  # open a new datafile
-            return _current_datafile
-        except Exception as e:
-            print("problem opening file")            
-            if os.path.getsize(datafile) < 100: #1kB/10
-                os.remove(datafile) # dirty hack to work around mode=a not working
-                                    # if the file is empty
-                
-            _current_datafile = DataFile(datafile, **kwargs)
-
+        _current_datafile = DataFile(datafile, **kwargs)  # open a new datafile
+        return _current_datafile
+        
 def set_temporary_current_datafile():
     """Create a temporary datafile, for testing purposes."""
     nplab.log("WARNING: using a temporary file")
