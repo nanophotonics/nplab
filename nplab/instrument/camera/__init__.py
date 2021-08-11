@@ -587,7 +587,7 @@ class PreviewImageItem(pg.ImageItem):
      #           point = pos/size
       #          self.legacy_click_callback(point[1], point[0])
                 self.legacy_click_callback(int(pos[1]), int(pos[0]))
-                #print(pos[1],pos[0])
+                # print(pos)
                 ev.accept()
             else:
                 pass

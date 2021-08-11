@@ -147,7 +147,7 @@ class APT_VCP_motor(APT_VCP, Stage):
     #        self._waitForReply(0x0444, 6)
             self._waitFinishMove()
 
-    def move(self, pos, axis=None, relative=False,channel_number = None,block = True):
+    def move(self, pos, axis=None, relative=False, channel_number=None, block=True):
         """ Move command allowing specification of axis, 
         relative, channel and if we want the function to be blocking"""
         if channel_number is None:

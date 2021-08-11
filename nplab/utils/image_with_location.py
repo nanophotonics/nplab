@@ -235,6 +235,8 @@ def locate_feature_in_image(image, feature, margin=0, restrict=False):
     # The line below is superfluous if we keep the datum-aware code below it.
     assert image.shape[0] > feature.shape[0] and image.shape[1] > feature.shape[1], "Image must be larger than feature!"
     # Check that there's enough space around the feature image
+    image, feature = image.astype(np.float32), feature.astype(np.float32)
+    
     lower_margin = datum_pixel(image) - datum_pixel(feature)
     upper_margin = (image.shape[:2] - datum_pixel(image)) - (feature.shape[:2] - datum_pixel(feature))
     assert np.all(np.array([lower_margin, upper_margin]) >= margin), "The feature image is too large."

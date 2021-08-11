@@ -20,6 +20,7 @@ from nplab.instrument.electronics.power_meter import PowerMeter
 from nplab.instrument.electronics.thorlabs_pm100 import ThorlabsPowermeter
 from nplab import datafile
 from nplab.datafile import sort_by_timestamp
+from nplab.utils.notified_property import NotifiedProperty, DumbNotifiedProperty
 
 def isMonotonic(A):
 
@@ -31,7 +32,7 @@ class PowerControl(Instrument):
     '''
     Controls the power. power_controller is something with a continuous input parameter like a filter wheel, or an AOM. 
     '''
-
+    calibrate_points = DumbNotifiedProperty(25)
     def __init__(self, power_controller, power_meter, calibration_points=25, title='power control', move_range=(0, 1)):
         super().__init__()
         self.pc = power_controller
@@ -78,10 +79,10 @@ class PowerControl(Instrument):
     def points(self):
         if isinstance(self.pc, RStage):
             if self.min_param < self.max_param:
-                return np.logspace(0, np.log10(self.max_param-self.min_param), self.number_points)+self.min_param
-            return self.min_param - np.logspace(0, np.log10(self.min_param-self.max_param), self.number_points)
+                return np.logspace(0, np.log10(self.max_param-self.min_param), self.calibration_points)+self.min_param
+            return self.min_param - np.logspace(0, np.log10(self.min_param-self.max_param), self.calibration_points)
         else:  # isinstance(self.pc, Aom):
-            return np.linspace(self.min_param, self.max_param, num=self.number_points, endpoint=True)
+            return np.linspace(self.min_param, self.max_param, num=self.calibration_points, endpoint=True)
 
     def calibrate_power(self, update_progress=lambda p: p):
         '''
@@ -102,14 +103,14 @@ class PowerControl(Instrument):
 
         powers = []
         
-        for counter, point in enumerate(self.points):
+        for i, point in enumerate(self.points):
             self.param = point
             time.sleep(.2)
             powers.append(self.pometer.power)
-            update_progress(counter)
+            update_progress(i)
 
         group = self.create_data_group(self.title+'_%d')
-        group.create_dataset('measured_powers', data=powers, attrs=attrs)
+        group.create_dataset('powers', data=powers, attrs=attrs)
         
         
         self.param = self.mid_param
@@ -135,8 +136,8 @@ class PowerControl(Instrument):
                 return
         else:
             
-            candidates = [g for g in sort_by_timestamp(search_in) 
-                                       if '_'.join(g.split('_')[:-1]) == self.title]
+            candidates = [group for name, group in sort_by_timestamp(search_in) # return key val pairs
+                                       if '_'.join(name.split('_')[:-1]) == self.title]
             if candidates: 
                 power_calibration_group = candidates[-1]
                 pc = power_calibration_group['powers']
@@ -182,47 +183,12 @@ class PowerControl_UI(QtWidgets.QWidget, UiTools):
         uic.loadUi(os.path.join(os.path.dirname(
             __file__), 'power_control.ui'), self)
         self.PC = PC
-        self.SetupSignals()
-        self.number_points_spinBox.setValue(self.PC.number_points)
-
-    def SetupSignals(self):
-        self.pushButton_calibrate_power.clicked.connect(
-            self.calibrate_power_gui)
-        self.doubleSpinBox_min_param.setValue(self.PC.min_param)
-        self.doubleSpinBox_max_param.setValue(self.PC.max_param)
-        self.doubleSpinBox_max_param.valueChanged.connect(
-            self.update_min_max_params)
-        self.doubleSpinBox_min_param.valueChanged.connect(
-            self.update_min_max_params)
-        self.laser_label.setText(self.PC.title)
-        self.doubleSpinBox_set_input_param.valueChanged.connect(self.set_param)
-        self.doubleSpinBox_set_input_param.setValue(self.PC.param)
-        self.measured_power_lineEdit.textChanged.connect(
-            self.update_measured_power)
-        self.doubleSpinBox_set_power.valueChanged.connect(self.set_power_gui)
-        self.number_points_spinBox.valueChanged.connect(
-            self.update_number_points)
-
-    def update_min_max_params(self):
-        self.PC.min_param = self.doubleSpinBox_min_param.value()
-        self.PC.max_param = self.doubleSpinBox_max_param.value()
-
-    def update_measured_power(self):
-        if self.doubleSpinBox_measured_power.text().isdigit():
-            self.PC.measured_power = float(
-                self.doubleSpinBox_measured_power.value())
-
-    def set_param(self):
-        self.PC.param = self.doubleSpinBox_set_input_param.value()
-
-    def set_power_gui(self):
-        self.PC.power = float(self.doubleSpinBox_set_power.value())
-
-    def update_number_points(self):
-        self.PC.number_points = self.number_points_spinBox.value()
-
+        self.auto_connect_by_name(controlled_object=self.PC)
+        self.calibrate_power_gui_pushButton.clicked.connect(self.calibrate_power_gui)
+        self.title_label.setText(self.PC.title)
+    
     def calibrate_power_gui(self):
-        run_function_modally(self.PC.calibrate_power,
+        run_function_modally(self.PC.calibrate_power, 
                              progress_maximum=len(self.PC.points))
 
 

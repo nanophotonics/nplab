@@ -40,7 +40,7 @@ class Piezoconcept(SerialInstrument, Stage):
         Stage.__init__(self)
         self.cmd_axis = cmd_axis.upper()
         self.unit = unit  # This can be 'u' for micron or 'n' for nano
-        
+        self.distance_scale = 0.001 if unit == 'n' else 1.
     def move(self, value, axis=None, relative=False):
         '''Move to an absolute positions between 0 and 100 um 
         
@@ -48,27 +48,25 @@ class Piezoconcept(SerialInstrument, Stage):
             value(float):   position to move to
 
         '''
-        if self.unit == "n":
-            multiplier = 0.001
-        if self.unit == "u":
-            multiplier = 1.0
-        multiplied = multiplier*value
-        if not relative:
-            if multiplied < 100 and multiplied >= 0:
-                if (multiplied-0.2*multiplier) > 0:
-                    value = value-0.2*multiplier  # why?
+        
+        multiplied = self.distance_scale*value
+        if relative:
+            if 0 <= multiplied + self.position < 100:
+                self.write(f'MOVR{self.cmd_axis} {np.float32(value)}{self.unit}')
+            else:
+                self._logger.warn(
+                    "The value is out of range! 0-100 um (0-1E8 nm) (Z)")          
+        else:
+            if 0 <= multiplied < 100:
+            #     if (multiplied-0.2*self.distance_scale) > 0:
+            #         value = value-0.2*self.distance_scale  # why?
       
                 self.write(f'MOVE{self.cmd_axis} {np.float32(value)}{self.unit}')
                 # print(self.readline(), 'reply')
             else:
                 self._logger.warn(
                     "The value is out of range! 0-100 um (0-1E8 nm) (Z)")
-        elif relative == True:
-            if (value*multiplier+self.position) < 1E2 and (value*multiplier+self.position) >= 0:
-                self.write(f'MOVR{self.cmd_axis} {np.float32(value)}{self.unit}')
-            else:
-                self._logger.warn(
-                    "The value is out of range! 0-100 um (0-1E8 nm) (Z)")
+            
     
     # def flush_input_buffer(self):
     #     """Make sure there's nothing waiting to be read, and clear the buffer if there is."""
