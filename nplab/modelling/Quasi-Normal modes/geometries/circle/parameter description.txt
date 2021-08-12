@@ -1,0 +1,15 @@
+f: facet fraction.
+   The ratio of facet diameter to spherical nanoparticle diameter.
+   Range: 0.1 - 0.4
+
+---------------------------------------------------------------------------
+D (nm): Sphere's Diameter.
+        Range: 40-100nm
+---------------------------------------------------------------------------
+t (nm): gap thickness. 
+        Range: 0.75-6nm
+---------------------------------------------------------------------------
+n: gap refractive index. 
+   Range: 1.25-2
+
+The facet has 5nm radius rounding applied to the edges.

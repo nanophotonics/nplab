@@ -1,8 +1,9 @@
 '''
 author: im354
 '''
-import struct,sys,math
-from bitarray import bitarray
+
+import sys
+
 import numpy as np 
 from nplab.instrument.serial_instrument import SerialInstrument
 from nplab.instrument.stage import Stage

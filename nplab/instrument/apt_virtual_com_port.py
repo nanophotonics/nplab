@@ -73,7 +73,7 @@ class APT_VCP(serial_instrument.SerialInstrument):
                                   73: ['Brushless DC motherboard', 'BBD102/BBD103'],
                                   94: ['Brushless DC motor card', 'BBD102/BBD103']}
     command_log = deque(maxlen=20)  # stores commands sent to the device
-
+    timeout = 30
     def __init__(self, port=None, source=0x01, destination=None, use_si_units=False, stay_alive=False):
         """
         Set up the serial port, setting source and destinations, verbosity and hardware info.
@@ -181,6 +181,7 @@ class APT_VCP(serial_instrument.SerialInstrument):
             self.staying_alive()
         self.command_log.append(message_id)
         self.ser.write(formated_message)
+    write = _write
 
     def query(self, message_id, param1=0x00, param2=0x00, data=None, destination_id=None, blocking=False):
         """Overwrite the query command to allow the correct passing of message_ids and parameters"""
@@ -285,7 +286,7 @@ class APT_VCP(serial_instrument.SerialInstrument):
             except struct.error:
                 reply = ''
             time.sleep(0.1)
-            if time.time() - t0 > 30:
+            if time.time() - t0 > self.timeout:
                 return False, ''
         return True, reply
 

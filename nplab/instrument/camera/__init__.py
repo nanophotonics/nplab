@@ -361,7 +361,8 @@ class Camera(Instrument):
         """
         while not self._live_view_stop_event.wait(timeout=0.1):
             success, frame = self.raw_snapshot()
-            self.update_latest_frame(frame)
+            if success:
+                self.update_latest_frame(frame)
             
     legacy_click_callback = None
     def set_legacy_click_callback(self, function):

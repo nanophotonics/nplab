@@ -13,6 +13,7 @@ from nplab.instrument.stage import Stage
 from nplab.utils.notified_property import NotifiedProperty, DumbNotifiedProperty, register_for_property_changes
 import types
 import time
+from nplab.ui.ui_tools import QuickControlBox
 
 DC_status_motors = {'BBD102/BBD103': [], 'TDC001': [], 'KDCT101': []}
 DEBUG = False
@@ -95,10 +96,12 @@ class APT_VCP_motor(APT_VCP, Stage):
 
             # delattr(self, 'get_qt_ui')
         if type(destination) != dict and len(self.destination)==1:
-            self.destination = {'x' : destination}
+            self.destination = {'x': destination}
+        
         else:
             self.axis_names = tuple(destination.keys())
             self.destination = destination
+        
         self.make_all_parameters()
         self._recusive_move_num = 0
 
@@ -117,12 +120,12 @@ class APT_VCP_motor(APT_VCP, Stage):
 
     def _waitFinishMove(self,axis = None,debug=False):
         """A simple function to force movement to block the console """
-        if axis == None:
+        if axis is None:
             destination_ids = list(self.destination.keys())
         else:
             destination_ids = [axis]
         for dest in destination_ids:
-            status = self.get_status_update(axis = dest)
+            status = self.get_status_update(axis=dest)
             if debug > 0 or DEBUG:
                 print(status)
             
@@ -137,7 +140,7 @@ class APT_VCP_motor(APT_VCP, Stage):
         else:
             destination_ids = tuple(axis)
         for dest in destination_ids:
-            self.write(0x0443,destination_id = dest)
+            self.write(0x0443, destination_id = dest)
     #        self._waitForReply(0x0444, 6)
             self._waitFinishMove()
 
@@ -565,12 +568,57 @@ class Stepper_APT_trinamics(APT_VCP_motor):
              'velocity' : vel_to_counts,
              'acceleration' : acc_to_counts}
     
+class MFF102(APT_VCP_motor):
+    
+    def jog_forward(self): # 1 -> 0 (blame thorlabs)
+        self._write(0x046A, param2=0x01)
+        self._waitFinishMove()
+        
+    def jog_backward(self): # 0 -> 1
+        self._write(0x046A, param2=0x02)
+        self._waitFinishMove()
+    
+    def get_status_bits(self):
+        data = self.query(0x0429, blocking=True)['data']
+        status_bits = struct.unpack(r'3h', data)
+        return status_bits
+    
+    def get_position(self):
+        return self.get_status_bits()[1] - 1
+        
+    def set_position(self, val):
+        if (pos := self.position) > val:
+            self.jog_forward()
+        elif pos < val:
+            self.jog_backward()
+    position = NotifiedProperty(get_position, set_position)
+    
+    def toggle(self):
+        self.position = not self.position    
+        
+    def home(self):
+        self.set_position(0)
+        
+    def _waitFinishMove(self):
+        pass
+    def get_qt_ui(self):
+        return FlipperUI(self)
+
+class FlipperUI(QuickControlBox):
+    def __init__(self, instr):
+        super().__init__()
+        self.instr = instr
+        self.add_checkbox('position')
+        self.auto_connect_by_name(controlled_object=instr)   
+
+    # getstatusbits = 0x0429
 if __name__ == '__main__':
     print("pass")
     # microscope_stage = APT_VCP_motor(port='COM12', source=0x01, destination=0x21)
-    r = DC_APT(port = 'COM13', destination = 0x01, stage_type = 'PRM' )
+    # r = DC_APT(port = 'COM13', destination = 0x01, stage_type = 'PRM' )
     DEBUG = True
-
+    f = MFF102('COM17', destination=0x01,)
+    f.show_gui(False)
     # tdc_cube = Stepper_APT_trinamics(port='/dev/ttyUSB1', source=0x01, destination=0x50)
     # # tdc_cube2 = APT_VCP_motor(port='COM20', source=0x01, destination=0x50)
 
