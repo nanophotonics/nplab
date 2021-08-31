@@ -47,7 +47,7 @@ class VariSpec(SerialInstrument):
         else:
             self._logger.warning(f'error code {e} raised')
   
-    wavelength = property(get_wavelength, set_wavelength) 
+    wavelength = NotifiedProperty(get_wavelength, set_wavelength) 
     wl = wavelength
     
     def get_error(self):

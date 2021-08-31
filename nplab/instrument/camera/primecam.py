@@ -11,6 +11,7 @@ from pyvcam import pvc
 
 from nplab.utils.notified_property import NotifiedProperty
 from nplab.utils.thread_utils import locked_action, background_action
+from nplab.utils.array_with_attrs import ArrayWithAttrs
 from nplab.ui.ui_tools import QuickControlBox
 from functools import wraps
 import numpy as np
@@ -37,6 +38,8 @@ def disarmer(f):
 class PrimeBSI(Camera):
     notified_properties = ('gain',) # properties that are in the gui
     disarmed_properties = ('gain', 'exp_time') # properties that break live view if changed
+    metadata_property_names = ('exposure', 'gain')
+    pixel_max = 2047.
     def __init__(self):  
         super().__init__()
         pvc.init_pvcam()
@@ -89,7 +92,7 @@ class PrimeBSI(Camera):
         if self.live_view:
             frame = self._camera.poll_frame()[0]['pixel_data']
         else: 
-           frame = self._camera.get_frame()
+            frame = self._camera.get_frame()
         return True, frame
 
     @Camera.live_view.setter
@@ -104,7 +107,32 @@ class PrimeBSI(Camera):
     def color_image(self, **kwargs):
         r = self.raw_image(**kwargs)
         return np.append(r[:,:, None], np.zeros(r.shape + (2,)), axis=-1)
-            
+    
+    def stack(self, exposures=(10,100,1000), **kwargs):
+        live_view = self.live_view
+        self.live_view = False
+        for i, e in enumerate(exposures):
+            self.exposure = e
+            im = self.raw_image(**kwargs)
+            if not i:
+                if isinstance(im, ArrayWithAttrs):
+                    images = ArrayWithAttrs(np.empty((len(exposures),)+im.shape, dtype=im.dtype,), 
+                                            attrs=im.attrs | {'exposures': list(exposures)})
+                else:
+                    images = ArrayWithAttrs(np.empty((len(exposures),)+im.shape, dtype=im.dtype),
+                                            attrs={'exposures': list(exposures)})
+            images[i] = im
+        self.live_view = live_view
+        return images  
+    @classmethod
+    def combine(cls, stack):
+        exposures = stack.attrs['exposures']
+        stack[stack >= cls.pixel_max[1]*0.9] = np.nan
+  
+        weighted = np.divide(stack, exposures[:, None, None])
+        combined = np.nanmean(weighted, axis=0)
+        return combined
+        
     def get_control_widget(self):
         "Get a Qt widget with the camera's controls (but no image display)"
         return PrimeCameraControlWidget(self)
