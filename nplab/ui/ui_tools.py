@@ -135,6 +135,7 @@ class UiTools(object):
         # Connect controls to properties with the same name
         for control_type, c in list(auto_connectable_controls.items()):
             for control in self.findChildren(c['qt_type']):
+                # print(control)
                 name = strip_suffices(control.objectName(), c['suffices'])
                 try:
                     # look for the named property on the controlled objects
@@ -257,13 +258,14 @@ class QuickControlBox(QtWidgets.QGroupBox, UiTools):
         self.setLayout(QtWidgets.QFormLayout())
         self.controls = dict()
     
-    def add_doublespinbox(self, name, vmin=-float("inf"), vmax=float("inf")):
+    def add_doublespinbox(self, name, vmin=-float("inf"), vmax=float("inf"), singlestep=1.,):
         """Add a floating-point spin box control."""
         sb = QtWidgets.QDoubleSpinBox()
         self.controls[name] = sb
         sb.setObjectName(name + "_spinbox")
         sb.setMinimum(vmin)
         sb.setMaximum(vmax)
+        sb.setSingleStep(singlestep)
         sb.setKeyboardTracking(False)
         self.layout().addRow(name.title(), sb)
     

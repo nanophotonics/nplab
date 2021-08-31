@@ -390,7 +390,7 @@ class CameraWithLocation(Instrument):
             shift = 0
             while np.linalg.norm(shift) < threshold_shift:
                 assert step < max_step, "Error, we hit the maximum step before we saw the sample move."
-                self.move(starting_location + np.array([step,0,0]))
+                self.move(starting_location + np.array([step, 0, 0]))
                 image = self.color_image()
                 shift = locate_feature_in_image(image, template) - image.datum_pixel
                 if np.sqrt(np.sum(shift**2)) > threshold_shift:

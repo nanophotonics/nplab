@@ -40,7 +40,7 @@ class Piezoconcept(SerialInstrument, Stage):
         Stage.__init__(self)
         self.cmd_axis = cmd_axis.upper()
         self.unit = unit  # This can be 'u' for micron or 'n' for nano
-        
+        self.distance_scale = 1 if unit == 'n' else 1_000.
     def move(self, value, axis=None, relative=False):
         '''Move to an absolute positions between 0 and 100 um 
         
@@ -48,37 +48,25 @@ class Piezoconcept(SerialInstrument, Stage):
             value(float):   position to move to
 
         '''
-        if self.unit == "n":
-            multiplier = 0.001
-        if self.unit == "u":
-            multiplier = 1.0
-        multiplied = multiplier*value
-        if not relative:
-            if multiplied < 100 and multiplied >= 0:
-                if (multiplied-0.2*multiplier) > 0:
-                    value = value-0.2*multiplier  # why?
+        nm = int(self.distance_scale*value)
+        if relative:
+            if 0 <= nm + self.position < 100_000:
+                self.write(f'MOVR{self.cmd_axis} {nm}n')
+            else:
+                self._logger.warn(
+                    "The value is out of range! 0-100 um (0-1E8 nm) (Z)")          
+        else:
+            if 0 <= nm < 100_000:
+            #     if (multiplied-0.2*self.distance_scale) > 0:
+            #         value = value-0.2*self.distance_scale  # why?
       
-                self.write(f'MOVE{self.cmd_axis} {np.float32(value)}{self.unit}')
+                self.write(f'MOVE{self.cmd_axis} {nm}n')
                 # print(self.readline(), 'reply')
             else:
                 self._logger.warn(
                     "The value is out of range! 0-100 um (0-1E8 nm) (Z)")
-        elif relative == True:
-            if (value*multiplier+self.position) < 1E2 and (value*multiplier+self.position) >= 0:
-                self.write(f'MOVR{self.cmd_axis} {np.float32(value)}{self.unit}')
-            else:
-                self._logger.warn(
-                    "The value is out of range! 0-100 um (0-1E8 nm) (Z)")
-    
-    # def flush_input_buffer(self):
-    #     """Make sure there's nothing waiting to be read, and clear the buffer if there is."""
-    #     with self.communications_lock:
-    #         print('called')
-    #         while (x := self.ser.inWaiting()) > 0:
-    #             print(f'flushing {x} bits')
-    #             self.ser.flushInput()
             
-            
+     
 
     def get_position(self):
         return float(self.query(f'GET_{self.cmd_axis}')[:-3])
@@ -109,3 +97,5 @@ class Piezoconcept(SerialInstrument, Stage):
 
     def HELP(self):
         return self.query('HELP_')
+if __name__ == '__main__':
+    z = Piezoconcept('COM16')
