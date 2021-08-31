@@ -33,12 +33,20 @@ class PowerControl(Instrument):
     Controls the power. power_controller is something with a continuous input parameter like a filter wheel, or an AOM. 
     '''
     calibrate_points = DumbNotifiedProperty(25)
-    def __init__(self, power_controller, power_meter, calibration_points=25, title='power control', move_range=(0, 1)):
+    def __init__(self, power_controller,
+                 power_meter,
+                 before_calibration_func=None,
+                 after_calibration_func=None,
+                 calibration_points=25,
+                 title='power control',
+                 move_range=(0, 1)):
         super().__init__()
         self.pc = power_controller
         self.pometer = power_meter
         self.calibration_points = calibration_points
         self.title = title
+        self.before_calibration_func = before_calibration_func 
+        self.after_calibration_func = after_calibration_func
         assert isinstance(power_controller, (Aom, Stage)), \
             ('power_controller must be AOM or Stage')
         assert isinstance(power_meter, PowerMeter), \
@@ -88,8 +96,8 @@ class PowerControl(Instrument):
         '''
 
         '''
-        live = self.pometer.live
-        self.pometer.live = False
+        if self.before_calibration_func is not None:
+            state = self.before_calibration_func()
         attrs = {}
     
         if isinstance(self.pc, RStage):
@@ -115,7 +123,8 @@ class PowerControl(Instrument):
         
         self.param = self.mid_param
         self.update_power_calibration()
-        self.pometer.live = live
+        if self.after_calibration_func is not None:
+            self.after_calibration_func(*state)
 
     def update_power_calibration(self, specific_calibration=None, laser=None):
         '''
