@@ -217,7 +217,7 @@ def STBOC_with_size_filter(g,
            centers.append(center)
            radii.append(radius)
    if return_centers:
-       return np.array(centers)[:,::-1]
+       return np.array(centers)[:,::-1] # in numpy indexing
    if return_centers_and_radii:
       return np.array(centers)[:,::-1], np.array(radii)
    elif return_original_with_particles:
