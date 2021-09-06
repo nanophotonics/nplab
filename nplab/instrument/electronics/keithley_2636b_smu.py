@@ -32,14 +32,16 @@ class Keithley2636B(VisaInstrument):
                               doc='Set the source type, either voltage or current')
     
     
-    delay = queried_property('print(smua.source.delay)', 'smua.source.delay={0}',
+    src_delay = queried_property('print(smua.source.delay)', 'smua.source.delay={0}',
                               dtype='str',
                               doc='Remove delay') #added by sunny
-    measurementdelay = queried_property('print(smua.measure.delay)', 'smua.measure.delay={0}',
+    
+    meas_delay = queried_property('print(smua.measure.delay)', 'smua.measure.delay={0}',
                               dtype='str',
                               doc='Remove delay') #added by sunny
-    speed = queried_property('print(smua.measure.nplc)', 'smua.measure.nplc={0}',
-                                  doc='Set Measure Speed') #added by sunny
+    
+    nplc = queried_property('print(smua.measure.nplc)', 'smua.measure.nplc={0}',
+                                  doc='Set Measure Speed')
     
     # def set_src_voltage(self, voltage):
     #    self.instr.write('smua.source.levelv=%s' % voltage)
@@ -137,6 +139,11 @@ class Keithley2636B(VisaInstrument):
 #        resultsstrlist = resultstring.split(',')
 #        resultlist = [float(x) for x in resultsstrlist ]
         return resultstring
+    
+    def send_command_list(self, command_list):
+        """ Pass commands as list of strings to be sent to the instrument"""
+        for command in command_list:
+            self.write(command)
     
     def load_script(self, command_list, script_name='', ):
         """

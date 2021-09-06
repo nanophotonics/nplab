@@ -188,7 +188,7 @@ class PiezoStage(Stage):
 class StageUI(QtWidgets.QWidget, UiTools):
     update_ui = QtCore.Signal([int], [str])
 
-    def __init__(self, stage, parent=None, stage_step_min=1e-9, stage_step_max=1e-3, default_step=1e-6):
+    def __init__(self, stage, parent=None, stage_step_min=200e-9, stage_step_max=1e-3, default_step=1e-6):
         assert isinstance(stage, Stage), "instrument must be a Stage"
         super(StageUI, self).__init__()
         self.stage = stage
@@ -199,7 +199,7 @@ class StageUI(QtWidgets.QWidget, UiTools):
         self.update_ui[str].connect(self.update_positions)
         self.create_axes_layout(default_step)
         self.update_positions()
-
+        
     def move_axis_absolute(self, position, axis):
         self.stage.move(position, axis=axis, relative=False)
         if type(axis) == str:
@@ -236,7 +236,8 @@ class StageUI(QtWidgets.QWidget, UiTools):
         uic.loadUi(os.path.join(os.path.dirname(__file__), 'stage.ui'), self)
         self.update_pos_button.clicked.connect(partial(self.update_positions, None))
         self.initialise_button.clicked.connect(self.stage.reset_and_configure)
-
+        self.xy_middle_button.clicked.connect(self.xy_mid_travel) # Asia
+        self.z_focus_button.clicked.connect(self.z_focus_travel) # Asia
         
         path = os.path.dirname(os.path.realpath(nplab.ui.__file__))
         icon_size = QtCore.QSize(12, 12)
@@ -347,11 +348,21 @@ class StageUI(QtWidgets.QWidget, UiTools):
         else:
             i = self.stage.axis_names.index(axis)
             try:
-                p = engineering_format(self.stage.position[i], base_unit=self.stage.unit, digits_of_precision=4)
+                p = engineering_format(self.stage.position[i], base_unit='mm', digits_of_precision=4)
             except ValueError:
-                p = '0 m'
+                p = '0 mm'
             self.positions[i].setText(p)
-
+#added by Asia:
+    def xy_mid_travel(self):
+        self.move_axis_absolute(6, '1')
+        self.move_axis_absolute(6, '2')
+        self.update_positions
+        
+    def z_focus_travel(self):
+        self.move_axis_absolute(15.3333, '3')
+        self.update_positions
+#added by Asia end
+            
 class BlueStageUI(QtWidgets.QWidget, UiTools):
     update_ui = QtCore.Signal([int], [str])
 
@@ -403,7 +414,6 @@ class BlueStageUI(QtWidgets.QWidget, UiTools):
         uic.loadUi(os.path.join(os.path.dirname(__file__), 'stage.ui'), self)
         self.update_pos_button.clicked.connect(partial(self.update_positions, None))
         self.initialise_button.clicked.connect(self.stage.reset_and_configure)
-
         
         path = os.path.dirname(os.path.realpath(nplab.ui.__file__))
         icon_size = QtCore.QSize(12, 12)
@@ -518,8 +528,6 @@ class BlueStageUI(QtWidgets.QWidget, UiTools):
             except ValueError:
                 p = '0 m'
             self.positions[i].setText(p)
-
-
 
 def step_size_dict(smallest, largest, mantissas=[1, 2, 5],unit = 'm'):
     """Return a dictionary with nicely-formatted distances as keys and metres as values."""

@@ -297,7 +297,7 @@ class SMC100(SerialInstrument, Stage):
         self._logger.info('Found stage %s' %stage)
         print(str(stage))
         # enter config mode
-        self._send_cmd('PW1', 1) #'PW1' added by sunny
+        self._send_cmd('PW1',1) #'PW1' added by sunny
         self._send_cmd('PW1',2)
         self._send_cmd('PW1',3) #'PW3' #added by Asia for 3rd axis
         self._wait_states(STATE_CONFIGURATION)
@@ -309,8 +309,12 @@ class SMC100(SerialInstrument, Stage):
         self._send_cmd('ZX2', 2)
         time.sleep(2)
         
-        self._send_cmd('ZX2', 3) #added by Asia for 3rd axis
-        time.sleep(2) #added by Asia for 3rd axis
+        self._send_cmd('ZX2', 3) #added by Asia for 3rd axis, seems not necessary
+        time.sleep(2) #added by Asia for 3rd axis, seems not necessary
+
+        self._send_cmd('BA', 1, '0.00760') #added by Asia - backlash values, printed on actuators
+        self._send_cmd('BA', 2, '0.00844') #added by Asia - backlash values, printed on actuators
+        self._send_cmd('BA', 3, '0.01236') #added by Asia - backlash values, printed on actuators
         
         # exit configuration mode
         self._send_cmd('PW0', 1)
@@ -319,12 +323,10 @@ class SMC100(SerialInstrument, Stage):
         time.sleep(5) #added by Asia for 3rd axis
         self._send_cmd('PW0', 3) #added by Asia for 3rd axis
         self._wait_states(STATE_NOT_REFERENCED_FROM_CONFIGURATION)
-        #homing part to make box flash green.
+        #homing part to make box flash green.#Asia: homing and putting in ready state
         self._send_cmd('OR',1)
         self._send_cmd('OR',2)
         self._send_cmd('OR',3) #added by Asia for 3rd axis
-        # wait for us to get back into NOT REFERENCED state
-        
 
     def get_position(self, axis=None):
         pos = self._send_cmd('TP', axes=axis, argument='?', expect_response=True, retry=10)
@@ -427,6 +429,7 @@ class SMC100(SerialInstrument, Stage):
     def set_velocity(self, velocity):
         self._send_cmd('VA_Set', velocity)
 
+        
     # def get_qt_ui(self):
     #     return SMC100UI(self)
 
@@ -635,7 +638,7 @@ class SMC100(SerialInstrument, Stage):
 
 
 if __name__ == '__main__':
-    smc100 = SMC100('COM1', (1,2))
+    smc100 = SMC100('COM1', (1,2,3))
 #    smc100.reset_and_configure()
 #    smc100._send_cmd('RS')
 #    smc100._send_cmd('PW1')

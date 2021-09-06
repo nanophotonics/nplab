@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>349</width>
-    <height>321</height>
+    <height>372</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -107,6 +107,20 @@
        </property>
        <property name="text">
         <string>Initialise (20 seconds)</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="xy_middle_button">
+       <property name="text">
+        <string>Move XY to the middle of travel range</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="z_focus_button">
+       <property name="text">
+        <string>Move Z near focus for 100x Olympus objective - NOT ZEISS</string>
        </property>
       </widget>
      </item>
