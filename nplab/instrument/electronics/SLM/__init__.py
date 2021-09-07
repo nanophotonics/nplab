@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import division
-from builtins import zip
-from builtins import range
 from past.utils import old_div
 from nplab.utils.gui import QtWidgets, QtGui, QtCore, uic, get_qt_app
 from nplab.ui.ui_tools import UiTools

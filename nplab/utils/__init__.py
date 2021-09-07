@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from __future__ import division
 __author__ = 'alansanders,rwb27'
 #__all__ = ['gui','thread_utils']
 

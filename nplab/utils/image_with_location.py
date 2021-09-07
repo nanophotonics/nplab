@@ -23,10 +23,6 @@ is called ``M`` in mathematical expressions.  To convert a pixel coordinate to a
 coordinate by the matrix, i.e. ``l = p.M`` and to convert the other way we use the inverse of ``M`` so ``p = l.M``
 where the dot denotes matrix multiplication using `numpy.dot`.
 """
-from __future__ import division
-
-from builtins import range
-from past.utils import old_div
 import numpy as np
 from nplab.utils.array_with_attrs import ArrayWithAttrs
 import cv2
@@ -61,7 +57,7 @@ class ImageWithLocation(ArrayWithAttrs):
         out.pixel_to_sample_matrix[3,:3] += location_shift
         if not np.all(step == 1):
             # if we're downsampling, remember to scale datum_pixel accordingly
-            out.datum_pixel = old_div(out.datum_pixel, step)
+            out.datum_pixel = out.datum_pixel// step
             # Scale the pixel-to-sample matrix if we've got a non-unity step in the slice
             # I don't understand why I can't do this with slicing, but it all goes wrong...
             for i in range(2):
@@ -130,9 +126,9 @@ class ImageWithLocation(ArrayWithAttrs):
 
         # For now, rely on numpy to complain if the feature is outside the image.  May do bound-checking at some point.
         # If so, we might need to think carefully about the datum pixel of the resulting image.
-        thumb = self[pos[0] - old_div(size[0],2):pos[0] + old_div(size[0],2), pos[1] - old_div(size[1],2):pos[1] + old_div(size[1],2), ...]
+        thumb = self[pos[0] - size[0]//2:pos[0] + size[0]//2, pos[1] - size[1]//2:pos[1] + size[1]//2, ...]
         if set_datum_to_centre:
-            thumb.datum_pixel = (old_div(size[0],2), old_div(size[1],2)) # Make the datum point of the new image its centre.
+            thumb.datum_pixel = (size[0]//2, size[1]//2) # Make the datum point of the new image its centre.
         return thumb
 
     def downsample(self, n):
@@ -147,7 +143,7 @@ class ImageWithLocation(ArrayWithAttrs):
     @property
     def datum_pixel(self):
         """The pixel that nominally corresponds to where the image "is".  Usually the central pixel."""
-        datum = self.attrs.get('datum_pixel', old_div((np.array(self.shape[:2]) - 1),2))
+        datum = self.attrs.get('datum_pixel', (np.array(self.shape[:2]) - 1)//2)
         assert len(datum) == 2, "The datum pixel didn't have length 2!"
         return datum
 
@@ -188,7 +184,7 @@ def datum_pixel(image):
     try:
         return np.array(image.datum_pixel)
     except:
-        return old_div((np.array(image.shape[:2]) - 1),2)
+        return (np.array(image.shape[:2]) - 1)//2
 
 
 def ensure_3d(vector):

@@ -65,13 +65,11 @@ object to be passed in.
         
 """
 
-from builtins import str
-from builtins import object
 import functools
 from weakref import WeakKeyDictionary
 import numpy as np
 
-class Property(object):
+class Property():
     """Emulate PyProperty_Type() in Objects/descrobject.c
     
     This is copied from 

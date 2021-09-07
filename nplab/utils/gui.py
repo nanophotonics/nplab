@@ -4,9 +4,6 @@ GUI Utilities
 
 Various utility functions for GUI-related stuff.
 """
-from __future__ import print_function
-
-from builtins import range
 import os
 import sys
 import warnings

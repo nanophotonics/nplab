@@ -29,12 +29,6 @@ Contents:
 
 @author: Richard Bowman (rwb27)
 """
-from __future__ import division
-from __future__ import print_function
-
-from builtins import str
-from builtins import range
-from past.utils import old_div
 import ctypes
 from ctypes import byref, c_int, c_ulong, c_double
 import numpy as np

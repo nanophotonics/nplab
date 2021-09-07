@@ -3,15 +3,10 @@
 @author: Ana Andres-Arroyo
 GUI which controls a uc480 camera
 """
-from __future__ import division
-from __future__ import print_function
+
 # documentation:
 # http://instrumental-lib.readthedocs.io/en/latest/uc480-cameras.html
 
-from builtins import str
-from builtins import range
-from builtins import object
-from past.utils import old_div
 import os
 import datetime
 import time
@@ -661,7 +656,7 @@ class LiveViewThread(QtCore.QThread):
         
         # calculate when we need to emit the image to the gui        
         capture_framerate = self.camera.framerate.magnitude
-        self.frame_multiple = int(old_div(capture_framerate, display_framerate))
+        self.frame_multiple = int(capture_framerate/display_framerate)
         # if display_framerate > capture_framerate then frame_multiple < 1
         # since we cannot emit each image more than once, frame_multiple must be >= 1
         if self.frame_multiple < 1: self.frame_multiple = 1

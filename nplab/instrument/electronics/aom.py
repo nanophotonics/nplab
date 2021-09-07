@@ -13,7 +13,7 @@ def Sigmoid(x,Shift=0.68207277,Scale=8.49175969):
     Output=(x-Shift)*Scale
     Output=np.exp(-Output)+1
     Output=1./Output
-    return old_div((Output-Zero),(One-Zero))
+    return (Output-Zero)/(One-Zero)
     
 def Inverse_Sigmoid(x,Shift=0.68207277,Scale=8.49175969):
     Zero=1./(np.exp(Shift*Scale)+1)

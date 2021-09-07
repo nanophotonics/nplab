@@ -2,8 +2,7 @@
 """
 Auto-aligning spectrometer: centres in on a nanoparticle after a short scan
 """
-from __future__ import division
-from __future__ import print_function
+
 #import traits
 #from traits.api import HasTraits, Property, Instance, Float, Range, Array, Int, String, Button, Bool, on_trait_change
 ##import traitsui
@@ -12,7 +11,6 @@ from __future__ import print_function
 #import chaco
 #from chaco.api import ArrayPlotData, Plot
 #from enable.component_editor import ComponentEditor
-from builtins import range
 from past.utils import old_div
 import threading
 import numpy as np

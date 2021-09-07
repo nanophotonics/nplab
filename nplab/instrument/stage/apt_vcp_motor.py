@@ -4,9 +4,6 @@ Created on Tue Mar 21 17:04:11 2017
 
 @author: Will, Yago
 """
-from __future__ import division
-from __future__ import print_function
-from builtins import str
 from past.utils import old_div
 import serial
 import struct
@@ -414,19 +411,19 @@ class DC_APT(APT_VCP_motor):
             return value
 
     def counts_to_pos(self,counts):
-        return old_div(counts,self.EncCnt)*1E3
+        return (counts/self.EncCnt)*1E3
     def pos_to_counts(self,pos):
-        return old_div(pos*self.EncCnt,1E3)
+        return (pos*self.EncCnt/1E3)
     
     def counts_to_vel(self,counts):
-        return old_div(counts,(self.EncCnt*self.t_constant*65536))*1E3
+        return (counts/(self.EncCnt*self.t_constant*65536))*1E3
     def vel_to_counts(self,vel):
-        return old_div(vel*65536*self.t_constant*self.EncCnt,1E3)
+        return (vel*65536*self.t_constant*self.EncCnt/1E3)
         
     def counts_to_acc(self,counts):
-        return old_div(counts,(self.EncCnt*self.t_constant**2*65536))*1E3
+        return (counts/(self.EncCnt*self.t_constant**2*65536))*1E3
     def acc_to_counts(self,acc):
-        return old_div(self.EncCnt*self.t_constant**2*65536*acc,1E3)
+        return (self.EncCnt*self.t_constant**2*65536*acc/1E3)
     def move_step(self,axis,direction):
         self.move_rel(self.stepsize*direction,axis)
     def _waitFinishMove(self,axis = None,debug=False):
@@ -503,9 +500,9 @@ class Stepper_APT_std(APT_VCP_motor):
             return value
 
     def counts_to_si(self,counts):
-        return old_div(counts,self.EncCnt)*1E3
+        return (counts/self.EncCnt)*1E3
     def si_to_counts(self,pos):
-        return old_div(pos*self.EncCnt,1E3)
+        return (pos*self.EncCnt/1E3)
     
 class Stepper_APT_trinamics(APT_VCP_motor):
     #The different EncCnt (calibrations) for the different stage types is microstep/mm

@@ -1,8 +1,3 @@
-from __future__ import division
-from __future__ import print_function
-from builtins import hex
-from builtins import str
-from builtins import object
 from past.utils import old_div
 import struct
 from nplab.instrument import serial_instrument as serial
@@ -53,7 +48,7 @@ class Rotation_Stage_Backend(serial.SerialInstrument):
             Angle+=360.
         Angle=Angle%360
 
-        Angle=old_div((262144.*Angle),360)
+        Angle= 262144.*Angle/360
 
         Angle=int(Angle)
         Angle=self.Number_to_Hex(Angle)
@@ -82,7 +77,7 @@ class Rotation_Stage_Backend(serial.SerialInstrument):
             Angle+=360.
         Angle=Angle%360
 
-        Angle=old_div((262144.*Angle),360)
+        Angle=(262144.*Angle)/360
 
         Angle=int(Angle)
         Angle=self.Number_to_Hex(Angle)
@@ -231,7 +226,7 @@ class Filter_Wheel(object):
         Angles=[self.Power_Curve[0][Lower_Angle],self.Power_Curve[0][Lower_Angle+1]]
         Powers=[self.Power_Curve[1][Lower_Angle],self.Power_Curve[1][Lower_Angle+1]]
 
-        m=old_div((Angles[1]-Angles[0]),(Powers[1]-Powers[0]))
+        m=(Angles[1]-Angles[0])/(Powers[1]-Powers[0])
         c=Angles[0]-(m*Powers[0])
 
         Angle=(m*Power)+c

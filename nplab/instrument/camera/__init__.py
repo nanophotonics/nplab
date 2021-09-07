@@ -4,7 +4,6 @@ Created on Wed Jun 11 12:28:18 2014
 
 @author: Richard Bowman
 """
-from __future__ import print_function
 
 import nplab.utils.gui #load Qt correctly - do this BEFORE traits
 from nplab.utils.gui import QtCore, QtGui, QtWidgets, uic
