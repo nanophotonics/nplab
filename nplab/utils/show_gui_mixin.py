@@ -10,6 +10,7 @@ author: Richard Bowman
 """
 import qdarkstyle
 
+
 class ShowGUIMixin():
     """A mixin class to provide standard GUI functionality.
 
@@ -17,7 +18,12 @@ class ShowGUIMixin():
     either a supplied Qt widget or using TraitsUI.
     """
     __gui_instance = None
-    def show_gui(self, blocking=None, block=None, force_new_window=False, dark=False):
+
+    def show_gui(self,
+                 blocking=None,
+                 block=None,
+                 force_new_window=False,
+                 dark=False):
         """Display a GUI window for the class.
 
         You may override this method to display a window to control the
@@ -50,30 +56,35 @@ class ShowGUIMixin():
         the only one existing - the previous window may disappear.
         """
         if blocking is None and block is not None:
-            blocking = block # Allow the use of either argument name
+            blocking = block  # Allow the use of either argument name
         if blocking is None:
-            blocking = True # We default to True.
-        if hasattr(self,'get_qt_ui'):
+            blocking = True  # We default to True.
+        if hasattr(self, 'get_qt_ui'):
             # NB this dynamic import is important to avoid saddling all of
             # nplab with dependencies on Qt.
             from nplab.utils.gui import QtCore, QtGui, QtWidgets, get_qt_app
             app = get_qt_app()
             if dark: app.setStyleSheet(qdarkstyle.load_stylesheet())
-            if force_new_window or not isinstance(self.__gui_instance, QtWidgets.QWidget):
+            if force_new_window or not isinstance(self.__gui_instance,
+                                                  QtWidgets.QWidget):
                 # create the widget if it doesn't exist already, or if we've been
                 # told to make a new one
                 self.__gui_instance = self.get_qt_ui()
             ui = self.__gui_instance
             ui.show()
-            ui.activateWindow() #flash the taskbar entry to make it obvious
+            ui.activateWindow()  #flash the taskbar entry to make it obvious
             if blocking:
-                print("Running GUI, this will block the command line until the window is closed.")
+                print(
+                    "Running GUI, this will block the command line until the window is closed."
+                )
                 ui.windowModality = QtCore.Qt.ApplicationModal
 
                 try:
                     return app.exec_()
                 except:
-                    print("Could not run the Qt application: perhaps it is already running?")
+                    print(
+                        "Could not run the Qt application: perhaps it is already running?"
+                    )
                     return
             else:
                 return ui

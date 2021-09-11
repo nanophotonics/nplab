@@ -41,6 +41,7 @@ EXAMPLE:
     >>>> camera.show_gui()
 """
 from future import standard_library
+
 standard_library.install_aliases()
 from builtins import str
 from past.utils import old_div
@@ -99,7 +100,7 @@ def subselect(string, size=100):
     :return:
     """
     if len(string) > size:
-        return '%s ... %s' % (string[:int(size/2)], string[-int(size/2):])
+        return '%s ... %s' % (string[:int(size / 2)], string[-int(size / 2):])
     else:
         return string
 
@@ -111,7 +112,8 @@ class ServerHandler(socketserver.BaseRequestHandler):
             while message_end not in raw_data:
                 raw_data += self.request.recv(BUFFER_SIZE).strip()
             raw_data = re.sub(re.escape(message_end) + b'$', b'', raw_data)
-            self.server._logger.debug("Server received: %s" % subselect(raw_data))
+            self.server._logger.debug("Server received: %s" %
+                                      subselect(raw_data))
 
             if raw_data == b"list_attributes":
                 instr_reply = list(self.server.instrument.__dict__.keys())
@@ -120,17 +122,26 @@ class ServerHandler(socketserver.BaseRequestHandler):
                 if "command" in command_dict:
                     if "args" in command_dict and "kwargs" in command_dict:
                         instr_reply = getattr(self.server.instrument,
-                                              command_dict["command"])(*command_dict["args"], **command_dict["kwargs"])
+                                              command_dict["command"])(
+                                                  *command_dict["args"],
+                                                  **command_dict["kwargs"])
                     elif "args" in command_dict:
-                        instr_reply = getattr(self.server.instrument, command_dict["command"])(*command_dict["args"])
+                        instr_reply = getattr(
+                            self.server.instrument,
+                            command_dict["command"])(*command_dict["args"])
                     elif "kwargs" in command_dict:
-                        instr_reply = getattr(self.server.instrument, command_dict["command"])(**command_dict["kwargs"])
+                        instr_reply = getattr(
+                            self.server.instrument,
+                            command_dict["command"])(**command_dict["kwargs"])
                     else:
-                        instr_reply = getattr(self.server.instrument, command_dict["command"])()
+                        instr_reply = getattr(self.server.instrument,
+                                              command_dict["command"])()
                 elif "variable_get" in command_dict:
-                    instr_reply = getattr(self.server.instrument, command_dict["variable_get"])
+                    instr_reply = getattr(self.server.instrument,
+                                          command_dict["variable_get"])
                 elif "variable_set" in command_dict:
-                    setattr(self.server.instrument, command_dict["variable_set"],
+                    setattr(self.server.instrument,
+                            command_dict["variable_set"],
                             parse_strings(command_dict["variable_value"]))
                     instr_reply = ''
                 else:
@@ -138,11 +149,13 @@ class ServerHandler(socketserver.BaseRequestHandler):
         except Exception as e:
             self.server._logger.warn(e)
             instr_reply = dict(error=e)
-        self.server._logger.debug("Instrument reply: %s" % subselect(str(instr_reply)))
+        self.server._logger.debug("Instrument reply: %s" %
+                                  subselect(str(instr_reply)))
 
         try:
             if type(instr_reply) == ArrayWithAttrs:
-                reply = repr(dict(array=instr_reply.tolist(), attrs=instr_reply.attrs))
+                reply = repr(
+                    dict(array=instr_reply.tolist(), attrs=instr_reply.attrs))
             elif type(instr_reply) == np.ndarray:
                 reply = repr(dict(array=instr_reply.tolist()))
             else:
@@ -152,7 +165,8 @@ class ServerHandler(socketserver.BaseRequestHandler):
             reply = repr(dict(error=str(e)))
         self.request.sendall(reply.encode() + message_end)
         self.server._logger.debug(
-            "Server replied %s %s: %s" % (len(reply), sys.getsizeof(reply), subselect(reply)))
+            "Server replied %s %s: %s" %
+            (len(reply), sys.getsizeof(reply), subselect(reply)))
 
 
 def create_server_class(original_class):
@@ -162,7 +176,6 @@ def create_server_class(original_class):
     :param original_class: an nplab instrument class
     :return: server class
     """
-
     class Server(socketserver.TCPServer):
         def __init__(self, server_address, *args, **kwargs):
             """
@@ -173,7 +186,8 @@ def create_server_class(original_class):
             :param args: arguments to be passed to the nplab instrument
             :param kwargs: named arguments for the nplab instrument
             """
-            socketserver.TCPServer.__init__(self, server_address, ServerHandler, True)
+            socketserver.TCPServer.__init__(self, server_address,
+                                            ServerHandler, True)
             self.instrument = original_class(*args, **kwargs)
             self._logger = create_logger('TCP server')
             self.thread = None
@@ -196,14 +210,17 @@ def create_server_class(original_class):
                     self.instrument.show_gui()
             else:
                 self.serve_forever()
+
     return Server
 
 
 def create_client_class(original_class,
                         tcp_methods=None,
-                        excluded_methods=('get_qt_ui', "get_control_widget", "get_preview_widget"),
+                        excluded_methods=('get_qt_ui', "get_control_widget",
+                                          "get_preview_widget"),
                         tcp_attributes=None,
-                        excluded_attributes=('ui', '_ShowGUIMixin__gui_instance')):
+                        excluded_attributes=('ui',
+                                             '_ShowGUIMixin__gui_instance')):
     """
     Given an nplab instrument, returns a class that overrides a series of class methods, so that instead of running
     those methods, it sends a string over TCP an instrument server of the same type. It is also able to get and set
@@ -219,7 +236,6 @@ def create_client_class(original_class,
             Hence, by default, the GUI attributes are not read over TCP.
     :return: new_class
     """
-
     def method_builder(method_name):
         """
         Given a method name, return a function that takes in any number of arguments and named arguments, creates a
@@ -229,7 +245,6 @@ def create_client_class(original_class,
         :param method_name: string
         :return: method (function)
         """
-
         def method(*args, **kwargs):
             obj = args[0]
             command_dict = dict(command=method_name)
@@ -241,7 +256,8 @@ def create_client_class(original_class,
             if type(reply) == dict:
                 if "array" in reply:
                     if "attrs" in reply:
-                        reply = ArrayWithAttrs(np.array(reply["array"]), reply["attrs"])
+                        reply = ArrayWithAttrs(np.array(reply["array"]),
+                                               reply["attrs"])
                     else:
                         reply = np.array(reply["array"])
             return reply
@@ -257,7 +273,8 @@ def create_client_class(original_class,
             """
             self.address = address
             self._logger = create_logger(original_class.__name__ + '_client')
-            self.instance_attributes = self.send_to_server("list_attributes", address)
+            self.instance_attributes = self.send_to_server(
+                "list_attributes", address)
 
         def __setattr__(self, item, value):
             """
@@ -272,12 +289,16 @@ def create_client_class(original_class,
             if item in self.method_list:
                 super(NewClass, self).__setattr__(item, value)
             # If the item is a local attribute, set it locally
-            elif item in ['instance_attributes', 'address', '_logger'] + excluded_attributes:
+            elif item in ['instance_attributes', 'address', '_logger'
+                          ] + excluded_attributes:
                 original_class.__setattr__(self, item, value)
             # If the item is an attribute of the server instrument, send it over TCP. Note this if needs to happen after
             # the previous one, since it needs to use the self.instance_attributes
             elif item in self.instance_attributes or item in tcp_attributes:
-                self.send_to_server(repr(dict(variable_set=item, variable_value=parse_arrays(value))))
+                self.send_to_server(
+                    repr(
+                        dict(variable_set=item,
+                             variable_value=parse_arrays(value))))
             else:
                 original_class.__setattr__(self, item, value)
 
@@ -307,7 +328,8 @@ def create_client_class(original_class,
                 self._logger.debug("Client received: %s" % subselect(received))
                 sock.close()
                 if b'error' in received:
-                    raise RuntimeError('Server error: %s' % subselect(received))
+                    raise RuntimeError('Server error: %s' %
+                                       subselect(received))
             except Exception as e:
                 raise e
             return ast.literal_eval(received.decode())
@@ -323,14 +345,19 @@ def create_client_class(original_class,
     for command_name in tcp_methods:
         command = getattr(NewClass, command_name)
         # only replaces methods that are not magic (__xx__) and are not explicitly excluded
-        if (inspect.ismethod(command) or inspect.isfunction(command)) and not command_name.startswith('__') and command_name not in excluded_methods:
+        if (inspect.ismethod(command) or
+                inspect.isfunction(command)) and not command_name.startswith(
+                    '__') and command_name not in excluded_methods:
             setattr(NewClass, command_name, method_builder(command_name))
             methods += [command_name]
     setattr(NewClass, "method_list", methods)
 
     def my_getattr(self, item):
         # print("Getting: ", item, item in ["address", "instance_attributes"])
-        if item in ["address", "instance_attributes", "method_list", "_logger", "__init__"] + excluded_attributes:
+        if item in [
+                "address", "instance_attributes", "method_list", "_logger",
+                "__init__"
+        ] + excluded_attributes:
             # print('Excluded attribute: %s' % item)
             return object.__getattribute__(self, item)
             # return object.__getattr__(self, item)

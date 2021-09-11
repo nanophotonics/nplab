@@ -1,33 +1,39 @@
 import nplab
 import os, sys, platform
 
+
 class GitFolderMissing(Exception):
     """Exception to be raised if the git folder is not found."""
     pass
 
+
 def git_folder():
     """Find the git folder for the repo that contains nplab."""
     project_dir = os.path.dirname(os.path.dirname(nplab.__file__))
-    git_folder = os.path.join(project_dir,'.git')
+    git_folder = os.path.join(project_dir, '.git')
     if os.path.isdir(git_folder):
         return git_folder
     else:
-        raise GitFolderMissing("Could not find the git folder - are you in develop mode?")
+        raise GitFolderMissing(
+            "Could not find the git folder - are you in develop mode?")
+
 
 def current_branch():
     """Return the name of the current branch we're using"""
-    f = open(os.path.join(git_folder(),'HEAD'), 'r')
+    f = open(os.path.join(git_folder(), 'HEAD'), 'r')
     current_branch = f.read()[5:].strip()
     f.close()
     return current_branch
+
 
 def latest_commit():
     """Find the SHA1 hash of the most recent commit."""
     #first, open the file with the SHA1 in it
     f = open(os.path.join(git_folder(), *(current_branch().split('/'))), 'r')
-    sha1 = f.read().strip() #the file only contains the SHA1
+    sha1 = f.read().strip()  #the file only contains the SHA1
     f.close()
     return sha1
+
 
 def all_module_versions_string():
     """A string containing the version of all loaded modules with accessible version info."""
@@ -39,6 +45,7 @@ def all_module_versions_string():
             pass
     return modulestring
 
+
 def platform_string():
     """A string identifying the platform (OS, Python version, etc.)"""
     platform_info = ""
@@ -48,6 +55,7 @@ def platform_string():
         except:
             pass
     return platform_info
+
 
 def version_info_string():
     """Construct a big string with all avaliable version info."""
@@ -64,6 +72,7 @@ def version_info_string():
     version_string += "Platform information:\n"
     version_string += platform_string()
     return version_string
+
 
 if __name__ == '__main__':
     print(version_info_string())

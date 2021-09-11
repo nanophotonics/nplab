@@ -29,7 +29,6 @@
 # CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
-
 """Lumenera(r) USB Camera Interface.
 
 The module contains two main interfaces to the Lumenera LuCam API:
@@ -91,9 +90,11 @@ import copy
 
 __version__ = '2013.01.18'
 __docformat__ = 'restructuredtext en'
-__all__ = ['API', 'Lucam', 'LucamEnumCameras', 'LucamNumCameras',
-           'LucamError', 'LucamGetLastError', 'LucamSynchronousSnapshots',
-           'LucamPreviewAVI', 'LucamConvertBmp24ToRgb24']
+__all__ = [
+    'API', 'Lucam', 'LucamEnumCameras', 'LucamNumCameras', 'LucamError',
+    'LucamGetLastError', 'LucamSynchronousSnapshots', 'LucamPreviewAVI',
+    'LucamConvertBmp24ToRgb24'
+]
 
 
 def API():
@@ -104,12 +105,14 @@ def API():
     """
     from numpy.ctypeslib import ndpointer
     from ctypes import c_int, c_char_p, c_void_p, POINTER, WINFUNCTYPE
-    from ctypes.wintypes import (BOOL, BYTE, FLOAT, LONG, ULONG, USHORT,
-                                 DWORD, LPCSTR, LPCWSTR, HANDLE, HWND, HMENU)
+    from ctypes.wintypes import (BOOL, BYTE, FLOAT, LONG, ULONG, USHORT, DWORD,
+                                 LPCSTR, LPCWSTR, HANDLE, HWND, HMENU)
 
     pUCHAR_LUT = ndpointer(dtype=numpy.uint8, ndim=1, flags='C_CONTIGUOUS')
     pUCHAR_RGB = ndpointer(dtype=numpy.uint8, ndim=3, flags='C_CONTIGUOUS')
-    pFLOAT_MATRIX33 = ndpointer(dtype=numpy.float32, ndim=2, shape=(3, 3),
+    pFLOAT_MATRIX33 = ndpointer(dtype=numpy.float32,
+                                ndim=2,
+                                shape=(3, 3),
                                 flags='C_CONTIGUOUS')
 
     UCHAR = ctypes.c_ubyte
@@ -126,13 +129,9 @@ def API():
 
     class LUCAM_VERSION(ctypes.Structure):
         """Lucam version structure."""
-        _fields_ = [
-            ('firmware', ULONG),
-            ('fpga', ULONG),
-            ('api', ULONG),
-            ('driver', ULONG),
-            ('serialnumber', ULONG),
-            ('reserved', ULONG)]
+        _fields_ = [('firmware', ULONG), ('fpga', ULONG), ('api', ULONG),
+                    ('driver', ULONG), ('serialnumber', ULONG),
+                    ('reserved', ULONG)]
 
         def __str__(self):
             return print_structure(self)
@@ -146,16 +145,9 @@ def API():
             _fields_ = [('subSampleY', USHORT), ('binningY', USHORT)]
 
         _anonymous_ = ['_x', '_y']
-        _fields_ = [
-            ('xOffset', ULONG),
-            ('yOffset', ULONG),
-            ('width', ULONG),
-            ('height', ULONG),
-            ('pixelFormat', ULONG),
-            ('_x', X),
-            ('flagsX', USHORT),
-            ('_y', Y),
-            ('flagsY', USHORT)]
+        _fields_ = [('xOffset', ULONG), ('yOffset', ULONG), ('width', ULONG),
+                    ('height', ULONG), ('pixelFormat', ULONG), ('_x', X),
+                    ('flagsX', USHORT), ('_y', Y), ('flagsY', USHORT)]
 
         def __str__(self):
             return print_structure(self)
@@ -164,18 +156,12 @@ def API():
         """Lucam snapshot settings structure."""
         class GAINS(ctypes.Union):
             class RBGG(ctypes.Structure):
-                _fields_ = [
-                    ('gainRed', FLOAT),
-                    ('gainBlue', FLOAT),
-                    ('gainGrn1', FLOAT),
-                    ('gainGrn2', FLOAT)]
+                _fields_ = [('gainRed', FLOAT), ('gainBlue', FLOAT),
+                            ('gainGrn1', FLOAT), ('gainGrn2', FLOAT)]
 
             class MCYY(ctypes.Structure):
-                _fields_ = [
-                    ('gainMag', FLOAT),
-                    ('gainCyan', FLOAT),
-                    ('gainYel1', FLOAT),
-                    ('gainYel2', FLOAT)]
+                _fields_ = [('gainMag', FLOAT), ('gainCyan', FLOAT),
+                            ('gainYel1', FLOAT), ('gainYel2', FLOAT)]
 
             _anonymous_ = ['_rbgg', '_mcyy']
             _fields_ = [('_rbgg', RBGG), ('_mcyy', MCYY)]
@@ -198,59 +184,46 @@ def API():
             ('bufferlastframe', BOOL),
             ('ulReserved2', ULONG),
             ('flReserved1', FLOAT),
-            ('flReserved2', FLOAT)]
+            ('flReserved2', FLOAT)
+        ]
 
         def __str__(self):
             return print_structure(self)
 
     class LUCAM_CONVERSION(ctypes.Structure):
         """Lucam conversion structure."""
-        _fields_ = [
-            ('DemosaicMethod', ULONG),
-            ('CorrectionMatrix', ULONG)]
+        _fields_ = [('DemosaicMethod', ULONG), ('CorrectionMatrix', ULONG)]
 
     class LUCAM_CONVERSION_PARAMS(ctypes.Structure):
         """Structure used for new conversion functions."""
         class GAINS(ctypes.Union):
             class YUV(ctypes.Structure):
-                _fields_ = [
-                    ('DigitalGain', FLOAT),
-                    ('DigitalWhiteBalanceU', FLOAT),
-                    ('DigitalWhiteBalanceV', FLOAT)]
+                _fields_ = [('DigitalGain', FLOAT),
+                            ('DigitalWhiteBalanceU', FLOAT),
+                            ('DigitalWhiteBalanceV', FLOAT)]
 
             class RGB(ctypes.Structure):
-                _fields_ = [
-                    ('DigitalGainRed', FLOAT),
-                    ('DigitalGainGreen', FLOAT),
-                    ('DigitalGainBlue', FLOAT)]
+                _fields_ = [('DigitalGainRed', FLOAT),
+                            ('DigitalGainGreen', FLOAT),
+                            ('DigitalGainBlue', FLOAT)]
 
             _anonymous_ = ['_yuv', '_rgb']
             _fields_ = [('_yuv', YUV), ('_rgb', RGB)]
 
         _anonymous_ = ['_gains']
-        _fields_ = [
-            ('Size', ULONG),
-            ('DemosaicMethod', ULONG),
-            ('CorrectionMatrix', ULONG),
-            ('FlipX', BOOL),
-            ('FlipY', BOOL),
-            ('Hue', FLOAT),
-            ('Saturation', FLOAT),
-            ('UseColorGainsOverWb', BOOL),
-            ('_gains', GAINS)]
+        _fields_ = [('Size', ULONG), ('DemosaicMethod', ULONG),
+                    ('CorrectionMatrix', ULONG), ('FlipX', BOOL),
+                    ('FlipY', BOOL), ('Hue', FLOAT), ('Saturation', FLOAT),
+                    ('UseColorGainsOverWb', BOOL), ('_gains', GAINS)]
 
         def __str__(self):
             return print_structure(self)
 
     class LUCAM_IMAGE_FORMAT(ctypes.Structure):
         """Image format information."""
-        _fields_ = [
-            ('Size', ULONG),
-            ('Width', ULONG),
-            ('Height', ULONG),
-            ('PixelFormat', ULONG),
-            ('ImageSize', ULONG),
-            ('LucamReserved', ULONG * 8)]
+        _fields_ = [('Size', ULONG), ('Width', ULONG), ('Height', ULONG),
+                    ('PixelFormat', ULONG), ('ImageSize', ULONG),
+                    ('LucamReserved', ULONG * 8)]
 
         def __str__(self):
             return print_structure(self)
@@ -284,11 +257,11 @@ def API():
     LucamDisplayPropertyPage = (BOOL, HANDLE, HWND)
     LucamDisplayVideoFormatPage = (BOOL, HANDLE, HWND)
     LucamQueryDisplayFrameRate = (BOOL, HANDLE, pFLOAT)
-    LucamCreateDisplayWindow = (
-        BOOL, HANDLE, LPCTSTR, ULONG, c_int, c_int, c_int, c_int, HWND, HMENU)
+    LucamCreateDisplayWindow = (BOOL, HANDLE, LPCTSTR, ULONG, c_int, c_int,
+                                c_int, c_int, HWND, HMENU)
     LucamDestroyDisplayWindow = (BOOL, HANDLE)
-    LucamAdjustDisplayWindow = (
-        BOOL, HANDLE, LPCTSTR, c_int, c_int, c_int, c_int)
+    LucamAdjustDisplayWindow = (BOOL, HANDLE, LPCTSTR, c_int, c_int, c_int,
+                                c_int)
     LucamReadRegister = (BOOL, HANDLE, LONG, LONG, pLONG)
     LucamWriteRegister = (BOOL, HANDLE, LONG, LONG, pLONG)
     LucamSetFormat = (BOOL, HANDLE, pLUCAM_FRAME_FORMAT, FLOAT)
@@ -306,37 +279,36 @@ def API():
     LucamSaveImageWEx = (BOOL, HANDLE, ULONG, ULONG, ULONG, pBYTE, LPCWSTR)
     LucamAddStreamingCallback = (LONG, HANDLE, VideoFilterCallback, c_void_p)
     LucamRemoveStreamingCallback = (BOOL, HANDLE, LONG)
-    LucamAddRgbPreviewCallback = (
-        LONG, HANDLE, RgbVideoFilterCallback, c_void_p, ULONG)
+    LucamAddRgbPreviewCallback = (LONG, HANDLE, RgbVideoFilterCallback,
+                                  c_void_p, ULONG)
     LucamRemoveRgbPreviewCallback = (BOOL, HANDLE, LONG)
     LucamQueryRgbPreviewPixelFormat = (BOOL, HANDLE, pULONG)
     LucamAddSnapshotCallback = (LONG, HANDLE, SnapshotCallback, c_void_p)
     LucamRemoveSnapshotCallback = (BOOL, HANDLE, LONG)
-    LucamConvertFrameToRgb24 = (
-        BOOL, HANDLE, pUCHAR_RGB, pBYTE, ULONG, ULONG, ULONG,
-        pLUCAM_CONVERSION)
-    LucamConvertFrameToRgb32 = (
-        BOOL, HANDLE, pBYTE, pBYTE, ULONG, ULONG, ULONG, pLUCAM_CONVERSION)
-    LucamConvertFrameToRgb48 = (
-        BOOL, HANDLE, pUSHORT, pUSHORT, ULONG, ULONG, ULONG, pLUCAM_CONVERSION)
-    LucamConvertFrameToGreyscale8 = (
-        BOOL, HANDLE, pBYTE, pBYTE, ULONG, ULONG, ULONG, pLUCAM_CONVERSION)
-    LucamConvertFrameToGreyscale16 = (
-        BOOL, HANDLE, pUSHORT, pUSHORT, ULONG, ULONG, ULONG, pLUCAM_CONVERSION)
+    LucamConvertFrameToRgb24 = (BOOL, HANDLE, pUCHAR_RGB, pBYTE, ULONG, ULONG,
+                                ULONG, pLUCAM_CONVERSION)
+    LucamConvertFrameToRgb32 = (BOOL, HANDLE, pBYTE, pBYTE, ULONG, ULONG,
+                                ULONG, pLUCAM_CONVERSION)
+    LucamConvertFrameToRgb48 = (BOOL, HANDLE, pUSHORT, pUSHORT, ULONG, ULONG,
+                                ULONG, pLUCAM_CONVERSION)
+    LucamConvertFrameToGreyscale8 = (BOOL, HANDLE, pBYTE, pBYTE, ULONG, ULONG,
+                                     ULONG, pLUCAM_CONVERSION)
+    LucamConvertFrameToGreyscale16 = (BOOL, HANDLE, pUSHORT, pUSHORT, ULONG,
+                                      ULONG, ULONG, pLUCAM_CONVERSION)
     LucamConvertBmp24ToRgb24 = (None, pUCHAR_RGB, ULONG, ULONG)
     LucamConvertRawAVIToStdVideo = (BOOL, HANDLE, LPCWSTR, LPCWSTR, ULONG)
     LucamPreviewAVIOpen = (HANDLE, LPCWSTR)
     LucamPreviewAVIClose = (BOOL, HANDLE)
     LucamPreviewAVIControl = (BOOL, HANDLE, ULONG, HWND)
-    LucamPreviewAVIGetDuration = (
-        BOOL, HANDLE, pLONGLONG, pLONGLONG, pLONGLONG, pLONGLONG)
+    LucamPreviewAVIGetDuration = (BOOL, HANDLE, pLONGLONG, pLONGLONG,
+                                  pLONGLONG, pLONGLONG)
     LucamPreviewAVIGetFrameCount = (BOOL, HANDLE, pLONGLONG)
     LucamPreviewAVIGetFrameRate = (BOOL, HANDLE, pFLOAT)
-    LucamPreviewAVIGetPositionTime = (
-        BOOL, HANDLE, pLONGLONG, pLONGLONG, pLONGLONG, pLONGLONG)
+    LucamPreviewAVIGetPositionTime = (BOOL, HANDLE, pLONGLONG, pLONGLONG,
+                                      pLONGLONG, pLONGLONG)
     LucamPreviewAVIGetPositionFrame = (BOOL, HANDLE, pLONGLONG)
-    LucamPreviewAVISetPositionTime = (
-        BOOL, HANDLE, LONGLONG, LONGLONG, LONGLONG, LONGLONG)
+    LucamPreviewAVISetPositionTime = (BOOL, HANDLE, LONGLONG, LONGLONG,
+                                      LONGLONG, LONGLONG)
     LucamPreviewAVISetPositionFrame = (BOOL, HANDLE, LONGLONG)
     LucamPreviewAVIGetFormat = (BOOL, HANDLE, pLONG, pLONG, pLONG, pLONG)
     LucamSetupCustomMatrix = (BOOL, HANDLE, pFLOAT_MATRIX33)
@@ -349,39 +321,38 @@ def API():
     LucamSetTriggerMode = (BOOL, HANDLE, BOOL)
     LucamTriggerFastFrame = (BOOL, HANDLE)
     LucamCancelTakeFastFrame = (BOOL, HANDLE)
-    LucamEnableSynchronousSnapshots = (
-        HANDLE, ULONG, pHANDLE, POINTER(pLUCAM_SNAPSHOT))
+    LucamEnableSynchronousSnapshots = (HANDLE, ULONG, pHANDLE,
+                                       POINTER(pLUCAM_SNAPSHOT))
     LucamTakeSynchronousSnapshots = (BOOL, HANDLE, POINTER(pBYTE))
     LucamDisableSynchronousSnapshots = (BOOL, HANDLE)
     LucamGpioRead = (BOOL, HANDLE, pBYTE, pBYTE)
     LucamGpioWrite = (BOOL, HANDLE, BYTE)
     LucamGpoSelect = (BOOL, HANDLE, BYTE)
     LucamGpioConfigure = (BOOL, HANDLE, BYTE)
-    LucamOneShotAutoExposure = (
-        BOOL, HANDLE, UCHAR, ULONG, ULONG, ULONG, ULONG)
+    LucamOneShotAutoExposure = (BOOL, HANDLE, UCHAR, ULONG, ULONG, ULONG,
+                                ULONG)
     LucamOneShotAutoWhiteBalance = (BOOL, HANDLE, ULONG, ULONG, ULONG, ULONG)
-    LucamOneShotAutoWhiteBalanceEx = (
-        BOOL, HANDLE, FLOAT, FLOAT, ULONG, ULONG, ULONG, ULONG)
+    LucamOneShotAutoWhiteBalanceEx = (BOOL, HANDLE, FLOAT, FLOAT, ULONG, ULONG,
+                                      ULONG, ULONG)
     LucamDigitalWhiteBalance = (BOOL, HANDLE, ULONG, ULONG, ULONG, ULONG)
-    LucamDigitalWhiteBalanceEx = (
-        BOOL, HANDLE, FLOAT, FLOAT, ULONG, ULONG, ULONG, ULONG)
-    LucamAdjustWhiteBalanceFromSnapshot = (
-        BOOL, HANDLE, pLUCAM_SNAPSHOT, pBYTE, FLOAT, FLOAT, ULONG, ULONG,
-        ULONG, ULONG)
+    LucamDigitalWhiteBalanceEx = (BOOL, HANDLE, FLOAT, FLOAT, ULONG, ULONG,
+                                  ULONG, ULONG)
+    LucamAdjustWhiteBalanceFromSnapshot = (BOOL, HANDLE, pLUCAM_SNAPSHOT,
+                                           pBYTE, FLOAT, FLOAT, ULONG, ULONG,
+                                           ULONG, ULONG)
     LucamOneShotAutoIris = (BOOL, HANDLE, UCHAR, ULONG, ULONG, ULONG, ULONG)
-    LucamContinuousAutoExposureEnable = (
-        BOOL, HANDLE, UCHAR, ULONG, ULONG, ULONG, ULONG, FLOAT)
+    LucamContinuousAutoExposureEnable = (BOOL, HANDLE, UCHAR, ULONG, ULONG,
+                                         ULONG, ULONG, FLOAT)
     LucamContinuousAutoExposureDisable = (BOOL, HANDLE)
-    LucamAutoFocusStart = (
-        BOOL, HANDLE, ULONG, ULONG, ULONG, ULONG, FLOAT, FLOAT, FLOAT,
-        ProgressCallback, c_void_p)
+    LucamAutoFocusStart = (BOOL, HANDLE, ULONG, ULONG, ULONG, ULONG, FLOAT,
+                           FLOAT, FLOAT, ProgressCallback, c_void_p)
     LucamAutoFocusWait = (BOOL, HANDLE, DWORD)
     LucamAutoFocusStop = (BOOL, HANDLE)
     LucamAutoFocusQueryProgress = (BOOL, HANDLE, pFLOAT)
     LucamInitAutoLens = (BOOL, HANDLE, BOOL)
     LucamSetup8bitsLUT = (BOOL, HANDLE, pUCHAR_LUT, ULONG)
-    LucamSetup8bitsColorLUT = (
-        BOOL, HANDLE, pUCHAR_LUT, ULONG, BOOL, BOOL, BOOL, BOOL)
+    LucamSetup8bitsColorLUT = (BOOL, HANDLE, pUCHAR_LUT, ULONG, BOOL, BOOL,
+                               BOOL, BOOL)
     LucamRs232Transmit = (c_int, HANDLE, c_char_p, c_int)
     LucamRs232Receive = (c_int, HANDLE, c_char_p, c_int)
     LucamAddRs232Callback = (BOOL, HANDLE, Rs232Callback, c_void_p)
@@ -654,8 +625,11 @@ class Lucam(object):
     #del value
     #del name
 
-    VIDEO_CONTROL = dict(stop_streaming=0, start_streaming=1, start_display=2,
-                         pause_stream=3, start_rgbstream=6)
+    VIDEO_CONTROL = dict(stop_streaming=0,
+                         start_streaming=1,
+                         start_display=2,
+                         pause_stream=3,
+                         start_rgbstream=6)
 
     def __init__(self, number=1):
         """Open connection to Lumenera camera.
@@ -713,16 +687,14 @@ class Lucam(object):
             "Default pixel format: %s" % pixformat[default.pixelFormat],
             "Default frame rate: %.2f" % self._default_framerate,
             "Image offset: %i, %i" % (frame.xOffset, frame.yOffset),
-            "Image size: %i x %i" % (frame.width // frame.binningX,
-                                     frame.height // frame.binningY),
-            "Binning: %ix%i" % (frame.binningX, frame.binningY)
-            if frame.flagsX else
-            "Subsampling: %ix%i" % (frame.subSampleX, frame.subSampleY),
+            "Image size: %i x %i" %
+            (frame.width // frame.binningX, frame.height // frame.binningY),
+            "Binning: %ix%i" % (frame.binningX, frame.binningY) if frame.flagsX
+            else "Subsampling: %ix%i" % (frame.subSampleX, frame.subSampleY),
             "Pixel format: %s" % pixformat[frame.pixelFormat],
             "Pixel depth: %i bit" % (depth if frame.pixelFormat else 8),
             "Frame rate: %.2f" % fps,
-            "Available frame rates: %s" % ', '.join('%.2f' % f
-                                                    for f in allfps)
+            "Available frame rates: %s" % ', '.join('%.2f' % f for f in allfps)
         ]
         #mn = API.FLOAT()
         #mx = API.FLOAT()
@@ -733,9 +705,8 @@ class Lucam(object):
             if API.LucamGetProperty(self._handle, prop, value, flags):
                 name = name.capitalize().replace('_', ' ')
                 if flags.value:
-                    result.append("%s: %s (%s)" % (
-                        name, value.value,
-                        ",".join(list_property_flags(flags.value))))
+                    result.append("%s: %s (%s)" % (name, value.value, ",".join(
+                        list_property_flags(flags.value))))
                 else:
                     result.append("%s: %s" % (name, value.value))
             #if API.LucamPropertyRange(self._handle, prop,
@@ -861,8 +832,15 @@ class Lucam(object):
         if not API.LucamDisplayVideoFormatPage(self._handle, parent):
             raise LucamError(self)
 
-    def CreateDisplayWindow(self, title=b"", style=282001408,
-                            x=0, y=0, width=0, height=0, parent=0, menu=0):
+    def CreateDisplayWindow(self,
+                            title=b"",
+                            style=282001408,
+                            x=0,
+                            y=0,
+                            width=0,
+                            height=0,
+                            parent=0,
+                            menu=0):
         """Create window, managed by API, for displaying video.
 
         Parameters
@@ -880,8 +858,8 @@ class Lucam(object):
         The window is not automatically resized to the video frame size.
 
         """
-        if not API.LucamCreateDisplayWindow(
-                self._handle, title, style, x, y, width, height, parent, menu):
+        if not API.LucamCreateDisplayWindow(self._handle, title, style, x, y,
+                                            width, height, parent, menu):
             raise LucamError(self)
         self._displaying_window = True
 
@@ -906,9 +884,11 @@ class Lucam(object):
             Extent of scaled video stream in pixels. Can be used to zoom.
 
         """
-        if not API.LucamAdjustDisplayWindow(self._handle, title,
-                                            x, y, width, height):
+        if not API.LucamAdjustDisplayWindow(self._handle, title, x, y, width,
+                                            height):
             raise LucamError(self)
+
+
 #        self._displaying_window = True #rwb27 commented this out as it's wrong when used to adjust a window I create...
 
     def GetTruePixelDepth(self):
@@ -994,8 +974,8 @@ class Lucam(object):
         default = API.FLOAT()
         flags = API.LONG()
         prop = Lucam.PROPERTY.get(prop, prop)
-        if not API.LucamPropertyRange(self._handle, prop, mn, mx,
-                                      default, flags):
+        if not API.LucamPropertyRange(self._handle, prop, mn, mx, default,
+                                      flags):
             raise LucamError(self)
         return mn.value, mx.value, default.value, flags.value
 
@@ -1201,8 +1181,7 @@ class Lucam(object):
         snapshot request and waiting for the next snapshot.
 
         """
-        data, pdata = ndarray(self._fastframe, self._byteorder,
-                              out, validate)
+        data, pdata = ndarray(self._fastframe, self._byteorder, out, validate)
         if not API.LucamTakeFastFrameNoTrigger(self._handle, pdata):
             raise LucamError(self)
         if out is None:
@@ -1269,9 +1248,10 @@ class Lucam(object):
             (3, 1): API.LUCAM_PF_24,
             (4, 1): API.LUCAM_PF_32,
             (2, 2): API.LUCAM_PF_16,
-            (3, 2): API.LUCAM_PF_48}[(data.ndim, data.dtype.itemsize)]
-        if not API.LucamSaveImageWEx(self._handle, width, height,
-                                     pixelformat, pdata, filename):
+            (3, 2): API.LUCAM_PF_48
+        }[(data.ndim, data.dtype.itemsize)]
+        if not API.LucamSaveImageWEx(self._handle, width, height, pixelformat,
+                                     pdata, filename):
             raise LucamError(self)
 
     def StreamVideoControl(self, ctrltype, window=0):
@@ -1291,8 +1271,7 @@ class Lucam(object):
 
         """
         ctrltype = Lucam.VIDEO_CONTROL.get(ctrltype, ctrltype)
-        if ctrltype in (API.START_STREAMING,
-                        API.START_DISPLAY,
+        if ctrltype in (API.START_STREAMING, API.START_DISPLAY,
                         API.START_RGBSTREAM):
             self._streaming = self.GetFormat()[0]
         else:
@@ -1320,8 +1299,8 @@ class Lucam(object):
         this function.
 
         """
-        data, pdata = ndarray(self._streaming, self._byteorder, out,
-                              validate, numframes)
+        data, pdata = ndarray(self._streaming, self._byteorder, out, validate,
+                              numframes)
         if numframes is None:
             numframes = data.shape[0]
         if not API.LucamTakeVideo(self._handle, numframes, pdata):
@@ -1370,8 +1349,8 @@ class Lucam(object):
 
         """
         ctrltype = Lucam.VIDEO_CONTROL.get(ctrltype, ctrltype)
-        if not API.LucamStreamVideoControlAVI(self._handle, ctrltype,
-                                              filename, window):
+        if not API.LucamStreamVideoControlAVI(self._handle, ctrltype, filename,
+                                              window):
             raise LucamError(self)
 
     def ConvertRawAVIToStdVideo(self, outfile, inputfile, outtype=1):
@@ -1392,7 +1371,10 @@ class Lucam(object):
                                                 inputfile, outtype):
             raise LucamError(self)
 
-    def ConvertFrameToRgb24(self, frameformat, source_frame_pointer, conversion_params=None):
+    def ConvertFrameToRgb24(self,
+                            frameformat,
+                            source_frame_pointer,
+                            conversion_params=None):
         """Return RGB24 image from raw Bayer data."""
         """
         LucamConvertFrameToRgb24 = (
@@ -1407,15 +1389,17 @@ class Lucam(object):
     LucamConvertFrameToGreyscale16 = (
         BOOL, HANDLE, pUSHORT, pUSHORT, ULONG, ULONG, ULONG, pLUCAM_CONVERSION)"""
         if conversion_params is None:
-                conversion_params = self.default_conversion()
-                conversion_params.DemosaicMethod = API.LUCAM_DM_FAST #need to think about defaults
+            conversion_params = self.default_conversion()
+            conversion_params.DemosaicMethod = API.LUCAM_DM_FAST  #need to think about defaults
         f = frameformat
         outputformat = copy.copy(frameformat)
-        outputformat.pixelFormat = API.LUCAM_PF_24 #need to modify the frame format for the output
+        outputformat.pixelFormat = API.LUCAM_PF_24  #need to modify the frame format for the output
         dest, pDest = ndarray(outputformat)
-        w, h = f.width // (f.binningX * f.subSampleX), f.height // (f.binningY * f.subSampleY)
-        if not API.LucamConvertFrameToRgb24(self._handle, dest, source_frame_pointer, 
-                                            w, h, frameformat.pixelFormat, conversion_params):
+        w, h = f.width // (f.binningX * f.subSampleX), f.height // (
+            f.binningY * f.subSampleY)
+        if not API.LucamConvertFrameToRgb24(
+                self._handle, dest, source_frame_pointer, w, h,
+                frameformat.pixelFormat, conversion_params):
             raise LucamError(self)
         return dest
 
@@ -1447,8 +1431,12 @@ class Lucam(object):
         if not API.LucamSetup8bitsLUT(self._handle, lut, lut.size):
             raise LucamError(self)
 
-    def Setup8bitsColorLUT(self, lut, red=False, green1=False,
-                           green2=False, blue=False):
+    def Setup8bitsColorLUT(self,
+                           lut,
+                           red=False,
+                           green1=False,
+                           green2=False,
+                           blue=False):
         """Populate 8 bit Color LUT inside camera.
 
         Parameters
@@ -1461,8 +1449,8 @@ class Lucam(object):
 
         """
         lut = numpy.array(lut if lut else [], numpy.uint8)
-        if not API.LucamSetup8bitsColorLUT(self._handle, lut, lut.size,
-                                           red, green1, green2, blue):
+        if not API.LucamSetup8bitsColorLUT(self._handle, lut, lut.size, red,
+                                           green1, green2, blue):
             raise LucamError(self)
 
     def SetupCustomMatrix(self, matrix):
@@ -1505,12 +1493,12 @@ class Lucam(object):
         """
         # asVoidPtr = ctypes.pythonapi.PyCObject_AsVoidPtr #this function converts PyCObject to void *, why is it not in ctypes natively...?
         # asVoidPtr.restype = ctypes.c_void_p #we need to set the result and argument types of the imported function
-        # asVoidPtr.argtypes = [ctypes.py_object]        
+        # asVoidPtr.argtypes = [ctypes.py_object]
         callback = API.VideoFilterCallback(callback)
         if context is not None:
             context = ctypes.py_object(context)
-        callbackid = API.LucamAddStreamingCallback(self._handle,
-                                                   callback, context)
+        callbackid = API.LucamAddStreamingCallback(self._handle, callback,
+                                                   context)
         if callbackid == -1:
             raise LucamError(self)
         self._callbacks[(API.VideoFilterCallback, callbackid)] = callback
@@ -1555,8 +1543,8 @@ class Lucam(object):
         callback = API.SnapshotCallback(callback)
         if context is not None:
             context = ctypes.py_object(context)
-        callbackid = API.LucamAddSnapshotCallback(self._handle,
-                                                  callback, context)
+        callbackid = API.LucamAddSnapshotCallback(self._handle, callback,
+                                                  context)
         if callbackid == -1:
             raise LucamError(self)
         self._callbacks[(API.SnapshotCallback, callbackid)] = callback
@@ -1636,8 +1624,8 @@ class Lucam(object):
             Window coordinates after any subsampling or binning.
 
         """
-        if not API.LucamOneShotAutoExposure(self._handle, target,
-                                            startx, starty, width, height):
+        if not API.LucamOneShotAutoExposure(self._handle, target, startx,
+                                            starty, width, height):
             raise LucamError(self)
 
     def OneShotAutoWhiteBalance(self, startx, starty, width, height):
@@ -1652,12 +1640,12 @@ class Lucam(object):
         in order to color balance the image.
 
         """
-        if not API.LucamOneShotAutoWhiteBalance(self._handle,
-                                                startx, starty, width, height):
+        if not API.LucamOneShotAutoWhiteBalance(self._handle, startx, starty,
+                                                width, height):
             raise LucamError(self)
 
-    def OneShotAutoWhiteBalanceEx(self, redovergreen, blueovergreen,
-                                  startx, starty, width, height):
+    def OneShotAutoWhiteBalanceEx(self, redovergreen, blueovergreen, startx,
+                                  starty, width, height):
         """Perform one iteration of exposure adjustment to reach target color.
 
         Parameters
@@ -1673,8 +1661,8 @@ class Lucam(object):
 
         """
         if not API.LucamOneShotAutoWhiteBalanceEx(
-                self._handle, redovergreen, blueovergreen,
-                startx, starty, width, height):
+                self._handle, redovergreen, blueovergreen, startx, starty,
+                width, height):
             raise LucamError(self)
 
     def DigitalWhiteBalance(self, startx, starty, width, height):
@@ -1689,12 +1677,12 @@ class Lucam(object):
         in order to color balance the image.
 
         """
-        if not API.LucamDigitalWhiteBalance(self._handle,
-                                            startx, starty, width, height):
+        if not API.LucamDigitalWhiteBalance(self._handle, startx, starty,
+                                            width, height):
             raise LucamError(self)
 
-    def LucamDigitalWhiteBalanceEx(self, redovergreen, blueovergreen,
-                                   startx, starty, width, height):
+    def LucamDigitalWhiteBalanceEx(self, redovergreen, blueovergreen, startx,
+                                   starty, width, height):
         """Perform one iteration of digital color gain adjustment.
 
         Parameters
@@ -1709,14 +1697,14 @@ class Lucam(object):
         in order to color balance the image to a specific target color.
 
         """
-        if not API.LucamDigitalWhiteBalanceEx(
-                self._handle, redovergreen, blueovergreen,
-                startx, starty, width, height):
+        if not API.LucamDigitalWhiteBalanceEx(self._handle, redovergreen,
+                                              blueovergreen, startx, starty,
+                                              width, height):
             raise LucamError(self)
 
     def AdjustWhiteBalanceFromSnapshot(self, snapshot, data, redovergreen,
-                                       blueovergreen, startx, starty,
-                                       width, height):
+                                       blueovergreen, startx, starty, width,
+                                       height):
         """Adjust digital color gain values of previously taken snapshot.
 
         Parameters
@@ -1753,16 +1741,16 @@ class Lucam(object):
             Window coordinates after any subsampling or binning.
 
         """
-        if not API.LucamOneShotAutoIris(self._handle, target,
-                                        startx, starty, width, height):
+        if not API.LucamOneShotAutoIris(self._handle, target, startx, starty,
+                                        width, height):
             raise LucamError(self)
 
-    def ContinuousAutoExposureEnable(self, target, startx, starty,
-                                     width, height, lightingperiod):
+    def ContinuousAutoExposureEnable(self, target, startx, starty, width,
+                                     height, lightingperiod):
         """Undocumented function."""
         if not API.LucamContinuousAutoExposureEnable(
-                self._handle, target, startx, starty,
-                width, height, lightingperiod):
+                self._handle, target, startx, starty, width, height,
+                lightingperiod):
             raise LucamError(self)
 
     def ContinuousAutoExposureDisable(self):
@@ -1770,8 +1758,13 @@ class Lucam(object):
         if not API.LucamContinuousAutoExposureDisable(self._handle):
             raise LucamError(self)
 
-    def LucamAutoFocusStart(self, startx, starty, width, height,
-                            callback=None, context=None):
+    def LucamAutoFocusStart(self,
+                            startx,
+                            starty,
+                            width,
+                            height,
+                            callback=None,
+                            context=None):
         """Start auto focus calibration.
 
         Parameters
@@ -1789,9 +1782,8 @@ class Lucam(object):
         callback = API.ProgressCallback(callback if callback else 0)
         if context is not None:
             context = ctypes.py_object(context)
-        if not API.LucamAutoFocusStart(self._handle, startx, starty,
-                                       width, height, 0., 0., 0.,
-                                       callback, context):
+        if not API.LucamAutoFocusStart(self._handle, startx, starty, width,
+                                       height, 0., 0., 0., callback, context):
             raise LucamError(self)
         self._callbacks[API.ProgressCallback] = callback
 
@@ -1843,7 +1835,7 @@ class Lucam(object):
 
         """
         assert 0 <= (size - offset) <= 2048
-        data = numpy.zeros((size,), numpy.uint8)
+        data = numpy.zeros((size, ), numpy.uint8)
         pdata = data.ctypes.data_as(API.pUCHAR)
         if not API.LucamPermanentBufferRead(self._handle, pdata, offset, size):
             raise LucamError(self)
@@ -1860,8 +1852,8 @@ class Lucam(object):
         pdata = data.ctypes.data_as(API.pUCHAR)
         size = data.size
         assert 0 <= (size - offset) <= 2048
-        if not API.LucamPermanentBufferWrite(self._handle, pdata,
-                                             offset, size):
+        if not API.LucamPermanentBufferWrite(self._handle, pdata, offset,
+                                             size):
             raise LucamError(self)
 
     def GpioRead(self):
@@ -1933,7 +1925,6 @@ class Lucam(object):
 
 class LucamError(Exception):
     """Exception to report Lucam problems."""
-
     def __init__(self, arg=None):
         """Initialize LucamError instance.
 
@@ -1956,263 +1947,363 @@ class LucamError(Exception):
         return self.CODES.get(self.value, "Unknown error: %i" % self.value)
 
     CODES = {
-        0: """NoError
+        0:
+        """NoError
             Initialization value in the API.""",
-        1: """NoSuchIndex
+        1:
+        """NoSuchIndex
             The index passed to LucamCameraOpen was 0. It must be >= 1.""",
-        2: """SnapshotNotSupported
+        2:
+        """SnapshotNotSupported
             The camera does not support snapshots or fast frames.""",
-        3: """InvalidPixelFormat
+        3:
+        """InvalidPixelFormat
             The pixel format parameter passed to the function is invalid.""",
-        4: """SubsamplingZero
+        4:
+        """SubsamplingZero
             A subsampling of zero was passed to a function.""",
-        5: """Busy
+        5:
+        """Busy
             The function is unavailable because the camera is busy with
             streaming or capturing fast frames.""",
-        6: """FailedToSetSubsampling
+        6:
+        """FailedToSetSubsampling
             The API failed to set the requested subsampling. This can be due
             to the camera being disconnected. It can also be due to a filter
             not being there.""",
-        7: """FailedToSetStartPosition
+        7:
+        """FailedToSetStartPosition
             The API failed to set the requested subsampling. This can be due
             to the camera being disconnected.""",
-        8: """PixelFormatNotSupported
+        8:
+        """PixelFormatNotSupported
             The camera does not support the pixel format passed to the
             function.""",
-        9: """InvalidFrameFormat
+        9:
+        """InvalidFrameFormat
             The format passed to the function does not pass the camera
             requirements. Verify that (xOffset + width) is not greater than
             the camera's maximum width. Verify that (width / subSamplingX)
             is a multiple of some 'nice' value. Do the same for the y.""",
-        10: """PreparationFailed
+        10:
+        """PreparationFailed
             The API failed to prepare the camera for streaming or snapshot.
             This can due to the camera being disconnected. If START_STREAMING
             succeeds and START_DISPLAY fails with this error, this can be due
             to a filter not being there or registered.""",
-        11: """CannotRun
+        11:
+        """CannotRun
             The API failed to get the camera running. This can be due to
             a bandwidth problem.""",
-        12: """NoTriggerControl
+        12:
+        """NoTriggerControl
             Contact Lumenera.""",
-        13: """NoPin
+        13:
+        """NoPin
             Contact Lumenera.""",
-        14: """NotRunning
+        14:
+        """NotRunning
             The function failed because it requires the camera to be running,
             and it is not.""",
-        15: """TriggerFailed
+        15:
+        """TriggerFailed
             Contact Lumenera.""",
-        16: """CannotSetupFrameFormat
+        16:
+        """CannotSetupFrameFormat
             The camera does not support that its frame format get setup.
             This will happen if your camera is plugged to a USB 1 port and
             it does not support it. LucamCameraOpen will still succeeds,
             but if a call to LucamGetLastError will return this value.""",
-        17: """DirectShowInitError
+        17:
+        """DirectShowInitError
             Direct Show initialization error. This may happen if you run the
             API before having installed a DS compatible camera ever before.
             The Lumenera camera is DS compatible.""",
-        18: """CameraNotFound
+        18:
+        """CameraNotFound
             The function LucamCameraOpen did not find the camera # index.""",
-        19: """Timeout
+        19:
+        """Timeout
             The function timed out.""",
-        20: """PropertyUnknown
+        20:
+        """PropertyUnknown
             The API does not know the property passed to LucamGetProperty,
             LucamSetProperty or LucamGetPropertyRange. You may be using an
             old DLL.""",
-        21: """PropertyUnsupported
+        21:
+        """PropertyUnsupported
             The camera does not support that property.""",
-        22: """PropertyAccessFailed
+        22:
+        """PropertyAccessFailed
             The API failed to access the property. Most likely, the reason
             is that the camera does not support that property.""",
-        23: """LucustomNotFound
+        23:
+        """LucustomNotFound
             The lucustom.ax filter was not found.""",
-        24: """PreviewNotRunning
+        24:
+        """PreviewNotRunning
             The function failed because preview is not running.""",
-        25: """LutfNotLoaded
+        25:
+        """LutfNotLoaded
             The function failed because lutf.ax is not loaded.""",
-        26: """DirectShowError
+        26:
+        """DirectShowError
             An error related to the operation of DirectShow occured.""",
-        27: """NoMoreCallbacks
+        27:
+        """NoMoreCallbacks
             The function LucamAddStreamingCallback failed because the API
             cannot support any more callbacks.""",
-        28: """UndeterminedFrameFormat
+        28:
+        """UndeterminedFrameFormat
             The API does not know what is the frame format of the camera.""",
-        29: """InvalidParameter
+        29:
+        """InvalidParameter
             An parameter has an obviously wrong value.""",
-        30: """NotEnoughResources
+        30:
+        """NotEnoughResources
             Resource allocation failed.""",
-        31: """NoSuchConversion
+        31:
+        """NoSuchConversion
             One of the members of the LUCAM_CONVERSION structure passed is
             either unknown or inappropriate.""",
-        32: """ParameterNotWithinBoundaries
+        32:
+        """ParameterNotWithinBoundaries
             A parameter representing a quantity is outside the allowed
             boundaries.""",
-        33: """BadFileIo
+        33:
+        """BadFileIo
             An error occured creating a file or writing to it. Verify that
             the path exists.""",
-        34: """GdiplusNotFound
+        34:
+        """GdiplusNotFound
             gdiplus.dll is needed and was not found.""",
-        35: """GdiplusError
+        35:
+        """GdiplusError
             gdiplus.dll reported an error. This may happen if there is a file
             IO error.""",
-        36: """UnknownFormatType
+        36:
+        """UnknownFormatType
             Contact Lumenera.""",
-        37: """FailedCreateDisplay
+        37:
+        """FailedCreateDisplay
             The API failed to create the display window. The reason could be
             unsufficient resources.""",
-        38: """DpLibNotFound
+        38:
+        """DpLibNotFound
             deltapolation.dll is needed and was not found.""",
-        39: """DpCmdNotSupported
+        39:
+        """DpCmdNotSupported
             The deltapolation command is not supported by the delta
             polation library.""",
-        40: """DpCmdUnknown
+        40:
+        """DpCmdUnknown
             The deltapolation command is unknown or invalid.""",
-        41: """NotWhilePaused
+        41:
+        """NotWhilePaused
             The function cannot be performed when the camera is in
             paused state.""",
-        42: """CaptureFailed
+        42:
+        """CaptureFailed
             Contact Lumenera.""",
-        43: """DpError
+        43:
+        """DpError
             Contact Lumenera.""",
-        44: """NoSuchFrameRate
+        44:
+        """NoSuchFrameRate
             Contact Lumenera.""",
-        45: """InvalidTarget
+        45:
+        """InvalidTarget
             One of the target parameters is wrong. This error code is used
             when startX + width > (frameFormat.width / frameFormat.subSampleX)
             or startY + height > (frameFormat.height / frameFormat.subSampleY)
             if any of those parameter is odd (not a multiple of 2) or
             or if width or height is 0.""",
-        46: """FrameTooDark
+        46:
+        """FrameTooDark
             The frame is too dark to perform white balance.""",
-        47: """KsPropertySetNotFound
+        47:
+        """KsPropertySetNotFound
             A DirectShow interface necessary to carry out the operation
             was not found.""",
-        48: """Cancelled
+        48:
+        """Cancelled
             The user cancelled the operation.""",
-        49: """KsControlNotSupported
+        49:
+        """KsControlNotSupported
             The DirectShow IKsControl interface is not supported (did you
             unplug the camera?).""",
-        50: """EventNotSupported
+        50:
+        """EventNotSupported
             Some module attempted to register an unsupported event.""",
-        51: """NoPreview
+        51:
+        """NoPreview
             The function failed because preview was not setup.""",
-        52: """SetPositionFailed
+        52:
+        """SetPositionFailed
             A function setting window position failed (invalid parameters).""",
-        53: """NoFrameRateList
+        53:
+        """NoFrameRateList
             The frame rate list is not available.""",
-        54: """FrameRateInconsistent
+        54:
+        """FrameRateInconsistent
             There was an error building the frame rate list.""",
-        55: """CameraNotConfiguredForCmd
+        55:
+        """CameraNotConfiguredForCmd
             The camera does not support that particular command.""",
-        56: """GraphNotReady
+        56:
+        """GraphNotReady
             The graph is not ready.""",
-        57: """CallbackSetupError
+        57:
+        """CallbackSetupError
             Contact Lumenera.""",
-        58: """InvalidTriggerMode
+        58:
+        """InvalidTriggerMode
             You cannot cause a soft trigger when hw trigger is enabled.""",
-        59: """NotFound
+        59:
+        """NotFound
             The API was asked to return soomething that is not there.""",
-        60: """EepromTooSmall
+        60:
+        """EepromTooSmall
             The onboard EEPROM is too small.""",
-        61: """EepromWriteFailed
+        61:
+        """EepromWriteFailed
             The API failed to write to the onboard eeprom.""",
-        62: """UnknownFileType
+        62:
+        """UnknownFileType
             The API failed because it failed to recognize the file type of
             a file name passed to it.""",
-        63: """EventIdNotSupported
+        63:
+        """EventIdNotSupported
             LucamRegisterEventNotification failed because the event
             is not supported.""",
-        64: """EepromCorrupted
+        64:
+        """EepromCorrupted
             The API found that the EEPROM was corrupted.""",
-        65: """SectionTooBig
+        65:
+        """SectionTooBig
             The VPD section to write to the eeprom is too big.""",
-        66: """FrameTooBright
+        66:
+        """FrameTooBright
             The frame is too bright to perform white balance.""",
-        67: """NoCorrectionMatrix
+        67:
+        """NoCorrectionMatrix
             The camera is configured to have no correction matrix
             (PROPERTY_CORRECTION_MATRIX is LUCAM_CM_NONE).""",
-        68: """UnknownCameraModel
+        68:
+        """UnknownCameraModel
             The API failed because it needs to know the camera model and it
             is not available.""",
-        69: """ApiTooOld
+        69:
+        """ApiTooOld
             The API failed because it needs to be upgraded to access a
             feature of the camera.""",
-        70: """SaturationZero
+        70:
+        """SaturationZero
             The API failed because the saturation is currently 0.""",
-        71: """AlreadyInitialised
+        71:
+        """AlreadyInitialised
             The API failed because the object was already initialised.""",
-        72: """SameInputAndOutputFile
+        72:
+        """SameInputAndOutputFile
             The API failed because the object was already initialised.""",
-        73: """FileConversionFailed
+        73:
+        """FileConversionFailed
             The API failed because the file conversion was not completed.""",
-        74: """FileAlreadyConverted
+        74:
+        """FileAlreadyConverted
             The API failed because the file is already converted in the
             desired format.""",
-        75: """PropertyPageNotSupported
+        75:
+        """PropertyPageNotSupported
             The API failed to display the property page.""",
-        76: """PropertyPageCreationFailed
+        76:
+        """PropertyPageCreationFailed
             The API failed to create the property page.""",
-        77: """DirectShowFilterNotInstalled
+        77:
+        """DirectShowFilterNotInstalled
             The API did not find the required direct show filter.""",
-        78: """IndividualLutNotAvailable
+        78:
+        """IndividualLutNotAvailable
             The camera does not support that different LUTs are applied
             to each color.""",
-        79: """UnexpectedError
+        79:
+        """UnexpectedError
             Contact Lumenera.""",
-        80: """StreamingStopped
+        80:
+        """StreamingStopped
             LucamTakeFastFrame or LucamTakeVideo failed because another thread
             interrupted the streaming by a call to LucamDisableFastFrames or
             LucamStreamVideoControl.""",
-        81: """MustBeInSwTriggerMode
+        81:
+        """MustBeInSwTriggerMode
             LucamForceTakeFastFrame was called while the camera is in hardware
             trigger still mode and the camera does not support taking a sw
             trigger snapshot while in that state.""",
-        82: """TargetFlaky
+        82:
+        """TargetFlaky
             The target is too flaky to perform auto focus.""",
-        83: """AutoLensUninitialized
+        83:
+        """AutoLensUninitialized
             The auto lens needs to be initialized before the function
             is used.""",
-        84: """LensNotInstalled
+        84:
+        """LensNotInstalled
             The function failed because the lens were not installed correctly.
             Verify that changing the focus has any effect.""",
-        85: """UnknownError
+        85:
+        """UnknownError
             The function failed because of an unknoen error.
             Contact Lumenera.""",
-        86: """FocusNoFeedbackError
+        86:
+        """FocusNoFeedbackError
             There is no feedback available for focus.""",
-        87: """LutfTooOld
+        87:
+        """LutfTooOld
             LuTF.ax is too old for this feature.""",
-        88: """UnknownAviFormat
+        88:
+        """UnknownAviFormat
             Unknown or invalid AVI format for input file.""",
-        89: """UnknownAviType
+        89:
+        """UnknownAviType
             Unknown AVI type. Verify the AVI type parameter.""",
-        90: """InvalidAviConversion
+        90:
+        """InvalidAviConversion
             The AVI conversion is invalid.""",
-        91: """SeekFailed
+        91:
+        """SeekFailed
             The seeking operation failed.""",
-        92: """AviRunning
+        92:
+        """AviRunning
             The function cannot be performed while an AVI is being
             captured.""",
-        93: """CameraAlreadyOpened
+        93:
+        """CameraAlreadyOpened
             An attempt was made to open a camera for streaming-related
             reasons while it is already opened for such.""",
-        94: """NoSubsampledHighRes
+        94:
+        """NoSubsampledHighRes
             The API cannot take a high resolution image in subsampled mode
             or binning mode.""",
-        95: """OnlyOnMonochrome
+        95:
+        """OnlyOnMonochrome
             The API function is only available on monochrome cameras.""",
-        96: """No8bppTo48bpp
+        96:
+        """No8bppTo48bpp
             Building a 48 bpp image from an 8 bpp image is invalid.""",
-        97: """Lut8Obsolete
+        97:
+        """Lut8Obsolete
             Use 12 bits LUT instead.""",
-        98: """FunctionNotSupported
+        98:
+        """FunctionNotSupported
             That functionnality is not supported.""",
-        99: """RetryLimitReached
-            Property access failed due to a retry limit."""}
+        99:
+        """RetryLimitReached
+            Property access failed due to a retry limit."""
+    }
 
 
 class LucamSynchronousSnapshots(object):
     """Simultaneous image capture from multiple cameras."""
-
     def __init__(self, cameras=None, settings=None):
         """Enable simultaneous snapshot capture mode.
 
@@ -2237,8 +2328,8 @@ class LucamSynchronousSnapshots(object):
             ppsettings[i] = ctypes.pointer(settings[i])
         self._cameras = cameras
         self._settings = settings
-        self._handle = API.LucamEnableSynchronousSnapshots(numcams, phcameras,
-                                                           ppsettings)
+        self._handle = API.LucamEnableSynchronousSnapshots(
+            numcams, phcameras, ppsettings)
         if not self._handle:
             raise LucamError()
 
@@ -2284,7 +2375,8 @@ class LucamPreviewAVI(object):
     CTRLTYPE = {
         'stop': API.STOP_AVI,
         'start': API.START_AVI,
-        'pause': API.PAUSE_AVI}
+        'pause': API.PAUSE_AVI
+    }
 
     def __init__(self, filename):
         """Open AVI file for previewing."""
@@ -2301,20 +2393,16 @@ class LucamPreviewAVI(object):
     def __str__(self):
         """Return information about AVI as string."""
         info = self.GetFormat()
-        fileformat = ('RAW_LUMENERA', 'STANDARD_24', 'STANDARD_32',
-                      'XVID_24', 'STANDARD_8')[info[2]]
-        return "\n* ".join((
-            "",
-            "File name: %s" % self._filename,
-            "Type: %s" % fileformat,
-            "Width: %s" % info[0],
-            "Height: %s" % info[1],
-            "Bit depth: %s" % info[3],
-            "Frame rate: %s" % self.GetFrameRate(),
-            "Frame count: %s" % self.GetFrameCount(),
-            "Duration: %s:%s:%s:%s" % self.GetDuration(),
-            "Current frame: %s" % self.GetPositionFrame(),
-            "Current time: %s:%s:%s:%s" % self.GetPositionTime()))
+        fileformat = ('RAW_LUMENERA', 'STANDARD_24', 'STANDARD_32', 'XVID_24',
+                      'STANDARD_8')[info[2]]
+        return "\n* ".join(
+            ("", "File name: %s" % self._filename, "Type: %s" % fileformat,
+             "Width: %s" % info[0], "Height: %s" % info[1],
+             "Bit depth: %s" % info[3], "Frame rate: %s" % self.GetFrameRate(),
+             "Frame count: %s" % self.GetFrameCount(),
+             "Duration: %s:%s:%s:%s" % self.GetDuration(),
+             "Current frame: %s" % self.GetPositionFrame(),
+             "Current time: %s:%s:%s:%s" % self.GetPositionTime()))
 
     def Close(self):
         """Close controller to AVI file."""
@@ -2526,8 +2614,8 @@ def print_property_range(minval, maxval, default, flags):
     """Return string representation of Lucam.PropertyRange() results."""
     if flags:
         return "[%s, %s] default=%s flags=%s" % (
-            minval, maxval, default,
-            ",".join(k for k, v in list(Lucam.PROP_FLAG.items()) if (v & flags)))
+            minval, maxval, default, ",".join(
+                k for k, v in list(Lucam.PROP_FLAG.items()) if (v & flags)))
     else:
         return "[%s, %s] default=%s" % (minval, maxval, default)
 
@@ -2555,11 +2643,11 @@ def print_structure(structure, indent=""):
                 line = "%s- Struct\n%s" % (
                     indent, print_structure(attr, indent + "  "))
             else:
-                line = "%s* %s:\n%s" % (
-                    indent, name, print_structure(attr, indent + "  "))
+                line = "%s* %s:\n%s" % (indent, name,
+                                        print_structure(attr, indent + "  "))
         elif isinstance(attr, ctypes.Union):
-            line = "%s- Union\n%s" % (
-                indent, print_structure(attr, indent + "  "))
+            line = "%s- Union\n%s" % (indent,
+                                      print_structure(attr, indent + "  "))
         else:
             line = "%s* %s: %s" % (indent, name, attr)
         result.append(line)
@@ -2612,8 +2700,8 @@ CAMERA_MODEL = {
     0x1A5: 'Infinity3-1M, Infinity3-1C',
     0x1AF: 'Infinity3-1UM, Infinity3-1UC',
     0x1AB: 'Infinity4-4M, Infinity4-4C',
-    0x1A8: 'Infinity4-11M, Infinity4-11C'}
-
+    0x1A8: 'Infinity4-11M, Infinity4-11C'
+}
 
 # Documentation in HTML format can be generated with Epydoc
 __docformat__ = "restructuredtext en"
@@ -2626,7 +2714,7 @@ def test():
     # print serial numbers of all connected cameras
     allcameras = LucamEnumCameras()
     print(("Cameras found:",
-          ", ".join(str(cam.serialnumber) for cam in allcameras)))
+           ", ".join(str(cam.serialnumber) for cam in allcameras)))
 
     # use first camera
     lucam = Lucam(1)
@@ -2635,14 +2723,25 @@ def test():
     print(("Camera Properties", lucam))
 
     # set camera to 16 bit, 4x4 binning, max framerate
-    lucam.SetFormat(
-        Lucam.FrameFormat(0, 0, 348 * 4, 256 * 4, API.LUCAM_PF_16,
-                          binningX=4, flagsX=1, binningY=4, flagsY=1),
-        framerate=100.0)
+    lucam.SetFormat(Lucam.FrameFormat(0,
+                                      0,
+                                      348 * 4,
+                                      256 * 4,
+                                      API.LUCAM_PF_16,
+                                      binningX=4,
+                                      flagsX=1,
+                                      binningY=4,
+                                      flagsY=1),
+                    framerate=100.0)
 
     # disable all internal image enhancements
-    lucam.set_properties(brightness=1.0, contrast=1.0, saturation=1.0,
-                         hue=0.0, gamma=1.0, exposure=100.0, gain=1.0)
+    lucam.set_properties(brightness=1.0,
+                         contrast=1.0,
+                         saturation=1.0,
+                         hue=0.0,
+                         gamma=1.0,
+                         exposure=100.0,
+                         gain=1.0)
 
     # get actual frame format, framerate, and bit depth
     frameformat, framerate = lucam.GetFormat()
@@ -2665,14 +2764,17 @@ def test():
 
     # take multiple snapshots
     try:
-        snapshot = Lucam.Snapshot(exposure=lucam.exposure, gain=1.0,
-                                timeout=1000.0, format=frameformat)
+        snapshot = Lucam.Snapshot(exposure=lucam.exposure,
+                                  gain=1.0,
+                                  timeout=1000.0,
+                                  format=frameformat)
         lucam.EnableFastFrames(snapshot)
         startsnapshots = time.clock()
         for _ in range(8):
             lucam.ForceTakeFastFrame(image, validate=False)
         endsnapshots = time.clock()
-        print("Took 8 snapshots in %f seconds" % (endsnapshots - startsnapshots))
+        print("Took 8 snapshots in %f seconds" %
+              (endsnapshots - startsnapshots))
     except LucamError:
         print("Warning: ForceTakeFastFrame() failed")
     finally:
@@ -2738,16 +2840,23 @@ def test():
     lucam.CameraReset()
 
     # set camera to 8 bit VGA mode at low framerate
-    lucam.SetFormat(
-        Lucam.FrameFormat(64, 64, 640, 480, API.LUCAM_PF_8,
-                          binningX=1, flagsX=1, binningY=1, flagsY=1),
-        framerate=10.0)
+    lucam.SetFormat(Lucam.FrameFormat(64,
+                                      64,
+                                      640,
+                                      480,
+                                      API.LUCAM_PF_8,
+                                      binningX=1,
+                                      flagsX=1,
+                                      binningY=1,
+                                      flagsY=1),
+                    framerate=10.0)
     frameformat, framerate = lucam.GetFormat()
 
     # run a callback function during snapshot
     def snapshot_callback(context, data, size):
         data[0] = 42
         print(("Snapshot callback function:", context, data[:2], size))
+
     callbackid = lucam.AddSnapshotCallback(snapshot_callback)
     image = lucam.TakeSnapshot()
     assert image[0, 0] == 42
@@ -2757,6 +2866,7 @@ def test():
     def streaming_callback(context, data, size):
         data[0] = 42
         print(("Streaming callback function:", context, data[:2], size))
+
     callbackid = lucam.AddStreamingCallback(streaming_callback)
     lucam.StreamVideoControl('start_streaming')
     time.sleep(2.0 / framerate)
@@ -2805,4 +2915,3 @@ def test():
 
 if __name__ == "__main__":
     test()
-

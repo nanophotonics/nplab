@@ -64,8 +64,10 @@ class CameraRoiScale(Camera):
         :return: 4-tuple of integers. Pixel positions xmin, xmax, ymin, ymax
         """
         self._roi = value
+
         def fltr(img):
             return img[self._roi[2]:self._roi[3], self._roi[0]:self._roi[1]]
+
         setattr(self, 'filter_function', fltr)
 
     @property
@@ -77,7 +79,7 @@ class CameraRoiScale(Camera):
         assert len(self._preview_widgets) == 1
         for wdg in self._preview_widgets:
             lims = wdg.get_roi()
-            if lims is None: lims = (0,1,0,1)
+            if lims is None: lims = (0, 1, 0, 1)
         return lims
 
     @property
@@ -116,7 +118,8 @@ class CameraRoiScale(Camera):
 
                     # Resize the crosshairs, so that they are always 1/40th of the total size of the image, but never
                     # less than 5 pixels
-                    size = max(((roi[1] - roi[0])/40., (roi[3]-roi[2])/40., 5))
+                    size = max(
+                        ((roi[1] - roi[0]) / 40., (roi[3] - roi[2]) / 40., 5))
                     for idx in [1, 2]:
                         xhair = getattr(widgt, 'CrossHair%d' % idx)
                         xhair._size = size
@@ -127,10 +130,14 @@ class CameraRoiScale(Camera):
                         elif self.crosshair_origin == 'bottom_left':
                             xhair._origin = [0, self.detector_shape[1]]
                         elif self.crosshair_origin == 'top_right':
-                            xhair._origin = [self.detector_shape[0], self.detector_shape[1]]
+                            xhair._origin = [
+                                self.detector_shape[0], self.detector_shape[1]
+                            ]
                         else:
-                            self._logger.info('Not recognised: crosshair_origin = %s. Needs to be top_left, top_right, '
-                                              'bottom_left or bottom_right' % self.crosshair_origin)
+                            self._logger.info(
+                                'Not recognised: crosshair_origin = %s. Needs to be top_left, top_right, '
+                                'bottom_left or bottom_right' %
+                                self.crosshair_origin)
                         xhair.update()
 
         super(CameraRoiScale, self).update_widgets()
@@ -155,23 +162,26 @@ class DisplayWidgetRoiScale(ExtendedImageView):
         self._pxl_scale = scale
         self._pxl_offset = offset
 
-        self.LineDisplay = self.ui.roiPlot#creates a PlotWidget instance
+        self.LineDisplay = self.ui.roiPlot  #creates a PlotWidget instance
         self.LineDisplay.showGrid(x=True, y=True)
         self.ui.splitter.setHandleWidth(10)
-        self.getHistogramWidget().gradient.restoreState(list(Gradients.values())[1])
+        self.getHistogramWidget().gradient.restoreState(
+            list(Gradients.values())[1])
         self.imageItem.setTransform(QtGui.QTransform())
         self.LineDisplay.show()
 
         self.plot = ()
         for ii in range(self._max_num_line_plots):
-            self.plot += (self.LineDisplay.plot(pen=pyqtgraph.intColor(ii, self._max_num_line_plots)),)
+            self.plot += (self.LineDisplay.plot(
+                pen=pyqtgraph.intColor(ii, self._max_num_line_plots)), )
 
         self.toggle_displays()
 
         self.checkbox_autorange = QtWidgets.QCheckBox('Autorange')
         self.tools.gridLayout.addWidget(self.checkbox_autorange, 0, 3, 1, 1)
 
-        self.update_data_signal.connect(self._update_image, type=QtCore.Qt.QueuedConnection)
+        self.update_data_signal.connect(self._update_image,
+                                        type=QtCore.Qt.QueuedConnection)
 
     @property
     def x_axis(self):
@@ -214,9 +224,9 @@ class DisplayWidgetRoiScale(ExtendedImageView):
             self.LineDisplay.show()
             self.LineDisplay.showAxis('left')
             self.LineDisplay.setMouseEnabled(True, True)
-            self.ui.splitter.setSizes([0, self.height()-35, 35])
+            self.ui.splitter.setSizes([0, self.height() - 35, 35])
         else:
-            self.ui.splitter.setSizes([self.height()-35, 0, 35])
+            self.ui.splitter.setSizes([self.height() - 35, 0, 35])
 
     def _update_image(self, newimage):
         scale = self._pxl_scale
@@ -225,7 +235,8 @@ class DisplayWidgetRoiScale(ExtendedImageView):
         if len(newimage.shape) == 1:
             self.toggle_displays(True)
             self.plot[0].setData(x=self.x_axis, y=newimage)
-        elif len(newimage.shape) == 2 and newimage.shape[0] < self._max_num_line_plots:
+        elif len(newimage.shape
+                 ) == 2 and newimage.shape[0] < self._max_num_line_plots:
             self.toggle_displays(True)
             for ii, ydata in enumerate(newimage):
                 self.plot[ii].setData(x=self.x_axis, y=ydata)
@@ -242,7 +253,6 @@ class DisplayWidgetRoiScale(ExtendedImageView):
 
 class DummyCameraRoiScale(CameraRoiScale):
     """A Dummy CameraRoiScale camera  """
-
     def __init__(self, data='spectrum'):
         super(DummyCameraRoiScale, self).__init__()
         self.data_type = data
@@ -253,9 +263,13 @@ class DummyCameraRoiScale(CameraRoiScale):
         if self.data_type == 'spectrum':
             ran = 100 * ArrayWithAttrs(np.random.random(1600))
         elif self.data_type == 'color_time':
-            ran = 100 * np.array([np.random.random((200, 1600, 3)) * x for x in np.arange(1, 11)])
+            ran = 100 * np.array([
+                np.random.random((200, 1600, 3)) * x for x in np.arange(1, 11)
+            ])
         elif self.data_type == 'time':
-            ran = 100 * np.array([np.random.random((200, 1600, 3)) * x for x in np.arange(1, 11)])
+            ran = 100 * np.array([
+                np.random.random((200, 1600, 3)) * x for x in np.arange(1, 11)
+            ])
         elif self.data_type == 'image':
             ran = 100 * np.random.random((200, 1600))
         elif self.data_type == 'color':
