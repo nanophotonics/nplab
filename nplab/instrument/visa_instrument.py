@@ -11,7 +11,6 @@ class VisaInstrument(MessageBusInstrument):
     """
     An instrument primarily using VISA communications
     """
-
     def __init__(self, address, settings=None):
         """
         :param address: VISA address as a string
@@ -24,7 +23,8 @@ class VisaInstrument(MessageBusInstrument):
         super(VisaInstrument, self).__init__()
         rm = visa.ResourceManager()
         try:
-            assert address in rm.list_resources(), "The instrument was not found"
+            assert address in rm.list_resources(
+            ), "The instrument was not found"
         except AssertionError:
             print('Available equipment:', rm.list_resources())
         if settings is None:
@@ -59,7 +59,7 @@ class VisaInstrument(MessageBusInstrument):
             except Exception:
                 print("Buffer emptied")
                 empty_buffer = True
-                
+
     idn = queried_property('*idn?', dtype='str')
 
 

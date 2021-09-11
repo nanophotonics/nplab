@@ -6,6 +6,7 @@ from datetime import datetime
 
 from nplab import datafile as df
 
+
 def list_datafile_content(filepath, folderpath):
     """
     Lists datasets from hdf5 file written by fiber raman rig in 'folderpath' inside file
@@ -25,6 +26,7 @@ def list_datafile_content(filepath, folderpath):
     """
     f = df.DataFile(os.path.normpath(filepath), 'r')
     return list(f[folderpath].keys())
+
 
 def extractor(filepath, folderpath):
     """
@@ -52,21 +54,27 @@ def extractor(filepath, folderpath):
     """
     f = df.DataFile(os.path.normpath(filepath), 'r')
     ks = list_datafile_content(filepath, folderpath)
+
     def unix_timestamp(dt):
         return time.mktime(dt.timetuple())
 
     def dataset_extractor(dset):
         intensity = np.array(dset)
-        assert intensity.shape[0] == 1014, 'number of datapoints in spctra should be 1014, =1024-10 truncating the left side'
+        assert intensity.shape[
+            0] == 1014, 'number of datapoints in spctra should be 1014, =1024-10 truncating the left side'
         center_wl = dset.attrs["center_wavelength"]
-        dt = datetime.strptime(str(dset.attrs["creation_timestamp"]),"%Y-%m-%dT%H:%M:%S.%f")
+        dt = datetime.strptime(str(dset.attrs["creation_timestamp"]),
+                               "%Y-%m-%dT%H:%M:%S.%f")
         return (dt, center_wl, intensity)
-    
+
     data = [dataset_extractor(dset=f[folderpath][k]) for k in ks]
-    data = sorted(data, key = lambda x: unix_timestamp(x[0]),reverse = False)
-    assert unix_timestamp(data[0][0]) < unix_timestamp(data[1][0]),"timestamp of first element is less than timestamp of second element"
+    data = sorted(data, key=lambda x: unix_timestamp(x[0]), reverse=False)
+    assert unix_timestamp(data[0][0]) < unix_timestamp(
+        data[1][0]
+    ), "timestamp of first element is less than timestamp of second element"
     return data
-    
+
+
 def mapped_extractor(filepath, folderpath, mapper):
     """
     Extracts spectral data from hdf5 file written by fiber raman rig, uses 'mapper' to convert from Acton center wavelength, pixel position to a 
@@ -93,20 +101,28 @@ def mapped_extractor(filepath, folderpath, mapper):
                 CCD size is 1024 but leftmost 10 pixels cut to remove edge effects
     """
     raw_data = extractor(filepath, folderpath)
-    pixel_offsets = np.arange(0,1014) #pixel offsets in image
-    def array_mapper(center_wavelength,pixel_offsets,mapper):
-        wavelengths =  np.array([mapper(center_wavelength, offset) for offset in pixel_offsets])
-        assert wavelengths.shape[0] == 1014, "wavelength list should contain 1014 values - one for every pixel/intensity value"
+    pixel_offsets = np.arange(0, 1014)  #pixel offsets in image
 
-    mapped_data = [ (dt,array_mapper(center_wl, pixel_offsets, mapper),intensity) for (dt, center_wl, intensity) in raw_data]
+    def array_mapper(center_wavelength, pixel_offsets, mapper):
+        wavelengths = np.array(
+            [mapper(center_wavelength, offset) for offset in pixel_offsets])
+        assert wavelengths.shape[
+            0] == 1014, "wavelength list should contain 1014 values - one for every pixel/intensity value"
+
+    mapped_data = [(dt, array_mapper(center_wl, pixel_offsets,
+                                     mapper), intensity)
+                   for (dt, center_wl, intensity) in raw_data]
     return mapped_data
 
     return mapped_data
+
 
 if __name__ == "__main__":
-	print("start")
-	from nplab.experiment.fiber_raman.spectrum_aligner_ir import grating_1200gmm as make_mapper
-	mapper_1200 = make_mapper()
-	FILEPATH = 'C:\\Users\\Hera\\OneDrive - University Of Cambridge\\20190522\\Spectra\\840_1s_38mW.hdf5'
-	FOLDERPATH = 'spectrum'
-	print((mapped_extractor(filepath=FILEPATH, folderpath=FOLDERPATH, mapper = mapper_1200)))
+    print("start")
+    from nplab.experiment.fiber_raman.spectrum_aligner_ir import grating_1200gmm as make_mapper
+    mapper_1200 = make_mapper()
+    FILEPATH = 'C:\\Users\\Hera\\OneDrive - University Of Cambridge\\20190522\\Spectra\\840_1s_38mW.hdf5'
+    FOLDERPATH = 'spectrum'
+    print((mapped_extractor(filepath=FILEPATH,
+                            folderpath=FOLDERPATH,
+                            mapper=mapper_1200)))

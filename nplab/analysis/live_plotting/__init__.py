@@ -25,8 +25,10 @@ pg.setConfigOption('foreground', 'k')
 app = QtGui.QApplication.instance()
 if app is None:
     app = QtGui.QApplication([])
-    
+
 graphs = []
+
+
 class GraphWidget(pg.PlotWidget):
     '''
     template for an interactive graph
@@ -40,12 +42,13 @@ class GraphWidget(pg.PlotWidget):
     make use of xlabel and ylabel methods!
         
     '''
-    def __init__(self, *args, 
-                 xlim=(-10,10),
-                 ylim=(0,100),
+    def __init__(self,
+                 *args,
+                 xlim=(-10, 10),
+                 ylim=(0, 100),
                  title='graph',
-                 xlabel = 'X axis',
-                 ylabel = 'Y axis'):
+                 xlabel='X axis',
+                 ylabel='Y axis'):
         super().__init__(title=title)
         self.equations = args
         self.xlim = xlim
@@ -53,37 +56,42 @@ class GraphWidget(pg.PlotWidget):
         self.title(title)
         self.xlabel(xlabel)
         self.ylabel(ylabel)
-        self.hasLegend=False
+        self.hasLegend = False
         self.addLegend()
         graphs.append(self)
-    
+
     @property
     def x(self):
         return np.linspace(*self.xlim, num=200)
-    
+
     @property
     def ys(self):
-        return [equation(self.x).astype(np.float64) for equation in self.equations]
-        
+        return [
+            equation(self.x).astype(np.float64) for equation in self.equations
+        ]
+
     def update(self):
-        def name(eq): # takes the name of the function the first time,
-        #and returns none after to stop the legend from exploding
+        def name(eq):  # takes the name of the function the first time,
+            #and returns none after to stop the legend from exploding
             if self.hasLegend: return None
             return str(eq).split(' ')[1]
-            
-        self.clearPlots() 
-        for i, (y, eq) in enumerate(zip( self.ys, self.equations)):  
-            self.plot(self.x, y, pen=(i,len(self.equations)), name=name(eq))
+
+        self.clearPlots()
+        for i, (y, eq) in enumerate(zip(self.ys, self.equations)):
+            self.plot(self.x, y, pen=(i, len(self.equations)), name=name(eq))
 
     def xlabel(self, label):
         self.setLabel('bottom', label)
+
     def ylabel(self, label):
         self.setLabel('left', label)
+
     def title(self, title):
         self._title = title
         self.setTitle(title)
+
     def export(self):
-        print('x, y(s):',self.x, self.ys, sep='\n')
+        print('x, y(s):', self.x, self.ys, sep='\n')
 
 
 class GraphGroup(QtGui.QGroupBox):
@@ -95,48 +103,60 @@ class GraphGroup(QtGui.QGroupBox):
         super().__init__('Graphs')
         self.setLayout(QtWidgets.QGridLayout())
         self.graphs = graphs
-        graphs_per_row = 5 if len(graphs)>12 else 4
-        for i,g in enumerate(graphs):    
-            self.layout().addWidget(graphs[i], i//graphs_per_row, i%graphs_per_row)
+        graphs_per_row = 5 if len(graphs) > 12 else 4
+        for i, g in enumerate(graphs):
+            self.layout().addWidget(graphs[i], i // graphs_per_row,
+                                    i % graphs_per_row)
 
     def update_graphs(self):
         for g in self.graphs:
             g.update()
             g.hasLegend = True
+
     def export(self):
         for g in self.graphs:
             print('Graph:', g._title)
             g.export()
-            
-            
+
+
 class FloatMathMixin():
     '''allows any class to be used like a float,
     assuming it has a __float__ method.
     '''
     def __add__(self, other):
         return float(self) + np.array(other)
+
     def __sub__(self, other):
         return float(self) - np.array(other)
+
     def __mul__(self, other):
-        return float(self)*np.array(other)
-    def __truediv__(self,other):
-        return float(self)/np.array(other)
+        return float(self) * np.array(other)
+
+    def __truediv__(self, other):
+        return float(self) / np.array(other)
+
     def __pow__(self, other):
         return float(self)**np.array(other)
-    
+
     def __radd__(self, other):
         return self.__add__(other)
+
     def __rsub__(self, other):
         return self.__sub__(other)
-    def __rmul__(self,other):
+
+    def __rmul__(self, other):
         return self.__mul__(other)
-    def __rtruediv__(self,other):
+
+    def __rtruediv__(self, other):
         return self.__truediv__(other)
+
     def __rpow__(self, other):
         return self.__pow__(other)
-    
-parameters = []  
-         
+
+
+parameters = []
+
+
 class Parameter(QtWidgets.QWidget, FloatMathMixin):
     '''
     Representation of a parameter to be varied in an equation.
@@ -150,17 +170,25 @@ class Parameter(QtWidgets.QWidget, FloatMathMixin):
         Max: maximum...
         
     '''
-    
+
     param_changed = QtCore.Signal(float)
-    def __init__(self, name, Default=1, Min=-100_000, Max=100_000, units=None, slider=False):
-        
+
+    def __init__(self,
+                 name,
+                 Default=1,
+                 Min=-100_000,
+                 Max=100_000,
+                 units=None,
+                 slider=False):
+
         super().__init__()
         self.name = name
         self.slider = slider
         self.units = f' ({units})' if units is not None else ''
         self.setLayout(QtWidgets.QFormLayout())
-        self.box =  QtGui.QSlider(QtCore.Qt.Horizontal) if slider else QtGui.QDoubleSpinBox()
-        self.label = QtGui.QLabel(self.name+self.units)
+        self.box = QtGui.QSlider(
+            QtCore.Qt.Horizontal) if slider else QtGui.QDoubleSpinBox()
+        self.label = QtGui.QLabel(self.name + self.units)
         self.layout().addWidget(self.label)
         self.box.setMinimum(Min)
         self.box.setMaximum(Max)
@@ -169,25 +197,29 @@ class Parameter(QtWidgets.QWidget, FloatMathMixin):
         self.box.valueChanged.connect(self.changed)
         self.changed()
         parameters.append(self)
-        
+
     def changed(self):
         if self.slider:
             self.label.setText(str(self))
         self.param_changed.emit(1)
-        
+
     def __float__(self):
         return float(self.box.value())
+
     def __repr__(self):
         return str(float(self))
+
     def __str__(self):
         return f'{self.name}: {float(self)} {self.units}'
-      
+
+
 class ParameterGroupBox(QtGui.QGroupBox):
     '''
     feed me parameters and i'll add spinBoxes for them, and 
     emit a signal when they're changed to update the graphs. 
     '''
     param_changed = QtCore.Signal(float)
+
     def __init__(self, parameters):
         super().__init__('Parameter controls')
         self.parameters = parameters
@@ -195,10 +227,12 @@ class ParameterGroupBox(QtGui.QGroupBox):
         for p in self.parameters:
             self.layout().addWidget(p)
             p.param_changed.connect(self.param_changed.emit)
+
     def export(self):
         for p in self.parameters:
             print(p)
-            
+
+
 class LivePlotWindow(QtWidgets.QMainWindow):
     '''Puts the graphing and parameter widgets together'''
     def __init__(self, style='Fusion'):
@@ -206,11 +240,11 @@ class LivePlotWindow(QtWidgets.QMainWindow):
         if app is None:
             app = QtGui.QApplication([])
         app.setStyleSheet(qdarkstyle.load_stylesheet())
-            
+
         super().__init__()
         layout = QtWidgets.QVBoxLayout()
-        self.resize(1500,1500)
-        self.graphing_group = GraphGroup(graphs)#graphing_group
+        self.resize(1500, 1500)
+        self.graphing_group = GraphGroup(graphs)  #graphing_group
         self.parameter_widget = ParameterGroupBox(parameters)
         layout.addWidget(self.graphing_group)
         # export_button = QtGui.QPushButton('Export values')
@@ -226,56 +260,57 @@ class LivePlotWindow(QtWidgets.QMainWindow):
         self.parameter_widget.param_changed.connect(self.update_graphs)
         self.update_graphs()
         self.show()
-    
+
     def update_graphs(self):
-        self.graphing_group.update_graphs()        
-    
+        self.graphing_group.update_graphs()
+
     def export(self):
         self.graphing_group.export()
-        self.parameter_widget.export() 
+        self.parameter_widget.export()
+
 
 if __name__ == '__main__':
-    
-    
+
     #Initialize all parameters
-    A = Parameter('Alpha', 15, Min=0, Max=10, units= 'm')
+    A = Parameter('Alpha', 15, Min=0, Max=10, units='m')
     B = Parameter('Bravo', 6, slider=True, Min=-10, Max=10)
     C = Parameter('Charlie', 15)
     D = Parameter('Demelza', 6)
 
     #define the equations to be plotted
     def equation1(x):
-        return A*x**2 + B*x**2 - C*x + D
+        return A * x**2 + B * x**2 - C * x + D
+
     def equation2(x):
-        return (A/x**2)**(B/C)
+        return (A / x**2)**(B / C)
+
     def eq3(x):
-        return A**np.sin(C*x)/D*x
+        return A**np.sin(C * x) / D * x
+
     def eq4(x):
-        return (np.sin(A*x)/B*x) + D
-    def eq5(x):  
+        return (np.sin(A * x) / B * x) + D
+
+    def eq5(x):
         y = np.arange(len(x), dtype=np.float64)
-        y[len(x)//2]=np.nan
+        y[len(x) // 2] = np.nan
         return y
-        return eq3(x)[::-1]#reversed
+        return eq3(x)[::-1]  #reversed
 
     #create the graphs
     GraphWidget(equation1, equation2, title='1st')
-    GraphWidget(equation2, xlim=(-5,5), title='2nd')
-    GraphWidget(eq3, eq5, title='etc,', xlabel = ':)')
+    GraphWidget(equation2, xlim=(-5, 5), title='2nd')
+    GraphWidget(eq3, eq5, title='etc,', xlabel=':)')
     GraphWidget(eq4, title='etc.')
     #x2 more of the same
     GraphWidget(equation1, equation2, title='1st')
-    GraphWidget(equation2, xlim=(-5,5), title='2nd')
-    GraphWidget(eq3, eq5, title='etc,', xlabel = ':)')
+    GraphWidget(equation2, xlim=(-5, 5), title='2nd')
+    GraphWidget(eq3, eq5, title='etc,', xlabel=':)')
     GraphWidget(eq5, title='etc.')
-    
+
     GraphWidget(equation1, equation2, title='1st')
-    GraphWidget(equation2, xlim=(-5,5), title='2nd')
-    GraphWidget(eq3, eq5, title='etc,', xlabel = ':)')
+    GraphWidget(equation2, xlim=(-5, 5), title='2nd')
+    GraphWidget(eq3, eq5, title='etc,', xlabel=':)')
     GraphWidget(eq4, title='etc.')
- 
+
     #and then the window!
     live_plotter = LivePlotWindow()
-    
-
-

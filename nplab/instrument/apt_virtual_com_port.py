@@ -14,18 +14,23 @@ import nplab.instrument.serial_instrument as serial_instrument
 
 def detect_APT_VCP_devices():
     """Function to tell you what devices are connected to what comports """
-    possible_destinations = [0x50, 0x11, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2A]
+    possible_destinations = [
+        0x50, 0x11, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2A
+    ]
     device_dict = dict()
-    for port_name, _, _ in list_ports.comports():  # loop through serial ports, apparently 256 is the limit?!
+    for port_name, _, _ in list_ports.comports(
+    ):  # loop through serial ports, apparently 256 is the limit?!
 
         print("Trying port", port_name)
         try:
             for destination in possible_destinations:
                 try:
                     test_device = APT_VCP(port_name, destination=destination)
-                    device_dict[port_name] = {'destination': destination,
-                                              'Serial Number': test_device.serial_number,
-                                              'Model': test_device.model}
+                    device_dict[port_name] = {
+                        'destination': destination,
+                        'Serial Number': test_device.serial_number,
+                        'Model': test_device.model
+                    }
                     break
                 except struct.error:
                     pass
@@ -47,38 +52,56 @@ class APT_VCP(serial_instrument.SerialInstrument):
                          timeout=1,
                          writeTimeout=1)
     termination_character = ""  # The APT communicates via fixed length messages therefore this is not required
-    surprise_message_codes = {'MGMSG_HW_RESPONSE': 0x0080,
-                              # The message id codes for messages sent from the hardware to the device.
-                              'MGMSG_HW_RICHRESPONSE': 0x0081,
-                              # One for one line error code and one for longer error codes
-                              'Status update id': None}  # This is the satus update message id that varies for each device and therefore must be set
+    surprise_message_codes = {
+        'MGMSG_HW_RESPONSE': 0x0080,
+        # The message id codes for messages sent from the hardware to the device.
+        'MGMSG_HW_RICHRESPONSE': 0x0081,
+        # One for one line error code and one for longer error codes
+        'Status update id': None
+    }  # This is the satus update message id that varies for each device and therefore must be set
 
-    channel_number_to_identity = {1: 0x01, 2: 0x02, 3: 0x04, 4: 0x08}  # Sets up the channel numbers to values
-    state_conversion = {True: 0x01,
-                        False: 0x02}  # Sets up the conversion from True and False values to 1's and 2's (godknows why they havnt used 0 and 1)
+    channel_number_to_identity = {
+        1: 0x01,
+        2: 0x02,
+        3: 0x04,
+        4: 0x08
+    }  # Sets up the channel numbers to values
+    state_conversion = {
+        True: 0x01,
+        False: 0x02
+    }  # Sets up the conversion from True and False values to 1's and 2's (godknows why they havnt used 0 and 1)
     reverse_state_conversion = {0x01: True, 0x02: False}
-    serial_num_to_device_types = {0: ['Filter flipper', 'MFF002'],
-                                  20: ['Legacy Single channel stepper driver', 'BSC001'],
-                                  25: ['Legacy single channel mini stepper driver', 'BMS001'],
-                                  27: ['K - Cube brushed DC servo driver', 'KDCT101'],
-                                  28: ['K - Cube brushless DC servo driver', 'KBD101'],
-                                  30: ['Legacy dual channel stepper driver', 'BSC002'],
-                                  35: ['Legacy dual channel mini stepper driver', 'BMS002'],
-                                  40: ['Single channel stepper driver', 'BSC101'],
-                                  60: ['OptoSTDriver(mini stepper driver)', 'OST001'],
-                                  63: ['OptoDCDriver (mini DC servo driver)', 'ODC001'],
-                                  70: ['Three channel card slot stepper driver', 'BSC103'],
-                                  80: ['Stepper Driver T-Cube', 'TST001'],
-                                  83: ['DC Driver T-Cube', 'TDC001'],
-                                  73: ['Brushless DC motherboard', 'BBD102/BBD103'],
-                                  94: ['Brushless DC motor card', 'BBD102/BBD103']}
+    serial_num_to_device_types = {
+        0: ['Filter flipper', 'MFF002'],
+        20: ['Legacy Single channel stepper driver', 'BSC001'],
+        25: ['Legacy single channel mini stepper driver', 'BMS001'],
+        27: ['K - Cube brushed DC servo driver', 'KDCT101'],
+        28: ['K - Cube brushless DC servo driver', 'KBD101'],
+        30: ['Legacy dual channel stepper driver', 'BSC002'],
+        35: ['Legacy dual channel mini stepper driver', 'BMS002'],
+        40: ['Single channel stepper driver', 'BSC101'],
+        60: ['OptoSTDriver(mini stepper driver)', 'OST001'],
+        63: ['OptoDCDriver (mini DC servo driver)', 'ODC001'],
+        70: ['Three channel card slot stepper driver', 'BSC103'],
+        80: ['Stepper Driver T-Cube', 'TST001'],
+        83: ['DC Driver T-Cube', 'TDC001'],
+        73: ['Brushless DC motherboard', 'BBD102/BBD103'],
+        94: ['Brushless DC motor card', 'BBD102/BBD103']
+    }
     command_log = deque(maxlen=20)  # stores commands sent to the device
     timeout = 30
-    def __init__(self, port=None, source=0x01, destination=None, use_si_units=False, stay_alive=False):
+
+    def __init__(self,
+                 port=None,
+                 source=0x01,
+                 destination=None,
+                 use_si_units=False,
+                 stay_alive=False):
         """
         Set up the serial port, setting source and destinations, verbosity and hardware info.
         """
-        serial_instrument.SerialInstrument.__init__(self, port=port)  # this opens the port
+        serial_instrument.SerialInstrument.__init__(
+            self, port=port)  # this opens the port
         self.source = source
         if destination is None:
             self._logger.error('destination has not been set!')
@@ -90,7 +113,8 @@ class APT_VCP(serial_instrument.SerialInstrument):
         self.serial_number = None
         self.model = None
         self.number_of_channels = None
-        hrdwr_info = self.get_hardware_info()  # sets things like the serial_number, model and number_of_channels
+        hrdwr_info = self.get_hardware_info(
+        )  # sets things like the serial_number, model and number_of_channels
         self._logger.debug(hrdwr_info)
 
     @staticmethod
@@ -110,55 +134,89 @@ class APT_VCP(serial_instrument.SerialInstrument):
         """Overwrite the read command with a fixed length read, check
             for additional data stream and error codes"""
         header = bytearray(self.ser.read(6))  # read 6 byte header
-        msgid, length, dest, source = struct.unpack('<HHBB',
-                                                    header)  # unpack the header as described by the format were a second data stream is expected
-        if msgid in list(self.surprise_message_codes.values()):  # Compare the message code to the list of suprise message codes
+        msgid, length, dest, source = struct.unpack(
+            '<HHBB', header
+        )  # unpack the header as described by the format were a second data stream is expected
+        if msgid in list(self.surprise_message_codes.values(
+        )):  # Compare the message code to the list of suprise message codes
             if msgid == self.surprise_message_codes['MGMSG_HW_RESPONSE']:
-                msgid, param1, param2, dest, source = struct.unpack('<HBBBB', header)
-                returned_message = {'message': msgid, 'param1': param1,
-                                    'param2': param2, 'dest': dest,
-                                    'source': source}
+                msgid, param1, param2, dest, source = struct.unpack(
+                    '<HBBBB', header)
+                returned_message = {
+                    'message': msgid,
+                    'param1': param1,
+                    'param2': param2,
+                    'dest': dest,
+                    'source': source
+                }
                 self._logger.debug(returned_message)
                 self.read()
             elif msgid == self.surprise_message_codes['MGMSG_HW_RICHRESPONSE']:
                 data = self.ser.read(length)
-                returned_message = {'message': msgid, 'length': length,
-                                    'dest': dest, 'source': source,
-                                    'data': data}
+                returned_message = {
+                    'message': msgid,
+                    'length': length,
+                    'dest': dest,
+                    'source': source,
+                    'data': data
+                }
                 self._logger.debug(returned_message)
                 self.read()
             elif (msgid == self.surprise_message_codes['Status update id']
-                  and self.command_log[-1] == self.surprise_message_codes['Status update id']):
+                  and self.command_log[-1]
+                  == self.surprise_message_codes['Status update id']):
                 data = self.ser.read(length)
-                returned_message = {'message': msgid, 'length': length,
-                                    'dest': dest, 'source': source,
-                                    'data': data}
+                returned_message = {
+                    'message': msgid,
+                    'length': length,
+                    'dest': dest,
+                    'source': source,
+                    'data': data
+                }
                 self.update_status(returned_message)
                 self.read()
         else:
             if self.source | 0x80 == dest:
                 data = self.ser.read(length)
-                returned_message = {'message': msgid, 'length': length,
-                                    'dest': dest, 'source': source,
-                                    'data': data}
+                returned_message = {
+                    'message': msgid,
+                    'length': length,
+                    'dest': dest,
+                    'source': source,
+                    'data': data
+                }
             elif self.source != dest:
                 if dest <= 0x80:
                     self.source = dest
                 else:
-                    self.source = dest-128
+                    self.source = dest - 128
                 data = self.ser.read(length)
-                returned_message = {'message': msgid, 'length': length,
-                                    'dest': dest, 'source': source,
-                                    'data': data}
+                returned_message = {
+                    'message': msgid,
+                    'length': length,
+                    'dest': dest,
+                    'source': source,
+                    'data': data
+                }
             else:
-                msgid, param1, param2, dest, source = struct.unpack('<HBBBB', header)
+                msgid, param1, param2, dest, source = struct.unpack(
+                    '<HBBBB', header)
 
-                returned_message = {'message': msgid, 'param1': param1,
-                                    'param2': param2, 'dest': dest,
-                                    'source': source}
+                returned_message = {
+                    'message': msgid,
+                    'param1': param1,
+                    'param2': param2,
+                    'dest': dest,
+                    'source': source
+                }
             return returned_message
 
-    def _write(self, message_id, param1=0x00, param2=0x00, data=None, destination_id=None):
+    def _write(self,
+               message_id,
+               param1=0x00,
+               param2=0x00,
+               data=None,
+               destination_id=None):
         """Overwrite the serial write command to combine message_id,
             two possible parameters (set to 0 if not given)
             with the source and destinations """
@@ -167,13 +225,16 @@ class APT_VCP(serial_instrument.SerialInstrument):
         else:
             destination = self.destination[destination_id]
         if data is None:
-            formated_message = bytearray(struct.pack('<HBBBB', message_id, param1, param2, destination, self.source))
+            formated_message = bytearray(
+                struct.pack('<HBBBB', message_id, param1, param2, destination,
+                            self.source))
         else:
             param1 = len(data)
-            formated_message = bytearray(struct.pack('<HBBBB', message_id, param1, param2,
-                                                     destination | 0x80, self.source))
+            formated_message = bytearray(
+                struct.pack('<HBBBB', message_id, param1, param2,
+                            destination | 0x80, self.source))
             formated_message += data
-        
+
         if len(self.command_log) == self.command_log.maxlen \
                 and 0x0492 not in self.command_log \
                 and self.stay_alive:
@@ -181,73 +242,110 @@ class APT_VCP(serial_instrument.SerialInstrument):
             self.staying_alive()
         self.command_log.append(message_id)
         self.ser.write(formated_message)
+
     write = _write
 
-    def query(self, message_id, param1=0x00, param2=0x00, data=None, destination_id=None, blocking=False):
+    def query(self,
+              message_id,
+              param1=0x00,
+              param2=0x00,
+              data=None,
+              destination_id=None,
+              blocking=False):
         """Overwrite the query command to allow the correct passing of message_ids and parameters"""
         with self.communications_lock:
             self.flush_input_buffer()
-            self._write(message_id, param1, param2, data=data, destination_id=destination_id)
+            self._write(message_id,
+                        param1,
+                        param2,
+                        data=data,
+                        destination_id=destination_id)
             time.sleep(0.1)
             if blocking:
                 reply = self._waitForReply()
                 if reply[0]:
                     return reply[1]
                 else:
-                    self._logger.error('No reply received for message ' + str(message_id))
+                    self._logger.error('No reply received for message ' +
+                                       str(message_id))
                     return reply[1]
             else:
-                return self.read()  # question: should we strip the final newline?
+                return self.read(
+                )  # question: should we strip the final newline?
 
     # Listing General control message, not all of these can be used with every piece of equipment
     def identify(self):
         """Instruct hardware unit to identify itself by flashing its LED"""
         self.write(0x0223)
 
-    def set_channel_state(self, channel_number, new_state, destination_id=None):
+    def set_channel_state(self,
+                          channel_number,
+                          new_state,
+                          destination_id=None):
         """Enable or disable a channel"""
         channel_identity = self.channel_number_to_identity[channel_number]
         new_state = self.state_conversion[new_state]
-        self.write(0x0210, param1=channel_identity, param2=new_state, destination_id=destination_id)
+        self.write(0x0210,
+                   param1=channel_identity,
+                   param2=new_state,
+                   destination_id=destination_id)
 
     def get_channel_state(self, channel_number, destination_id=None):
         """Get the current state of a channel"""
-        message_dict = self.query(0x0211, param1=self.channel_number_to_identity[
-            channel_number], destination_id=destination_id)  # Get the entire message dictionary
-        current_state = self.reverse_state_conversion[
-            message_dict['param2']]  # pull out the current state parameter and convert it to a True/False value
+        message_dict = self.query(
+            0x0211,
+            param1=self.channel_number_to_identity[channel_number],
+            destination_id=destination_id)  # Get the entire message dictionary
+        current_state = self.reverse_state_conversion[message_dict[
+            'param2']]  # pull out the current state parameter and convert it to a True/False value
         return current_state
 
     def disconnect(self, destination_id=None):
         """Disconnect the controller from the usb bus"""
         self.write(0x002, destination_id=destination_id)
 
-    def enable_updates(self, enable_state, update_rate=10, destination_id=None):
+    def enable_updates(self,
+                       enable_state,
+                       update_rate=10,
+                       destination_id=None):
         """Enable or disable hardware updates"""
         if enable_state:
-            self.write(0x0011, param1=update_rate, destination_id=destination_id)
+            self.write(0x0011,
+                       param1=update_rate,
+                       destination_id=destination_id)
         else:
             self.write(0x0012, destination_id=destination_id)
 
     def get_hardware_info(self, destination_id=None):
         """Manually get a status update"""
         message_dict = self.query(0x0005, destination_id=destination_id)
-        serialnum, model, hwtype, swversion, notes, hwversion, modstate, nchans = struct.unpack('<I8sHI48s12xHHH',
-                                                                                                message_dict['data'])
+        serialnum, model, hwtype, swversion, notes, hwversion, modstate, nchans = struct.unpack(
+            '<I8sHI48s12xHHH', message_dict['data'])
         if serialnum != 0 and len(str(serialnum)) != 8:
             serialnum = int(hex(serialnum)[2:-1])
 
-        hardware_dict = {'serial_number': serialnum, 'model': str(model).replace('\x00', ''), 'hardware_type': hwtype,
-                         'software_version': swversion, 'notes': str(notes).replace('\x00', ''),
-                         'hardware_version': hwversion,
-                         'modstate': modstate, 'number_of_channels': nchans}
+        hardware_dict = {
+            'serial_number': serialnum,
+            'model': str(model).replace('\x00', ''),
+            'hardware_type': hwtype,
+            'software_version': swversion,
+            'notes': str(notes).replace('\x00', ''),
+            'hardware_version': hwversion,
+            'modstate': modstate,
+            'number_of_channels': nchans
+        }
         self.serial_number = serialnum
 
         try:
-            self.model = self.serial_num_to_device_types[int(str(serialnum)[0:2])]
+            self.model = self.serial_num_to_device_types[int(
+                str(serialnum)[0:2])]
         except KeyError:
-            self.model = ['Dummy', 'Serial number not recognised in the serial_num_to_device_types']
-            self._logger.warn('Serial number not recognised. Model set to Dummy')
+            self.model = [
+                'Dummy',
+                'Serial number not recognised in the serial_num_to_device_types'
+            ]
+            self._logger.warn(
+                'Serial number not recognised. Model set to Dummy')
         self.number_of_channels = nchans
         return hardware_dict
 
@@ -276,7 +374,7 @@ class APT_VCP(serial_instrument.SerialInstrument):
             self._logger.debug(str(dest))
             self.write(0x0492, destination_id=dest)
         self._logger.debug(str(destination_id) + str(dest))
-        
+
     def _waitForReply(self):
         reply = ''
         t0 = time.time()
