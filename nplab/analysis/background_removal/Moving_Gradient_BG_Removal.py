@@ -1,5 +1,4 @@
 import numpy as np
-
 """
 Author: jpg66
 
@@ -21,109 +20,112 @@ possible peak positions.
 These iterations are stopped when they reach Maximum_Iterations or when the list of possible peak positions converges.
 """
 
-def Construct_Background(Gradient,Not_Allowed,Window,Signal_Length):
-	"""
+
+def Construct_Background(Gradient, Not_Allowed, Window, Signal_Length):
+    """
 	Function that takes a list of gradients (Gradient), a list indicating whether points represent possible peak postions (Not_Allowed), the window size
 	and the length of the signal and reconstructs the BG signal + a constant.
 	"""
 
-	#---Estimate gradient at each position----
+    #---Estimate gradient at each position----
 
-	Average=[]
-	while len(Average)<Signal_Length:
-		Average.append([])
+    Average = []
+    while len(Average) < Signal_Length:
+        Average.append([])
 
-	for i in range(len(Gradient)):
-		if Not_Allowed[i] is False and Not_Allowed[i+Window] is False:
-			n=0
-			while n<=Window:
-				Average[n+i].append(Gradient[i])
-				n+=1
+    for i in range(len(Gradient)):
+        if Not_Allowed[i] is False and Not_Allowed[i + Window] is False:
+            n = 0
+            while n <= Window:
+                Average[n + i].append(Gradient[i])
+                n += 1
 
-	#--- Ensure every point has a gradient----
+    #--- Ensure every point has a gradient----
 
-	if len(Average[0])==0:
-		Average[0]=[0]
-	for i in range(len(Average)):
-		if len(Average[i])==0:
-			Average[i]=Average[i-1]
+    if len(Average[0]) == 0:
+        Average[0] = [0]
+    for i in range(len(Average)):
+        if len(Average[i]) == 0:
+            Average[i] = Average[i - 1]
 
-	#---Integrate up output------
+    #---Integrate up output------
 
-	Output=[0.]
-	for i in Average:
-		Output.append(Output[-1]+np.median(i))
+    Output = [0.]
+    for i in Average:
+        Output.append(Output[-1] + np.median(i))
 
-	return np.array(Output[:-1])
+    return np.array(Output[:-1])
 
 
-def Run(Signal,Window=50,Maximum_Iterations=10,Peak_Tolerance=0.5):
-	"""
+def Run(Signal, Window=50, Maximum_Iterations=10, Peak_Tolerance=0.5):
+    """
 	Main function, explained at the top of the page.
 	"""
 
-	#---Ensure Window fits contraints---
+    #---Ensure Window fits contraints---
 
-	Window=int(Window)
-	if Window<2:
-		Window=2
+    Window = int(Window)
+    if Window < 2:
+        Window = 2
 
-	#--Calcuate gradients-------
+    #--Calcuate gradients-------
 
-	Gradient=[]
-	n=Window
-	while n<len(Signal):
-		Gradient.append(float(Signal[n]-Signal[n-Window])/Window)
-		n+=1
-	Not_Allowed=[]
-	while len(Not_Allowed)<len(Signal):
-		Not_Allowed.append(False)
+    Gradient = []
+    n = Window
+    while n < len(Signal):
+        Gradient.append(float(Signal[n] - Signal[n - Window]) / Window)
+        n += 1
+    Not_Allowed = []
+    while len(Not_Allowed) < len(Signal):
+        Not_Allowed.append(False)
 
-	#----Initial estimate-----
+    #----Initial estimate-----
 
-	Background=Construct_Background(Gradient,Not_Allowed,Window,len(Signal))
+    Background = Construct_Background(Gradient, Not_Allowed, Window,
+                                      len(Signal))
 
-	Clean=np.array(Signal)-Background
-	Clean=Clean-np.median(Clean)
+    Clean = np.array(Signal) - Background
+    Clean = Clean - np.median(Clean)
 
-	#---Calculate number of points over the noise threshold that correspond to a possible peak
+    #---Calculate number of points over the noise threshold that correspond to a possible peak
 
-	Point_Run=0
-	while 100.*((1./6)**Point_Run)>Peak_Tolerance:
-		Point_Run+=1
+    Point_Run = 0
+    while 100. * ((1. / 6)**Point_Run) > Peak_Tolerance:
+        Point_Run += 1
 
-	#---Iterate background estimation, ignoring possible peak positions-----
+    #---Iterate background estimation, ignoring possible peak positions-----
 
-	Iterate=True
-	Iterations=0
-	while Iterate is True and Iterations<Maximum_Iterations:
-		Iterations+=1
-		Possible_Peak_Regions=[]
-		Current_Run=[]
-		Threshold=np.median(np.abs(Clean))
-		for i in range(len(Signal)):
-			if Clean[i]>=Threshold:
-				Current_Run.append(i)
-			else:
-				if len(Current_Run)>=Point_Run:
-					Possible_Peak_Regions+=Current_Run
-				Current_Run=[]
-		if len(Current_Run)>=Point_Run:
-			Possible_Peak_Regions+=Current_Run
+    Iterate = True
+    Iterations = 0
+    while Iterate is True and Iterations < Maximum_Iterations:
+        Iterations += 1
+        Possible_Peak_Regions = []
+        Current_Run = []
+        Threshold = np.median(np.abs(Clean))
+        for i in range(len(Signal)):
+            if Clean[i] >= Threshold:
+                Current_Run.append(i)
+            else:
+                if len(Current_Run) >= Point_Run:
+                    Possible_Peak_Regions += Current_Run
+                Current_Run = []
+        if len(Current_Run) >= Point_Run:
+            Possible_Peak_Regions += Current_Run
 
-		New_Not_Allowed=[]
-		for i in range(len(Signal)):
-			if i in Possible_Peak_Regions:
-				New_Not_Allowed.append(True)
-			else:
-				New_Not_Allowed.append(False)
+        New_Not_Allowed = []
+        for i in range(len(Signal)):
+            if i in Possible_Peak_Regions:
+                New_Not_Allowed.append(True)
+            else:
+                New_Not_Allowed.append(False)
 
-		if np.array_equal(Not_Allowed,New_Not_Allowed)==False:
-			Not_Allowed=New_Not_Allowed
-			Background=Construct_Background(Gradient,Not_Allowed,Window,len(Signal))
-			Clean=np.array(Signal)-Background
-			Clean=Clean-np.median(Clean)
-		else:
-			Iterate=False
+        if np.array_equal(Not_Allowed, New_Not_Allowed) == False:
+            Not_Allowed = New_Not_Allowed
+            Background = Construct_Background(Gradient, Not_Allowed, Window,
+                                              len(Signal))
+            Clean = np.array(Signal) - Background
+            Clean = Clean - np.median(Clean)
+        else:
+            Iterate = False
 
-	return Clean
+    return Clean

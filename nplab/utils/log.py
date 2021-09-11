@@ -19,10 +19,13 @@ if 'PYCHARM_HOSTED' not in os.environ:
     colorama.init()
 
 
-
-def log(message, from_class=None, from_object=None,
-        create_datafile=False, assert_datafile=False, level= 'info'):
-        """Add a message to the NPLab log, stored in the current datafile.
+def log(message,
+        from_class=None,
+        from_object=None,
+        create_datafile=False,
+        assert_datafile=False,
+        level='info'):
+    """Add a message to the NPLab log, stored in the current datafile.
 
         This function will put a message in the nplab_log group in the root of
         the current datafile (i.e. the HDF5 file returned by
@@ -46,36 +49,36 @@ def log(message, from_class=None, from_object=None,
         should consider using `self.log()` which automatically fills in the
         object and class fields.
         """
-        try:
-            if hasattr(from_object,'_logger'):
-                getattr(from_object._logger,level)(message)
-            df = nplab.current_datafile(create_if_none=create_datafile,
-                                        create_if_closed=create_datafile)
-            logs = df.require_group("nplab_log")
-            logs.attrs['log_group'] = True 
-            dset = logs.create_dataset("entry_%d",
-                                       data=np.string_(message),
-                                       timestamp=True)
-            #save the object and class if supplied.
-            if from_object is not None:
-                dset.attrs.create("object",np.string_("%x" % id(from_object)))
-                dset.attrs['log_dset'] = True
-                dset.attrs['level'] = level
-                if from_class is None:
-                    #extract the class of the object if it's not specified
-                    try:
-                        from_class = from_object.__class__
-                    except:
-                        pass
-            if from_class is not None:
-                dset.attrs.create("class",np.string_(from_class))
+    try:
+        if hasattr(from_object, '_logger'):
+            getattr(from_object._logger, level)(message)
+        df = nplab.current_datafile(create_if_none=create_datafile,
+                                    create_if_closed=create_datafile)
+        logs = df.require_group("nplab_log")
+        logs.attrs['log_group'] = True
+        dset = logs.create_dataset("entry_%d",
+                                   data=np.string_(message),
+                                   timestamp=True)
+        #save the object and class if supplied.
+        if from_object is not None:
+            dset.attrs.create("object", np.string_("%x" % id(from_object)))
+            dset.attrs['log_dset'] = True
+            dset.attrs['level'] = level
+            if from_class is None:
+                #extract the class of the object if it's not specified
+                try:
+                    from_class = from_object.__class__
+                except:
+                    pass
+        if from_class is not None:
+            dset.attrs.create("class", np.string_(from_class))
 
-        except Exception as e:
-#            print "Couldn't log to file: " + message
-#            print 'due to error', e
-            if assert_datafile:
-                print("Error saving log message - raising exception.")
-                raise e
+    except Exception as e:
+        #            print "Couldn't log to file: " + message
+        #            print 'due to error', e
+        if assert_datafile:
+            print("Error saving log message - raising exception.")
+            raise e
 
 
 '''COLORED LOGGING'''
@@ -86,12 +89,15 @@ RESET_SEQ = "\033[0m"
 COLOR_SEQ = "\033[1;%dm"
 BOLD_SEQ = "\033[1m"
 
-def formatter_message(message, use_color = True):
+
+def formatter_message(message, use_color=True):
     if use_color:
-        message = message.replace("$RESET", RESET_SEQ).replace("$BOLD", BOLD_SEQ)
+        message = message.replace("$RESET",
+                                  RESET_SEQ).replace("$BOLD", BOLD_SEQ)
     else:
         message = message.replace("$RESET", "").replace("$BOLD", "")
     return message
+
 
 COLORS = {
     'WARNING': YELLOW,
@@ -106,7 +112,8 @@ class ColoredFormatter(logging.Formatter):
     def format(self, record):
         levelname = record.levelname
         if levelname in COLORS:
-            levelname_color = COLOR_SEQ % (30 + COLORS[levelname]) + levelname + RESET_SEQ
+            levelname_color = COLOR_SEQ % (
+                30 + COLORS[levelname]) + levelname + RESET_SEQ
             record.levelname = levelname_color
         return logging.Formatter.format(self, record)
 
@@ -130,7 +137,8 @@ def create_logger(name='Experiment', **kwargs):
         test.warn('Logger already has a StreamHandler!')
     else:
         fh = logging.StreamHandler(sys.stdout)
-        f = ColoredFormatter('[%(name)s] - %(levelname)s: %(message)s - %(asctime)s ', '%H:%M')
+        f = ColoredFormatter(
+            '[%(name)s] - %(levelname)s: %(message)s - %(asctime)s ', '%H:%M')
         fh.setFormatter(f)
         test.addHandler(fh)
 
@@ -139,7 +147,10 @@ def create_logger(name='Experiment', **kwargs):
             test.warn('Logger already has a FileHandler!')
         else:
             fh = logging.FileHandler(LOGGER_FILE)
-            fh.setFormatter(logging.Formatter('[%(name)s] - %(levelname)s: %(message)s - %(asctime)s ', datefmt='%H:%M'))
+            fh.setFormatter(
+                logging.Formatter(
+                    '[%(name)s] - %(levelname)s: %(message)s - %(asctime)s ',
+                    datefmt='%H:%M'))
             fh.setLevel(LOGGER_LEVEL)
             test.addHandler(fh)
 
@@ -148,5 +159,5 @@ def create_logger(name='Experiment', **kwargs):
 
 if __name__ == '__main__':
     logger = create_logger()
-    for ii in ['debug','info','warn','error']:
-        getattr(logger,ii)(ii)
+    for ii in ['debug', 'info', 'warn', 'error']:
+        getattr(logger, ii)(ii)
