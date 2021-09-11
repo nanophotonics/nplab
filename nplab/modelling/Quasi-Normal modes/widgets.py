@@ -4,7 +4,8 @@ Created on Wed Jun 23 12:37:43 2021
 
 @author: Eoin
 """
-from functools import cache
+
+from collections import defaultdict
 
 import numpy as np
 import pyqtgraph as pg
@@ -49,9 +50,12 @@ class DoubleSlider(QtWidgets.QSlider):
         super().setValue(int(value * self._multi))
 
 
-@cache
-def degeneracy(mode_name):
-    return 1 + (not mode_name.endswith('0'))
+# @cache
+# def degeneracy(geometry, mode_name):
+#     if geometry == 'circle':
+#         return 1 + (not mode_name.endswith('0'))
+#     else:
+#         return 1
 
 
 class Filler():
@@ -78,19 +82,21 @@ class LorentzGraphWidget(pg.PlotWidget):
     def __init__(self,
                  modes,
                  xlim_func,
+                 degeneracies=defaultdict(lambda: 1),
+                 resolution=100,
                  title='Efficiencies',
                  xlabel='wavelength (nm)',
-                 ylabel='radiative efficiency',
-                 resolution=100):
+                 ylabel='radiative efficiency',):
         super().__init__(title=title)
         self.modes = modes
         self.xlim_func = xlim_func
+        self.degeneracies = degeneracies
+        self.resolution = resolution
         self.setTitle(title)
         self.setLabel('bottom', xlabel)
         self.setLabel('left', ylabel)
         self.hasLegend = False
         self.addLegend()
-        self.resolution = resolution
         self.plot_item = self.getPlotItem()
         self.plots_to_remove = []
 
@@ -105,14 +111,14 @@ class LorentzGraphWidget(pg.PlotWidget):
 
         xs = np.linspace(*self.xlim_func(), self.resolution)  # x axis changes
         ys = np.zeros(
-            (sum(degeneracy(m) for m in self.modes), self.resolution))
+            (sum(self.degeneracies[m] for m in self.modes), self.resolution))
         filler = Filler(ys)
         for i, (name, mode) in enumerate(self.modes.items()):
             y = mode['Lorentz'](xs)
-            for _ in range(degeneracy(name)):
+            for _ in range(d := self.degeneracies[name]):
                 filler.fill(y)
             wl, eff = mode['annotate']()
-            label = f'{name}, wl={round(wl)}nm, efficiency={np.around(eff, 2)}'
+            label = f'{name}, wl={round(wl)}nm, efficiency={np.around(eff, 2)}, degeneracy={d}'
             self._plot(xs,
                        y,
                        pen=pg.mkPen(pg.intColor(i,

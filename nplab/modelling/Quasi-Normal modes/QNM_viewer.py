@@ -7,6 +7,7 @@ Created on Tue Jun  8 19:32:29 2021
 from collections import defaultdict
 from functools import cache
 from pathlib import Path
+import json
 
 import qdarkstyle  # dark theme
 from PyQt5.QtWidgets import QApplication
@@ -107,11 +108,14 @@ def make_graph_widget(folder):
     def xlim_func():
         reals = [mode['real'](f, D, t, n) for mode in modes.values()]
         return min(reals) * 0.8, max(reals) * 1.1
-
+    degeneracies = json.load(open(folder / 'degeneracies.json'))
+    degeneracies = {k+' mode': v for k, v in degeneracies.items()}
     return GraphWithPinAndClearButtons(modes,
                                        xlim_func,
-                                       title=folder.stem,
-                                       resolution=100)
+                                       degeneracies=degeneracies,
+                                       resolution=100,
+                                       title=folder.stem,                                      
+                                       )
 
 
 if __name__ == '__main__':

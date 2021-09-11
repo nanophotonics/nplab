@@ -204,8 +204,8 @@ def STBOC_with_size_filter(g,
            radius = int(radius)+2
            strided[center[1]-radius:center[1]+radius,center[0]-radius:center[0]+radius] = 0
        else:
-           M = cv2.moments(cnt,binaryImage = True) #find center of mass
-           center = int(M['m10'],M['m00'])//int(M['m01']/M['m00'])
+           M = cv2.moments(cnt, binaryImage = True) #find center of mass
+           center = (int(M['m10']/M['m00']),int(M['m01']/M['m00']))
            centers.append(center)
            radii.append(radius)
    if return_centers:
