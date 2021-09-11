@@ -278,9 +278,9 @@ def STBOC_with_size_filter(g,
     strided[strided != 0] = 255
     return strided
 
-
 #     strided=strided.repeat(bin_fac, 0)
 #    strided=strided.repeat(bin_fac, 1)
+
 
 #       return strided
 

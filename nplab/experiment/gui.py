@@ -116,7 +116,6 @@ class ExperimentWithProgressBar(Experiment):
         self._progress_bar.canceled.connect(self.stop_and_cancel_dialog)
         self._experiment_thread = self.run_in_background(*args, **kwargs)
 
-
 #     self._progress_bar.exec_()
 
     def stop_and_cancel_dialog(self):
