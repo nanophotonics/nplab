@@ -104,7 +104,7 @@ class AOM(VisaInstrument):
             y.append(Take_Reading())         
             time.sleep(1)
         
-        
+         
         if y[0]>Power or y[1]<Power:
             print('Out of Range!')
             return
