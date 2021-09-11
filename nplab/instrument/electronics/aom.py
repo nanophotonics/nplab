@@ -101,12 +101,12 @@ class AOM(VisaInstrument):
         y=[]
         for i in x:
             self.Power(i)   
-            y.append(Take_Reading())         
-            time.sleep(1)
+            y.append( Take_Reading())         
+            time.sleep(1 )
         
          
-        if y[0]>Power or y[1]<Power:
-            print('Out of Range!')
+        if y[0]>Power or  y[1]<Power:
+            print( 'Out of Range!')
             return
         
         for i in range(2):
