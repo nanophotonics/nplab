@@ -80,9 +80,7 @@ class MessageBusInstrument(nplab.instrument.Instrument):
         self._check_echo(write_string, timeout)
 
     def _write(self, query_string, *args, **kwargs):
-        raise NotImplementedError(
-            "Subclasses of MessageBusInstrument must override the _write method!"
-        )
+        raise NotImplementedError("Subclasses of MessageBusInstrument must override the _write method!")
 
     def flush_input_buffer(self):
         """Make sure there's nothing waiting to be read.
@@ -92,14 +90,12 @@ class MessageBusInstrument(nplab.instrument.Instrument):
         """
         with self.communications_lock:
             pass
-
+    
     def readline(self, timeout=None):
         """Read one line from the underlying bus.  Must be overriden."""
         with self.communications_lock:
-            raise NotImplementedError(
-                "Subclasses of MessageBusInstrument must override the readline method!"
-            )
-
+            raise NotImplementedError("Subclasses of MessageBusInstrument must override the readline method!")
+            
     def read_multiline(self, termination_line=None, timeout=None):
         """Read one line from the underlying bus.  Must be overriden.
 
@@ -110,27 +106,18 @@ class MessageBusInstrument(nplab.instrument.Instrument):
                 termination_line = self.termination_line
 
             try:
-                assert isinstance(
-                    termination_line, basestring
-                ), "If you perform a multiline query, you must specify a termination line either through the termination_line keyword argument or the termination_line property of the NPSerialInstrument."
+                assert isinstance(termination_line, basestring), "If you perform a multiline query, you must specify a termination line either through the termination_line keyword argument or the termination_line property of the NPSerialInstrument."
             except NameError:
-                assert isinstance(
-                    termination_line, str
-                ), "If you perform a multiline query, you must specify a termination line either through the termination_line keyword argument or the termination_line property of the NPSerialInstrument."
+                assert isinstance(termination_line, str), "If you perform a multiline query, you must specify a termination line either through the termination_line keyword argument or the termination_line property of the NPSerialInstrument."
 
             response = ""
             last_line = "dummy"
-            while termination_line not in last_line and len(
-                    last_line) > 0:  # read until we get the termination line.
+            while termination_line not in last_line and len(last_line) > 0:  # read until we get the termination line.
                 last_line = self.readline(timeout)
                 response += last_line
             return response
 
-    def query(self,
-              query_string,
-              multiline=False,
-              termination_line=None,
-              timeout=None):
+    def query(self, query_string, multiline=False, termination_line=None, timeout=None):
         """
         Write a string to the stage controller and return its response.
 
@@ -146,8 +133,7 @@ class MessageBusInstrument(nplab.instrument.Instrument):
             if multiline:
                 return self.read_multiline(termination_line)
             else:
-                return self.readline(timeout).strip(
-                )  # question: should we strip the final newline?
+                return self.readline(timeout).strip()  # question: should we strip the final newline?
 
     def _check_echo(self, echo_string, timeout=None):
         if self.ignore_echo:
@@ -155,12 +141,7 @@ class MessageBusInstrument(nplab.instrument.Instrument):
             if echo_line != echo_string:
                 self._logger.warn('Command did not echo: %s' % echo_string)
 
-    def parsed_query_old(self,
-                         query_string,
-                         response_string=r"(\d+)",
-                         re_flags=0,
-                         parse_function=int,
-                         **kwargs):
+    def parsed_query_old(self, query_string, response_string=r"(\d+)", re_flags=0, parse_function=int, **kwargs):
         """
         Perform a query, then parse the result.
 
@@ -174,25 +155,16 @@ class MessageBusInstrument(nplab.instrument.Instrument):
         reply = self.query(query_string, **kwargs)
         res = re.search(response_string, reply, flags=re_flags)
         if res is None:
-            raise ValueError(
-                "Stage response to '%s' ('%s') wasn't matched by /%s/" %
-                (query_string, reply, response_string))
+            raise ValueError("Stage response to '%s' ('%s') wasn't matched by /%s/" % (query_string, reply, response_string))
         try:
             if len(res.groups()) == 1:
                 return parse_function(res.groups()[0])
             else:
-                return list(map(parse_function, res.groups()))
+                return list(map(parse_function,res.groups()))
         except ValueError:
-            raise ValueError(
-                "Stage response to %s ('%s') couldn't be parsed by the supplied function"
-                % (query_string, reply))
+            raise ValueError("Stage response to %s ('%s') couldn't be parsed by the supplied function" % (query_string, reply))
 
-    def parsed_query(self,
-                     query_string,
-                     response_string=r"%d",
-                     re_flags=0,
-                     parse_function=None,
-                     **kwargs):
+    def parsed_query(self, query_string, response_string=r"%d", re_flags=0, parse_function=None, **kwargs):
         """
         Perform a query, returning a parsed form of the response.
 
@@ -214,48 +186,33 @@ class MessageBusInstrument(nplab.instrument.Instrument):
         noop = lambda x: x  # placeholder null parse function
         placeholders = [  # tuples of (regex matching placeholder, regex to replace it with, parse function)
             (r"%c", r".", noop),
-            (r"%(\\d+)c", r".{\1}",
-             noop),  # TODO support %cn where n is a number of chars
+            (r"%(\\d+)c", r".{\1}", noop),  # TODO support %cn where n is a number of chars
             (r"%d", r"[-+]?\\d+", int),
-            (r"%[eEfg]", r"[-+]?(?:\\d+(?:\.\\d*)?|\.\\d+)(?:[eE][-+]?\\d+)?",
-             float),
+            (r"%[eEfg]", r"[-+]?(?:\\d+(?:\.\\d*)?|\.\\d+)(?:[eE][-+]?\\d+)?", float),
             # (r"%(\\d+)c",r".{\\1}", noop), #TODO support %cn where n is a number of chars
             # (r"%d",r"[-+]?\\d+", int),
             # (r"%[eEfg]",r"[-+]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][-+]?\\d+)?", float),
-            (r"%i", r"[-+]?(?:0[xX][\\dA-Fa-f]+|0[0-7]*|\\d+)",
-             lambda x: int(x, 0)),  # 0=autodetect base
+            (r"%i", r"[-+]?(?:0[xX][\\dA-Fa-f]+|0[0-7]*|\\d+)", lambda x: int(x, 0)),  # 0=autodetect base
             (r"%o", r"[-+]?[0-7]+", lambda x: int(x, 8)),  # 8 means octal
             (r"%s", r"\\S+", noop),
             (r"%u", r"\\d+", int),
-            (r"%[xX]", r"[-+]?(?:0[xX])?[\\dA-Fa-f]+",
-             lambda x: int(x, 16)),  # 16 forces hexadecimal
+            (r"%[xX]", r"[-+]?(?:0[xX])?[\\dA-Fa-f]+", lambda x: int(x, 16)),  # 16 forces hexadecimal
         ]
         matched_placeholders = []
         for placeholder, regex, parse_fun in placeholders:
-            response_regex = re.sub(
-                placeholder, '(' + regex + ')',
-                response_regex)  # substitute regex for placeholder
-            matched_placeholders.extend([
-                (parse_fun, m.start())
-                for m in re.finditer(placeholder, response_string)
-            ])  # save the positions of the placeholders
+            response_regex = re.sub(placeholder, '(' + regex + ')', response_regex)  # substitute regex for placeholder
+            matched_placeholders.extend([(parse_fun, m.start()) for m in re.finditer(placeholder, response_string)])  # save the positions of the placeholders
         if parse_function is None:
-            parse_function = [
-                f for f, s in sorted(matched_placeholders, key=lambda m: m[1])
-            ]  # order parse functions by their occurrence in the original string
+            parse_function = [f for f, s in sorted(matched_placeholders, key=lambda m: m[1])]  # order parse functions by their occurrence in the original string
         if not hasattr(parse_function, '__iter__'):
             parse_function = [parse_function]  # make sure it's a list.
 
         reply = self.query(query_string, **kwargs)  # do the query
         res = re.search(response_regex, reply, flags=re_flags)
         if res is None:
-            raise ValueError(
-                "Stage response to '%s' ('%s') wasn't matched by /%s/ (generated regex /%s/"
-                % (query_string, reply, response_string, response_regex))
+            raise ValueError("Stage response to '%s' ('%s') wasn't matched by /%s/ (generated regex /%s/" % (query_string, reply, response_string, response_regex))
         try:
-            parsed_result = [
-                f(g) for f, g in zip(parse_function, res.groups())
-            ]  # try to apply each parse function to its argument
+            parsed_result = [f(g) for f, g in zip(parse_function, res.groups())]  # try to apply each parse function to its argument
             if len(parsed_result) == 1:
                 return parsed_result[0]
             else:
@@ -264,9 +221,7 @@ class MessageBusInstrument(nplab.instrument.Instrument):
             print("Parsing Error")
             print("Matched Groups:", res.groups())
             print("Parsing Functions:", parse_function)
-            raise ValueError(
-                "Stage response to %s ('%s') couldn't be parsed by the supplied function"
-                % (query_string, reply))
+            raise ValueError("Stage response to %s ('%s') couldn't be parsed by the supplied function" % (query_string, reply))
 
     def int_query(self, query_string, **kwargs):
         """Perform a query and return the result(s) as integer(s) (see parsedQuery)"""
@@ -290,14 +245,8 @@ class queried_property(object):
     interact with the instrument over the communication bus to set and retrieve
     its value.
     """
-    def __init__(self,
-                 get_cmd=None,
-                 set_cmd=None,
-                 validate=None,
-                 valrange=None,
-                 fdel=None,
-                 doc=None,
-                 dtype='float'):
+    def __init__(self, get_cmd=None, set_cmd=None, validate=None, valrange=None,
+                 fdel=None, doc=None, dtype='float'):
         self.dtype = dtype
         self.get_cmd = get_cmd
         self.set_cmd = set_cmd
@@ -330,14 +279,10 @@ class queried_property(object):
             raise AttributeError("can't set attribute")
         if self.validate is not None:
             if value not in self.validate:
-                raise ValueError(
-                    'invalid value supplied - value must be one of {}'.format(
-                        self.validate))
+                raise ValueError('invalid value supplied - value must be one of {}'.format(self.validate))
         if self.valrange is not None:
             if value < min(self.valrange) or value > max(self.valrange):
-                raise ValueError(
-                    'invalid value supplied - value must be in the range {}-{}'
-                    .format(*self.valrange))
+                raise ValueError('invalid value supplied - value must be in the range {}-{}'.format(*self.valrange))
         message = self.set_cmd
         if '{0' in message:
             message = message.format(value)
@@ -353,17 +298,10 @@ class queried_property(object):
 
 class queried_channel_property(queried_property):
     # I'm not sure what this does or who uses it.  I assume it's Alan's? --rwb27
-    def __init__(self,
-                 get_cmd=None,
-                 set_cmd=None,
-                 validate=None,
-                 valrange=None,
-                 fdel=None,
-                 doc=None,
-                 dtype='float'):
-        super(queried_channel_property,
-              self).__init__(get_cmd, set_cmd, validate, valrange, fdel, doc,
-                             dtype)
+    def __init__(self, get_cmd=None, set_cmd=None, validate=None, valrange=None,
+                 fdel=None, doc=None, dtype='float'):
+        super(queried_channel_property, self).__init__(get_cmd, set_cmd, validate, valrange,
+                                                       fdel, doc, dtype)
 
     def __get__(self, obj, objtype=None):
         assert hasattr(obj, 'ch') and hasattr(obj, 'parent'),\
@@ -395,14 +333,10 @@ class queried_channel_property(queried_property):
             raise AttributeError("can't set attribute")
         if self.validate is not None:
             if value not in self.validate:
-                raise ValueError(
-                    'invalid value supplied - value must be one of {}'.format(
-                        self.validate))
+                raise ValueError('invalid value supplied - value must be one of {}'.format(self.validate))
         if self.valrange is not None:
             if value < min(self.valrange) or value > max(self.valrange):
-                raise ValueError(
-                    'invalid value supplied - value must be in the range {}-{}'
-                    .format(*self.valrange))
+                raise ValueError('invalid value supplied - value must be in the range {}-{}'.format(*self.valrange))
         message = self.set_cmd
         if '{0' in message:
             message = message.format(obj.ch, value)
@@ -433,21 +367,18 @@ def wrap_with_echo_to_console(obj):
     obj._original_readline = obj.readline
 
     def write(self, q, *args, **kwargs):
-        print("Sent: " + str(q))
+        print("Sent: "+str(q))
         return self._original_write(q, *args, **kwargs)
-
     obj.write = functools.partial(write, obj)
 
     def readline(self, *args, **kwargs):
         ret = self._original_readline(*args, **kwargs)
-        print("Recv: " + str(ret))
+        print("Recv: "+str(ret))
         return ret
-
     obj.readline = functools.partial(readline, obj)
 
 
 if __name__ == '__main__':
-
     class DummyInstrument(EchoInstrument):
         x = queried_property('gx', 'sx {0}', dtype='str')
 

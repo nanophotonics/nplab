@@ -2,7 +2,6 @@ from __future__ import division
 from builtins import str
 from builtins import range
 from past.utils import old_div
-
 __author__ = 'alansanders'
 
 import numpy as np
@@ -16,22 +15,15 @@ from matplotlib import cm, gridspec
 from nputils.plotting.plot_functions import scale_axes
 from nputils.plotting import np_cmap
 
-locs = {
-    'upper right': (0.95, 0.95),
-    'upper left': (0.05, 0.95),
-    'lower left': (0.05, 0.05),
-    'lower right': (0.95, 0.15)
-}
+locs = {'upper right' : (0.95,0.95),
+        'upper left'  : (0.05,0.95),
+        'lower left'  : (0.05,0.05),
+        'lower right' : (0.95,0.15)}
 
 
 def _plot_image(x, y, z, ax, **kwargs):
-    img_kwargs = {
-        'vmin': z.min(),
-        'vmax': z.max(),
-        'cmap': cm.afmhot,
-        'rasterized': True,
-        'shading': 'gouraud'
-    }
+    img_kwargs = {'vmin': z.min(), 'vmax': z.max(), 'cmap': cm.afmhot,
+                  'rasterized': True, 'shading': 'gouraud'}
     for k in kwargs:
         img_kwargs[k] = kwargs[k]
     x, y = np.meshgrid(x, y, indexing='ij')
@@ -63,22 +55,10 @@ def _format_image_plot(ax, xlabel=None, ylabel=None, invert=False):
         plt.setp(ax.get_yticklabels(), visible=False)
 
 
-def plot_wavelength(hs_image,
-                    ax,
-                    wl,
-                    polarisation=1,
-                    wlnorm=True,
-                    rescale_axes=False,
-                    smoothing=None,
-                    contour_lines=None,
-                    mult=1.,
-                    loc='upper right',
-                    xlabels=True,
-                    ylabels=True,
-                    threshold=None,
-                    img_kwargs={},
-                    contour_kwargs={'colors': 'k'},
-                    **kwargs):
+def plot_wavelength(hs_image, ax, wl, polarisation=1, wlnorm=True, rescale_axes=False,
+                    smoothing=None, contour_lines=None, mult=1.,
+                    loc='upper right', xlabels=True, ylabels=True, threshold=None,
+                    img_kwargs={}, contour_kwargs={'colors':'k'}, **kwargs):
     """Plots the hyperspectral image at the selected wavelength on a given axis."""
 
     image = hs_image.get_image(wl, polarisation, **kwargs)
@@ -88,7 +68,7 @@ def plot_wavelength(hs_image,
         wavelength, spectra = hs_image.get_spectra(polarisation)
         minimum, maximum = (spectra.min(), spectra.max())
     if threshold is not None:
-        maximum = threshold * maximum + (1 - threshold) * minimum
+        maximum = threshold*maximum + (1-threshold)*minimum
 
     x, unit = scale_axes(hs_image.x)
     y, unit = scale_axes(hs_image.y)
@@ -101,34 +81,21 @@ def plot_wavelength(hs_image,
     img = _plot_image(x, y, image, ax, **img_kwargs)
     if contour_lines is not None:
         ax.contour(x, y, image, contour_lines, **contour_kwargs)
-    if xlabels: xlabel = '$x$ (%s)' % unit
+    if xlabels: xlabel = '$x$ (%s)'%unit
     else: xlabel = None
-    if ylabels: ylabel = '$y$ (%s)' % unit
+    if ylabels: ylabel = '$y$ (%s)'%unit
     else: ylabel = None
     _format_image_plot(ax, xlabel=xlabel, ylabel=ylabel)
     tx, ty = locs[loc]
-    ax.text(tx,
-            ty,
-            str(wl) + ' nm',
-            va='top',
-            ha='right',
-            transform=ax.transAxes,
-            color='white',
-            fontsize='small',
-            fontweight='bold')
+    ax.text(tx, ty, str(wl)+' nm', va='top', ha='right',
+            transform=ax.transAxes, color='white', fontsize='small', fontweight='bold')
     return img
 
 
-def plot_colour_map(hs_image,
-                    ax,
-                    polarisation=1,
-                    norm=True,
+def plot_colour_map(hs_image, ax, polarisation=1, norm=True,
                     smoothing=None,
-                    loc='upper right',
-                    xlabels=True,
-                    ylabels=True,
-                    img_kwargs={},
-                    **kwargs):
+                    loc='upper right', xlabels=True, ylabels=True,
+                    img_kwargs={}, **kwargs):
     """Plots the hyperspectral image at the selected wavelength on a given axis."""
 
     image = hs_image.construct_colour_map(polarisation, norm, **kwargs)
@@ -137,9 +104,9 @@ def plot_colour_map(hs_image,
     if smoothing is not None:
         image = gaussian_filter(image, smoothing)
     img = _plot_image(x, y, image, ax, **img_kwargs)
-    if xlabels: xlabel = '$x$ (%s)' % unit
+    if xlabels: xlabel = '$x$ (%s)'%unit
     else: xlabel = None
-    if ylabels: ylabel = '$y$ (%s)' % unit
+    if ylabels: ylabel = '$y$ (%s)'%unit
     else: ylabel = None
     _format_image_plot(ax, xlabel=xlabel, ylabel=ylabel)
     #tx, ty = locs[loc]
@@ -148,55 +115,38 @@ def plot_colour_map(hs_image,
     return img
 
 
-def plot_colour(hs_image,
-                ax,
-                amp=1,
-                smoothing=None,
-                loc='upper right',
-                xlabels=True,
-                ylabels=True,
+def plot_colour(hs_image, ax, amp=1, smoothing=None, loc='upper right',
+                xlabels=True, ylabels=True,
                 **kwargs):
     ax.set_axis_bgcolor('black')
     image = hs_image.reconstruct_colour_image(**kwargs)
     if smoothing is not None:
         image = gaussian_filter(image, smoothing)
-    image[:, :, 3] = amp * image[:, :, 3]
-    image[:, :, 3] = np.where(image[:, :, 3] > 1, 1, image[:, :, 3])
+    image[:,:,3] = amp*image[:,:,3]
+    image[:,:,3] = np.where(image[:,:,3] > 1, 1, image[:,:,3])
     x, unit = scale_axes(hs_image.x)
     y, unit = scale_axes(hs_image.y)
-    limits = np.array([x.min(), x.max(), y.min(), y.max()])
+    limits = np.array([x.min(), x.max(),
+                       y.min(), y.max()])
     ax.imshow(image, origin='lower', extent=limits)
     ax.set_xlim(limits[0], limits[1])
     ax.set_ylim(limits[2], limits[3])
-    if xlabels: xlabel = '$x$ (%s)' % unit
+    if xlabels: xlabel = '$x$ (%s)'%unit
     else: xlabel = None
-    if ylabels: ylabel = '$y$ (%s)' % unit
+    if ylabels: ylabel = '$y$ (%s)'%unit
     else: ylabel = None
     _format_image_plot(ax, xlabel=xlabel, ylabel=ylabel)
     tx, ty = locs[loc]
-    ax.text(tx,
-            ty,
-            'colour',
-            va='top',
-            ha='right',
-            transform=ax.transAxes,
-            color='white',
-            fontsize='small')
+    ax.text(tx, ty, 'colour', va='top', ha='right',
+            transform=ax.transAxes, color='white', fontsize='small')
     return image
 
 
-def plot_line_scan(hs_image,
-                   ax,
-                   axis,
-                   line,
-                   imnorm=False,
-                   linenorm=False,
-                   dat='',
-                   smooth=None):
-    if dat == '':
+def plot_line_scan(hs_image, ax, axis, line, imnorm=False, linenorm=False, dat='', smooth=None):
+    if dat=='':
         spectra = hs_image.spectra
         wavelength = hs_image.wavelength
-    elif dat == 'trans':
+    elif dat=='trans':
         data = hs_image.data_t
         wavelength = hs_image.wavelength_t
     line_spectra = hs_image.get_line_spectra(axis, line, dat)
@@ -211,8 +161,8 @@ def plot_line_scan(hs_image,
         minimum = line_spectra.min()
         maximum = line_spectra.max()
     else:
-        minimum = data.min() * (data.min() >= 0.0)
-        maximum = data.max() * (data.max() >= 0.0)
+        minimum = data.min() * (data.min()>=0.0)
+        maximum = data.max() * (data.max()>=0.0)
 
     #lev_exp = np.linspace(np.log10(minimum), np.log10(maximum), 200)
     #levs = np.power(10, lev_exp)
@@ -223,16 +173,10 @@ def plot_line_scan(hs_image,
     X, Y = np.meshgrid(hs_image.x, wavelength, indexing='ij')
     ax.contourf(X, Y, line_spectra, levs, norm=norm, cmap=cm.CMRmap)
 
-    if axis == 'x': label = 'y={0:.2f} nm'.format(hs_image.x[line])
-    if axis == 'y': label = 'x={0:.2f} nm'.format(hs_image.y[line])
-    ax.text(0.95,
-            0.95,
-            label,
-            va='top',
-            ha='right',
-            transform=ax.transAxes,
-            color='white',
-            fontsize='small')
+    if axis=='x': label = 'y={0:.2f} nm'.format(hs_image.x[line])
+    if axis=='y': label = 'x={0:.2f} nm'.format(hs_image.y[line])
+    ax.text(0.95, 0.95, label, va='top', ha='right',
+            transform=ax.transAxes, color='white', fontsize='small')
     ax.tick_params(axis='both', which='major', labelsize='small')
     ax.set_xlim(hs_image.x.min(), hs_image.x.max())
     ax.set_ylim(wavelength.min(), wavelength.max())

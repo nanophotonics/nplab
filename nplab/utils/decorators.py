@@ -21,26 +21,25 @@ class inherit_docstring():
         # if there is a docstring in both the current function and the base function
         # then the new docstring will include both docstrings separated by an empty line
         else:
-            f.__doc__ += '\n\n' + self.base_f.__doc__
+            f.__doc__ += '\n\n'+self.base_f.__doc__
         return f
 
 
 if __name__ == '__main__':
-
     class A(object):
         def foo(self, x):
             """Docstring for A"""
-            return x + 1
+            return x+1
 
     class B(A):
         @inherit_docstring(A.foo)
         def foo(self, x):
-            return x + 2
+            return x+2
 
     class C(B):
         @inherit_docstring(B.foo)
         def foo(self, x):
             """Docstring for C"""
-            return x + 3
+            return x+3
 
     print(C.foo.__doc__)

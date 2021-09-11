@@ -1,7 +1,6 @@
 from __future__ import print_function
 from builtins import str
 from builtins import range
-
 __author__ = 'alansanders'
 
 from nplab.experiment.scanning_experiment import ScanningExperiment, TimedScan
@@ -16,6 +15,7 @@ class LinearScan(ScanningExperiment, TimedScan):
     """
 
     """
+
     def __init__(self, start=None, stop=None, step=None):
         ScanningExperiment.__init__(self)
         TimedScan.__init__(self)
@@ -36,14 +36,12 @@ class LinearScan(ScanningExperiment, TimedScan):
         :param rate: the update period in seconds
         :return:
         """
-        if isinstance(self.acquisition_thread,
-                      threading.Thread) and self.acquisition_thread.is_alive():
+        if isinstance(self.acquisition_thread, threading.Thread) and self.acquisition_thread.is_alive():
             print('scan already running')
             return
         self.init_scan()
         self.acquisition_thread = threading.Thread(target=self.scan,
-                                                   args=(self.start, self.stop,
-                                                         self.step))
+                                                   args=(self.start, self.stop, self.step))
         self.acquisition_thread.start()
 
     def init_parameter(self, start, stop, step):
@@ -112,7 +110,7 @@ class LinearScanQt(LinearScan, QtCore.QObject):
     def run(self, rate=0.1):
         super(LinearScanQt, self).run()
         self.acquiring.wait()
-        self.timer.start(1000. * rate)
+        self.timer.start(1000.*rate)
 
     def get_qt_ui(self):
         return LinearScanUI(self)
@@ -139,30 +137,25 @@ class LinearScanQt(LinearScan, QtCore.QObject):
 
 class LinearScanUI(QtWidgets.QWidget, UiTools):
     def __init__(self, linear_scanner):
-        assert isinstance(
-            linear_scanner,
-            LinearScanQt), "A valid LinearScanQt subclass must be supplied"
+        assert isinstance(linear_scanner, LinearScanQt), "A valid LinearScanQt subclass must be supplied"
         super(LinearScanUI, self).__init__()
         self.linear_scanner = linear_scanner
-        uic.loadUi(
-            os.path.join(os.path.dirname(__file__), 'linear_scanner.ui'), self)
-        self.rate = 1. / 30.
+        uic.loadUi(os.path.join(os.path.dirname(__file__), 'linear_scanner.ui'), self)
+        self.rate = 1./30.
 
         self.setWindowTitle(self.linear_scanner.__class__.__name__)
 
         for widget in [self.start, self.stop, self.step]:
             widget.setValidator(QtGui.QDoubleValidator())
             widget.textChanged.connect(self.on_text_change)
-        self.update_button.clicked.connect(
-            self.linear_scanner.init_current_parameter)
+        self.update_button.clicked.connect(self.linear_scanner.init_current_parameter)
         self.start_button.clicked.connect(self.on_click)
         self.abort_button.clicked.connect(self.linear_scanner.abort)
         self.step_up.clicked.connect(self.on_click)
         self.step_down.clicked.connect(self.on_click)
         self.linear_scanner.status_updated.connect(self.update_status)
         self.linear_scanner.timing_updated.connect(self.update_timing)
-        self.linear_scanner.total_points_updated.connect(
-            self.update_parameters)
+        self.linear_scanner.total_points_updated.connect(self.update_parameters)
 
         self.start.setText(str(self.linear_scanner.start))
         self.stop.setText(str(self.linear_scanner.stop))
@@ -196,8 +189,7 @@ class LinearScanUI(QtWidgets.QWidget, UiTools):
     def update_parameters(self):
         self.total_points.setText(str(self.linear_scanner.total_points))
         self.total_points.resize(self.total_points.sizeHint())
-        self.est_scan_time.setText(
-            str(self.linear_scanner.estimate_scan_duration()))
+        self.est_scan_time.setText(str(self.linear_scanner.estimate_scan_duration()))
         self.est_scan_time.resize(self.est_scan_time.sizeHint())
 
     def update_status(self):
@@ -228,7 +220,6 @@ if __name__ == '__main__':
             self.estimated_step_time = 0.0005
             self.fig = Figure()
             self.data = None
-
         def open_scan(self):
             self.fig.clear()
             self.data = np.zeros_like(self.parameter, dtype=np.float64)
@@ -237,25 +228,18 @@ if __name__ == '__main__':
             #self.ax.set_xlim(self.parameter.min(), self.parameter.max())
         def set_parameter(self, value):
             pass
-
         def scan_function(self, index):
             time.sleep(0.0005)
             x = self.parameter[index]
-            self.data[index] = np.sin(2 * np.pi * 5 * x)
-            self.check_for_data_request(self.parameter[:self.index + 1],
-                                        self.data[:self.index + 1])
-
+            self.data[index] = np.sin(2*np.pi*5*x)
+            self.check_for_data_request(self.parameter[:self.index+1], self.data[:self.index+1])
         def run(self, rate=0.1):
             fname = 'profiling.stats'
-            cProfile.runctx('super(DummyLinearScan, self).run(%.2f)' % rate,
-                            globals(),
-                            locals(),
-                            filename=fname)
+            cProfile.runctx('super(DummyLinearScan, self).run(%.2f)'%rate, globals(), locals(), filename=fname)
             stats = pstats.Stats(fname)
             stats.strip_dirs()
             stats.sort_stats('cumulative')
             stats.print_stats()
-
         def update(self, force=False):
             super(DummyLinearScan, self).update(force)
             if self.data is None or self.fig.canvas is None:
@@ -277,7 +261,6 @@ if __name__ == '__main__':
                     self.ax.relim()
                     self.ax.autoscale_view()
                 self.fig.canvas.draw()
-
         def get_qt_ui(self):
             return DummyLinearScanUI(self)
 
@@ -285,16 +268,16 @@ if __name__ == '__main__':
         def __init__(self, linear_scanner):
             super(DummyLinearScanUI, self).__init__(linear_scanner)
             self.canvas = FigureCanvas(self.linear_scanner.fig)
-            self.canvas.setMaximumSize(300, 300)
+            self.canvas.setMaximumSize(300,300)
             self.layout.addWidget(self.canvas)
             self.resize(self.sizeHint())
 
     ls = DummyLinearScan()
     if test == 'qt':
-        ls.run(1. / 30.)
+        ls.run(1./30.)
         app = get_qt_app()
         gui = ls.get_qt_ui()
-        gui.rate = 1. / 30.
+        gui.rate = 1./30.
         gui.show()
         sys.exit(app.exec_())
     else:

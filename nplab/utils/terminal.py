@@ -43,9 +43,8 @@ class Ipython():
     def show(self):
         self.control.show()
 
-        self.control.setWindowState(self.control.windowState()
-                                    & ~QtCore.Qt.WindowMinimized
-                                    | QtCore.Qt.WindowActive)
+        self.control.setWindowState(
+            self.control.windowState() & ~QtCore.Qt.WindowMinimized | QtCore.Qt.WindowActive)
         self.control.activateWindow()
 
     def stop(self):
@@ -71,6 +70,7 @@ class QIPythonWidget(RichJupyterWidget):
     Convenience class for a live IPython console widget. We can replace the standard banner using the customBanner
     argument. Modified from https://stackoverflow.com/questions/11513132/embedding-ipython-qt-console-in-a-pyqt-application
     """
+
     def __init__(self, custom_banner=None, scripts_path='', *args, **kwargs):
         if custom_banner is not None:
             self.banner = custom_banner
@@ -118,3 +118,4 @@ class QIPythonWidget(RichJupyterWidget):
             self._execute('run -i %s' % scriptpath, False)
         except Exception as e:
             print('Failed because ', e)
+

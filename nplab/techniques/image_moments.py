@@ -1,5 +1,4 @@
 from past.utils import old_div
-
 __author__ = 'alansanders'
 
 import numpy as np
@@ -30,17 +29,15 @@ def find_centroid(img, x=None, y=None, threshold=None):
     if img.shape != (y.size, x.size):
         raise ValueError('Shape of img(y,x) does not match (x,y)')
     # remove background - the maximum value of the outer array elements and threshold to 0
-    bkgd = np.concatenate((
-        img[0, :],  # bottom
-        img[-1, :],  # top
-        img[:, 0].flatten(),  # left
-        img[:, -1].flatten())  # right
+    bkgd = np.concatenate((img[0, :],  # bottom
+                           img[-1, :],  # top
+                           img[:, 0].flatten(),  # left
+                           img[:, -1].flatten())  # right
                           ).max()
     img *= (img - bkgd >= 0)
     # apply threshold
     if threshold is not None:
-        threshold = threshold * img.max() + (
-            1 - threshold) * img.min()  # n(x-y)+y = nx +y(1-n)
+        threshold = threshold*img.max() + (1 - threshold)*img.min()  # n(x-y)+y = nx +y(1-n)
         img *= (img >= threshold)
     # calculate moments
     m10 = np.sum(y.reshape(img.shape[0], 1) * img)
@@ -51,8 +48,7 @@ def find_centroid(img, x=None, y=None, threshold=None):
     return centroid_x, centroid_y
 
 
-gaussian = lambda x, bkgd, A, x0, sigma: bkgd + A * np.exp(
-    old_div(-(x - x0)**2, sigma**2))
+gaussian = lambda x, bkgd, A, x0, sigma: bkgd + A * np.exp(old_div(-(x - x0) ** 2, sigma ** 2))
 
 
 def measure_fwhm(img, x=None, y=None, return_curve=False):
@@ -64,16 +60,8 @@ def measure_fwhm(img, x=None, y=None, return_curve=False):
     cx, cy = find_centroid(img, x, y)
     xdata = np.sum(img, axis=0)
     ydata = np.sum(img, axis=1)
-    p0_x = [
-        xdata.min(),
-        xdata.max() - xdata.min(), cx,
-        old_div((x.max() - x.min()), 2)
-    ]
-    p0_y = [
-        ydata.min(),
-        ydata.max() - ydata.min(), cy,
-        old_div((y.max() - y.min()), 2)
-    ]
+    p0_x = [xdata.min(), xdata.max() - xdata.min(), cx, old_div((x.max() - x.min()), 2)]
+    p0_y = [ydata.min(), ydata.max() - ydata.min(), cy, old_div((y.max() - y.min()), 2)]
     popt_x, pcov_x = curve_fit(gaussian, x, xdata, p0_x)
     popt_y, pcov_y = curve_fit(gaussian, y, ydata, p0_y)
     fwhm_x = 2 * np.sqrt(2 * np.log(2)) * popt_x[3]
@@ -89,8 +77,8 @@ if __name__ == '__main__':
     x = np.linspace(-1, 2, 200)
     y = np.linspace(-1, 1, 100)
     xx, yy = np.meshgrid(x, y)
-    img = gaussian(xx, 0, 1, 0, 1) * gaussian(yy, 0, 1, 0, 0.5)
-    plt.pcolormesh(x, y, img)
+    img = gaussian(xx,0,1,0,1) * gaussian(yy,0,1,0,0.5)
+    plt.pcolormesh(x,y,img)
 
     cx, cy = find_centroid(img, x, y)
     print(cy, cy)

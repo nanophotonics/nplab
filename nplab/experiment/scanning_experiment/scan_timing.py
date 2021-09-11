@@ -1,6 +1,5 @@
 from __future__ import print_function
 from builtins import object
-
 __author__ = 'alansanders'
 
 import numpy as np
@@ -33,9 +32,7 @@ class TimedScan(object):
             return 0
         times = self._step_times[mask].flatten()
         average_step_time = np.mean(np.diff(times))
-        etr = (
-            self.total_points - self._index
-        ) * average_step_time  # remaining steps = self.total_points - index
+        etr = (self.total_points - self._index) * average_step_time  # remaining steps = self.total_points - index
         return etr
 
     def format_time(self, t):
