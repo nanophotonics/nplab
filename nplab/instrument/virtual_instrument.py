@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 """
 Created on Wed May 31 14:20:06 2017
 
@@ -19,9 +20,8 @@ from nplab.instrument.message_bus_instrument import MessageBusInstrument
 
 
 class VirtualInstrument_listener(object):
-    def __init__(self,
-                 memory_size=65536,
-                 memory_identifier='VirtualInstMemory'):
+
+    def __init__(self, memory_size=65536, memory_identifier='VirtualInstMemory'):
         """
         A class for creating the listening element of the "virtual" instrument, when subclassed this
         essentially creates a memory map and waits for commands. Upon receiving a command the instrument
@@ -32,16 +32,13 @@ class VirtualInstrument_listener(object):
 
             memory_identifier(str): The memory str identifier - this is usually set as the "VirtualInstMemory_'classname'"
         """
-        self.memory_map_in = mmap.mmap(0, memory_size,
-                                       memory_identifier + 'In')
-        self.memory_map_out = mmap.mmap(0, memory_size * 100,
-                                        memory_identifier + 'Out')
+        self.memory_map_in = mmap.mmap(0, memory_size, memory_identifier + 'In')
+        self.memory_map_out = mmap.mmap(0, memory_size * 100, memory_identifier + 'Out')
         self.end_line = 'THE END\n'
         self.out_size = memory_size * 100
         self.memory_identifier = memory_identifier
         np.set_printoptions(
-            threshold=np.inf
-        )  # Set the prints options so that the arrays are printed as strings with no shortening
+            threshold=np.inf)  # Set the prints options so that the arrays are printed as strings with no shortening
 
     def begin_listening(self):
         """ Start the listening loop, this is a never ending loop which looks for 
@@ -61,25 +58,19 @@ class VirtualInstrument_listener(object):
                 if data is not None:
                     self.memory_map_out.seek(0)
                     if not hasattr(data, '__iter__'):
-                        data = (data, )
+                        data = (data,)
                     self.memory_map_out.write('data = [];')
                     for data_i in data:
                         try:
-                            data_i_str = np.array_str(
-                                data_i)  # attempt to convert array's to a str
+                            data_i_str = np.array_str(data_i)  # attempt to convert array's to a str
                             try:
-                                self.memory_map_out.write(
-                                    'data.append(np.array(' + data_i_str +
-                                    '));')
+                                self.memory_map_out.write('data.append(np.array(' + data_i_str + '));')
                             except ValueError:
-                                print(
-                                    'Memory map size error, Increase the output map size'
-                                )
+                                print('Memory map size error, Increase the output map size')
 
                         except AttributeError:
                             # If the data is not a numpy array it will be passed at its str representation...This should work for most dtypes?
-                            self.memory_map_out.write('data.append(' +
-                                                      str(data_i) + ');')
+                            self.memory_map_out.write('data.append(' + str(data_i) + ');')
                     self.memory_map_out.write('\n' + self.end_line)
 
     def run_command_str(self, input_str):
@@ -97,12 +88,9 @@ class VirtualInstrument_listener(object):
                 for input_param in input_list:
                     input_param_split = input_param.split('=')
                     if len(input_param_split) == 2:
-                        input_dict[input_param.split('=')
-                                   [0]] = input_param.split('=')[1]
+                        input_dict[input_param.split('=')[0]] = input_param.split('=')[1]
                     else:
-                        print(
-                            'Arguments must be named for use through VirtualInstrument'
-                        )
+                        print('Arguments must be named for use through VirtualInstrument')
                 #           print 'input_dict', input_dict
                 return function(**input_dict)
             else:
@@ -115,9 +103,8 @@ class VirtualInstrument_listener(object):
 
 
 class VirtualInstrument_speaker(MessageBusInstrument):
-    def __init__(self,
-                 memory_size=65536,
-                 memory_identifier='VirtualInstMemory'):
+
+    def __init__(self, memory_size=65536, memory_identifier='VirtualInstMemory'):
         """
         When subclassed creates the speaker half of the virtual instrument.
         It does this by creating read and write functions pass and parse commands/data to
@@ -129,11 +116,9 @@ class VirtualInstrument_speaker(MessageBusInstrument):
             memory_identifier(str): The memory str identifier - this is usually set as the "VirtualInstMemory_'classname'"
         """
         self.end_line = 'THE END\n'
-        self.memory_map_in = mmap.mmap(0, memory_size,
-                                       memory_identifier + 'In')
+        self.memory_map_in = mmap.mmap(0, memory_size, memory_identifier + 'In')
         self.memory_map_in.write(self.end_line)
-        self.memory_map_out = mmap.mmap(0, memory_size * 100,
-                                        memory_identifier + 'Out')
+        self.memory_map_out = mmap.mmap(0, memory_size * 100, memory_identifier + 'Out')
         self.memory_map_out.write(self.end_line)
 
         self.out_size = memory_size * 100
@@ -182,6 +167,7 @@ def function_builder(command_name):
     """A function for generating the write functions for intergrating classes with
     the speaker instrument class.
     """
+
     def wrapped_function(*args, **kwargs):
         input_str = ''
         obj = args[0]
@@ -206,26 +192,20 @@ def create_speaker_class(original_class):
     A function that creates a speaker class by subclassing the original class
     and replacing any function calls with write commands that pass the functions to the listener
     """
+
     class original_class_Stripped(original_class):  # copies the class
         def __init__(self):
             original_class.__init__(self)
 
-    for command_name in list(
-            original_class.__dict__.keys()):  # replaces any method
+    for command_name in list(original_class.__dict__.keys()):  # replaces any method
         command = getattr(original_class_Stripped, command_name)
         if inspect.ismethod(command):
-            setattr(original_class_Stripped, command_name,
-                    function_builder(command_name))
+            setattr(original_class_Stripped, command_name, function_builder(command_name))
 
-    class virtual_speaker_class(
-            original_class_Stripped, VirtualInstrument_speaker
-    ):  # creates the new class by sublcassing the stripped class and the speaker class
-        def __init__(self,
-                     memory_size=65536,
-                     memory_identifier='VirtualInstMemory_' +
-                     original_class.__name__):
-            VirtualInstrument_speaker.__init__(self, memory_size,
-                                               memory_identifier)
+    class virtual_speaker_class(original_class_Stripped,
+                                VirtualInstrument_speaker):  # creates the new class by sublcassing the stripped class and the speaker class
+        def __init__(self, memory_size=65536, memory_identifier='VirtualInstMemory_' + original_class.__name__):
+            VirtualInstrument_speaker.__init__(self, memory_size, memory_identifier)
 
     return virtual_speaker_class()
 
@@ -235,14 +215,11 @@ def create_listener_class(original_class):
     Args:
         original_class(class):  The instrument class the listener will be a subclass of 
     """
+
     class virtual_listener(original_class, VirtualInstrument_listener):
-        def __init__(self,
-                     memory_size=65536,
-                     memory_identifier='VirtualInstMemory_' +
-                     original_class.__name__):
+        def __init__(self, memory_size=65536, memory_identifier='VirtualInstMemory_' + original_class.__name__):
             original_class.__init__(self)
-            VirtualInstrument_listener.__init__(self, memory_size,
-                                                memory_identifier)
+            VirtualInstrument_listener.__init__(self, memory_size, memory_identifier)
 
     return virtual_listener
 
@@ -250,9 +227,8 @@ def create_listener_class(original_class):
 def create_listener_by_name(module_name, class_name):
     """A convenceince function for creating the listener class via the name of the module and class
     """
-    exec('from ' + (module_name + " import " + class_name) + ' as ' +
-         class_name)
-    exec('virtual_listener=create_listener_class(' + class_name + ')')
+    exec ('from ' + (module_name + " import " + class_name) + ' as ' + class_name)
+    exec ('virtual_listener=create_listener_class(' + class_name + ')')
     return virtual_listener
 
 
@@ -268,7 +244,9 @@ def setup_communication(original_class):
     speaker_class = create_speaker_class(original_class)
     import subprocess
     command_str = "exec(\'import qtpy;from nplab.instrument.virtual_instrument import inialise_listenser;inialise_listenser(" + r"\"" + original_class.__module__ + r"\",\"" + original_class.__name__ + r"\"" + ")')"
-    listner_console = subprocess.Popen(["python32", "-c", command_str])
+    listner_console = subprocess.Popen(["python32",
+                                        "-c",
+                                        command_str])
     return speaker_class, listner_console
 
 

@@ -13,23 +13,22 @@ the observed counts or higher would be seen in this case are calculated. This wi
 the fit. These are used as weights for the next round of fitting. This continues until the fit converges.
 """
 
+
 import numpy as np
 import scipy.stats as stat
 
-
-def Find_Weights(Background, Data):
-    """
+def Find_Weights(Background,Data):
+	"""
 	Given a background fit (Background) and a spectrum (Data), calculates the probabilities for seeing the number of counts observed or greater
 	at each wavelength assuming they are Poisson distributed with means at the background fit value.
 	"""
-    Weights = []
-    for i in range(len(Background)):
-        Weights.append(1 - stat.poisson.cdf(Data[i], Background[i]))
-    return Weights
+	Weights=[]
+	for i in range(len(Background)):
+		Weights.append(1-stat.poisson.cdf(Data[i],Background[i]))
+	return Weights
 
-
-def Iterative_Step(Data, Current_Params, Degree, Return_BG=False):
-    """
+def Iterative_Step(Data,Current_Params,Degree,Return_BG=False):
+	"""
 	Given a spectrum and background fit, updates the background fit. 
 
 	Data=1D array for spectrum. Current_Params=List of polynomial coefficents for the BG fit, highest power first. Degree=order of polynomial fit. 
@@ -38,23 +37,20 @@ def Iterative_Step(Data, Current_Params, Degree, Return_BG=False):
 	INPUT coefficents is also returned.
 	"""
 
-    Background = np.polyval(Current_Params, list(range(len(Data))))
-    Background *= (
-        Background > 0
-    )  #For a Poisson distribution, negative values are meaningless
+	Background=np.polyval(Current_Params,list(range(len(Data))))
+	Background*=(Background>0)  #For a Poisson distribution, negative values are meaningless
 
-    Weights = Find_Weights(Background, Data)
+	Weights=Find_Weights(Background,Data)
+	
+	Poly_Params=np.polyfit(list(range(len(Data))),Data,Degree,w=Weights)
 
-    Poly_Params = np.polyfit(list(range(len(Data))), Data, Degree, w=Weights)
+	if Return_BG is False:
+		return Poly_Params
+	else:
+		return Poly_Params,Background
 
-    if Return_BG is False:
-        return Poly_Params
-    else:
-        return Poly_Params, Background
-
-
-def Run(Data, Degree, Threshold=0.0001, Max_Steps=None, Auto_Remove=True):
-    """
+def Run(Data,Degree,Threshold=0.0001,Max_Steps=None,Auto_Remove=True):
+	"""
 	Main function that completes the background subtraction. 
 
 	Data=1D array for spectrum. Degree is the polynomial degree to fit. The initial sum squared difference between the first two backgrounds is 
@@ -64,38 +60,37 @@ def Run(Data, Degree, Threshold=0.0001, Max_Steps=None, Auto_Remove=True):
 	If Auto_Remove is True, the background subtracted spectrum is returned. If it is False, the Background is returned.
 	"""
 
-    Background = None
-    Intial_Difference = None
-    End = False
+	Background=None
+	Intial_Difference=None
+	End=False
 
-    Params = np.polyfit(list(range(len(Data))), Data, Degree)
+	Params=np.polyfit(list(range(len(Data))),Data,Degree)
 
-    Steps = 0
+	Steps=0
 
-    while End is False:
-        Params, New_Background = Iterative_Step(Data, Params, Degree, True)
-        if Background is None:
-            Background = New_Background
-        else:
-            Difference = np.sum(
-                np.square(np.array(New_Background) -
-                          np.array(Background)))**0.5
-            if Intial_Difference is None:
-                Intial_Difference = Difference
-            else:
-                if Difference < Threshold * Intial_Difference:
-                    End = True
-                else:
-                    Background = New_Background
-        if Max_Steps is not None:
-            if Steps > Max_Steps:
-                End = True
-        Steps += 1
+	while End is False:
+		Params,New_Background=Iterative_Step(Data,Params,Degree,True)
+		if Background is None:
+			Background=New_Background
+		else:
+			Difference=np.sum(np.square(np.array(New_Background)-np.array(Background)))**0.5
+			if Intial_Difference is None:
+				Intial_Difference=Difference
+			else:
+				if Difference<Threshold*Intial_Difference:
+					End=True
+				else:
+					Background=New_Background
+		if Max_Steps is not None:
+			if Steps>Max_Steps:
+				End=True
+		Steps+=1
 
-    Background = np.polyval(Params, list(range(len(Data))))
-    Background *= (Background > 0)
+	Background=np.polyval(Params,list(range(len(Data))))
+	Background*=(Background>0)
 
-    if Auto_Remove is True:
-        return np.array(Data) - np.array(Background)
-    else:
-        return np.array(Background)
+	if Auto_Remove is True:
+		return np.array(Data)-np.array(Background)
+	else:
+		return np.array(Background)
+

@@ -22,15 +22,10 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
     by the generation of dock widgets, this allow the user to create a save a custom
     gui without all of the hard work
     """
-    def __init__(self,
-                 instrument_dict,
-                 parent=None,
-                 dock_settings_path=None,
-                 scripts_path=None,
-                 working_directory=None,
-                 file_path=None,
-                 terminal=False,
-                 dark=False):
+
+    def __init__(self, instrument_dict, parent=None, dock_settings_path=None,
+                 scripts_path=None, working_directory=None, file_path=None,
+                 terminal=False, dark=False):  
         """Args:
             instrument_dict(dict) :     This is a dictionary containing the
                                         instruments objects where the key is the 
@@ -80,12 +75,9 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
         self.actions = dict(Views={}, Instruments={})
 
         self.dockwidgetArea = pyqtgraph.dockarea.DockArea()
-        self.dockWidgetArea = self.replace_widget(self.verticalLayout,
-                                                  self.centralWidget(),
-                                                  self.dockwidgetArea)
+        self.dockWidgetArea = self.replace_widget(self.verticalLayout, self.centralWidget(), self.dockwidgetArea)
         self.dockWidgetAllInstruments.setWidget(self.dockwidgetArea)
-        self.dockWidgetAllInstruments.setTitleBarWidget(
-            QtWidgets.QWidget())  # This trick makes the title bar disappear
+        self.dockWidgetAllInstruments.setTitleBarWidget(QtWidgets.QWidget())  # This trick makes the title bar disappear
 
         # Iterate over all the opened instruments. If the instrument has a GUI (i.e. if they have the get_qt_ui function
         # defined inside them), then create a pyqtgraph.Dock for it and add its widget to the Dock. Also prints out any
@@ -94,7 +86,7 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
 
         for instr in self.instr_dict:
             self._open_one_gui(instr)
-
+            
         self.script_menu = None
         if scripts_path is not None:
             self.scripts_path = scripts_path
@@ -122,16 +114,13 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
             self.dock_settings_path = None
         self.showMaximized()
 
-    def __getattribute__(
-        self, name
-    ):  # All instruments log function and method calls at debugging level
+    def __getattribute__(self, name):  # All instruments log function and method calls at debugging level
 
         returned = QtCore.QObject.__getattribute__(self, name)
         if inspect.isfunction(returned) or inspect.ismethod(returned):
             codeline = inspect.getsourcelines(returned)[1]
             filename = inspect.getfile(returned)
-            self._logger.debug('Called %s on line %g of %s' %
-                               (returned.__name__, codeline, filename))
+            self._logger.debug('Called %s on line %g of %s' % (returned.__name__, codeline, filename))
         return returned
 
     def _open_one_gui(self, instrument_name):
@@ -139,41 +128,25 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
         get_qt_ui function for a single panel or if invidual control and preview widgets
         are possible then the get_control_widget and get_preview_widgets will be sed
         """
-        if hasattr(self.instr_dict[instrument_name],
-                   'get_control_widget') or hasattr(
-                       self.instr_dict[instrument_name], 'get_preview_widget'):
+        if hasattr(self.instr_dict[instrument_name], 'get_control_widget') or hasattr(self.instr_dict[instrument_name],
+                                                                                      'get_preview_widget'):
             if hasattr(self.instr_dict[instrument_name], 'get_control_widget'):
-                self.allWidgets[instrument_name +
-                                ' controls'] = self.instr_dict[
-                                    instrument_name].get_control_widget()
-                self.allDocks[instrument_name +
-                              ' controls'] = pyqtgraph.dockarea.Dock(
-                                  instrument_name + ' controls')
-                self.dockwidgetArea.addDock(
-                    self.allDocks[instrument_name + ' controls'], 'left')
-                self.allDocks[instrument_name + ' controls'].addWidget(
-                    self.allWidgets[instrument_name + ' controls'])
+                self.allWidgets[instrument_name + ' controls'] = self.instr_dict[instrument_name].get_control_widget()
+                self.allDocks[instrument_name + ' controls'] = pyqtgraph.dockarea.Dock(instrument_name + ' controls')
+                self.dockwidgetArea.addDock(self.allDocks[instrument_name + ' controls'], 'left')
+                self.allDocks[instrument_name + ' controls'].addWidget(self.allWidgets[instrument_name + ' controls'])
                 self._addActionViewMenu(instrument_name + ' controls')
             if hasattr(self.instr_dict[instrument_name], 'get_preview_widget'):
-                self.allWidgets[instrument_name +
-                                ' display'] = self.instr_dict[
-                                    instrument_name].get_preview_widget()
-                self.allDocks[instrument_name +
-                              ' display'] = pyqtgraph.dockarea.Dock(
-                                  instrument_name + ' display')
-                self.dockwidgetArea.addDock(
-                    self.allDocks[instrument_name + ' display'], 'left')
-                self.allDocks[instrument_name + ' display'].addWidget(
-                    self.allWidgets[instrument_name + ' display'])
+                self.allWidgets[instrument_name + ' display'] = self.instr_dict[instrument_name].get_preview_widget()
+                self.allDocks[instrument_name + ' display'] = pyqtgraph.dockarea.Dock(instrument_name + ' display')
+                self.dockwidgetArea.addDock(self.allDocks[instrument_name + ' display'], 'left')
+                self.allDocks[instrument_name + ' display'].addWidget(self.allWidgets[instrument_name + ' display'])
                 self._addActionViewMenu(instrument_name + ' display')
         elif hasattr(self.instr_dict[instrument_name], 'get_qt_ui'):
-            self.allWidgets[instrument_name] = self.instr_dict[
-                instrument_name].get_qt_ui()
-            self.allDocks[instrument_name] = pyqtgraph.dockarea.Dock(
-                instrument_name)
+            self.allWidgets[instrument_name] = self.instr_dict[instrument_name].get_qt_ui()
+            self.allDocks[instrument_name] = pyqtgraph.dockarea.Dock(instrument_name)
             self.dockwidgetArea.addDock(self.allDocks[instrument_name], 'left')
-            self.allDocks[instrument_name].addWidget(
-                self.allWidgets[instrument_name])
+            self.allDocks[instrument_name].addWidget(self.allWidgets[instrument_name])
             self._addActionViewMenu(instrument_name)
         else:
             self._logger.warn('%s does not have a get_qt_ui' % instrument_name)
@@ -275,8 +248,7 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
         except Exception as e:
             self._logger.debug(e)
             self._logger.warn(
-                'The dock_settings file does not exist! or it is for the wrong docks!'
-            )
+                'The dock_settings file does not exist! or it is for the wrong docks!')
 
     def menuNewExperiment(self):
         """A start new experiment button causing the gui to close ask for a new file and reopen"""
@@ -309,33 +281,21 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
         from nplab.utils import terminal
         if self.terminalWindow is None:
             if os.environ["QT_API"] == "pyqt5":
-                self.terminalWindow = terminal.QIPythonWidget(
-                    scripts_path=self.scripts_path)
-                self.terminalWindow.push_vars({
-                    'gui': self,
-                    'exper': self.instr_dict
-                })
+                self.terminalWindow = terminal.QIPythonWidget(scripts_path=self.scripts_path)
+                self.terminalWindow.push_vars({'gui': self, 'exper': self.instr_dict})
                 self.terminalWindow.push_vars(self.instr_dict)
-                self.terminalWindow.execute_command(
-                    'import nplab.datafile as df')
+                self.terminalWindow.execute_command('import nplab.datafile as df')
                 self.terminalWindow.execute_command('')
-                handle = logging.StreamHandler(
-                    self.terminalWindow.kernel_manager.kernel.stdout)
+                handle = logging.StreamHandler(self.terminalWindow.kernel_manager.kernel.stdout)
             else:
                 self.terminalWindow = terminal.Ipython()
-                self.terminalWindow.push({
-                    'gui': self,
-                    'exper': self.instr_dict
-                })
+                self.terminalWindow.push({'gui': self, 'exper': self.instr_dict})
                 self.terminalWindow.push(self.instr_dict)
                 self.terminalWindow.execute('import nplab.datafile as df')
                 self.terminalWindow.execute('data_file = df.current()')
                 self.terminalWindow.execute('')
-                handle = logging.StreamHandler(
-                    self.terminalWindow.kernel.stdout)
-            formatter = ColoredFormatter(
-                '[%(name)s] - %(levelname)s: %(message)s - %(asctime)s ',
-                '%H:%M')
+                handle = logging.StreamHandler(self.terminalWindow.kernel.stdout)
+            formatter = ColoredFormatter('[%(name)s] - %(levelname)s: %(message)s - %(asctime)s ', '%H:%M')
             handle.setFormatter(formatter)
             self._logger.addHandler(handle)
             instr_logger = logging.getLogger('Instrument')
@@ -373,9 +333,7 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
             for fn in filenames:
                 if fn != '__init__.py':
                     menuitem = current.addAction(fn)
-                    menuitem.triggered.connect(
-                        partial(self.menuScriptClicked, '\\'.join(
-                            (dirpath, fn))))
+                    menuitem.triggered.connect(partial(self.menuScriptClicked, '\\'.join((dirpath,fn))))
 
         script_menu.addSeparator()
         refreshScripts = script_menu.addAction('Refresh')
@@ -396,11 +354,10 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
                 self.menuTerminal()
             self.terminalWindow.run_script(scriptname)
         else:
-            self._logger.debug('Running %s' %
-                               os.path.join(self.scripts_path, scriptname))
+            self._logger.debug('Running %s' % os.path.join(self.scripts_path, scriptname))
             runfile(scriptname, current_namespace=True)
             # exec(open(os.path.join(self.scripts_path, scriptname)).read())
-
+            
     def VerboseChanged(self, action):
         """Automatically change the loggers 
         verbosity level across all instruments upon 
@@ -423,14 +380,13 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
         self._logger.info(quit_msg)
         try:
             if os.environ["QT_API"] == "pyqt5":
-                reply = QtWidgets.QMessageBox.question(
-                    self, 'Message', quit_msg, QtWidgets.QMessageBox.Yes
-                    | QtWidgets.QMessageBox.Save | QtWidgets.QMessageBox.No)
+                reply = QtWidgets.QMessageBox.question(self, 'Message', quit_msg,
+                                                       QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Save | QtWidgets.QMessageBox.No)
 
             else:
-                reply = QtWidgets.QMessageBox.question(
-                    self, 'Message', quit_msg, QtWidgets.QMessageBox.Yes,
-                    QtWidgets.QMessageBox.Save, QtWidgets.QMessageBox.No)
+                reply = QtWidgets.QMessageBox.question(self, 'Message', quit_msg,
+                                                       QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.Save,
+                                                       QtWidgets.QMessageBox.No)
 
             if reply != QtWidgets.QMessageBox.No:
                 if reply == QtWidgets.QMessageBox.Save:

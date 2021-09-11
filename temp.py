@@ -3,11 +3,10 @@ from time import sleep
 from traits.api import *
 from traitsui.api import View, Item, ButtonEditor
 
-
 class TextDisplay(HasTraits):
-    string = String()
+    string =  String()
 
-    view = View(Item('string', show_label=False, springy=True, style='custom'))
+    view= View( Item('string',show_label=False, springy=True, style='custom' ))
 
 
 class CaptureThread(Thread):
@@ -20,13 +19,12 @@ class CaptureThread(Thread):
             self.display.string += '%d image captured\n' % n_img
         self.display.string += 'Camera stopped\n'
 
-
 class Camera(HasTraits):
     start_stop_capture = Button()
     display = Instance(TextDisplay)
     capture_thread = Instance(CaptureThread)
 
-    view = View(Item('start_stop_capture', show_label=False))
+    view = View( Item('start_stop_capture', show_label=False ))
 
     def _start_stop_capture_fired(self):
         if self.capture_thread and self.capture_thread.isAlive():
@@ -36,7 +34,6 @@ class Camera(HasTraits):
             self.capture_thread.wants_abort = False
             self.capture_thread.display = self.display
             self.capture_thread.start()
-
 
 class MainWindow(HasTraits):
     display = Instance(TextDisplay, ())

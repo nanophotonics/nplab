@@ -108,16 +108,14 @@ def make_graph_widget(folder):
     def xlim_func():
         reals = [mode['real'](f, D, t, n) for mode in modes.values()]
         return min(reals) * 0.8, max(reals) * 1.1
-
     degeneracies = json.load(open(folder / 'degeneracies.json'))
-    degeneracies = {k + ' mode': v for k, v in degeneracies.items()}
-    return GraphWithPinAndClearButtons(
-        modes,
-        xlim_func,
-        degeneracies=degeneracies,
-        resolution=100,
-        title=folder.stem,
-    )
+    degeneracies = {k+' mode': v for k, v in degeneracies.items()}
+    return GraphWithPinAndClearButtons(modes,
+                                       xlim_func,
+                                       degeneracies=degeneracies,
+                                       resolution=100,
+                                       title=folder.stem,                                      
+                                       )
 
 
 if __name__ == '__main__':

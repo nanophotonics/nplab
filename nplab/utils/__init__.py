@@ -7,11 +7,7 @@ import threading
 import collections
 
 
-def monitor_property(instance,
-                     property_name,
-                     how_long,
-                     how_often,
-                     warn_limits=None):
+def monitor_property(instance, property_name, how_long, how_often, warn_limits=None):
     """
     Given an nplab instrument instance and one of it's properties, it creates a deque containing the property's value
     over time. The deque gets updated in a background thread.
@@ -23,8 +19,7 @@ def monitor_property(instance,
     :param warn_limits: None or 2-tuple. If the monitored value goes outside these limits, throws out a warning.
     :return:
     """
-    setattr(instance, property_name + '_history',
-            collections.deque(maxlen=int(how_long / how_often)))
+    setattr(instance, property_name + '_history', collections.deque(maxlen=int(how_long / how_often)))
     setattr(instance, '_monitoring_' + property_name, True)
 
     def monitor():
@@ -33,13 +28,10 @@ def monitor_property(instance,
             if warn_limits is not None:
                 if value < warn_limits[0] or value > warn_limits[1]:
                     setattr(instance, '_monitoring_' + property_name, False)
-                    raise ValueError('%s=%g is outside of range' %
-                                     (property_name, value))
-            getattr(instance,
-                    property_name + '_history').append([time.time(), value])
+                    raise ValueError('%s=%g is outside of range' % (property_name, value))
+            getattr(instance, property_name + '_history').append([time.time(), value])
             time.sleep(how_often)
 
     monitor_thread = threading.Thread(target=monitor)
-    monitor_thread.setDaemon(
-        True)  # a daemon thread will not prevent the program from exiting
+    monitor_thread.setDaemon(True)  # a daemon thread will not prevent the program from exiting
     monitor_thread.start()

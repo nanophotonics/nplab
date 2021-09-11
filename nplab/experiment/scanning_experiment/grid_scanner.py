@@ -12,7 +12,6 @@ from builtins import str
 from builtins import range
 from past.utils import old_div
 from functools import reduce
-
 __author__ = 'alansanders'
 
 import numpy as np
@@ -32,6 +31,7 @@ class GridScan(ScanningExperiment, TimedScan):
     """
     Note that the axes (x,y,z) will relate to the indices (z,y,x) as per array standards.
     """
+
     def __init__(self):
         ScanningExperiment.__init__(self)
         TimedScan.__init__(self)
@@ -47,7 +47,7 @@ class GridScan(ScanningExperiment, TimedScan):
         self._num_axes = len(self.axes)
         self._unit_conversion = {'nm': 1e-9, 'um': 1e-6, 'mm': 1e-3}
         self._size_unit, self._step_unit, self._init_unit = ('um', 'um', 'um')
-        self.grid_shape = (0, 0)
+        self.grid_shape = (0,0)
         #self.init_grid(self.axes, self.size, self.step, self.init)
 
     def _update_axes(self, num_axes):
@@ -62,15 +62,11 @@ class GridScan(ScanningExperiment, TimedScan):
         current_axes = self.axes
         current_axes_names = self.axes_names
         # numpy arrays must be explicitly copied
-        current_size, current_step, current_init = (self.size.copy(),
-                                                    self.step.copy(),
-                                                    self.init.copy())
+        current_size, current_step, current_init = (self.size.copy(), self.step.copy(), self.init.copy())
         if self.num_axes > len(current_axes):
-            self.axes = [''] * self.num_axes
-            self.axes_names = [''] * self.num_axes
-            self.size, self.step, self.init = (np.zeros(self.num_axes),
-                                               np.zeros(self.num_axes),
-                                               np.zeros(self.num_axes))
+            self.axes = ['']*self.num_axes
+            self.axes_names = ['']*self.num_axes
+            self.size, self.step, self.init = (np.zeros(self.num_axes), np.zeros(self.num_axes), np.zeros(self.num_axes))
             self.axes[:len(current_axes)] = current_axes
             self.axes_names[:len(current_axes)] = current_axes_names
             self.size[:len(current_axes)] = current_size
@@ -94,29 +90,21 @@ class GridScan(ScanningExperiment, TimedScan):
         if value not in self._unit_conversion:
             raise ValueError('a valid unit must be supplied')
         unit_param = '_%s_unit' % param
-        old_value = getattr(self, unit_param) if hasattr(self,
-                                                         unit_param) else value
+        old_value = getattr(self, unit_param) if hasattr(self, unit_param) else value
         setattr(self, unit_param, value)
         a = getattr(self, param)
-        a *= old_div(self._unit_conversion[old_value],
-                     self._unit_conversion[value])
+        a *= old_div(self._unit_conversion[old_value], self._unit_conversion[value])
 
     num_axes = property(fget=lambda self: self._num_axes, fset=_update_axes)
-    size_unit = property(
-        fget=lambda self: self._size_unit,
-        fset=lambda self, value: self.rescale_parameter('size', value))
-    step_unit = property(
-        fget=lambda self: self._step_unit,
-        fset=lambda self, value: self.rescale_parameter('step', value))
-    init_unit = property(
-        fget=lambda self: self._init_unit,
-        fset=lambda self, value: self.rescale_parameter('init', value))
-    si_size = property(
-        fget=lambda self: self.size * self._unit_conversion[self.size_unit])
-    si_step = property(
-        fget=lambda self: self.step * self._unit_conversion[self.step_unit])
-    si_init = property(
-        fget=lambda self: self.init * self._unit_conversion[self.init_unit])
+    size_unit = property(fget=lambda self: self._size_unit,
+                         fset=lambda self, value: self.rescale_parameter('size', value))
+    step_unit = property(fget=lambda self: self._step_unit,
+                         fset=lambda self, value: self.rescale_parameter('step', value))
+    init_unit = property(fget=lambda self: self._init_unit,
+                         fset=lambda self, value: self.rescale_parameter('init', value))
+    si_size = property(fget=lambda self: self.size*self._unit_conversion[self.size_unit])
+    si_step = property(fget=lambda self: self.step*self._unit_conversion[self.step_unit])
+    si_init = property(fget=lambda self: self.init*self._unit_conversion[self.init_unit])
 
     def run(self):
         """
@@ -126,14 +114,12 @@ class GridScan(ScanningExperiment, TimedScan):
         :param rate: the update period in seconds
         :return:
         """
-        if isinstance(self.acquisition_thread,
-                      threading.Thread) and self.acquisition_thread.is_alive():
+        if isinstance(self.acquisition_thread, threading.Thread) and self.acquisition_thread.is_alive():
             print('scan already running')
             return
         self.init_scan()
         self.acquisition_thread = threading.Thread(target=self.scan,
-                                                   args=(self.axes, self.size,
-                                                         self.step, self.init))
+                                                   args=(self.axes, self.size, self.step, self.init))
         self.acquisition_thread.start()
 
     def init_grid(self, axes, size, step, init):
@@ -143,7 +129,7 @@ class GridScan(ScanningExperiment, TimedScan):
             s = size[i] * self._unit_conversion[self.size_unit]
             st = step[i] * self._unit_conversion[self.step_unit]
             s0 = init[i] * self._unit_conversion[self.init_unit]
-            ax = np.arange(0, s + st / 2., st) - s / 2. + s0
+            ax = np.arange(0, s+st/2., st) - s/2. + s0
             scan_axes.append(ax)
         self.grid_shape = tuple(ax.size for ax in scan_axes)
         self.total_points = reduce(operator.mul, self.grid_shape, 1)
@@ -152,8 +138,7 @@ class GridScan(ScanningExperiment, TimedScan):
 
     def init_current_grid(self):
         """Convenience method that initialises a grid based on current parameters."""
-        axes, size, step, init = (self.axes[::-1], self.size[::-1],
-                                  self.step[::-1], self.init[::-1])
+        axes, size, step, init = (self.axes[::-1], self.size[::-1], self.step[::-1], self.init[::-1])
         self.init_grid(axes, size, step, init)
 
     def set_stage(self, stage, axes=None):
@@ -170,50 +155,41 @@ class GridScan(ScanningExperiment, TimedScan):
         else:
             for ax in axes:
                 if ax not in self.stage.axis_names:
-                    raise ValueError(
-                        'one of the supplied axes are invalid (not found in the stage axis names)'
-                    )
+                    raise ValueError('one of the supplied axes are invalid (not found in the stage axis names)')
             self.num_axes = len(axes)
             self.axes = list(axes)
         self.set_init_to_current_position()
 
     def move(self, position, axis):
         """Move to a position along a given axis."""
-        self.stage.move(old_div(position, self.stage_units), axis=axis)
+        self.stage.move(old_div(position,self.stage_units), axis=axis)
 
     def get_position(self, axis):
         return self.stage.get_position(axis=axis) * self.stage_units
-
+    
     def outer_loop_start(self):
         """This function is called before the scan happens, for each value of the outermost variable (usually Z)"""
         pass
-
     def middle_loop_start(self):
         """This function is called before the scan happens, for each value of the second-outermost variable (usually Y)"""
         pass
-
     def outer_loop_end(self):
         """This function is called after the scan happens, for each value of the outermost variable (usually Z)"""
         pass
-
     def middle_loop_end(self):
         """This function is called after the scan happens, for each value of the second-outermost variable (usually Y)"""
         pass
-
     def scan(self, axes, size, step, init):
         """Scans a grid, applying a function at each position."""
         self.abort_requested = False
-        axes, size, step, init = (axes[::-1], size[::-1], step[::-1],
-                                  init[::-1])
+        axes, size, step, init = (axes[::-1], size[::-1], step[::-1], init[::-1])
         scan_axes = self.init_grid(axes, size, step, init)
         print(scan_axes)
         self.open_scan()
         # get the indices of points along each of the scan axes for use with snaking over array
         pnts = [list(range(axis.size)) for axis in scan_axes]
 
-        self.indices = [
-            -1,
-        ] * len(axes)
+        self.indices = [-1,] * len(axes)
         self._index = 0
         self._step_times = np.zeros(self.grid_shape)
         self._step_times.fill(np.nan)
@@ -222,16 +198,13 @@ class GridScan(ScanningExperiment, TimedScan):
         scan_start_time = time.time()
         for k in pnts[0]:  # outer most axis
             self.indices = list(self.indices)
-            self.indices[
-                0] = k  # Make sure indices is always up-to-date, for the drift compensation
+            self.indices[0] = k # Make sure indices is always up-to-date, for the drift compensation
             if self.abort_requested:
                 break
             self.outer_loop_start()
-            self.status = 'Scanning layer {0:d}/{1:d}'.format(
-                k + 1, len(pnts[0]))
+            self.status = 'Scanning layer {0:d}/{1:d}'.format(k + 1, len(pnts[0]))
             self.move(scan_axes[0][k], axes[0])
-            pnts[1] = pnts[
-                1][::-1]  # reverse which way is iterated over each time
+            pnts[1] = pnts[1][::-1]  # reverse which way is iterated over each time
             for j in pnts[1]:
                 if self.abort_requested:
                     break
@@ -240,26 +213,21 @@ class GridScan(ScanningExperiment, TimedScan):
                 self.indices[1] = j
                 if len(axes) == 3:  # for 3d grid (volume) scans
                     self.middle_loop_start()
-                    pnts[2] = pnts[
-                        2][::
-                           -1]  # reverse which way is iterated over each time
+                    pnts[2] = pnts[2][::-1]  # reverse which way is iterated over each time
                     for i in pnts[2]:
                         if self.abort_requested:
                             break
                         self.move(scan_axes[2][i], axes[2])
-                        self.indices[
-                            2] = i  # These two lines are redundant.  TODO: pick one...
+                        self.indices[2] = i # These two lines are redundant.  TODO: pick one...
                         #self.indices = (k, j, i) # keeping it as a list allows index assignment
                         self.scan_function(k, j, i)
-                        self._step_times[k, j, i] = time.time()
+                        self._step_times[k,j,i] = time.time()
                         self._index += 1
                     self.middle_loop_end()
-                elif len(
-                        axes
-                ) == 2:  # for regular 2d grid scans ignore third axis i
+                elif len(axes) == 2:  # for regular 2d grid scans ignore third axis i
                     self.indices = (k, j)
                     self.scan_function(k, j)
-                    self._step_times[k, j] = time.time()
+                    self._step_times[k,j] = time.time()
                     self._index += 1
             self.outer_loop_end()
 
@@ -267,8 +235,7 @@ class GridScan(ScanningExperiment, TimedScan):
         self.acquiring.clear()
         # move back to initial positions
         for i in range(len(axes)):
-            self.move(init[i] * self._unit_conversion[self._init_unit],
-                      axes[i])
+            self.move(init[i]*self._unit_conversion[self._init_unit], axes[i])
         # finish the scan
         self.analyse_scan()
         self.close_scan()
@@ -286,8 +253,7 @@ class GridScan(ScanningExperiment, TimedScan):
 
     def set_init_to_current_position(self):
         for i, ax in enumerate(self.axes):
-            self.init[i] = old_div(self.get_position(ax),
-                                   self._unit_conversion[self.init_unit])
+            self.init[i] = old_div(self.get_position(ax), self._unit_conversion[self.init_unit])
 
 
 @inherit_docstring(GridScan)
@@ -315,7 +281,7 @@ class GridScanQt(GridScan, QtCore.QObject):
     def run(self, rate=0.1):
         super(GridScanQt, self).run()
         self.acquiring.wait()
-        self.timer.start(1000 * rate)
+        self.timer.start(1000*rate)
 
     def get_qt_ui(self):
         return GridScanUI(self)
@@ -366,7 +332,7 @@ class GridScanQt(GridScan, QtCore.QObject):
         :param multiplier:
         :return:
         """
-        param = name.split('_', 1)[1]
+        param = name.split('_',1)[1]
         super(GridScanQt, self).vary_axes(name, multiplier=2.)
         getattr(self, '%s_updated' % param).emit(getattr(self, param))
 
@@ -374,33 +340,24 @@ class GridScanQt(GridScan, QtCore.QObject):
         super(GridScanQt, self).set_init_to_current_position()
         self.init_updated.emit(self.init)
 
-    num_axes = property(fget=lambda self: getattr(self, '_num_axes'),
-                        fset=_update_axes)
-    size_unit = property(
-        fget=lambda self: getattr(self, '_size_unit'),
-        fset=lambda self, value: self.rescale_parameter('size', value))
-    step_unit = property(
-        fget=lambda self: getattr(self, '_step_unit'),
-        fset=lambda self, value: self.rescale_parameter('step', value))
-    init_unit = property(
-        fget=lambda self: getattr(self, '_init_unit'),
-        fset=lambda self, value: self.rescale_parameter('init', value))
-
+    num_axes = property(fget=lambda self: getattr(self, '_num_axes'), fset=_update_axes)
+    size_unit = property(fget=lambda self: getattr(self, '_size_unit'),
+                         fset=lambda self, value: self.rescale_parameter('size', value))
+    step_unit = property(fget=lambda self: getattr(self, '_step_unit'),
+                         fset=lambda self, value: self.rescale_parameter('step', value))
+    init_unit = property(fget=lambda self: getattr(self, '_init_unit'),
+                         fset=lambda self, value: self.rescale_parameter('init', value))
 
 #base, widget = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'gridscanner.ui'), from_imports=False)
-
 
 #class GridScannerUI(UiTools, base, widget):
 class GridScanUI(QtWidgets.QWidget, UiTools):
     def __init__(self, grid_scanner):
-        assert isinstance(
-            grid_scanner,
-            GridScanQt), "A valid GridScannerQT subclass must be supplied"
+        assert isinstance(grid_scanner, GridScanQt), "A valid GridScannerQT subclass must be supplied"
         super(GridScanUI, self).__init__()
         self.grid_scanner = grid_scanner
         #self.setupUi(self)
-        uic.loadUi(os.path.join(os.path.dirname(__file__), 'grid_scanner.ui'),
-                   self)
+        uic.loadUi(os.path.join(os.path.dirname(__file__), 'grid_scanner.ui'), self)
 
         self.rate = 0.1
 
@@ -413,47 +370,29 @@ class GridScanUI(QtWidgets.QWidget, UiTools):
         # setting the lists in the GUI list views
         # note that axes are always set as string so if a stage requires an integer as an
         # axis identifier then it must be wrapped in an int() in the move function
-        for widget, list, param in zip([
-                self.axes_view, self.axes_names_view, self.size_view,
-                self.step_view, self.init_view
-        ], [
-                self.grid_scanner.axes, self.grid_scanner.axes_names,
-                self.grid_scanner.size, self.grid_scanner.step,
-                self.grid_scanner.init
-        ], ['axes', 'axes_names', 'size', 'step', 'init']):
+        for widget, list, param in zip([self.axes_view, self.axes_names_view, self.size_view, self.step_view, self.init_view],
+                                       [self.grid_scanner.axes, self.grid_scanner.axes_names, self.grid_scanner.size, self.grid_scanner.step, self.grid_scanner.init],
+                                       ['axes', 'axes_names', 'size', 'step', 'init']):
             model = QtCore.QStringListModel([str(x) for x in list])
             dtype = str if param in ['axes', 'axes_names'] else float
             convert = False if param in ['axes', 'axes_names'] else True
-            model.dataChanged.connect(
-                partial(self.set_param, param, dtype=dtype, convert=convert))
+            model.dataChanged.connect(partial(self.set_param, param, dtype=dtype, convert=convert))
             widget.setModel(model)
 
-        self.grid_scanner.axes_updated.connect(
-            partial(self.update_param, 'axes'))
-        self.grid_scanner.axes_names_updated.connect(
-            partial(self.update_param, 'axes_names'))
-        self.grid_scanner.size_updated.connect(
-            partial(self.update_param, 'size'))
-        self.grid_scanner.step_updated.connect(
-            partial(self.update_param, 'step'))
-        self.grid_scanner.init_updated.connect(
-            partial(self.update_param, 'init'))
+        self.grid_scanner.axes_updated.connect(partial(self.update_param, 'axes'))
+        self.grid_scanner.axes_names_updated.connect(partial(self.update_param, 'axes_names'))
+        self.grid_scanner.size_updated.connect(partial(self.update_param, 'size'))
+        self.grid_scanner.step_updated.connect(partial(self.update_param, 'step'))
+        self.grid_scanner.init_updated.connect(partial(self.update_param, 'init'))
 
-        self.size_unit.activated[str].connect(
-            partial(self.grid_scanner.rescale_parameter, 'size'))
-        self.step_unit.activated[str].connect(
-            partial(self.grid_scanner.rescale_parameter, 'step'))
-        self.init_unit.activated[str].connect(
-            partial(self.grid_scanner.rescale_parameter, 'init'))
+        self.size_unit.activated[str].connect(partial(self.grid_scanner.rescale_parameter, 'size'))
+        self.step_unit.activated[str].connect(partial(self.grid_scanner.rescale_parameter, 'step'))
+        self.init_unit.activated[str].connect(partial(self.grid_scanner.rescale_parameter, 'init'))
 
-        self.size_up.clicked.connect(
-            partial(self.grid_scanner.vary_axes, 'increase_size', 2.))
-        self.size_down.clicked.connect(
-            partial(self.grid_scanner.vary_axes, 'decrease_size', 2.))
-        self.step_up.clicked.connect(
-            partial(self.grid_scanner.vary_axes, 'increase_step', 2.))
-        self.step_down.clicked.connect(
-            partial(self.grid_scanner.vary_axes, 'decrease_step', 2.))
+        self.size_up.clicked.connect(partial(self.grid_scanner.vary_axes, 'increase_size', 2.))
+        self.size_down.clicked.connect(partial(self.grid_scanner.vary_axes, 'decrease_size', 2.))
+        self.step_up.clicked.connect(partial(self.grid_scanner.vary_axes, 'increase_step', 2.))
+        self.step_down.clicked.connect(partial(self.grid_scanner.vary_axes, 'decrease_step', 2.))
 
         self.grid_scanner.grid_shape_updated.connect(self.update_grid)
         self.update_button.clicked.connect(self.grid_scanner.init_current_grid)
@@ -464,12 +403,9 @@ class GridScanUI(QtWidgets.QWidget, UiTools):
 
         self.num_axes.setText(str(self.grid_scanner.num_axes))
         self.status.setText(self.grid_scanner.status)
-        self.size_unit.setCurrentIndex(
-            self.size_unit.findText(self.grid_scanner.size_unit))
-        self.step_unit.setCurrentIndex(
-            self.size_unit.findText(self.grid_scanner.step_unit))
-        self.init_unit.setCurrentIndex(
-            self.size_unit.findText(self.grid_scanner.init_unit))
+        self.size_unit.setCurrentIndex(self.size_unit.findText(self.grid_scanner.size_unit))
+        self.step_unit.setCurrentIndex(self.size_unit.findText(self.grid_scanner.step_unit))
+        self.init_unit.setCurrentIndex(self.size_unit.findText(self.grid_scanner.init_unit))
 
         self.set_init_button.clicked.connect(self.on_click)
 
@@ -491,8 +427,7 @@ class GridScanUI(QtWidgets.QWidget, UiTools):
         self.gridshape.resize(self.gridshape.sizeHint())
         self.total_points.setText(str(self.grid_scanner.total_points))
         self.total_points.resize(self.total_points.sizeHint())
-        self.est_scan_time.setText(
-            str(self.grid_scanner.estimate_scan_duration()))
+        self.est_scan_time.setText(str(self.grid_scanner.estimate_scan_duration()))
         self.est_scan_time.resize(self.est_scan_time.sizeHint())
 
     def update_status(self):
@@ -505,7 +440,7 @@ class GridScanUI(QtWidgets.QWidget, UiTools):
         """
         Apply changes made in the UI lists to the underlying GridScanner.
         """
-        uia = getattr(self, param + '_view')
+        uia = getattr(self, param+'_view')
         a = [dtype(x) for x in uia.model().stringList()]
         if convert:
             a = np.array(a)
@@ -514,7 +449,7 @@ class GridScanUI(QtWidgets.QWidget, UiTools):
     def update_param(self, param):
         """Update the UI list with changes from the underlying GridScanner."""
         gsa = getattr(self.grid_scanner, param)
-        uia = getattr(self, param + '_view')
+        uia = getattr(self, param+'_view')
         uia.model().setStringList([str(x) for x in gsa])
 
     def renew_axes_ui(self):
@@ -546,50 +481,41 @@ if __name__ == '__main__':
             self.estimated_step_time = 0.0005
             self.fig = Figure()
             self.data = None
-
         def open_scan(self):
             self.fig.clear()
             self.data = np.zeros(self.grid_shape, dtype=np.float64)
             self.data.fill(np.nan)
             self.ax = self.fig.add_subplot(111)
             self.ax.set_aspect('equal')
-            mult = 1. / self._unit_conversion[self.size_unit]
-            x, y = (mult * self.scan_axes[-1], mult * self.scan_axes[-2])
+            mult = 1./self._unit_conversion[self.size_unit]
+            x, y = (mult*self.scan_axes[-1], mult*self.scan_axes[-2])
             self.ax.set_xlim(x.min(), x.max())
             self.ax.set_ylim(y.min(), y.max())
-
         def scan_function(self, *indices):
             time.sleep(0.0005)
-            x, y = (self.scan_axes[-1][indices[-1]],
-                    self.scan_axes[-2][indices[-2]])
-            self.data[indices] = np.sin(2 * np.pi * 2e6 * x) * np.cos(
-                2 * np.pi * 2e6 * y)
+            x,y = (self.scan_axes[-1][indices[-1]], self.scan_axes[-2][indices[-2]])
+            self.data[indices] = np.sin(2*np.pi*2e6*x) * np.cos(2*np.pi*2e6*y)
             if self.num_axes == 2:
                 self.check_for_data_request(self.data)
             elif self.num_axes == 3:
-                self.check_for_data_request(self.data[indices[0], :, :])
-
+                self.check_for_data_request(self.data[indices[0],:,:])
         #@profile
         #def start(self, rate=0.1):
         #    super(DummyGridScanner, self).start(0.1)
         def run(self, rate=0.1):
             fname = 'profiling.stats'
-            cProfile.runctx('super(DummyGridScan, self).run(%.2f)' % rate,
-                            globals(),
-                            locals(),
-                            filename=fname)
+            cProfile.runctx('super(DummyGridScan, self).run(%.2f)'%rate, globals(), locals(), filename=fname)
             stats = pstats.Stats(fname)
             stats.strip_dirs()
             stats.sort_stats('cumulative')
             stats.print_stats()
-
         def update(self, force=False):
             super(DummyGridScan, self).update(force)
             if self.data is None or self.fig.canvas is None:
                 print('no canvas or data')
                 return
             if force:
-                data = (self.data, )
+                data = (self.data,)
             else:
                 data = self.request_data()
             if data is not False:
@@ -597,39 +523,31 @@ if __name__ == '__main__':
                 if not np.any(np.isfinite(data)):
                     return
                 if not self.ax.collections:
-                    mult = 1. / self._unit_conversion[self.size_unit]
-                    self.ax.pcolormesh(mult * self.scan_axes[-1],
-                                       mult * self.scan_axes[-2], data)
-                    cid = self.fig.canvas.mpl_connect('button_press_event',
-                                                      self.onclick)
-                    cid = self.fig.canvas.mpl_connect('pick_event',
-                                                      self.onpick4)
+                    mult = 1./self._unit_conversion[self.size_unit]
+                    self.ax.pcolormesh(mult*self.scan_axes[-1], mult*self.scan_axes[-2], data)
+                    cid = self.fig.canvas.mpl_connect('button_press_event', self.onclick)
+                    cid = self.fig.canvas.mpl_connect('pick_event', self.onpick4)
                 else:
                     img, = self.ax.collections
-                    img.set_array(data[:-1, :-1].ravel())
+                    img.set_array(data[:-1,:-1].ravel())
                     try:
                         img_min = data[np.isfinite(data)].min()
                         img_max = data[np.isfinite(data)].max()
                     except ValueError:
                         print('There may have been a NaN error')
-                        img_min = 0
-                        img_max = 1
+                        img_min=0
+                        img_max=1
                     img.set_clim(img_min, img_max)
                     self.ax.relim()
                 self.fig.canvas.draw()
-
         def get_qt_ui(self):
             return DummyGridScanUI(self)
-
         def onclick(self, event):
-            print('button=%d, x=%d, y=%d, xdata=%f, ydata=%f' %
-                  (event.button, event.x, event.y, event.xdata, event.ydata))
-            init_scale = old_div(self._unit_conversion[self.size_unit],
-                                 self._unit_conversion[self.init_unit])
-            self.init[:2] = (event.xdata * init_scale,
-                             event.ydata * init_scale)
+            print('button=%d, x=%d, y=%d, xdata=%f, ydata=%f'%(
+            event.button, event.x, event.y, event.xdata, event.ydata))
+            init_scale = old_div(self._unit_conversion[self.size_unit], self._unit_conversion[self.init_unit])
+            self.init[:2] = (event.xdata * init_scale, event.ydata * init_scale)
             self.init_updated.emit(self.init)
-
         def onpick4(self, event):
             artist = event.artist
             if isinstance(artist, matplotlib.image.AxesImage):
@@ -641,7 +559,7 @@ if __name__ == '__main__':
         def __init__(self, grid_scanner):
             super(DummyGridScanUI, self).__init__(grid_scanner)
             self.canvas = FigureCanvas(self.grid_scanner.fig)
-            self.canvas.setMaximumSize(300, 300)
+            self.canvas.setMaximumSize(300,300)
             self.layout.addWidget(self.canvas)
             self.resize(self.sizeHint())
 

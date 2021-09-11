@@ -79,16 +79,14 @@ class LorentzGraphWidget(pg.PlotWidget):
        xlim_func: when called provides an appropriate xlim. 
         
     '''
-    def __init__(
-        self,
-        modes,
-        xlim_func,
-        degeneracies=defaultdict(lambda: 1),
-        resolution=100,
-        title='Efficiencies',
-        xlabel='wavelength (nm)',
-        ylabel='radiative efficiency',
-    ):
+    def __init__(self,
+                 modes,
+                 xlim_func,
+                 degeneracies=defaultdict(lambda: 1),
+                 resolution=100,
+                 title='Efficiencies',
+                 xlabel='wavelength (nm)',
+                 ylabel='radiative efficiency',):
         super().__init__(title=title)
         self.modes = modes
         self.xlim_func = xlim_func
@@ -106,7 +104,7 @@ class LorentzGraphWidget(pg.PlotWidget):
         p = self.plot(*args, **kwargs)  # pyqtgraph
         if remove:  # keep track of it if we want to remove it every update
             self.plots_to_remove.append(p)
-
+    
     def update(self, remove=True):
         while self.plots_to_remove:  # remove all the stored plots
             self.plot_item.removeItem(self.plots_to_remove.pop())
@@ -340,14 +338,12 @@ if __name__ == '__main__':
     from mim import MIM
     from QNM_viewer import wl_to_ev
     pi = 3.1415
-
     def Lorentz(wls, center_wl, eff):
         eVs, center_eV = map(wl_to_ev, (wls, center_wl))
         width_2 = MIM(center_eV, n, t) / (1 - eff)  # eV - = Gamma/2
         lor = (width_2 / (width_2**2 + ((eVs - center_eV))**2)) / (2 * pi**2)
         # 2pi times all eVs for angular frequency, then divide by pi for normalizing
         return lor * eff
-
     app = QApplication.instance()
     if app is None:
         app = QApplication([])
@@ -361,47 +357,48 @@ if __name__ == '__main__':
         Min=1.,
         Max=2.,
     )
-
     def real_eq(f, D, t, n):
         s = n * t**-0.46
 
         return (395.5 + 0.0 + 179.6 * f + 0.3522 * D + 85.75 * s -
                 567.0 * f**2 + 1.823 * f * D + 93.01 * f * s + 0.00548 * D**2 +
                 1.438 * D * s + 0.836 * s**2)
-
     def imag_eq(real, D):
-        return (1.05 + 0.0 - 0.1229 * D + 0.7649 * real + 0.001026 * D**2 +
-                0.08007 * D * real - 1.159 * real**2 - 2.85e-06 * D**3 -
-                0.0002686 * D**2 * real - 0.0126 * D * real**2 +
-                0.2632 * real**3)
-
+        return (1.05
+        +0.0
+        -0.1229*D
+        +0.7649*real
+        +0.001026*D**2
+        +0.08007*D*real
+        -1.159*real**2
+        -2.85e-06*D**3
+        -0.0002686*D**2*real
+        -0.0126*D*real**2
+        +0.2632*real**3)
     def Lorentz_eq(wl):
         real = real_eq(f, D, t, n)
         efficiency = imag_eq(real, D)
         return Lorentz(wl, real, efficiency)
-
     def annotate():
         real = real_eq(f, D, t, n)
         efficiency = imag_eq(real, D)
         return real, efficiency
-
     def xlim():
-        wl = real_eq(f, D, t, n)
+        wl = real_eq(f, D, t, n) 
         return wl * 0.8, wl * 1.1
-
-    eqs = {
-        'real': real_eq,
-        'image': imag_eq,
-        'Lorentz': Lorentz_eq,
-        'annotate': annotate,
-    }
-    LPW = LivePlotWindow([
-        GraphWithPinAndClearButtons(
-            {'10': eqs}, xlim, title='test', resolution=100)
-    ], (f, D, t, n))
+    eqs = {'real': real_eq,
+           'image': imag_eq,
+           'Lorentz': Lorentz_eq,
+           'annotate': annotate,
+           }
+    LPW = LivePlotWindow([GraphWithPinAndClearButtons({'10': eqs},
+                                       xlim,
+                                       title='test',
+                                       resolution=100)], (f, D, t, n))
     for _ in range(100):
         LPW.update_graphs()
     # print(timeit.timeit(LPW.update_graphs, number=100))
-
+    
     # LPW.show()
     # app.exec_()
+    
