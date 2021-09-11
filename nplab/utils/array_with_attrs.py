@@ -7,13 +7,13 @@ Created on Tue May 26 08:08:14 2015
 
 import numpy as np
 
+
 class AttributeDict(dict):
     """This class extends a dictionary to have a "create" method for
     compatibility with h5py attrs objects."""
-    
     def create(self, name, data):
         self[name] = data
-        
+
     def modify(self, name, data):
         self[name] = data
 
@@ -22,7 +22,8 @@ class AttributeDict(dict):
         for k in list(self.keys()):
             if isinstance(self[k], np.ndarray):
                 self[k] = np.copy(self[k])
-        
+
+
 def ensure_attribute_dict(obj, copy=False):
     """Given a mapping that may or not be an AttributeDict, return an
     AttributeDict object that either is, or copies the data of, the input."""
@@ -33,15 +34,17 @@ def ensure_attribute_dict(obj, copy=False):
         if copy:
             out.copy_arrays()
         return out
-        
+
+
 def ensure_attrs(obj):
     """Return an ArrayWithAttrs version of an array-like object, may be the
     original object if it already has attrs."""
     if hasattr(obj, 'attrs'):
-        return obj #if it has attrs, do nothing
+        return obj  #if it has attrs, do nothing
     else:
-        return ArrayWithAttrs(obj) #otherwise, wrap it
-        
+        return ArrayWithAttrs(obj)  #otherwise, wrap it
+
+
 class ArrayWithAttrs(np.ndarray):
     """A numpy ndarray, with an AttributeDict accessible as array.attrs.
     
@@ -50,7 +53,6 @@ class ArrayWithAttrs(np.ndarray):
     a lot to the ``InfoArray`` example in `numpy` documentation on subclassing
     `numpy.ndarray`.
     """
-    
     def __new__(cls, input_array, attrs={}):
         """Make a new ndarray, based on an existing one, with an attrs dict.
         
@@ -64,17 +66,20 @@ class ArrayWithAttrs(np.ndarray):
         obj.attrs = ensure_attribute_dict(attrs)
         # return the new object
         return obj
-        
+
     def __array_finalize__(self, obj):
         # this is called by numpy when the object is created (__new__ may or
         # may not get called)
-        if obj is None: return # if obj is None, __new__ was called - do nothing
+        if obj is None:
+            return  # if obj is None, __new__ was called - do nothing
         # if we didn't create the object with __new__,  we must add the attrs
         # dictionary.  We copy this from the source object if possible (while
         # ensuring it's the right type) or create a new, empty one if not.
         # NB we don't use ensure_attribute_dict because we want to make sure the
         # dict object is *copied* not merely referenced.
-        self.attrs = ensure_attribute_dict(getattr(obj, 'attrs', {}), copy=True)
+        self.attrs = ensure_attribute_dict(getattr(obj, 'attrs', {}),
+                                           copy=True)
+
 
 def attribute_bundler(attrs):
     """Return a function that bundles the supplied attributes with an array."""
@@ -83,7 +88,7 @@ def attribute_bundler(attrs):
 
 
 class DummyHDF5Group(dict):
-    def __init__(self,dictionary, attrs ={}, name="DummyHDF5Group"):
+    def __init__(self, dictionary, attrs={}, name="DummyHDF5Group"):
         super(DummyHDF5Group, self).__init__()
         self.attrs = attrs
         for key in dictionary:

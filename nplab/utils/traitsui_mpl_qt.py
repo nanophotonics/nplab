@@ -29,7 +29,7 @@ class FigureCanvasWithDeferredDraw(FigureCanvas):
     # the GUI thread, even if the call comes from outside the GUI thread.
     # this is necessary if you want to plot from a background thread.
     ask_for_redraw = QtCore.Signal()
-    
+
     def __init__(self, figure):
         FigureCanvas.__init__(self, figure)
         # We connect the ask_for_redraw signal to the FigureCanvas's draw() method.
@@ -76,8 +76,7 @@ if __name__ == "__main__":
         n = Int(11)
         a = Float(0.5)
 
-        view = View(Item('figure', editor=MPLFigureEditor(),
-                         show_label=False),
+        view = View(Item('figure', editor=MPLFigureEditor(), show_label=False),
                     Item('n'),
                     Item('a'),
                     width=400,
@@ -97,7 +96,9 @@ if __name__ == "__main__":
             n = self.n
             axes = self.figure.axes[0]
             if not axes.lines:
-                axes.plot(sin(t) * (1 + a * cos(n * t)), cos(t) * (1 + a * cos(n * t)))
+                axes.plot(
+                    sin(t) * (1 + a * cos(n * t)),
+                    cos(t) * (1 + a * cos(n * t)))
             else:
                 l = axes.lines[0]
                 l.set_xdata(sin(t) * (1 + a * cos(n * t)))

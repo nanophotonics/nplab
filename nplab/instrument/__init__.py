@@ -24,8 +24,10 @@ import os
 import h5py
 import datetime
 from contextlib import contextmanager
+
 LOGGER = create_logger('Instrument')
 LOGGER.setLevel('INFO')
+
 
 class Instrument(ShowGUIMixin):
     """Base class for all instrument-control classes.
@@ -33,13 +35,16 @@ class Instrument(ShowGUIMixin):
     This class takes care of management of instruments, saving data, etc.
     """
     __instances = None
-    metadata_property_names = () #"Tuple of names of properties that should be automatically saved as HDF5 metadata
+    metadata_property_names = (
+    )  #"Tuple of names of properties that should be automatically saved as HDF5 metadata
 
     def __init__(self):
         """Create an instrument object."""
         super(Instrument, self).__init__()
-        Instrument.instances_set().add(self) #keep track of instances (should this be in __new__?)
-        self._logger = logging.getLogger('Instrument.' + str(type(self)).split('.')[-1].split('\'')[0])
+        Instrument.instances_set().add(
+            self)  #keep track of instances (should this be in __new__?)
+        self._logger = logging.getLogger(
+            'Instrument.' + str(type(self)).split('.')[-1].split('\'')[0])
 
     @classmethod
     def instances_set(cls):
@@ -59,7 +64,7 @@ class Instrument(ShowGUIMixin):
         Usually returns the first available instance.
         """
         instances = cls.get_instances()
-        if len(instances)>0:
+        if len(instances) > 0:
             return instances[0]
         else:
             if create:
@@ -101,28 +106,27 @@ class Instrument(ShowGUIMixin):
 
         Other arguments are passed to `nplab.datafile.Group.create_dataset`.
         """
-        if "%d" not in name: # is this really necessary?
+        if "%d" not in name:  # is this really necessary?
             name = name + '_%d'
         df = cls.get_root_data_folder()
         dset = df.create_dataset(name, *args, **kwargs)
         if 'data' in kwargs and flush:
-            dset.file.flush() #make sure it's in the file if we wrote data
+            dset.file.flush()  #make sure it's in the file if we wrote data
         return dset
 
-    def log(self, message,level = 'info'):
+    def log(self, message, level='info'):
         """Save a log message to the current datafile.
 
         This is the preferred way to output debug/informational messages.  They
         will be saved in the current HDF5 file and optionally shown in the
         nplab console.
         """
-        nplab.utils.log.log(message, from_object=self,level = level)
+        nplab.utils.log.log(message, from_object=self, level=level)
 
-    def get_metadata(self, 
-                     property_names=[], 
+    def get_metadata(self,
+                     property_names=[],
                      include_default_names=True,
-                     exclude=None
-                     ):
+                     exclude=None):
         """A dictionary of settings, properties, etc. to save along with data.
 
         This returns the value of each property specified in the arguments or
@@ -153,8 +157,8 @@ class Instrument(ShowGUIMixin):
                 try:
                     keys.remove(p)
                 except ValueError:
-                    pass # Don't worry if we exclude items that are not there!
-        return {name: getattr(self,name) for name in keys}
+                    pass  # Don't worry if we exclude items that are not there!
+        return {name: getattr(self, name) for name in keys}
 
     metadata = property(get_metadata)
 
@@ -181,13 +185,15 @@ class Instrument(ShowGUIMixin):
         if not hasattr(self, '_config_file'):
             f = inspect.getfile(self.__class__)
             d = os.path.dirname(f)
-            self._config_file = nplab.datafile.DataFile(h5py.File(os.path.join(d, 'config.h5'), mode='a'))
-            self._config_file.attrs['date'] = datetime.datetime.now().strftime("%H:%M %d/%m/%y")
+            self._config_file = nplab.datafile.DataFile(
+                h5py.File(os.path.join(d, 'config.h5'), mode='a'))
+            self._config_file.attrs['date'] = datetime.datetime.now().strftime(
+                "%H:%M %d/%m/%y")
         return self._config_file
 
     config_file = property(open_config_file)
-    
-    def update_config(self, name, data, attrs= None):
+
+    def update_config(self, name, data, attrs=None):
         """Update the configuration file for this spectrometer.
         
         A file is created in the nplab directory that holds configuration
@@ -195,10 +201,11 @@ class Instrument(ShowGUIMixin):
         function allows values to be stored in that file."""
         f = self.config_file
         if name in f.keys():
-            try: del f[name]
-            except: 
+            try:
+                del f[name]
+            except:
                 f[name][...] = data
-                f.flush()    
+                f.flush()
         else:
             f.create_dataset(name, data=data, attrs=attrs)
 
