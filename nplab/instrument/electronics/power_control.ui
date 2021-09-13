@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>354</width>
-    <height>262</height>
+    <height>268</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -29,22 +29,22 @@
       <enum>QFrame::Raised</enum>
      </property>
      <layout class="QFormLayout" name="formLayout_5">
-      <item row="2" column="0">
-       <widget class="QLabel" name="label_2">
+      <item row="8" column="1">
+       <widget class="QPushButton" name="calibrate_power_gui_pushButton">
         <property name="text">
-         <string>max angle/voltage</string>
+         <string>Calibrate</string>
         </property>
        </widget>
       </item>
-      <item row="0" column="0">
-       <widget class="QLabel" name="label_9">
+      <item row="1" column="0">
+       <widget class="QLabel" name="title_label">
         <property name="text">
-         <string>min angle/voltage</string>
+         <string>laser wavelength</string>
         </property>
        </widget>
       </item>
-      <item row="0" column="1">
-       <widget class="QDoubleSpinBox" name="doubleSpinBox_min_param">
+      <item row="2" column="1">
+       <widget class="QDoubleSpinBox" name="min_param_doubleSpinBox">
         <property name="decimals">
          <number>1</number>
         </property>
@@ -56,8 +56,29 @@
         </property>
        </widget>
       </item>
-      <item row="2" column="1">
-       <widget class="QDoubleSpinBox" name="doubleSpinBox_max_param">
+      <item row="2" column="0">
+       <widget class="QLabel" name="label_9">
+        <property name="text">
+         <string>min angle/voltage</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="0">
+       <widget class="QLabel" name="label">
+        <property name="text">
+         <string>points</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="label_2">
+        <property name="text">
+         <string>max angle/voltage</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <widget class="QDoubleSpinBox" name="max_param_doubleSpinBox">
         <property name="decimals">
          <number>1</number>
         </property>
@@ -69,35 +90,8 @@
         </property>
        </widget>
       </item>
-      <item row="3" column="0">
-       <widget class="QLabel" name="label">
-        <property name="text">
-         <string>points</string>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="1">
-       <widget class="QSpinBox" name="number_points_spinBox"/>
-      </item>
-      <item row="6" column="1">
-       <widget class="QPushButton" name="pushButton_calibrate_power">
-        <property name="text">
-         <string>Calibrate</string>
-        </property>
-       </widget>
-      </item>
-      <item row="6" column="0">
-       <widget class="QLineEdit" name="measured_power_lineEdit">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="text">
-         <string>power at maxpoint</string>
-        </property>
-       </widget>
+      <item row="5" column="1">
+       <widget class="QSpinBox" name="calibration_points_spinBox"/>
       </item>
      </layout>
     </widget>
@@ -137,7 +131,7 @@
              </widget>
             </item>
             <item row="0" column="1">
-             <widget class="QDoubleSpinBox" name="doubleSpinBox_set_input_param">
+             <widget class="QDoubleSpinBox" name="param_doubleSpinBox">
               <property name="keyboardTracking">
                <bool>false</bool>
               </property>
@@ -169,7 +163,7 @@
              </widget>
             </item>
             <item row="0" column="1">
-             <widget class="QDoubleSpinBox" name="doubleSpinBox_set_power">
+             <widget class="QDoubleSpinBox" name="power_doubleSpinBox">
               <property name="keyboardTracking">
                <bool>false</bool>
               </property>
@@ -182,13 +176,6 @@
           </widget>
          </item>
         </layout>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLabel" name="laser_label">
-        <property name="text">
-         <string>laser wavelength</string>
-        </property>
        </widget>
       </item>
      </layout>

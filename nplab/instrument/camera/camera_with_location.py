@@ -394,11 +394,15 @@ class CameraWithLocation(Instrument):
                 else:
                     step *= 10**(0.5)
             step *= target_shift / shift # Scale the amount we step the stage by, to get a reasonable image shift.
+            
         update_progress(2)
         # Move the stage in a square, recording the displacement from both the stage and the camera
         pixel_shifts = []
         images = []
-        for i, p in enumerate([[-step, -step, 0], [-step, step, 0], [step, step, 0], [step, -step, 0]]):
+        for i, p in enumerate([[-step, -step, 0],
+                               [-step,  step, 0],
+                               [step,   step, 0],
+                               [step,  -step, 0]]):
           #          print 'premove'
         #        print starting_location,p
             self.move(starting_location + np.array(p))
@@ -468,8 +472,6 @@ class CameraWithLocationControlUI(QtWidgets.QWidget):
         fc.add_checkbox('use_thumbnail', 'Use Thumbnail')
         fc.auto_connect_by_name(self.cwl)
         self.focus_controls = fc
-
-#        sc = 
 
         l = QtWidgets.QHBoxLayout()
         l.addWidget(cc)

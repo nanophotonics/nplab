@@ -15,9 +15,13 @@ class XY_ZWrapper(Stage):
         
     
     def get_position(self, axis=None):
-       if axis is not None:
-           raise NotImplementedError()
-       return np.append(self.XY.position, self.Z.position)
+       if axis is  None:
+           return np.append(self.XY.position, self.Z.position)
+       elif axis in self.axis_names:
+           if axis in 'xy':
+               return self.XY.get_position(axis=axis)
+           elif axis == 'z':
+               return self.Z.get_position()
     
     def move(self, x, axis=None, relative=False):
         """ move wrapper """

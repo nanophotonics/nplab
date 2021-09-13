@@ -14,6 +14,7 @@ from nplab.utils.thread_utils import locked_action, background_action
 from nplab.utils.array_with_attrs import ArrayWithAttrs
 from nplab.ui.ui_tools import QuickControlBox
 from functools import wraps
+import numpy as np
 
 try: 
     pvc.uninit_pvcam()
@@ -85,7 +86,7 @@ class PrimeBSI(Camera):
     def exposure(self, val): # ms
         if self.exp_res_index: # us
             val *= 1_000
-        self.exp_time = val
+        self.exp_time = int(val)
             
     def raw_snapshot(self):
         if self.live_view:
@@ -93,8 +94,7 @@ class PrimeBSI(Camera):
         else: 
             frame = self._camera.get_frame()
         return True, frame
-        
-    
+
     @Camera.live_view.setter
     def live_view(self, live_view):
         if live_view == self._live_view: return # small redundancy with Camera.live_view
@@ -108,7 +108,7 @@ class PrimeBSI(Camera):
         r = self.raw_image(**kwargs)
         return np.append(r[:,:, None], np.zeros(r.shape + (2,)), axis=-1)
     
-    def stack(self, exposures=(10,100,1000), **kwargs):
+    def stack(self, exposures=(10, 100, 1000), **kwargs):
         live_view = self.live_view
         self.live_view = False
         for i, e in enumerate(exposures):
