@@ -342,7 +342,7 @@ class Triax(VisaInstrument):
     """
 
     def reset(self):
-        self.instr.write_raw('\xde')
+        self.instr.write_raw(b'\xde')
         time.sleep(5)
         buff = self.query(" ")
         if buff == 'B':
@@ -357,7 +357,7 @@ class Triax(VisaInstrument):
         self.write("A")
         time.sleep(60)
         self.waitTillReady()
-        self.Grating(1)
+        self.Grating(2)
         self.Grating_Number = self.Grating()
 
     def exitLateral(self):

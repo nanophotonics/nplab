@@ -179,7 +179,7 @@ class Instrument(ShowGUIMixin):
 
     def open_config_file(self):
         """Open the config file for the current spectrometer and return it, creating if it's not there"""
-        if not hasattr(self,'_config_file'):
+        if not hasattr(self, '_config_file'):
             f = inspect.getfile(self.__class__)
             d = os.path.dirname(f)
             self._config_file = nplab.datafile.DataFile(os.path.join(d, 'config.h5'), mode='a')

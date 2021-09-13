@@ -39,13 +39,16 @@ class VisaInstrument(MessageBusInstrument):
             print("The serial port didn't close cleanly:", e)
 
     def write(self, *args, **kwargs):
-        return self.instr.write(*args, **kwargs)
+        with self.communications_lock:
+            return self.instr.write(*args, **kwargs)
 
     def read(self, *args, **kwargs):
-        return self.instr.read(*args, **kwargs)
+        with self.communications_lock:
+            return self.instr.read(*args, **kwargs)
 
     def query(self, *args, **kwargs):
-        return self.instr.query(*args, **kwargs)
+        with self.communications_lock:
+            return self.instr.query(*args, **kwargs)
 
     def clear_read_buffer(self):
         empty_buffer = False

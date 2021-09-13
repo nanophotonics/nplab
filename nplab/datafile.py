@@ -458,13 +458,13 @@ def set_current(datafile, **kwargs):
             _current_datafile = DataFile(datafile, **kwargs)  # open a new datafile
             return _current_datafile
         except Exception as e:
+
             print("problem opening file:")
             print(e)
-            
             # kwargs['mode'] = 'r+'  # dirty hack to work around mode=a not working
-            
             if os.path.getsize(datafile) < 100: #1kB/10
-                os.remove(datafile)
+                os.remove(datafile) # dirty hack to work around mode=a not working
+                                    # if the file is empty
                 
             _current_datafile = DataFile(datafile, **kwargs)
 
