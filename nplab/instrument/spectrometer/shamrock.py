@@ -10,7 +10,6 @@ Created on Fri Apr 10 08:43:56 2015
 # - accessoires
 # - output slit
 # - Shutter
-from builtins import range
 import platform
 
 from ctypes import *

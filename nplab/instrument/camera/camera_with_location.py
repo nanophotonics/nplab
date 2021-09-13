@@ -15,10 +15,6 @@ you should use its `color_image`, `gray_image` and `raw_image` methods rather th
 
 NB see the note on coordinate systems in utils/image_with_location.py
 """
-from __future__ import division
-from __future__ import print_function
-from builtins import range
-from past.utils import old_div
 import nplab
 from nplab.instrument.camera import Camera
 import nplab.instrument.camera
@@ -133,8 +129,8 @@ class CameraWithLocation(Instrument):
     @staticmethod
     def crop_centered(image, size=(100,100)):
         if size is None: return image
-        return image[old_div(image.shape[0],2)-old_div(size[0],2):old_div(image.shape[0],2)+old_div(size[0],2),
-                     old_div(image.shape[1],2)-old_div(size[1],2):old_div(image.shape[1],2)+old_div(size[1],2)]
+        return image[image.shape[0]//2-size[0]//2:image.shape[0]//2)+size[0]//2,
+                     image.shape[1]//2-size[1]//2:image.shape[1]//2)+size[1]//2]
     
     def thumb_image(self, size=(100,100)):
         """Return a cropped "thumb" from the CWL with size  """
@@ -284,7 +280,7 @@ class CameraWithLocation(Instrument):
         """
         self.camera.exposure = self.camera.exposure/exposure_factor
         if dz is None:
-            dz = (np.arange(self.af_steps) - old_div((self.af_steps - 1),2)) * self.af_step_size # Default value
+            dz = (np.arange(self.af_steps) - (self.af_steps - 1)//2) * self.af_step_size # Default value
         here = self.stage.position
         positions = []  # positions keeps track of where we sample
         powers = []  # powers holds the value of the merit fn at each point
@@ -315,14 +311,14 @@ class CameraWithLocation(Instrument):
                 print("Warning, something went wrong and all the autofocus scores were identical! Returning to initial position.")
                 new_position = here # Return to initial position if something fails
             elif (number_of_maxima == 1) and not (indices_of_maxima[0] == 0 or indices_of_maxima[-1] == (weights.size-1)):
-                new_position = old_div(np.dot(weights, positions), np.sum(weights))
+                new_position = np.dot(weights, positions)/ np.sum(weights)
             else:
                 print("Warning, a maximum autofocus score could not be found. Returning to initial position.")
                 new_position = here
         elif method == "parabola":
             coefficients = np.polyfit(z, powers, deg=2)  # fit a parabola
-            root = old_div(-coefficients[1], (2 * coefficients[
-                0]))  # p = c[0]z**" + c[1]z + c[2] which has max (or min) at 2c[0]z + c[1]=0 i.e. z=-c[1]/2c[0]
+            root = -coefficients[1]/ (2 * coefficients[
+                0])  # p = c[0]z**" + c[1]z + c[2] which has max (or min) at 2c[0]z + c[1]=0 i.e. z=-c[1]/2c[0]
             if z.min() < root and root < z.max():
                 new_position = [here[0], here[1], root]
             else:
@@ -390,19 +386,23 @@ class CameraWithLocation(Instrument):
             shift = 0
             while np.linalg.norm(shift) < threshold_shift:
                 assert step < max_step, "Error, we hit the maximum step before we saw the sample move."
-                self.move(starting_location + np.array([step,0,0]))
+                self.move(starting_location + np.array([step, 0, 0]))
                 image = self.color_image()
                 shift = locate_feature_in_image(image, template) - image.datum_pixel
                 if np.sqrt(np.sum(shift**2)) > threshold_shift:
                     break
                 else:
                     step *= 10**(0.5)
-            step *= old_div(target_shift, shift) # Scale the amount we step the stage by, to get a reasonable image shift.
+            step *= target_shift / shift # Scale the amount we step the stage by, to get a reasonable image shift.
+            
         update_progress(2)
         # Move the stage in a square, recording the displacement from both the stage and the camera
         pixel_shifts = []
         images = []
-        for i, p in enumerate([[-step, -step, 0], [-step, step, 0], [step, step, 0], [step, -step, 0]]):
+        for i, p in enumerate([[-step, -step, 0],
+                               [-step,  step, 0],
+                               [step,   step, 0],
+                               [step,  -step, 0]]):
           #          print 'premove'
         #        print starting_location,p
             self.move(starting_location + np.array(p))
@@ -472,8 +472,6 @@ class CameraWithLocationControlUI(QtWidgets.QWidget):
         fc.add_checkbox('use_thumbnail', 'Use Thumbnail')
         fc.auto_connect_by_name(self.cwl)
         self.focus_controls = fc
-
-#        sc = 
 
         l = QtWidgets.QHBoxLayout()
         l.addWidget(cc)

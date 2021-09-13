@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from builtins import map
-from builtins import range
 from nplab.instrument.visa_instrument import VisaInstrument
 import os
 import pprint

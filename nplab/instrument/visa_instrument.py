@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import print_function
 __author__ = 'alansanders'
 
 from nplab.instrument.message_bus_instrument import MessageBusInstrument, queried_property, queried_channel_property

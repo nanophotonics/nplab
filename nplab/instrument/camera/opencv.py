@@ -4,9 +4,6 @@ Created on Wed Jun 11 12:28:18 2014
 
 @author: Richard
 """
-from __future__ import print_function
-
-from builtins import range
 import sys
 try:
     import cv2

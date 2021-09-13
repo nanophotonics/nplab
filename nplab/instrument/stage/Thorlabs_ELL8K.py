@@ -1,14 +1,9 @@
 '''
 author: im354
 '''
-from __future__ import division
-from __future__ import print_function
 
-from builtins import str
-from builtins import range
-from past.utils import old_div
-import struct,sys,math
-from bitarray import bitarray
+import sys
+
 import numpy as np 
 from nplab.instrument.serial_instrument import SerialInstrument
 from nplab.instrument.stage import Stage

@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 
-from builtins import object
 from nplab.utils import monitor_property
 import threading
 import time
 
 
-class TemperatureControlMixin(object):
+class TemperatureControlMixin():
     """A class representing temperature-control stages.
 
     This class provides two threads: a temperature control thread that monitors the temperature every second and sends a

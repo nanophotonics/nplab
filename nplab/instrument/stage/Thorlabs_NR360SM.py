@@ -1,5 +1,3 @@
-from __future__ import print_function
-from builtins import str
 import sys, numpy as np
 from nplab.instrument.stage import Stage, StageUI
 from nplab.instrument.stage.apt_vcp_motor import APT_VCP_motor

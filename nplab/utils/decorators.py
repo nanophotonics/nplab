@@ -1,12 +1,10 @@
 """
 A collection of decorators useful when subclassing in NPLab
 """
-from __future__ import print_function
-from builtins import object
 __author__ = 'alansanders'
 
 
-class inherit_docstring(object):
+class inherit_docstring():
     """Appends the current functions docstring with that of the specified base function"""
     def __init__(self, base_f):
         self.base_f = base_f

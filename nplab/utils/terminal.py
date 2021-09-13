@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import print_function
-from builtins import object
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.inprocess import QtInProcessKernelManager
 # from IPython.qt.console.rich_ipython_widget import RichIPythonWidget
@@ -12,7 +10,7 @@ import os
 from IPython.lib import guisupport
 
 
-class Ipython(object):
+class Ipython():
     def __init__(self, scripts_path=''):
         self.kernel_manager = QtInProcessKernelManager()
         self.kernel_manager.start_kernel()

@@ -1,4 +1,3 @@
-from __future__ import print_function
 import struct,sys,math
 import numpy as np 
 from nplab.instrument.serial_instrument import SerialInstrument

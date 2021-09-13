@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import division
-from builtins import map
 from past.utils import old_div
 from nplab.instrument.serial_instrument import SerialInstrument
 from serial import EIGHTBITS, PARITY_NONE, STOPBITS_ONE

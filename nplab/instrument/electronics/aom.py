@@ -1,12 +1,10 @@
-from __future__ import division
-from __future__ import print_function
-from builtins import str
-from builtins import range
-from builtins import object
+
 from past.utils import old_div
 import pyvisa as visa
 import numpy as np
 import time
+
+from nplab.instrument.visa_instrument import VisaInstrument
 
 def Sigmoid(x,Shift=0.68207277,Scale=8.49175969):
     Zero=1./(np.exp(Shift*Scale)+1)
@@ -15,7 +13,7 @@ def Sigmoid(x,Shift=0.68207277,Scale=8.49175969):
     Output=(x-Shift)*Scale
     Output=np.exp(-Output)+1
     Output=1./Output
-    return old_div((Output-Zero),(One-Zero))
+    return (Output-Zero)/(One-Zero)
     
 def Inverse_Sigmoid(x,Shift=0.68207277,Scale=8.49175969):
     Zero=1./(np.exp(Shift*Scale)+1)
@@ -26,11 +24,12 @@ def Inverse_Sigmoid(x,Shift=0.68207277,Scale=8.49175969):
     Output+=Shift 
     return Output
 
-class AOM(object): 
-    def __init__(self,address = 'USB0::0x0957::0x0407::MY44037993::0::INSTR'):
-        rm = visa.ResourceManager()
-        self.Power_Supply=rm.open_resource(address)
+class AOM(VisaInstrument): 
+    def __init__(self, address='USB0::0x0957::0x0407::MY44037993::0::INSTR', *args, **kwargs):
+        super().__init__(address, *args, **kwargs)
+        self.Power_Supply = self.instr
         self.mode = 'R'
+       
         self.Power_Supply.write("FUNC DC")
         self.Power_Supply.write("VOLT:OFFS 1")
         
@@ -53,7 +52,7 @@ class AOM(object):
         
     def Power(self,Fraction=None):
 #        if Fraction is None:
-#            Voltage=float(self.Power_Supply.ask("SOUR:VOLT:OFFS?"))
+#            Voltage=float(self.Power_Supply.query("SOUR:VOLT:OFFS?"))
 #            return Inverse_Sigmoid(Voltage)
 #        else:
 #            if Fraction<0:
@@ -64,7 +63,7 @@ class AOM(object):
 #            self.Power_Supply.write("VOLT:OFFS "+str(Voltage))
 #            
         if Fraction is None:
-            return float(self.Power_Supply.ask("SOUR:VOLT:OFFS?"))
+            return float(self.Power_Supply.query("SOUR:VOLT:OFFS?"))
         else:
             if Fraction<0:
                 Fraction=0.
@@ -73,7 +72,7 @@ class AOM(object):
             self.Power_Supply.write("VOLT:OFFS "+str(Fraction))  
         
     def Get_Power(self):
-        return float(self.Power_Supply.ask("SOUR:VOLT:OFFS?"))
+        return float(self.Power_Supply.query("SOUR:VOLT:OFFS?"))
     
     def Power_Apply(self, shape, frequency, amplitude, offset):
         self.Power_Supply.write("APPL:%s %d Hz, %f VPP, %f V" % (shape, frequency, amplitude, offset))
@@ -102,12 +101,12 @@ class AOM(object):
         y=[]
         for i in x:
             self.Power(i)   
-            y.append(Take_Reading())         
-            time.sleep(1)
+            y.append( Take_Reading())         
+            time.sleep(1 )
         
-        
-        if y[0]>Power or y[1]<Power:
-            print('Out of Range!')
+         
+        if y[0]>Power or  y[1]<Power:
+            print( 'Out of Range!')
             return
         
         for i in range(2):
@@ -155,7 +154,7 @@ class AOM(object):
         return Guess,Reading
         
 if __name__ == '__main__':
-    aom = AOM()
+    aom = AOM('USB0::0x0957::0x0407::MY44037993::0::INSTR')
     aom.Switch_Mode()
     
     

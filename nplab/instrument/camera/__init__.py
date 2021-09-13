@@ -4,7 +4,6 @@ Created on Wed Jun 11 12:28:18 2014
 
 @author: Richard Bowman
 """
-from __future__ import print_function
 
 import nplab.utils.gui #load Qt correctly - do this BEFORE traits
 from nplab.utils.gui import QtCore, QtGui, QtWidgets, uic
@@ -362,7 +361,8 @@ class Camera(Instrument):
         """
         while not self._live_view_stop_event.wait(timeout=0.1):
             success, frame = self.raw_snapshot()
-            self.update_latest_frame(frame)
+            if success:
+                self.update_latest_frame(frame)
             
     legacy_click_callback = None
     def set_legacy_click_callback(self, function):
@@ -586,7 +586,7 @@ class PreviewImageItem(pg.ImageItem):
      #           point = pos/size
       #          self.legacy_click_callback(point[1], point[0])
                 self.legacy_click_callback(int(pos[1]), int(pos[0]))
-                #print(pos[1],pos[0])
+                # print(pos)
                 ev.accept()
             else:
                 pass

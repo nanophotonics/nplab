@@ -22,12 +22,7 @@ Development notes:
     * API for DLL: Picam 5.x Programmers Manual, 4411-0161, Issue 5, August 2018
     
 """
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
 
-from builtins import range
-from past.utils import old_div
 import ctypes as ct
 import numpy as np
 from matplotlib import pyplot as plt

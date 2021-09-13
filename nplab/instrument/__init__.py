@@ -11,7 +11,6 @@ There's also some support mechanisms for metadata creation, and the bundling
 of metadata in ArrayWithAttrs objects that include both data and metadata.
 """
 
-from builtins import str
 from nplab.utils.thread_utils import locked_action_decorator, background_action_decorator
 import nplab
 from weakref import WeakSet
@@ -180,9 +179,12 @@ class Instrument(ShowGUIMixin):
     def open_config_file(self):
         """Open the config file for the current spectrometer and return it, creating if it's not there"""
         if not hasattr(self, '_config_file'):
-            f = inspect.getfile(self.__class__)
+            try:
+                f = inspect.getfile(self.__class__) # fails in IPython
+            except ValueError:
+                f = inspect.getfile(self.__class__.__init__) # assumes the inst has an init method
             d = os.path.dirname(f)
-            self._config_file = nplab.datafile.DataFile(h5py.File(os.path.join(d, 'config.h5')), mode='a')
+            self._config_file = nplab.datafile.DataFile(os.path.join(d, self.__class__.__name__+'_config.h5'), mode='a')
             self._config_file.attrs['date'] = datetime.datetime.now().strftime("%H:%M %d/%m/%y")
         return self._config_file
 
@@ -201,7 +203,7 @@ class Instrument(ShowGUIMixin):
                 f[name][...] = data
                 f.flush()    
         else:
-            f.create_dataset(name, data=data ,attrs = attrs)
+            f.create_dataset(name, data=data, attrs=attrs)
 
     @contextmanager
     def temporarily_set(self, **kwargs):
