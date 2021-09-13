@@ -10,7 +10,7 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 from nplab.analysis import latest_scan, load_h5
-from nplab.analysis.image_exclusion.utils import save_rejected
+from nplab.analysis.particle_exclusion.utils import save_rejected
 from scipy import ndimage, signal
 from tqdm import tqdm
 
@@ -47,7 +47,7 @@ class MonotonousImageExcluder():
                 self.fig_dir.mkdir()
 
         rejected = set()
-        for name, group in tqdm(list(scan.items())):
+        for name, group in tqdm(list(self.scan.items())):
             if not name.startswith('Particle'): continue
             im = group[self.image_name]
             im_center = tuple(np.array(im.shape)[:2] // 2)
