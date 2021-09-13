@@ -338,7 +338,13 @@ class DataFile(Group):
         if isinstance(name, h5py.File):
             f=name #if it's already an open file, just use it
         else:
-            f = h5py.File(name, mode, *args, **kwargs)  # open the file
+            try:
+                
+                f = h5py.File(name, mode, *args, **kwargs)  # open the file
+            except OSError:
+                if os.path.getsize(name) < 100: #1kB/10
+                    os.remove(name)
+                f = h5py.File(name, mode, *args, **kwargs)
         super(DataFile, self).__init__(f.id)  # initialise a Group object with the root group of the file (saves re-wrapping all the functions for File)
         if save_version_info and self.file.mode != 'r':
             #Save version information if needed
@@ -452,7 +458,10 @@ def set_current(datafile, **kwargs):
             _current_datafile = DataFile(datafile, **kwargs)  # open a new datafile
             return _current_datafile
         except Exception as e:
-            print("problem opening file")            
+
+            print("problem opening file:")
+            print(e)
+            # kwargs['mode'] = 'r+'  # dirty hack to work around mode=a not working
             if os.path.getsize(datafile) < 100: #1kB/10
                 os.remove(datafile) # dirty hack to work around mode=a not working
                                     # if the file is empty
