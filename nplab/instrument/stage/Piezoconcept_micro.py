@@ -50,7 +50,7 @@ class Piezoconcept(SerialInstrument, Stage):
         '''
         nm = int(self.distance_scale*value)
         if relative:
-            if 0 <= nm + self.position < 100_000:
+            if 0 <= nm/1_000 + self.position*1_000 < 100_000:
                 self.write(f'MOVR{self.cmd_axis} {nm}n')
             else:
                 self._logger.warn(

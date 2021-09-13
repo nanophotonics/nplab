@@ -86,7 +86,7 @@ class PrimeBSI(Camera):
     def exposure(self, val): # ms
         if self.exp_res_index: # us
             val *= 1_000
-        self.exp_time = val
+        self.exp_time = int(val)
             
     def raw_snapshot(self):
         if self.live_view:
@@ -108,7 +108,7 @@ class PrimeBSI(Camera):
         r = self.raw_image(**kwargs)
         return np.append(r[:,:, None], np.zeros(r.shape + (2,)), axis=-1)
     
-    def stack(self, exposures=(10,100,1000), **kwargs):
+    def stack(self, exposures=(10, 100, 1000), **kwargs):
         live_view = self.live_view
         self.live_view = False
         for i, e in enumerate(exposures):
