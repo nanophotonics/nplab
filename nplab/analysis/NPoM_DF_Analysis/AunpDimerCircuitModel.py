@@ -3,6 +3,9 @@ Author: car72
 Date: 2020-12-09
 
 Uses Felix Benz's circuit model combined with some of jjb's Igor code for combining cavity and antenna modes
+    "Generalized circuit model for coupled plasmonic systems"; Benz et al., Optics Express, 2015
+    "Hybridization of plasmonic antenna and cavity modes: Extreme optics of nanoparticle-on-mirror nanogaps"; Tserkezis et al., Phys. Rev. A., 2015
+
 Just call VirtualDimer() with appropriate parameters for your model system (see comments in VirtualDimer.__init__() for details)
 This returns a dimer Object with attributes relating to the dimer's physical properties
 
