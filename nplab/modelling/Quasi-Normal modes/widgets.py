@@ -4,29 +4,31 @@ Created on Wed Jun 23 12:37:43 2021
 
 @author: Eoin
 """
-import numpy as np
-from PyQt5 import QtGui, QtWidgets, QtCore
-import qdarkstyle  # dark theme
 
+from collections import defaultdict
+
+import numpy as np
 import pyqtgraph as pg
+from PyQt5 import QtCore, QtGui, QtWidgets
+
 pg.setConfigOption('background', 'w')
 pg.setConfigOption('foreground', 'k')
 
 
-class DoubleSlider(QtGui.QSlider):
+class DoubleSlider(QtWidgets.QSlider):
     '''' A Qt slider that works with floats (doubles) - taken from
     https://stackoverflow.com/questions/42820380/use-float-for-qslider'''
     # create our our signal that we can connect to if necessary
-    doubleValueChanged = QtCore.Signal(float)
+    doubleValueChanged = QtCore.pyqtSignal(float)
 
     def __init__(self, *args, decimals=3, **kwargs):
         super().__init__(*args, **kwargs)
-        self._multi = 10 ** decimals
+        self._multi = 10**decimals
 
         self.valueChanged.connect(self.emitDoubleValueChanged)
 
     def emitDoubleValueChanged(self):
-        value = float(super().value())/self._multi
+        value = float(super().value()) / self._multi
         self.doubleValueChanged.emit(value)
 
     def value(self):
@@ -48,6 +50,24 @@ class DoubleSlider(QtGui.QSlider):
         super().setValue(int(value * self._multi))
 
 
+# @cache
+# def degeneracy(geometry, mode_name):
+#     if geometry == 'circle':
+#         return 1 + (not mode_name.endswith('0'))
+#     else:
+#         return 1
+
+
+class Filler():
+    def __init__(self, arr):
+        self.i = 0
+        self.arr = arr
+
+    def fill(self, row):
+        self.arr[self.i] = row
+        self.i += 1
+
+
 class LorentzGraphWidget(pg.PlotWidget):
     '''
     template for an interactive Lorentian graph
@@ -59,21 +79,24 @@ class LorentzGraphWidget(pg.PlotWidget):
        xlim_func: when called provides an appropriate xlim. 
         
     '''
-
-    def __init__(self, modes, xlim_func,
+    def __init__(self,
+                 modes,
+                 xlim_func,
+                 degeneracies=defaultdict(lambda: 1),
+                 resolution=100,
                  title='Efficiencies',
                  xlabel='wavelength (nm)',
-                 ylabel='radiative efficiency',
-                 resolution=100):
+                 ylabel='radiative efficiency',):
         super().__init__(title=title)
         self.modes = modes
         self.xlim_func = xlim_func
+        self.degeneracies = degeneracies
+        self.resolution = resolution
         self.setTitle(title)
         self.setLabel('bottom', xlabel)
         self.setLabel('left', ylabel)
         self.hasLegend = False
         self.addLegend()
-        self.resolution = resolution
         self.plot_item = self.getPlotItem()
         self.plots_to_remove = []
 
@@ -81,34 +104,39 @@ class LorentzGraphWidget(pg.PlotWidget):
         p = self.plot(*args, **kwargs)  # pyqtgraph
         if remove:  # keep track of it if we want to remove it every update
             self.plots_to_remove.append(p)
-
+    
     def update(self, remove=True):
         while self.plots_to_remove:  # remove all the stored plots
             self.plot_item.removeItem(self.plots_to_remove.pop())
 
-        _sum = np.zeros(self.resolution)
         xs = np.linspace(*self.xlim_func(), self.resolution)  # x axis changes
+        ys = np.zeros(
+            (sum(self.degeneracies[m] for m in self.modes), self.resolution))
+        filler = Filler(ys)
         for i, (name, mode) in enumerate(self.modes.items()):
             y = mode['Lorentz'](xs)
-            _sum += y
-
+            for _ in range(d := self.degeneracies[name]):
+                filler.fill(y)
             wl, eff = mode['annotate']()
-            label = f'{name}, wl={round(wl)}nm, efficiency={np.around(eff, 2)}'
-
-            self._plot(xs, y,
+            label = f'{name}, wl={round(wl)}nm, efficiency={np.around(eff, 2)}, degeneracy={d}'
+            self._plot(xs,
+                       y,
                        pen=pg.mkPen(pg.intColor(i,
                                                 len(self.modes),
-                                                alpha=100+155*remove),
+                                                alpha=100 + 155 * remove),
                                     width=5),
-                       name=label, remove=remove)
-        self._plot(xs, _sum,
-                   pen=pg.mkPen(color=pg.mkColor((0, 0, 0, 100+155*remove)),
+                       name=label,
+                       remove=remove)
+        self._plot(xs, (ys**2 / ys.sum(axis=0)).sum(axis=0),
+                   pen=pg.mkPen(color=pg.mkColor(
+                       (0, 0, 0, 100 + 155 * remove)),
                                 width=5,
                                 style=QtCore.Qt.DotLine),
-                   name='sum', remove=remove)
+                   name='sum',
+                   remove=remove)
 
     def pin_plot(self):
-       self.update(False)
+        self.update(False)
 
     def _clear(self):
         self.clear()
@@ -119,41 +147,42 @@ class PinAndClearButtons(QtWidgets.QGroupBox):
     def __init__(self, graph):
         super().__init__('graph pinning buttons')
         self.setLayout(QtWidgets.QHBoxLayout())
-        pin = QtGui.QPushButton('pin')
+        pin = QtWidgets.QPushButton('pin')
         pin.clicked.connect(graph.pin_plot)
         self.layout().addWidget(pin)
-        clear = QtGui.QPushButton('clear')
+        clear = QtWidgets.QPushButton('clear')
         clear.clicked.connect(graph._clear)
         self.layout().addWidget(clear)
 
 
 class GraphWithPinAndClearButtons(QtWidgets.QGroupBox):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, layout='V', **kwargs):
         super().__init__(kwargs.get('title', ''))
         self.graph = LorentzGraphWidget(*args, **kwargs)
-        self.setLayout(QtWidgets.QVBoxLayout())
-        self.layout().addWidget(self.graph)
+        layout = QtWidgets.QHBoxLayout(
+        ) if layout == 'H' else QtWidgets.QVBoxLayout()
+        layout.addWidget(self.graph)
         buttons = PinAndClearButtons(self.graph)
-        self.layout().addWidget(buttons)
+        layout.addWidget(buttons)
+        self.setLayout(layout)
 
     def update(self):
         self.graph.update()
 
 
-class GraphGroup(QtGui.QGroupBox):
+class GraphGroup(QtWidgets.QGroupBox):
     '''
     feed me GraphWidget objects and 
     I'll lay them out horizontally
     '''
-
-    def __init__(self, graphs):
+    def __init__(self, graphs, layout='H'):
         super().__init__('Graphs')
-        self.setLayout(QtWidgets.QGridLayout())
+        layout = QtWidgets.QHBoxLayout(
+        ) if layout == 'H' else QtWidgets.QVBoxLayout()
+        self.setLayout(layout)
         self.graphs = graphs
-        graphs_per_row = 5 if len(graphs) > 12 else 4
         for i, g in enumerate(graphs):
-            self.layout().addWidget(
-                graphs[i], i//graphs_per_row, i % graphs_per_row)
+            self.layout().addWidget(g)
 
     def update_graphs(self):
         for g in self.graphs:
@@ -170,7 +199,6 @@ class FloatMathMixin():
     '''allows any class to be used like a float,
     assuming it has a __float__ method.
     '''
-
     def __add__(self, other):
         return float(self) + np.asarray(other)
 
@@ -178,10 +206,10 @@ class FloatMathMixin():
         return float(self) - np.asarray(other)
 
     def __mul__(self, other):
-        return float(self)*np.asarray(other)
+        return float(self) * np.asarray(other)
 
     def __truediv__(self, other):
-        return float(self)/np.asarray(other)
+        return float(self) / np.asarray(other)
 
     def __pow__(self, other):
         return float(self)**np.asarray(other)
@@ -216,9 +244,15 @@ class Parameter(QtWidgets.QWidget, FloatMathMixin):
         
     '''
 
-    param_changed = QtCore.Signal()
+    param_changed = QtCore.pyqtSignal()
 
-    def __init__(self, name, default=1., Min=-100_000., Max=100_000., units=None, slider=True):
+    def __init__(self,
+                 name,
+                 default=1.,
+                 Min=-100_000.,
+                 Max=100_000.,
+                 units=None,
+                 slider=True):
 
         super().__init__()
         self.name = name
@@ -228,9 +262,9 @@ class Parameter(QtWidgets.QWidget, FloatMathMixin):
         if slider:
             self.box = DoubleSlider(QtCore.Qt.Horizontal)
         else:
-            self.box = QtGui.QDoubleSpinBox()
-        self.box.setSingleStep((Max-Min)/20.)
-        self.label = QtGui.QLabel(self.name+self.units)
+            self.box = QtWidgets.QDoubleSpinBox()
+        self.box.setSingleStep((Max - Min) / 20.)
+        self.label = QtWidgets.QLabel(self.name + self.units)
         self.layout().addWidget(self.label)
         self.box.setMinimum(float(Min))
         self.box.setMaximum(float(Max))
@@ -255,12 +289,12 @@ class Parameter(QtWidgets.QWidget, FloatMathMixin):
         return f'{self.name}: {float(self)}{self.units}'
 
 
-class ParameterGroupBox(QtGui.QGroupBox):
+class ParameterGroupBox(QtWidgets.QGroupBox):
     '''
     feed me parameters and i'll add spinBoxes for them, and 
     emit a signal when they're changed to update the graphs. 
     '''
-    param_changed = QtCore.Signal()
+    param_changed = QtCore.pyqtSignal()
 
     def __init__(self, parameters):
         super().__init__('Parameter controls')
@@ -273,12 +307,7 @@ class ParameterGroupBox(QtGui.QGroupBox):
 
 class LivePlotWindow(QtWidgets.QMainWindow):
     '''Puts the graphing and parameter widgets together'''
-
     def __init__(self, graphs, parameters, style='Fusion'):
-        app = QtGui.QApplication.instance()
-        if app is None:
-            app = QtGui.QApplication([])
-        app.setStyleSheet(qdarkstyle.load_stylesheet())
 
         super().__init__()
         layout = QtWidgets.QVBoxLayout()
@@ -289,7 +318,7 @@ class LivePlotWindow(QtWidgets.QMainWindow):
         layout.addWidget(self.parameter_widget)
         self.setWindowTitle('Live Plotting')
         self.setWindowIcon(QtGui.QIcon('maxwell.png'))
-        self.widget = QtGui.QWidget()
+        self.widget = QtWidgets.QWidget()
         self.widget.setLayout(layout)
         self.setCentralWidget(self.widget)
         self.parameter_widget.param_changed.connect(self.update_graphs)
@@ -298,3 +327,78 @@ class LivePlotWindow(QtWidgets.QMainWindow):
 
     def update_graphs(self):
         self.graphing_group.update_graphs()
+
+
+if __name__ == '__main__':
+    import timeit
+
+    import qdarkstyle
+    from PyQt5.QtWidgets import QApplication
+
+    from mim import MIM
+    from QNM_viewer import wl_to_ev
+    pi = 3.1415
+    def Lorentz(wls, center_wl, eff):
+        eVs, center_eV = map(wl_to_ev, (wls, center_wl))
+        width_2 = MIM(center_eV, n, t) / (1 - eff)  # eV - = Gamma/2
+        lor = (width_2 / (width_2**2 + ((eVs - center_eV))**2)) / (2 * pi**2)
+        # 2pi times all eVs for angular frequency, then divide by pi for normalizing
+        return lor * eff
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication([])
+    app.setStyleSheet(qdarkstyle.load_stylesheet())
+    f = Parameter('Facet', 0.3, Min=0.1, Max=0.4)
+    D = Parameter('Diameter', 80., Min=40, Max=100, units='nm')
+    t = Parameter('gap thickness', 1., Min=0.75, Max=6., units='nm')
+    n = Parameter(
+        'gap refractive index',
+        1.5,
+        Min=1.,
+        Max=2.,
+    )
+    def real_eq(f, D, t, n):
+        s = n * t**-0.46
+
+        return (395.5 + 0.0 + 179.6 * f + 0.3522 * D + 85.75 * s -
+                567.0 * f**2 + 1.823 * f * D + 93.01 * f * s + 0.00548 * D**2 +
+                1.438 * D * s + 0.836 * s**2)
+    def imag_eq(real, D):
+        return (1.05
+        +0.0
+        -0.1229*D
+        +0.7649*real
+        +0.001026*D**2
+        +0.08007*D*real
+        -1.159*real**2
+        -2.85e-06*D**3
+        -0.0002686*D**2*real
+        -0.0126*D*real**2
+        +0.2632*real**3)
+    def Lorentz_eq(wl):
+        real = real_eq(f, D, t, n)
+        efficiency = imag_eq(real, D)
+        return Lorentz(wl, real, efficiency)
+    def annotate():
+        real = real_eq(f, D, t, n)
+        efficiency = imag_eq(real, D)
+        return real, efficiency
+    def xlim():
+        wl = real_eq(f, D, t, n) 
+        return wl * 0.8, wl * 1.1
+    eqs = {'real': real_eq,
+           'image': imag_eq,
+           'Lorentz': Lorentz_eq,
+           'annotate': annotate,
+           }
+    LPW = LivePlotWindow([GraphWithPinAndClearButtons({'10': eqs},
+                                       xlim,
+                                       title='test',
+                                       resolution=100)], (f, D, t, n))
+    for _ in range(100):
+        LPW.update_graphs()
+    # print(timeit.timeit(LPW.update_graphs, number=100))
+    
+    # LPW.show()
+    # app.exec_()
+    

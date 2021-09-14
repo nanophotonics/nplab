@@ -1,0 +1,22 @@
+f: facet fraction.
+   Analoguous to the ratio of facet diameter to spherical nanoparticle diameter.
+   f = fs/(a*2*sqrt(3)),
+   where a is Rhombicuboctohedral side length, and fs is the facet side length.
+   This definition was chosen to preserve the ratio of areas on the facet to the middle 
+   cross-section of the nanoparticle in the spherical and rhombicuboctohedral cases.
+   for a regular rhombicuboctohedron, use 1/(2*sqrt(3)) ~ 0.29
+   Range: 0.1 - 0.4
+
+---------------------------------------------------------------------------
+D (nm): roughly equivalent to Diameter. A sphere of diameter D and Rhombicuboctohedron
+        defined by parameter D have the same cross-sectional area.
+        D = a/sqrt(pi/(12*sqrt(3)))
+        Range: 40-100nm
+---------------------------------------------------------------------------
+t (nm): gap thickness. 
+        Range: 0.75-6nm
+---------------------------------------------------------------------------
+n: gap refractive index. 
+   Range: 1.25-2
+
+The facet has 5nm radius rounding applied to the edges.

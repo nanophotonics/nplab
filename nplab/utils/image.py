@@ -4,8 +4,6 @@ Created on Wed Oct 21 18:41:41 2015
 
 @author: rwb27
 """
-from __future__ import division
-from __future__ import print_function
 
 from past.utils import old_div
 from nplab.utils.array_with_attrs import ArrayWithAttrs

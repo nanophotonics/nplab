@@ -1,9 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import division
-from __future__ import print_function
-from builtins import range
-from past.utils import old_div
 import nplab.instrument.serial_instrument as serial
 import nplab.instrument.stage as stage
 import re
@@ -41,7 +37,7 @@ class ProScan(serial.SerialInstrument, stage.Stage):
         
 #        try: #get the set-up parameters
         self.microstepsPerMicron = self.parsed_query("STAGE",r"MICROSTEPS/MICRON = %d",termination_line="END")
-        self.query("RES s %f" % (old_div(1,self.microstepsPerMicron))) #set the resolution to 1 microstep
+        self.query("RES s %f" % (1/self.microstepsPerMicron)) #set the resolution to 1 microstep
         self.resolution = self.float_query("RES s")
 #        except:
 #            raise Exception("Could not establish stage parameters, maybe the com port is wrong?")
@@ -83,7 +79,7 @@ class ProScan(serial.SerialInstrument, stage.Stage):
             # relative move
             querystring += "R"
         if self.use_si_units: x = np.array(x) * 1e6
-        for i in range(len(x)): querystring += " %d" % int(old_div(x[i],self.resolution))
+        for i in range(len(x)): querystring += " %d" % int(x[i]/self.resolution)
         self.query(querystring)
         time_0 = time.time()
         #position_0 = self.position
@@ -117,7 +113,7 @@ class ProScan(serial.SerialInstrument, stage.Stage):
         else:
             pos = self.parsed_query('P',r"%f,%f,%f")
             if self.use_si_units:
-                pos = old_div(np.array(pos),1e6)
+                pos = np.array(pos)/1e6
             return np.array(pos) * self.resolution
 
     position = property(get_position)

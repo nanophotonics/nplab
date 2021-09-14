@@ -7,9 +7,7 @@ This base class
 
 @author: Richard Bowman
 """
-from __future__ import print_function
-#from traits.api import HasTraits, Bool, Int, Str, Button, Array, Enum, List
-#import nplab
+
 from past.builtins import basestring
 from builtins import str
 from builtins import zip
@@ -79,7 +77,7 @@ class MessageBusInstrument(nplab.instrument.Instrument):
         """Write a string to the unerlying communications port"""
         with self.communications_lock:
             self._write(write_string, *args, **kwargs)
-            self._check_echo(write_string, timeout)
+        self._check_echo(write_string, timeout)
 
     def _write(self, query_string, *args, **kwargs):
         raise NotImplementedError("Subclasses of MessageBusInstrument must override the _write method!")

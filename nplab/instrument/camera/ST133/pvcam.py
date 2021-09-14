@@ -18,14 +18,6 @@ Original Odemis was tested on Linux with a PI PIXIS. This was tested on Windows 
 """
 
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import absolute_import
-
-
-from builtins import str
-from builtins import range
-from builtins import object
 import ctypes as ct
 from nplab.instrument.camera.ST133 import *  # Dictionary linking metadata names with codes
 import math

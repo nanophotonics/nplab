@@ -158,5 +158,5 @@ def run_function_modally(function, progress_maximum, *args, **kwargs):
     progress_maximum, which sets the final value of progress.
     """
  #   function(*args, **kwargs)
-    e = RunFunctionWithProgressBar(function, progress_maximum = progress_maximum)
+    e = RunFunctionWithProgressBar(function, progress_maximum=progress_maximum)
     e.run_modally(*args, **kwargs)

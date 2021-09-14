@@ -134,7 +134,7 @@ def sort_by_timestamp(hdf5_group):
         keys = np.array(keys)[np.argsort(time_stamps)]
     except KeyError:
         keys.sort(key=lambda n: n.split('_')[-1] if '_' in n else n)
-    items_lists = [[key,hdf5_group[key]] for key in keys]
+    items_lists = [(key, hdf5_group[key]) for key in keys]
     return items_lists
 
 class Group(h5py.Group, ShowGUIMixin):
@@ -342,9 +342,22 @@ class DataFile(Group):
         with information about the current module and system.
         """
         if isinstance(name, h5py.Group):
-            f=name #if it's already an open file, just use it
+            f = name #if it's already an open file, just use it
         else:
             f = h5py.File(name, mode, *args, **kwargs)  # open the file
+            try:
+                f = h5py.File(name, mode, *args, **kwargs)
+            except OSError as e:
+                print("problem opening file", e)            
+                if os.path.getsize(name) < 100 and mode == 'a': #1kB/10
+                    os.remove(name) # dirty hack to work around mode=a not working
+                                        # if the file is empty
+                else:
+                    raise e
+                f = h5py.File(name, mode, *args, **kwargs)
+        
+        
+        
         super(DataFile, self).__init__(f.id)  # initialise a Group object with the root group of the file (saves re-wrapping all the functions for File)
         if save_version_info and self.file.mode != 'r':
             #Save version information if needed
@@ -454,17 +467,9 @@ def set_current(datafile, **kwargs):
         return _current_datafile
     else:
         print("opening file: ", datafile)
-        try:
-            _current_datafile = DataFile(datafile, **kwargs)  # open a new datafile
-            return _current_datafile
-        except Exception as e:
-            print("problem opening file")            
-            if os.path.getsize(datafile) < 100: #1kB/10
-                os.remove(datafile) # dirty hack to work around mode=a not working
-                                    # if the file is empty
-                
-            _current_datafile = DataFile(datafile, **kwargs)
-
+        _current_datafile = DataFile(datafile, **kwargs)  # open a new datafile
+        return _current_datafile
+        
 def set_temporary_current_datafile():
     """Create a temporary datafile, for testing purposes."""
     nplab.log("WARNING: using a temporary file")

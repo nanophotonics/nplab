@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import division
-from __future__ import print_function
-from builtins import range
 import numpy as np
 import requests
 import matplotlib.pyplot as plt

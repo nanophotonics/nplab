@@ -4,11 +4,6 @@ This is an interface module for instruments produced by Sigma Koki
 
 __author__: Yago
 """
-from __future__ import division
-from builtins import zip
-from builtins import str
-from builtins import map
-from builtins import range
 from nplab.utils.thread_utils import locked_action
 from nplab.instrument.stage import Stage
 from nplab.instrument.serial_instrument import SerialInstrument

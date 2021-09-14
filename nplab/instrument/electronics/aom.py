@@ -13,7 +13,7 @@ def Sigmoid(x,Shift=0.68207277,Scale=8.49175969):
     Output=(x-Shift)*Scale
     Output=np.exp(-Output)+1
     Output=1./Output
-    return old_div((Output-Zero),(One-Zero))
+    return (Output-Zero)/(One-Zero)
     
 def Inverse_Sigmoid(x,Shift=0.68207277,Scale=8.49175969):
     Zero=1./(np.exp(Shift*Scale)+1)
@@ -101,12 +101,12 @@ class AOM(VisaInstrument):
         y=[]
         for i in x:
             self.Power(i)   
-            y.append(Take_Reading())         
-            time.sleep(1)
+            y.append( Take_Reading())         
+            time.sleep(1 )
         
-        
-        if y[0]>Power or y[1]<Power:
-            print('Out of Range!')
+         
+        if y[0]>Power or  y[1]<Power:
+            print( 'Out of Range!')
             return
         
         for i in range(2):

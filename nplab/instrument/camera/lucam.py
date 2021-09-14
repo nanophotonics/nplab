@@ -83,14 +83,6 @@ Examples
 Refer to the test() function at the end of the document for more examples.
 
 """
-from __future__ import print_function
-
-
-
-from builtins import str
-from builtins import hex
-from builtins import range
-from builtins import object
 import sys
 import ctypes
 

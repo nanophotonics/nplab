@@ -1,5 +1,3 @@
-from __future__ import division
-from past.utils import old_div
 import numpy as np
 
 """
@@ -29,7 +27,7 @@ def Run(Z_Scan,Threshold=0.2, Smoothing_width=1.5):
     Thresholded=np.nan_to_num(Z_Scan)
 
     Thresholded=Thresholded.astype(np.float64)
-    Thresholded=old_div((Thresholded - Thresholded.min(axis=0)),(Thresholded.max(axis=0)-Thresholded.min(axis=0)))
+    Thresholded=(Thresholded - Thresholded.min(axis=0))/(Thresholded.max(axis=0)-Thresholded.min(axis=0))
     Thresholded-=Threshold
     Thresholded*=(Thresholded>0)       #Normalise and Threshold array
 

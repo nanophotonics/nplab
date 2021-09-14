@@ -14,11 +14,7 @@ V1.1
 Michael Leung
 mcleung@stanford.edu
 """
-from __future__ import print_function
-from builtins import object
 DEBUG = False
-
-
 
 
 '''

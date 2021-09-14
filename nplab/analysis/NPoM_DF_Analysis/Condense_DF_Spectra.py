@@ -10,11 +10,6 @@ Output (summary) is directly compatible with Igor (Bart de Nijs) and Python (Cha
 requires lmfit (available via pip install lmfit)
 """
 
-from __future__ import division
-from __future__ import print_function
-
-from builtins import range
-from past.utils import old_div
 if __name__ == '__main__':
     print('Importing modules')
 

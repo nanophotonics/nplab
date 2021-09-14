@@ -1,7 +1,4 @@
 # -*- coding: utf-8 -*-
-
-from __future__ import print_function
-from builtins import range
 __author__ = 'alansanders'
 import ctypes as ct
 import os
