@@ -38,7 +38,8 @@ from nplab.ui.ui_tools import UiTools
 from nplab.utils.gui import QtWidgets, QtCore, uic, QtGui
 import sys,os, time
 from nplab.utils.log import create_logger
-from picam_constants import PicamSensorTemperatureStatus,PicamParameter,PicamValueType,PicamError,transpose_dictionary,PI_V,PicamConstraintType
+from .picam_constants import PicamSensorTemperatureStatus,PicamParameter,PicamValueType,PicamError,transpose_dictionary,PI_V,PicamConstraintType
+from nplab.utils.notified_property import NotifiedProperty
 
 import logging
 LOGGER = create_logger('Pixis256E')
@@ -51,6 +52,8 @@ class clsPicamReadoutStruct(ct.Structure):
 
 
 class Pixis(CameraRoiScale):
+    metadata_property_names = ('Exposure', 'x_axis', 'CurrentTemperature',)
+    
     def __init__(self,with_start_up = False ,debug=0):
         super(Pixis, self).__init__()
         self.debug = debug
@@ -60,6 +63,8 @@ class Pixis(CameraRoiScale):
         self.x_max = 0
         self.y_min = 0
         self.x_min = 0
+        self.center_row = 128
+        self.num_rows = 256
         self.aquisition_mode = 'Image'
         if with_start_up == True:
             self.StartUp()
@@ -81,7 +86,6 @@ class Pixis(CameraRoiScale):
         """
         try:
             image  = np.array(self.GetCurrentFrame())
-            self.current_frame = image
             return image
         except Exception as e:
             if suppress_errors==True:
@@ -93,18 +97,17 @@ class Pixis(CameraRoiScale):
         """
             CameraRoiScale class override
         """
-        if self.aquisition_mode == 'Image':
-                image  = self.Capture()
-        elif self.aquisition_mode == 'Spectrum':
-                raw_snapshot = self.Capture()
-                image = self.get_spectrum(raw_snapshot)
+        image  = self.filter_function(self.Capture())
+
+        if self.aquisition_mode == 'Spectrum':
+                image = self.get_spectrum(image)
         elif self.aquisition_mode == 'ROI':
-                raw_snapshot = self.Capture()
-                image = self.get_roi(raw_snapshot)
+                image = self.get_roi(image)
+        self.current_frame = image
         return True, image
           
 
-    def get_roi(self,raw_snapshot, x_min=None, x_max = None, y_min=None,y_max = None, suppress_errors=False,debug=0):
+    def get_roi(self,raw_image, x_min=None, x_max = None, y_min=None,y_max = None, suppress_errors=False,debug=0):
         """ 
             Takes input of raw snapshot an outputs ROI image
         """
@@ -118,22 +121,20 @@ class Pixis(CameraRoiScale):
             y_max = self.y_max
         if debug > 0:
             print("Pixis.get_roi region of interest:",x_min,x_max,y_min,y_max)
-        roi_image = raw_snapshot[y_min:y_max, x_min:x_max]
+        roi_image = raw_image[y_min:y_max, x_min:x_max]
         if debug > 0:
             print("Pixis.roi_image.shape:",roi_image.shape)
         return roi_image
 
-    def get_spectrum(self, raw_snapshot, x_min= None, x_max = None, y_min=None,y_max = None ,with_boundary_cut = True, suppress_errors=False):  
+    def get_spectrum(self, raw_image, x_min= None, x_max = None, y_min=None,y_max = None ,with_boundary_cut = False, suppress_errors=False):  
         """ 
             Takes input of raw snapshot an outputs ROI defined spectrum
         """
-        roi_image = self.get_roi(raw_snapshot, x_min,x_max,y_min,y_max,suppress_errors)
+        roi_image = self.get_roi(raw_image, x_min,x_max,y_min,y_max,suppress_errors)
         #cut edge values from raw spectrum - remove edge effects
-        raw_spectrum = np.mean(roi_image,axis=0)
-        pixel_offsets = np.array(list(range(0,len(raw_spectrum))))-int(self.FrameWidth/2)
+        raw_spectrum = np.sum(roi_image,axis=0)
         if with_boundary_cut == True:
             return raw_spectrum[self.boundary_cut:-self.boundary_cut]
-
         else:
             return raw_spectrum
 
@@ -195,7 +196,7 @@ class Pixis(CameraRoiScale):
             "PicamValueType_FloatingPoint" : ct.c_double(),
 
             "PicamValueType_Enumeration": ct.c_int(), #TODO 
-            "PicamValueType_Rois": None, #TODO
+            "PicamValueType_Rois": ct.c_int(), #TODO
             "PicamValueType_Pulse": None, #TODO
             "PicamValueType_Modulations": None #None       
         }
@@ -257,7 +258,7 @@ class Pixis(CameraRoiScale):
             "PicamValueType_LargeInteger" : ct.c_long,
             "PicamValueType_FloatingPoint" : ct.c_double, #WARNING - THIS SHOULD BE A DOUBLE (64bit), NOT FLOAT (32bit) [for 32bit change to float]
             "PicamValueType_Enumeration": ct.c_int, #Maybe an int 
-            "PicamValueType_Rois": None, #TODO
+            "PicamValueType_Rois": ct.c_int() , #TODO
             "PicamValueType_Pulse": None, #TODO
             "PicamValueType_Modulations": None #None       
         }
@@ -350,7 +351,11 @@ class Pixis(CameraRoiScale):
         param_name = "PicamParameter_ExposureTime"        
         param_value = time #in milliseconds
         self.set_parameter(parameter_name=param_name,parameter_value=param_value)
-
+        
+    def GetExposureTime(self):
+        
+        param_name = "PicamParameter_ExposureTime"        
+        self.get_parameter(parameter_name=param_name)
 
     def SetTemperatureWithLock(self,temperature):
         self.__SetSensorTemperatureSetPoint(temperature)
@@ -383,15 +388,8 @@ class Pixis(CameraRoiScale):
         '''
         param_name = "PicamParameter_SensorTemperatureStatus"
         return self.get_parameter(param_name)
-
-
-    def GetExposureTime(self):
-        param_name = "PicamParameter_ExposureTime"
-        #function call: PicamEnumeratedType_CoolingFanStatus
-        return self.get_parameter(parameter_name=param_name)
-        
-        # return self.get_parameter(parameter=33685527, label="exposure time")
     
+    pixis_temperature = NotifiedProperty(GetSensorTemperatureReading, __SetSensorTemperatureSetPoint)
 
     def GetSensorType(self):
         param_name = "PicamParameter_SensorType"
@@ -432,13 +430,27 @@ class Pixis(CameraRoiScale):
             return frame - self.background
         else:
             return frame
+        
+    def get_pixis_parameters(self):
+        print(self.GetExposureTime())
+        pixis_parameters = dict()
+        pixis_parameters['Temperature'] = self.pixis_temperature
+        pixis_parameters['Exposure Time'] = self.GetExposureTime()
+        pixis_parameters['ROI'] = np.array([self.center_row, self.num_rows])
+        if self.backgrounded:
+            pixis_parameters['Background'] = self.background
+        return pixis_parameters
+        
     
     def get_control_widget(self):
-        return PixisUI()
+        return PixisUI(self)
     
+"""List of avalible Pixis parameters saved in meta data
+"""
+parameters = dict()
 
 class PixisUI(QtWidgets.QWidget, UiTools):
-    def __init__(self):
+    def __init__(self,pixis):
         if not isinstance(pixis, Pixis):
            raise TypeError('instrument must be a Pixis camera')
         super(PixisUI, self).__init__()
@@ -447,12 +459,11 @@ class PixisUI(QtWidgets.QWidget, UiTools):
         self.Pixis = pixis
         self.DisplayWidget = None
         self.data_file = None
+        self.save_all_parameters = False
         
         self.Pixis.StartUp()
         self._setup_signals()
-        #self.init_gui()
-        #self.data_file = None
-        
+    
     def _setup_signals(self):
         #self.comboBoxBinning.activated.connect(self.binning)
         self.comboBoxReadMode.activated.connect(self.read_mode)
@@ -494,7 +505,7 @@ class PixisUI(QtWidgets.QWidget, UiTools):
         self.lineEditExpT.setText(str(value))
         
     def update_temperature_display(self):
-        temperature = self.Pixis.GetSensorTemperatureReading()
+        temperature = self.Pixis.pixis_temperature
         self.temperature_lcdNumber.display(float(temperature))
         
     def take_background(self):
@@ -520,36 +531,41 @@ class PixisUI(QtWidgets.QWidget, UiTools):
     def number_rows(self):
         num_rows = self.spinBoxNumRows.value()
         center_row = self.spinBoxCenterRow.value()
+        self.Pixis.center_row = center_row
+        self.Pixis.num_rows = num_rows
         self.Pixis.y_min = int(center_row - (num_rows/2))
         self.Pixis.y_max = int(center_row + (num_rows/2))
     
     def read_mode(self):
         if self.Pixis.aquisition_mode != self.comboBoxReadMode.currentText():
-            if self.comboBoxReadMode.currentText() == "Image":
-                self.latest_raw_frame = self.Pixis.current_frame
-            elif self.comboBoxReadMode.currentText() == "Spectrum":
-                self.latest_raw_frame = self.Pixis.get_spectrum(self.Pixis.current_frame)
-            elif self.comboBoxReadMode.currentText() == "ROI":
-                self.latest_raw_frame = self.Pixis.get_roi(self.Pixis.current_frame)
-                
             self.Pixis.aquisition_mode = self.comboBoxReadMode.currentText()
-        print(self.Pixis.aquisition_mode)
         
     def Save(self):
         if self.data_file is None:
             self.data_file = df.current()
         data = self.Pixis.current_frame
+        
         if self.filename_lineEdit.text() != 'Filename....':
             filename = self.filename_lineEdit.text()
         else:
             filename = 'Pixis_data'      
         
         group = self.data_file.create_group('PixisData')
+
+        attrs = self.Pixis.get_pixis_parameters()
+        print(attrs)
+
+        attrs['Description'] = self.description_plainTextEdit.toPlainText()
+        if hasattr(self.Pixis, 'x_axis'):
+            attrs['wavelengths'] = self.Pixis.x_axis
+            
+        if hasattr(self.Pixis, 'slit_width'):
+            attrs['Slit Width'] = self.Pixis.slit_width
+            
         try:
             data_set = group.create_dataset(name=filename, data=data)
         except Exception as e:
             self.Pixis._logger.info(e)
-        attrs = dict()
         df.attributes_from_dict(data_set, attrs)   
             
     def __del__(self):
