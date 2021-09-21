@@ -150,7 +150,7 @@ class LumeneraCamera(Camera):
                                         ctypes.POINTER(ctypes.c_byte))
                     image = self.convert_frame(frame_pointer,np.product(frame.shape))
                     if crop_fraction is not None:
-                        x_size = int(image.shape[0]*crop_fraction)//2)
+                        x_size = int(image.shape[0]*crop_fraction)//2
                         x_mid = int(image.shape[0])//2
                         y_size = int(image.shape[1]*crop_fraction)//2
                         y_mid = int(image.shape[1])//2
