@@ -5,7 +5,7 @@ Created on Fri Nov 02 14:01:17 2018
 @author: car72
 
 Contains all necessary functions for analysis of NPoM darkfield and photoluminescence spectra
-Best used in conjunction with Condense_Fit_DF or script
+Best used in conjunction with Condense_Fit_DF control script
 
 """
 from __future__ import division
@@ -992,7 +992,6 @@ def lorentzian(x, height, center, fwhm):
     return y
 
 def gaussian(x, height, center, fwhm, offset = 0):
-
     '''Gaussian as a function of height, centre, fwhm and offset'''
     a = height
     b = center
@@ -2678,7 +2677,7 @@ def reCheckCentering():
 
 def plotIntensityRatios(outputFileName, plotName = 'All NPoMs', dataType = 'Raw', cMap = 'Greys', closeFigures = False, 
                         plot = True, corrPars = [1.0763150264374398e-16, -4.955034954727432e-13, 9.679921256656744e-10, -1.0400936324948906e-06, 0.0006638040249482491, -0.2516124765012756, 52.43996030260027, -4633.856249916117],
-                        returnCentroid = True):
+                        returnCentroid = True, filename = None):
 
     if 'Intensity ratios' not in os.listdir('.'):
         os.mkdir('Intensity ratios')
@@ -2776,7 +2775,12 @@ def plotIntensityRatios(outputFileName, plotName = 'All NPoMs', dataType = 'Raw'
             ax1.patch.set_visible(False)
 
             fig.tight_layout()
-            fig.savefig('Intensity ratios/%s, %s' % (plotName, dataType), bbox_inches = 'tight', transparent = True)
+            filename = f'{plotName}, {dataType}' if filename is None else f'{filename}'
+            
+            if not filename.endswith('.png'):
+                filename = f'{filename}.png'
+
+            fig.savefig(f'Intensity ratios/{filename}', bbox_inches = 'tight', transparent = True)
 
             if closeFigures == True:
                 plt.close('all')

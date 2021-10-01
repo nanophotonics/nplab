@@ -225,11 +225,7 @@ def remove_cosmic_ray(spectrum, thresh=5, smooth=30, max_iterations=10):
         return cleaned
     return cleaned
 
-
 if __name__ ==  '__main__':
-    
-    
-
     import matplotlib.pyplot as plt
     wls = np.linspace(633, 750, 1600)
     spec = np.random.randint(300, 600, size=1600)
