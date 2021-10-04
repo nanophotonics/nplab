@@ -1,9 +1,11 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from nplab.analysis import Spectrum, latest_scan, load_h5
-from nplab.analysis.particle_exclusion.utils import load_rejected
+
 from scipy.signal import argrelextrema
 
+from nplab.analysis import Spectrum, latest_scan, load_h5
+from nplab.analysis.particle_exclusion.utils import load_rejected
+from nplab.datafile import current
 
 def closest(iterable, val):
     ''' return the closest element in an iterable to val'''
@@ -15,7 +17,8 @@ def closest_index(iterable, val):
     return min(enumerate(iterable), key=lambda i_e: abs(i_e[0] - val))[1]
 
 
-scan = latest_scan(load_h5())  # most recent particle track, most recent file
+# scan = latest_scan(load_h5())  # most recent particle track, most recent file
+scan = latest_scan(current(mode='r')) # pop up a window 
 rejected = load_rejected()  # create with monotonous_image_excluder
 
 group_len = len(next(iter(
@@ -36,7 +39,7 @@ for name, group in scan.items():
 wl = stack[0].wl[:]  # keep the wl axis as a variable for later
 
 #%% group peaks by maxima
-bounds = np.arange(740, 880, 10)  #10 groups, feel free to change
+bounds = np.arange(740, 880, 10)  #steps of 10nm, feel free to change
 bins = [np.mean(bounds[np.array([i, i + 1])]) for i in range(len(bounds) - 1)]
 # the center of the bounds
 grouped = {b: [] for b in bins}  # gonna group particles by bin
@@ -70,6 +73,6 @@ ax.set_ylabel('frequency')
 ax.set_xlabel('wavelength (nm)')
 ax = plt.twinx(ax)
 for i, spectrum in enumerate(averages.values()):
-    ax.plot(wl, spectrum.smooth(6), color=colors[i])
+    ax.plot(spectrum.wl, spectrum.smooth(6), color=colors[i])
 ax.set_ylabel('intensity')
 ax.set_title(f'center = ${np.mean(peaks):.1f}\pm{np.std(peaks):.1f}$nm')
