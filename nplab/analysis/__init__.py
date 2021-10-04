@@ -1,17 +1,22 @@
 __author__ = 'alansanders'
+import re 
 
 import numpy as np
 from pathlib import Path
 import h5py
 from scipy.ndimage import gaussian_filter
 from functools import cached_property
+H5_TEMPLATE = r'\S*(\d{4})-(\d{2})-(\d{2})\S*.h5' 
+# allow somestuff1_2021-01-05_someotherstuff.h5
 
 def load_h5(location='.'):
     '''return the latest h5 in a given directory. If location is left blank,
     loads the latest file in the current directory.'''
     path = Path(location)
-    return h5py.File(path / max(f for f in path.iterdir() if f.suffix == '.h5'), 'r')
-
+    candidates_dates = [(f, [int(m) for m in match.groups()]) for f in path.iterdir()\
+                        if (match := re.match(H5_TEMPLATE, f.name))]
+    return h5py.File(path / max(candidates_dates, key=lambda cd: cd[1])[0], 'r') 
+    
 def latest_scan(file):
     '''returns the last ParticleScannerScan in a file'''
     return file[max(file, key=lambda x: int(x.split('_')[-1])
@@ -238,3 +243,4 @@ if __name__ ==  '__main__':
     rspec2 = RamanSpectrum(spec, wavelengths=wls)
     plt.plot(rspec2.shifts, rspec2, label='center of 700')
     plt.legend()
+    
