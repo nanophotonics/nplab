@@ -50,24 +50,6 @@ class DoubleSlider(QtWidgets.QSlider):
         super().setValue(int(value * self._multi))
 
 
-# @cache
-# def degeneracy(geometry, mode_name):
-#     if geometry == 'circle':
-#         return 1 + (not mode_name.endswith('0'))
-#     else:
-#         return 1
-
-
-class Filler():
-    def __init__(self, arr):
-        self.i = 0
-        self.arr = arr
-
-    def fill(self, row):
-        self.arr[self.i] = row
-        self.i += 1
-
-
 class LorentzGraphWidget(pg.PlotWidget):
     '''
     template for an interactive Lorentian graph
@@ -82,7 +64,6 @@ class LorentzGraphWidget(pg.PlotWidget):
     def __init__(self,
                  modes,
                  xlim_func,
-                 degeneracies=defaultdict(lambda: 1),
                  resolution=100,
                  title='Efficiencies',
                  xlabel='wavelength (nm)',
@@ -90,7 +71,6 @@ class LorentzGraphWidget(pg.PlotWidget):
         super().__init__(title=title)
         self.modes = modes
         self.xlim_func = xlim_func
-        self.degeneracies = degeneracies
         self.resolution = resolution
         self.setTitle(title)
         self.setLabel('bottom', xlabel)
@@ -110,15 +90,13 @@ class LorentzGraphWidget(pg.PlotWidget):
             self.plot_item.removeItem(self.plots_to_remove.pop())
 
         xs = np.linspace(*self.xlim_func(), self.resolution)  # x axis changes
-        ys = np.zeros(
-            (sum(self.degeneracies[m] for m in self.modes), self.resolution))
-        filler = Filler(ys)
+        ys = np.zeros((len(self.modes), self.resolution))
         for i, (name, mode) in enumerate(self.modes.items()):
             y = mode['Lorentz'](xs)
-            for _ in range(d := self.degeneracies[name]):
-                filler.fill(y)
+            
+            ys[i] = y
             wl, eff = mode['annotate']()
-            label = f'{name}, wl={round(wl)}nm, efficiency={np.around(eff, 2)}, degeneracy={d}'
+            label = f'{name}, wl={round(wl)}nm, efficiency={np.around(eff, 2)}'
             self._plot(xs,
                        y,
                        pen=pg.mkPen(pg.intColor(i,
