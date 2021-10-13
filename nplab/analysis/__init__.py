@@ -6,6 +6,9 @@ from pathlib import Path
 import h5py
 from scipy.ndimage import gaussian_filter
 from functools import cached_property
+
+
+
 H5_TEMPLATE = r'\S*(\d{4})-(\d{2})-(\d{2})\S*.h5' 
 # allow somestuff1_2021-01-05_someotherstuff.h5
 
