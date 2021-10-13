@@ -5,7 +5,7 @@ Created on Tue Oct 12 14:21:21 2021
 @author: Eoin
 """
 
-from constants import c, e, h
+from nplab.unit_conversions.constants import c, e, h
 
 
 def ev_to_joules(ev):

@@ -5,8 +5,8 @@ Created on Tue Oct 12 14:21:21 2021
 @author: Eoin
 """
 
-import spectroscopy_conversions as cnv
-from constants import c
+import nplab.unit_conversions.spectroscopy_conversions as cnv
+from nplab.unit_conversions.constants import c
 
 
 def nm_to_hz(nm, laser):
