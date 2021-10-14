@@ -18,7 +18,10 @@ def load_h5(location='.'):
     path = Path(location)
     candidates_dates = [(f, [int(m) for m in match.groups()]) for f in path.iterdir()\
                         if (match := re.match(H5_TEMPLATE, f.name))]
-    return h5py.File(path / max(candidates_dates, key=lambda cd: cd[1])[0], 'r') 
+    if candidates_dates:
+        return h5py.File(path / max(candidates_dates, key=lambda cd: cd[1])[0], 'r') 
+    else:
+        raise ValueError('No suitable h5 file found')
     
 def latest_scan(file):
     '''returns the last ParticleScannerScan in a file'''
