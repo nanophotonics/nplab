@@ -61,49 +61,11 @@ class Triax(VisaInstrument):
         #----Generate initial 3x3 calibration arrays for the gratings used for initial estimate of wavelengths on each CCD pixel--------
         
         self.Grating_Number=self.Grating() #Current grating number
-        self.Calibration_Arrays=[]
-        for i in Calibration_Data:
-            self.Calibration_Arrays.append([])
-            if len(i)==4:
-                for j in i[1:]:
-                    self.Calibration_Arrays[-1].append(np.polyfit(i[0],j,2))
 
-
-        #---------Generate the quadratic fit data to create quadratic splines for the 3x3 calibration arrays for the gratings, used to improve wavelength estimation-----------
-
-        self.Spline_Data=[]   
-        for i in Calibration_Data:
-            self.Spline_Data.append([])
-            if len(i)==4:
-                self.Spline_Data[-1].append(i[0])
-                for j in i[1:]:
-                    self.Spline_Data[-1].append([])
-                    for k in range(len(self.Spline_Data[-1][0]))[1:-1]:
-                        self.Spline_Data[-1][-1].append(np.polyfit(self.Spline_Data[-1][0][k-1:k+2],j[k-1:k+2],2))
-
-        #---print regions each grating is calibrated over
-
-        self.Regions=[]
-
-        print('This Triax spectrometer is calibrated for use over the following ranges:')
-        for i in range(len(Calibration_Data)):
-            if len(Calibration_Data[i])==4:
-                print('Grating',i,':',np.min(Calibration_Data[i][0]),'nm - ',np.max(Calibration_Data[i][0]),'nm')
-                self.Regions.append([np.min(Calibration_Data[i][0]),np.max(Calibration_Data[i][0])])
-            else:
-                self.Regions.append(None)
-
-        self.Wavelength_Array = None #Not intially set. Updated with a change of grating or stepper motor position
+       
         self.Number_of_Pixels=CCD_Horizontal_Resolution
 
-    def Get_Wavelength_Array(self):
-        """
-        Returns the wavelength array in memory. If it is yet to be calculated, it is caluculated here
-        """
-        if self.Wavelength_Array is None:
-            self.Wavelength_Array=self.Convert_Pixels_to_Wavelengths(np.array(list(range(self.Number_of_Pixels))))
-        return self.Wavelength_Array
-
+    
     def Grating(self, Set_To=None):
         """
         Function for checking or setting the grating number. If Set_To is left as None, current grating number is returned. If 0,1 or 2 is passed as Set_To, the
@@ -138,111 +100,20 @@ class Triax(VisaInstrument):
         self.write("H0\r")
         return int(self.read()[1:])
 
-    def Convert_Pixels_to_Wavelengths(self,Pixel_Array):
-        """
-        A function to convert a given Pixel Array into a wavelength array depending on the current Grating and Grating Position.
-
-        Achieves this by optimising wavelengths on each pixel that would require the current grating motor stepper position.
-
-        Result is always a quadratic approximation.
-        """
-
-        Steps=self.Motor_Steps() #Check grating position
-
-        if self.Grating_Number<=len(self.Calibration_Arrays): #Check calibration exists
-            if len(self.Calibration_Arrays)==0 or len(self.Calibration_Arrays[self.Grating_Number])==0:
-                return Pixel_Array
-
-        Sample_Pixels=np.linspace(np.min(Pixel_Array),np.max(Pixel_Array),10) #Make some estimates to the nearest 0.1nm
-        Sample_Wavelengths=[np.mean(self.Regions[self.Grating_Number])]
-        while len(Sample_Wavelengths)<len(Sample_Pixels):
-            Sample_Wavelengths.append(Sample_Wavelengths[0])
-        Range=0.5*(self.Regions[self.Grating_Number][1]-self.Regions[self.Grating_Number][0])
-        Spacing=[10.,1.,0.1]
-
-        while len(Spacing)>0:
-            for i in range(len(Sample_Pixels)):
-                To_Test=np.arange(Sample_Wavelengths[i]-Range,Sample_Wavelengths[i]+Range,Spacing[0])
-                Results=[]
-                for j in To_Test:
-                    Results.append(self.Find_Required_Step(j,Sample_Pixels[i],False))
-                Sample_Wavelengths[i]=To_Test[np.argmin(np.abs(np.array(Results)-Steps))]
-            Range=Spacing[0]
-            Spacing=Spacing[1:]
-
-        #Use estimates to find a quadratic relation
-
-        Coefficents=np.polyfit(Sample_Pixels,Sample_Wavelengths,2)
-
-        #Optimise this relation over all pixels
-
-        def Loss(Coefficents):
-            Wavelengths = np.polyval(np.polyfit(Sample_Pixels,Sample_Wavelengths,2),Pixel_Array)
-            Diff=[]
-            for i in range(len(Pixel_Array)):
-                Diff.append(self.Find_Required_Step(Wavelengths[i],Pixel_Array[i],False)-Steps)
-            return np.sum(np.abs(Diff))
-
-        Coefficents=spo.minimize(Loss,Coefficents).x
-
-        Wavelengths=np.polyval(np.polyfit(Sample_Pixels,Sample_Wavelengths,2), Pixel_Array)
-
-        return Wavelengths
-           
-    def Find_Required_Step(self,Wavelength,Pixel,Require_Integer=True):
-        """
-        Function to return the required motor step value that would place a given Wavelength on a given Pixel of the CCD
-        """
-
-        if self.Grating_Number>=len(self.Calibration_Arrays) or len(self.Calibration_Arrays[self.Grating_Number])==0: #Check calibration exists
-            raise ValueError('Current grating is not calibrated! No calibration supplied!')
-
-        Spline_Data=self.Spline_Data[self.Grating_Number]
-
-        Coefficent_Blocks=[]
-        for i in range(len(Spline_Data[1])):
-            Coefficent_Blocks.append(np.array([Spline_Data[1][i],Spline_Data[2][i],Spline_Data[3][i]]))
-
-        #-----Calculate the 3x3 calibration matrix to use-----------    
-
-        Region=0
-        while Region<len(Spline_Data[0]) and Spline_Data[0][Region]<Wavelength:
-            Region+=1
-
-        if Region<=1:
-            Coefficents=Coefficent_Blocks[0]
-        elif Region>=len(Spline_Data)-1:
-            Coefficents=Coefficent_Blocks[-1]
-        else:
-            Frac=(Wavelength-Spline_Data[0][Region-1])/(Spline_Data[0][Region]-Spline_Data[0][Region-1])
-            Coefficents=(1-Frac)*Coefficent_Blocks[Region-2]+Frac*Coefficent_Blocks[Region-1]
-        
-        #Perform Conversion
-        
-        Coefficents=np.sum(Coefficents*np.array([Wavelength**2,Wavelength,1.]),axis=1)
-
-        Output=(-Coefficents[1]-np.sqrt((Coefficents[1]**2)-(4*Coefficents[0]*(Coefficents[2]-Pixel))))/(2*Coefficents[0])
-        if Require_Integer is True:
-            Output=int(Output)
-       
-        return Output
-
-    def Move_Steps(self, Steps):
+    def Move_Steps(self, Steps): # relative
         """
         Function to move the grating by a number of stepper motor Steps.
         """
         
         if (Steps <= 0):  # Taken from original code, assume there is an issue moving backwards that this corrects
             self.write("F0,%i\r" % (Steps - 1000))
-            time.sleep(1)
             self.waitTillReady()
             self.write("F0,1000\r")
             self.waitTillReady()
         else:
             self.write("F0,%i\r" % Steps)
-            time.sleep(1)
             self.waitTillReady()
-        self.Wavelength_Array=self.Convert_Pixels_to_Wavelengths(np.array(list(range(self.Number_of_Pixels)))) #Update wavelength array
+    
 
     def Set_Center_Wavelength(self,Wavelength):  
         if self.ccd_size is None:
