@@ -10,37 +10,36 @@ from past.utils import old_div
 from nplab.instrument.spectrometer.Triax import Triax
 import numpy as np
 from nplab.instrument.camera.Andor import Andor, AndorUI
-import types
-import future
-
-
+import h5py
+from nplab.datafile import DataFile 
+from nplab.utils.array_with_attrs import ArrayWithAttrs
+from pathlib import Path
+from nplab.utils.thread_utils import background_action
+import time
+from tqdm import tqdm
 CCD_Size = 1600  # Size of ccd in pixels
 
-# Make a deepcopy of the andor capture function, to add a white light shutter close command to if required later
-# Andor_Capture_Function=types.FunctionType(Andor.capture.__code__, Andor.capture.__globals__, 'Unimportant_Name',Andor.capture.__defaults__, Andor.capture.__closure__)
 
-
+ # Grating 1
+ # 633 is at 6134
+ # 785 is at 8500 steps 
+ # so steps = 14.38wl -2790
+ # rougly 5_000 steps to 10_000 steps
 class Trandor(Andor):  # Andor
     ''' Wrapper class for the Triax and the andor
     '''
 
     def __init__(self, white_shutter=None, triax_address='GPIB0::1::INSTR', use_shifts=False, laser='_633'):
-        print('Triax Information:')
         super(Trandor, self).__init__()
         self.triax = Triax(triax_address, CCD_Size)  # Initialise triax
         self.white_shutter = white_shutter
         self.triax.ccd_size = CCD_Size
         self.use_shifts = use_shifts
         self.laser = laser
-
-        print('Current Grating:'+str(self.triax.Grating()))
-        print('Current Slit Width:'+str(self.triax.Slit())+'um')
         self.metadata_property_names += ('slit_width', 'wavelengths')
-
-    def Grating(self, Set_To=None):
-        return self.triax.Grating(Set_To)
-
-    def Generate_Wavelength_Axis(self, use_shifts=None):
+        self.calibration_filepath = Path(__file__).parent / 'wavelength calibration.h5'
+    
+    def generate_wavelength_axis(self, use_shifts=None):
 
         if use_shifts is None:
             use_shifts = self.use_shifts
@@ -52,17 +51,19 @@ class Trandor(Andor):  # Andor
             wavelengths = np.array(self.triax.Get_Wavelength_Array()[::-1])
             return (1./(centre_wl*1e-9) - 1./(wavelengths*1e-9))/100
         else:
-            return self.triax.Get_Wavelength_Array()[::-1]
-    x_axis = property(Generate_Wavelength_Axis)
+            return self.wavelengths
+    x_axis = property(generate_wavelength_axis)
 
+    # @property
+    # def wavelengths(self):
+    #     return self.Generate_Wavelength_Axis(use_shifts=False)
     @property
     def wavelengths(self):
-        return self.Generate_Wavelength_Axis(use_shifts=False)
-
+        return range(1600)
     @property
     def slit_width(self):
-        return self.triax.Slit()
-
+        return self.triax.slit
+    
     def Test_Notch_Alignment(self):
         Accepted = False
         while Accepted is False:
@@ -82,9 +83,23 @@ class Trandor(Andor):  # Andor
     def Set_Center_Wavelength(self, wavelength):
         ''' backwards compatability with lab codes that use trandor.Set_Center_Wavelength'''
         self.triax.Set_Center_Wavelength(wavelength)
-
-    def take_calibration_spectra(self):
-        pass
+    
+    @background_action
+    def take_calibration_spectra(self, step_bounds=(5_000, 10_000), steps=200):
+        '''todo'''
+       
+        step_range = np.linspace(*step_bounds, steps)
+        specs = []
+        for step in tqdm(step_range):
+            self.triax.motor_steps = step
+            time.sleep(0.2)
+            spec = self.raw_image(update_latest_frame=True)
+            specs.append(spec)
+        with h5py.File(self.calibration_filepath, 'w') as calibration_file:
+            dset = calibration_file.create_dataset(
+                f'wavelength_calibration_grating_{self.triax.grating}',
+                data=specs)
+            dset.attrs['steps'] = step_range
 
 
 def Capture(_AndorUI):
@@ -99,7 +114,7 @@ def Capture(_AndorUI):
         _AndorUI.Andor.raw_image(update_latest_frame=True)
 
 
-setattr(AndorUI, 'Capture', Capture)
+# setattr(AndorUI, 'Capture', Capture)
 
 
 if __name__ == '__main__':

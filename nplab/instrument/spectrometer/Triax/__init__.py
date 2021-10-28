@@ -58,49 +58,23 @@ class Triax(VisaInstrument):
         except:
             raise Exception('Triax communication error!')
 
-        #----Generate initial 3x3 calibration arrays for the gratings used for initial estimate of wavelengths on each CCD pixel--------
-        
-        self.Grating_Number=self.Grating() #Current grating number
+    
 
-       
         self.Number_of_Pixels=CCD_Horizontal_Resolution
 
-    
-    def Grating(self, Set_To=None):
-        """
-        Function for checking or setting the grating number. If Set_To is left as None, current grating number is returned. If 0,1 or 2 is passed as Set_To, the
-        corresponding grating position is rotated to.
-        """
 
-   		#-----Check Input-------
-        
-        if Set_To not in [None,0,1,2]:
-            raise ValueError('Invalid input for grating input. Must be None, 0, 1, or 2.')
+    def get_grating(self):
+        return int(self.query("Z452,0,0,0\r")[1:])
 
-        #----Return current grating or switch grating---------
-            
-        if Set_To is None:
-            return int(self.query("Z452,0,0,0\r")[1:])
+    def set_grating(self, grating_number):
+        assert grating_number in (0,1,2), 'Invalid grating'
+        self.write("Z451,0,0,0,%i\r" % (grating_number))
 
-        else:
-            self.write("Z451,0,0,0,%i\r" % (Set_To))
-            time.sleep(1)
-            self.waitTillReady()
-            self.Grating_Number = Set_To
-            #try:
-            self.Wavelength_Array=self.Convert_Pixels_to_Wavelengths(np.arange(self.Number_of_Pixels)) #Update wavelength array
-            #except:
-                #Dump=1
+        self.waitTillReady()
+    grating = property(get_grating, set_grating)
+       
 
-    def Motor_Steps(self):
-        """
-        Returns the current rotation of the grating in units of steps of the internal stepper motor
-        """
-
-        self.write("H0\r")
-        return int(self.read()[1:])
-
-    def Move_Steps(self, Steps): # relative
+    def move_steps(self, Steps): # relative
         """
         Function to move the grating by a number of stepper motor Steps.
         """
@@ -114,8 +88,21 @@ class Triax(VisaInstrument):
             self.write("F0,%i\r" % Steps)
             self.waitTillReady()
     
+    def motor_steps(self):
+        """
+        Returns the current rotation of the grating in units of steps of the internal stepper motor
+        """
 
-    def Set_Center_Wavelength(self,Wavelength):  
+        self.write("H0\r")
+        return int(self.read()[1:])
+    
+    def move_steps_absolute(self, steps):
+        current = self.motor_steps
+        self.move_steps(steps - current)
+    
+    motor_steps = property(motor_steps, move_steps_absolute)
+
+    def set_center_wavelength(self,Wavelength):  
         if self.ccd_size is None:
             raise ValueError('ccd_size must be set in child class')
         Centre_Pixel=int(self.ccd_size/2)
@@ -123,23 +110,23 @@ class Triax(VisaInstrument):
         Current_Step=self.Motor_Steps()
         self.Move_Steps(Required_Step-Current_Step)
     
-    def Get_Center_Wavelength(self):
+    def get_center_wavelength(self):
         wls = self.Get_Wavelength_Array()
         return wls[len(wls)//2]
     
-    center_wavelength = property(Get_Center_Wavelength, Set_Center_Wavelength)    
+    center_wavelength = property(get_center_wavelength, set_center_wavelength)    
 
-    def Slit(self, Width=None):
+    
+    def get_slit(self):
+        return int(self.query("j0,0\r")[1:])
+        
+    def set_slit(self, width):
         """
         Function to return or set the triax slit with in units of um. If Width is None, the current width is returned. 
         """
         
-        Current_Width=int(self.query("j0,0\r")[1:])
-        
-        if Width is None:
-            return Current_Width
-        elif Width > 0:
-           To_Move = Width - Current_Width
+        if width > 0:
+           To_Move = width - self.slit
         if To_Move == 0:
             return
         elif To_Move > 0:  # backlash correction
@@ -151,6 +138,7 @@ class Triax(VisaInstrument):
         else:
             self.write("k0,0,%i\r" % To_Move)
             self.waitTillReady()
+    slit = property(get_slit, set_slit)
 
     def _isBusy(self):
         """
