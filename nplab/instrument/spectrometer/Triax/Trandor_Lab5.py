@@ -1,18 +1,11 @@
 """
 jpg66
 """
-from __future__ import division
-from __future__ import print_function
 
-from builtins import input
-from builtins import str
-from past.utils import old_div
 from nplab.instrument.spectrometer.Triax import Triax
 import numpy as np
 from nplab.instrument.camera.Andor import Andor, AndorUI
 import h5py
-from nplab.datafile import DataFile 
-from nplab.utils.array_with_attrs import ArrayWithAttrs
 from pathlib import Path
 from nplab.utils.thread_utils import background_action
 import time
@@ -33,7 +26,11 @@ class Trandor(Andor):  # Andor
         cls.metadata_property_names += ('slit_width', 'wavelengths')
         return super(Trandor, cls).__new__(cls)#, *args, **kwargs)
     
-    def __init__(self, white_shutter=None, triax_address='GPIB0::1::INSTR', use_shifts=False, laser='_633'):
+    def __init__(self,
+                 white_shutter=None,
+                 triax_address='GPIB0::1::INSTR',
+                 use_shifts=False,
+                 laser='_633'):
         super(Trandor, self).__init__()
         self.triax = Triax(triax_address, CCD_size=self.CCD_size)  # Initialise triax
         self.white_shutter = white_shutter

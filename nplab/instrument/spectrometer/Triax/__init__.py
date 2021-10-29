@@ -99,14 +99,14 @@ class Triax(VisaInstrument):
     
     motor_steps = property(motor_steps, move_steps_absolute)
 
-    def set_center_wavelength(self,Wavelength):  
+    def set_center_wavelength(self, wavelength):  
         if self.ccd_size is None:
             raise ValueError('ccd_size must be set in child class')
         
     
     def get_center_wavelength(self):
         # TODO
-        return 
+        return 0
     
     center_wavelength = property(get_center_wavelength, set_center_wavelength)    
 
