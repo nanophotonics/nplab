@@ -24,7 +24,7 @@ This is the base class for the Triax spectrometer. This should be wrapped for ea
 class Triax(VisaInstrument):
     metadata_property_names = ('wavelength', )
 
-    def __init__(self, Address, Calibration_Data=[], CCD_Horizontal_Resolution=2000):  
+    def __init__(self, Address, Calibration_Data=[], CCD_size=2000):  
         """
         Initialisation function for the triax class. Address in the port address of the triax connection.
 
@@ -57,10 +57,7 @@ class Triax(VisaInstrument):
 
         except:
             raise Exception('Triax communication error!')
-
-    
-
-        self.Number_of_Pixels=CCD_Horizontal_Resolution
+        self.CCD_horizontal_resolution = CCD_size
 
 
     def get_grating(self):
@@ -105,14 +102,11 @@ class Triax(VisaInstrument):
     def set_center_wavelength(self,Wavelength):  
         if self.ccd_size is None:
             raise ValueError('ccd_size must be set in child class')
-        Centre_Pixel=int(self.ccd_size/2)
-        Required_Step=self.Find_Required_Step(Wavelength,Centre_Pixel)
-        Current_Step=self.Motor_Steps()
-        self.Move_Steps(Required_Step-Current_Step)
+        
     
     def get_center_wavelength(self):
-        wls = self.Get_Wavelength_Array()
-        return wls[len(wls)//2]
+        # TODO
+        return 
     
     center_wavelength = property(get_center_wavelength, set_center_wavelength)    
 
@@ -208,21 +202,22 @@ class TriaxUI(QtWidgets.QWidget,UiTools):
         self.centre_wl_lineEdit.returnPressed.connect(self.set_wl_gui)
         self.slit_lineEdit.returnPressed.connect(self.set_slit_gui)     
         self.centre_wl_lineEdit.setText(str(np.around(self.triax.center_wavelength)))
-        self.slit_lineEdit.setText(str(self.triax.Slit()))
-        eval('self.grating_'+str(self.triax.Grating())+'_radioButton.setChecked(True)')
+        self.slit_lineEdit.setText(str(self.triax.slit))
+        eval('self.grating_'+str(self.triax.grating)+'_radioButton.setChecked(True)')
         for radio_button in range(3):
             eval('self.grating_'+str(radio_button)+'_radioButton.clicked.connect(self.set_grating_gui)')
     def set_wl_gui(self):
-        self.triax.Set_Center_Wavelength(float(self.centre_wl_lineEdit.text().strip()))
+        self.triax.center_wavelength = float(self.centre_wl_lineEdit.text().strip())
     def set_slit_gui(self):
-        self.triax.Slit(float(self.slit_lineEdit.text().strip()))
+        self.triax.slit = float(self.slit_lineEdit.text().strip())
+        
     def set_grating_gui(self):
         s = self.sender()
         if s is self.grating_0_radioButton:
-            self.triax.Grating(0)
+            self.triax.grating = 0
         elif s is self.grating_1_radioButton:
-            self.triax.Grating(1)
+            self.triax.grating = 1
         elif s is self.grating_2_radioButton:
-            self.triax.Grating(2)
+            self.triax.grating = 2
         else:
             raise ValueError('radio buttons not connected!')

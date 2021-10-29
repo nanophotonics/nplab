@@ -17,7 +17,7 @@ from pathlib import Path
 from nplab.utils.thread_utils import background_action
 import time
 from tqdm import tqdm
-CCD_Size = 1600  # Size of ccd in pixels
+
 
 
  # Grating 1
@@ -28,18 +28,20 @@ CCD_Size = 1600  # Size of ccd in pixels
 class Trandor(Andor):  # Andor
     ''' Wrapper class for the Triax and the andor
     '''
-
+    CCD_size= 1600  # Size of ccd in pixels
+    def __new__(cls, *args, **kwargs):
+        cls.metadata_property_names += ('slit_width', 'wavelengths')
+        return super(Trandor, cls).__new__(cls)#, *args, **kwargs)
+    
     def __init__(self, white_shutter=None, triax_address='GPIB0::1::INSTR', use_shifts=False, laser='_633'):
         super(Trandor, self).__init__()
-        self.triax = Triax(triax_address, CCD_Size)  # Initialise triax
+        self.triax = Triax(triax_address, CCD_size=self.CCD_size)  # Initialise triax
         self.white_shutter = white_shutter
-        self.triax.ccd_size = CCD_Size
         self.use_shifts = use_shifts
         self.laser = laser
-        self.metadata_property_names += ('slit_width', 'wavelengths')
         self.calibration_filepath = Path(__file__).parent / 'wavelength calibration.h5'
     
-    def generate_wavelength_axis(self, use_shifts=None):
+    def get_x_axis(self, use_shifts=None):
 
         if use_shifts is None:
             use_shifts = self.use_shifts
@@ -52,37 +54,21 @@ class Trandor(Andor):  # Andor
             return (1./(centre_wl*1e-9) - 1./(wavelengths*1e-9))/100
         else:
             return self.wavelengths
-    x_axis = property(generate_wavelength_axis)
+    x_axis = property(get_x_axis)
 
-    # @property
-    # def wavelengths(self):
-    #     return self.Generate_Wavelength_Axis(use_shifts=False)
     @property
     def wavelengths(self):
-        return range(1600)
+        return self.x_axis
+    @property
+    def wavelengths(self):
+        return range(self.CCD_size)
+    @property
+    def shifts(self):
+        return self.get_x_axis(use_shifts=True)
     @property
     def slit_width(self):
         return self.triax.slit
     
-    def Test_Notch_Alignment(self):
-        Accepted = False
-        while Accepted is False:
-            Input = input(
-                'WARNING! A slight misalignment of the narrow band notch filters could be catastrophic! Has the laser thoughput been tested? [Yes/No]')
-            if Input.upper() in ['Y', 'N', 'YES', 'NO']:
-                Accepted = True
-                if len(Input) > 1:
-                    Input = Input.upper()[0]
-        if Input.upper() == 'Y':
-            print('You are now free to capture spectra')
-            self.Notch_Filters_Tested = True
-        else:
-            print('The next spectrum capture will be allowed for you to test this. Please LOWER the laser power and REDUCE the integration time.')
-            self.Notch_Filters_Tested = None
-
-    def Set_Center_Wavelength(self, wavelength):
-        ''' backwards compatability with lab codes that use trandor.Set_Center_Wavelength'''
-        self.triax.Set_Center_Wavelength(wavelength)
     
     @background_action
     def take_calibration_spectra(self, step_bounds=(5_000, 10_000), steps=200):
