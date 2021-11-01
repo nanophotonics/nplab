@@ -1,24 +1,24 @@
-from __future__ import division
-from __future__ import print_function
-from builtins import zip
-from builtins import range
-from past.utils import old_div
-import matplotlib.pyplot as plt 
-import numpy as np
-from nplab import datafile
-from skimage import feature, filters
-import cv2
+from __future__ import division, print_function
+
 import math
-from skimage.filters import gaussian
-from skimage.segmentation import active_contour
-from scipy.signal import convolve2d, correlate2d
-import scipy.misc
-from PIL import Image
 import re
 import sys
+from builtins import range, zip
+
+import cv2
+import matplotlib.pyplot as plt
+import numpy as np
+import scipy.misc
 import scipy.ndimage as ndimage
 import skimage
+from past.utils import old_div
+from PIL import Image
+from scipy.signal import convolve2d, correlate2d
+from skimage import feature, filters
+from skimage.filters import gaussian
+from skimage.segmentation import active_contour
 
+from nplab import datafile
 
 FILEPATH = "/home/ilya/Desktop/2018-02-17.h5"
 FOLDERPATH = "ParticleScannerScan_2"
@@ -124,7 +124,9 @@ def get_contour_area(contour):
 	return skimage.measure.moments(contour)[0,0]
 
 
-from matplotlib.path import Path 
+from matplotlib.path import Path
+
+
 def make_vertex_mask(vertices,image_shape):
 	polygonPath = Path(vertices)
 	mask = np.zeros(image_shape)
@@ -386,6 +388,8 @@ def CoM_image(image):
 
 
 from skimage import draw
+
+
 def main():
 	images = get_images()
 

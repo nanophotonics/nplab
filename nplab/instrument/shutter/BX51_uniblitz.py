@@ -3,10 +3,13 @@
 __author__ = 'jm806'
 
 
-from nplab.instrument.shutter import ShutterWithEmulatedRead
-from nplab.instrument.serial_instrument import SerialInstrument
-import serial
 import time
+
+import serial
+
+from nplab.instrument.serial_instrument import SerialInstrument
+from nplab.instrument.shutter import ShutterWithEmulatedRead
+
 
 class Uniblitz(ShutterWithEmulatedRead, SerialInstrument):
     """

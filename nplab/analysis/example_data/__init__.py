@@ -13,9 +13,9 @@ nplab.analysis.example_data.SERS_and_shifts
 for example.
 """
 
-import numpy as np
 import os
 
+import numpy as np
 
 # Example SERS spectrum (BPT, 785nm laser, centered at 785nm)
 SERS_and_shifts =  np.load(os.path.join(os.path.dirname(__file__), 'example_SERS_and_shifts.npy'))

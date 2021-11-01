@@ -1,9 +1,12 @@
-from nplab.instrument.Flipper import Flipper
 import struct
-import numpy as np
 import time
-from nplab.utils.thread_utils import locked_action, background_action
+
+import numpy as np
 import serial
+
+from nplab.instrument.Flipper import Flipper
+from nplab.utils.thread_utils import background_action, locked_action
+
 
 class ThorlabsMFF(Flipper):
     port_settings = dict(baudrate=115200,

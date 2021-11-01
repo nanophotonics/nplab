@@ -6,10 +6,13 @@ Created on Tue Oct 21 15:58:04 2014
 """
 
 
-from nplab.instrument.serial_instrument import SerialInstrument
-from nplab.instrument.light_sources import LightSource
-import serial
 from contextlib import closing
+
+import serial
+
+from nplab.instrument.light_sources import LightSource
+from nplab.instrument.serial_instrument import SerialInstrument
+
 
 class OndaxLaser(SerialInstrument, LightSource):
     def __init__(self, port=None):

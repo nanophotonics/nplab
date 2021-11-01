@@ -1,5 +1,7 @@
 from __future__ import print_function
+
 from builtins import object
+
 __author__ = 'alansanders'
 
 import numpy as np

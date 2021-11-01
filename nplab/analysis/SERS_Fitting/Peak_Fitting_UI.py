@@ -19,20 +19,20 @@ To visualise the results, use View_Results(Array,x_axis,Start_Spectrum,End_Spect
 
 If the fits display "crosstalk", use the function Reorder_Peaks(Fits).
 """
-from __future__ import division
-from __future__ import print_function
+from __future__ import division, print_function
 
+from builtins import input, range, str
 
-from builtins import input
-from builtins import str
-from builtins import range
-from past.utils import old_div
 import matplotlib
+from past.utils import old_div
+
 matplotlib.use('Qt4Agg')
+import multiprocessing as mp
+
 import matplotlib.pyplot as pl
 import numpy as np
-import multiprocessing as mp
 import scipy.optimize as spo
+
 
 def Select_Time_Range(Min,Max):
 	"""

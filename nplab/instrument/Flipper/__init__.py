@@ -1,11 +1,13 @@
-from nplab.instrument import Instrument
-from nplab.instrument.apt_virtual_com_port import APT_VCP
-from nplab.utils.gui import QtCore, QtGui, QtWidgets, get_qt_app, uic
-from nplab.ui.ui_tools import UiTools, QuickControlBox
+import contextlib
 import os
 import time
-from nplab.utils.notified_property import DumbNotifiedProperty, register_for_property_changes
-import contextlib
+
+from nplab.instrument import Instrument
+from nplab.instrument.apt_virtual_com_port import APT_VCP
+from nplab.ui.ui_tools import QuickControlBox, UiTools
+from nplab.utils.gui import QtCore, QtGui, QtWidgets, get_qt_app, uic
+from nplab.utils.notified_property import (DumbNotifiedProperty,
+                                           register_for_property_changes)
 
 
 class Flipper(APT_VCP):
@@ -100,18 +102,17 @@ class Dummyflipper(Flipper):
 if __name__ == '__main__':
     import sys
     import time
+
     # app = get_qt_app()
     # flipper = Dummyflipper()
-
     # flipper.setstate(0)
     # time.sleep(5)
     # flipper.set_state(1)
-
     # state_peek = QuickControlBox(title="Internal State")
     # state_peek.add_checkbox("_open", title="flipper Open")
     # state_peek.auto_connect_by_name(controlled_object=flipper)
     # state_peek.show()
-    
+
     # ui = flipper.get_qt_ui()
     # ui.show()
     # sys.exit(app.exec_())

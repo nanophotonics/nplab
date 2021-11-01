@@ -12,31 +12,36 @@ Just place in the same folder as hdf5 data and run - it will auto-detect files w
 Output summary file should be identical to output of old view_spectra code - can be used directly with usual Igor multipeakfitBeta05d code.
 
 """
-from __future__ import division
-from __future__ import print_function
+from __future__ import division, print_function
 
 from builtins import range
+
 from past.utils import old_div
+
 if __name__ == '__main__':
     print('Importing modules')
 
-import traits
-from traits.api import HasTraits, Property, Instance, Float, Range, Array, Int, String, Button, Bool, on_trait_change
-import traitsui
-from traitsui.api import View, Item, HGroup, VGroup, Tabbed
-from traitsui.table_column import ObjectColumn
-import threading
-import numpy as np
-from nplab.utils.traitsui_mpl_qt import MPLFigureEditor
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.figure import Figure
-import h5py
-import gaussian_fit
-import scipy.ndimage.filters
-import scipy.stats
 import os
 import re
+import threading
+
+import gaussian_fit
+import h5py
+import matplotlib.pyplot as plt
+import numpy as np
+import scipy.ndimage.filters
+import scipy.stats
+import traits
+import traitsui
+from matplotlib.backends.backend_qt4agg import \
+    FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
+from traits.api import (Array, Bool, Button, Float, HasTraits, Instance, Int,
+                        Property, Range, String, on_trait_change)
+from traitsui.api import HGroup, Item, Tabbed, VGroup, View
+from traitsui.table_column import ObjectColumn
+
+from nplab.utils.traitsui_mpl_qt import MPLFigureEditor
 
 if __name__ == '__main__':
     print('Modules imported\n')

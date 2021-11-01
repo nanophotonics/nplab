@@ -1,7 +1,10 @@
 from builtins import range
-import numpy as np 
-import matplotlib.pyplot as plt 
+
+import matplotlib.pyplot as plt
+import numpy as np
 from scipy.signal import correlate
+
+
 #Perform phase correlation alignment
 def get_window(N, window_type ="hamming"):
 	if window_type == "hamming":

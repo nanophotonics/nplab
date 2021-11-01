@@ -6,10 +6,13 @@ Created on Fri Feb 02 15:21:59 2018
 """
 
 from builtins import str
+
+import serial
+
 from nplab.instrument.serial_instrument import SerialInstrument
 from nplab.utils.notified_property import NotifiedProperty
 
-import serial
+
 class inspire_OPO(SerialInstrument):
     port_settings = dict(baudrate=9600,
                          bytesize=serial.EIGHTBITS,

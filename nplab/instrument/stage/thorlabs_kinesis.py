@@ -16,13 +16,16 @@ It also uses the excellent ``pythonnet`` package to get access to the .NET API.
 This is by far the least painful way to get Kinesis to work nicely as it 
 avoids the low-level faffing about.
 """
-from nplab.instrument.stage import Stage
-import clr
 import sys
 import time
 
+import clr
+
+from nplab.instrument.stage import Stage
+
 clr.AddReference("System")
-from System import Decimal  # System is part of the .NET framework, which clr provides
+from System import \
+    Decimal  # System is part of the .NET framework, which clr provides
 
 try:
     sys.path.append(r'C:\Program Files\Thorlabs\Kinesis')
@@ -95,6 +98,7 @@ Currently tested with BCP203 (may not be correct)
 """
 clr.AddReference("Thorlabs.MotionControl.Benchtop.PiezoCLI")
 import Thorlabs.MotionControl.Benchtop.PiezoCLI as BenchtopPiezoCLI
+
 
 class BenchtopPiezo(Stage):
     axis_names = None

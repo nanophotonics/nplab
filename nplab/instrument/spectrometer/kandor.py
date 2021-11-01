@@ -4,9 +4,12 @@ Created on Sat Jul 08 19:47:22 2017
 
 @author: Hera
 """
+import numpy as np
+
 from nplab.instrument.camera.Andor import Andor
 from nplab.instrument.spectrometer.Kymera import Kymera
-import numpy as np
+
+
 class Kandor(Andor):
     ''' Wrapper class for the kymera and the andor
     '''

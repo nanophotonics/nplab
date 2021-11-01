@@ -6,20 +6,23 @@ Created on Fri May 05 09:57:21 2017
 """
 from __future__ import print_function
 
-from builtins import str
-from builtins import range
+import threading
+import time
+from builtins import range, str
+
+import numpy as np
+from particle_tracking_app.particle_tracking_wizard_car72 import TrackingWizard
+
+from nplab.instrument.camera.camera_with_location_car72 import \
+    CameraWithLocation
 from nplab.instrument.camera.lumenera import LumeneraCamera
-from nplab.instrument.stage.prior import ProScan
-from nplab.instrument.spectrometer.seabreeze import OceanOpticsSpectrometer
 from nplab.instrument.light_sources.cube_laser import CubeLaser
 from nplab.instrument.shutter.BX51_uniblitz import Uniblitz
-import time
-import threading
-from nplab.instrument.spectrometer.spectrometer_aligner import SpectrometerAligner
-from nplab.instrument.camera.camera_with_location_car72 import CameraWithLocation
+from nplab.instrument.spectrometer.seabreeze import OceanOpticsSpectrometer
+from nplab.instrument.spectrometer.spectrometer_aligner import \
+    SpectrometerAligner
+from nplab.instrument.stage.prior import ProScan
 from nplab.utils.array_with_attrs import ArrayWithAttrs
-from particle_tracking_app.particle_tracking_wizard_car72 import TrackingWizard
-import numpy as np
 
 stage = ProScan("COM3", hardware_version = 2)
 cam = LumeneraCamera(1)

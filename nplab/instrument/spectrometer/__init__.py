@@ -1,29 +1,28 @@
 __author__ = 'alansanders'
 
+import datetime
+import inspect
+import os
+import time
+import warnings
+from collections import deque
+from multiprocessing.pool import ThreadPool
+from weakref import WeakSet
+
+import h5py
 import numpy as np
 import numpy.ma as ma
-from nplab.utils.gui import QtCore, QtGui, QtWidgets, get_qt_app, uic
+import pyqtgraph as pg
 
-from collections import deque
-
-from nplab.ui.ui_tools import UiTools
 import nplab.datafile as df
 from nplab.datafile import DataFile
-from nplab.utils.notified_property import DumbNotifiedProperty, register_for_property_changes
-from nplab.utils.array_with_attrs import ArrayWithAttrs
-import h5py
-from multiprocessing.pool import ThreadPool
 from nplab.experiment.gui import run_function_modally
-
-import time
-
-import os
-import inspect
-import datetime
 from nplab.instrument import Instrument
-import warnings
-import pyqtgraph as pg
-from weakref import WeakSet
+from nplab.ui.ui_tools import UiTools
+from nplab.utils.array_with_attrs import ArrayWithAttrs
+from nplab.utils.gui import QtCore, QtGui, QtWidgets, get_qt_app, uic
+from nplab.utils.notified_property import (DumbNotifiedProperty,
+                                           register_for_property_changes)
 
 
 class Spectrometer(Instrument):
@@ -811,6 +810,7 @@ class DummySpectrometer(Spectrometer):
 
 if __name__ == '__main__':
     import sys
+
     from nplab.utils.gui import get_qt_app
     s1 = DummySpectrometer()
     s1.show_gui(blocking = False)

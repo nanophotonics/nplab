@@ -3,13 +3,14 @@ author: im354
 '''
 from __future__ import division
 
-from builtins import zip
-from builtins import range
-from past.utils import old_div
-import numpy as np
+from builtins import range, zip
+
 import matplotlib.pyplot as plt
+import numpy as np
 import pywt
+from past.utils import old_div
 from scipy.optimize import minimize_scalar
+
 
 def blocks():
 

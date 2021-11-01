@@ -1,7 +1,8 @@
 __author__ = 'alansanders'
 
-from nplab.instrument.visa_instrument import VisaInstrument, queried_property
 from functools import partial
+
+from nplab.instrument.visa_instrument import VisaInstrument, queried_property
 
 
 class SignalGenerator(VisaInstrument):

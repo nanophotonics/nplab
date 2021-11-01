@@ -4,16 +4,19 @@ Created on Fri Sep 22 15:27:17 2017
 
 @author: William Deacon (fo263)
 """
+import threading
+import time
+from collections import deque
+
+import numpy as np
+import pyqtgraph as pg
+import serial
+
 from nplab.instrument.serial_instrument import SerialInstrument
 from nplab.ui.ui_tools import QuickControlBox
-import pyqtgraph as pg
-import threading
-import serial
-from collections import deque
 from nplab.utils.gui import QtCore, QtWidgets
-import numpy as np
-import time
 from nplab.utils.notified_property import NotifiedProperty
+
 
 class Frequency_counter_F390(SerialInstrument):
     port_settings = dict(baudrate=115200,

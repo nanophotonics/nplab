@@ -1,14 +1,17 @@
 from __future__ import print_function
-from builtins import str
-from builtins import range
+
+from builtins import range, str
+
 __author__ = 'alansanders'
 
-from nplab.experiment.scanning_experiment import ScanningExperiment, TimedScan
-import numpy as np
 import threading
 import time
-from nplab.utils.gui import *
+
+import numpy as np
+
+from nplab.experiment.scanning_experiment import ScanningExperiment, TimedScan
 from nplab.ui.ui_tools import UiTools
+from nplab.utils.gui import *
 
 
 class LinearScan(ScanningExperiment, TimedScan):
@@ -202,10 +205,12 @@ class LinearScanUI(QtWidgets.QWidget, UiTools):
 if __name__ == '__main__':
     import matplotlib
     matplotlib.use('Qt4Agg')
-    from nplab.ui.mpl_gui import FigureCanvasWithDeferredDraw as FigureCanvas
-    from matplotlib.figure import Figure
     import cProfile
     import pstats
+
+    from matplotlib.figure import Figure
+
+    from nplab.ui.mpl_gui import FigureCanvasWithDeferredDraw as FigureCanvas
 
     test = 'qt'
     if test == 'qt':

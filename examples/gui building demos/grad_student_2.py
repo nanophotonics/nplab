@@ -5,7 +5,10 @@ Created on Mon Mar  8 18:08:38 2021
 @author: Eoin
 """
 from nplab.instrument import Instrument
-from nplab.utils.notified_property import DumbNotifiedProperty, NotifiedProperty ###
+from nplab.utils.notified_property import (DumbNotifiedProperty,  # ##
+                                           NotifiedProperty)
+
+
 ### = changed
 class GradStudent(Instrument):
     angry = DumbNotifiedProperty(False) 
@@ -43,9 +46,10 @@ student = GradStudent()
 
 #%%    
 import os
+
+from nplab.ui.ui_tools import UiTools  # ##
 from nplab.utils.gui import QtWidgets, uic
 
-from nplab.ui.ui_tools import UiTools ###
 
 class GradStudentUI(QtWidgets.QWidget, UiTools): ###
     def __init__(self, student):

@@ -1,12 +1,18 @@
 from __future__ import print_function
+
 from builtins import object
+
 __author__ = 'alansanders'
 
-from nplab.instrument.visa_instrument import VisaInstrument, queried_property, queried_channel_property
 from functools import partial
+
 import numpy as np
-from nplab.utils.gui import *
+
+from nplab.instrument.visa_instrument import (VisaInstrument,
+                                              queried_channel_property,
+                                              queried_property)
 from nplab.ui.ui_tools import *
+from nplab.utils.gui import *
 
 
 class AgilentDSOChannel(object):

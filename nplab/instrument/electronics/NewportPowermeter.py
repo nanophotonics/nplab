@@ -4,11 +4,13 @@ Modified from https://github.com/plasmon360/python_newport_1918_powermeter
 
 """
 
-from past.utils import old_div
-from nplab.instrument import Instrument
-from ctypes import *
 import time
+from ctypes import *
+
 import numpy as np
+from past.utils import old_div
+
+from nplab.instrument import Instrument
 
 
 class NewportPowermeter(Instrument):

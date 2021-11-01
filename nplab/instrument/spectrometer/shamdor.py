@@ -5,10 +5,12 @@ Created on Sat Jul 08 19:47:22 2017
 @author: Hera
 """
 
-from nplab.instrument.camera.Andor import Andor, AndorUI
-from nplab.instrument.spectrometer.shamrock import Shamrock
 import numpy as np
+
+from nplab.instrument.camera.Andor import Andor, AndorUI
 from nplab.instrument.shutter.BX51_uniblitz import Uniblitz
+from nplab.instrument.spectrometer.shamrock import Shamrock
+
 
 class Shamdor(Andor):
     ''' Wrapper class for the shamrock and the andor

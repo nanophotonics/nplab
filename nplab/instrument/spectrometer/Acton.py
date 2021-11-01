@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 
-from builtins import str
-from nplab.instrument.visa_instrument import VisaInstrument
+import json
+import os
 import re
 import time
-from visa import VisaIOError
-import os
-import json
+from builtins import str
+
 import numpy as np
+from visa import VisaIOError
+
+from nplab.instrument.visa_instrument import VisaInstrument
 
 
 class SP2750(VisaInstrument):

@@ -10,11 +10,12 @@ A control mechanism for running a 32-bit instrument from a 64-bit python console
 
 @author: Will
 """
-import numpy as np
-import mmap
-import time
-import re
 import inspect
+import mmap
+import re
+import time
+
+import numpy as np
 
 from nplab.instrument.message_bus_instrument import MessageBusInstrument
 

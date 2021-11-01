@@ -1,8 +1,9 @@
 from distutils.core import setup
 from distutils.extension import Extension
+
+import numpy as np
 from Cython.Build import cythonize
 from Cython.Distutils import build_ext
-import numpy as np
 
 #ext  =  [Extension( "afm_mechanical_model", sources=["afm_mechanical_model.pyx"] )]
 

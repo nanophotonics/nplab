@@ -4,14 +4,18 @@ Created on Fri Mar  5 12:47:58 2021
 
 @author: Hera
 """
+import random
+import re
+import winsound
+from itertools import zip_longest
+
+import numpy as np
+
+from nplab.instrument import Instrument
+from nplab.utils.array_with_attrs import ArrayWithAttrs
 from nplab.utils.gui import QtWidgets
 from nplab.utils.thread_utils import background_action
-from nplab.utils.array_with_attrs import ArrayWithAttrs
-from nplab.instrument import Instrument
-from itertools import zip_longest
-import re
-import winsound, random
-import numpy as np
+
 
 def squawk():
     for i in range(5):
@@ -87,7 +91,8 @@ class Rotators(QtWidgets.QWidget, Instrument):
     def get_qt_ui(self):
          return self
 if __name__ == '__main__':
-    from nplab.instrument.stage.Thorlabs_ELL8K import Thorlabs_ELL8K, BusDistributor
+    from nplab.instrument.stage.Thorlabs_ELL8K import (BusDistributor,
+                                                       Thorlabs_ELL8K)
     bus = BusDistributor('COM6')
     ells = {l: Thorlabs_ELL8K(bus, l) for l in 'ABC'}
     rotators = Rotators(ells)

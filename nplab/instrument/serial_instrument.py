@@ -4,14 +4,16 @@ Serial Instrument interface
 
 @author: Richard Bowman
 """
-from nplab.instrument.message_bus_instrument import MessageBusInstrument
 import threading
+import time
+
 import serial
 import serial.tools.list_ports
-from serial import FIVEBITS, SIXBITS, SEVENBITS, EIGHTBITS
-from serial import PARITY_NONE, PARITY_EVEN, PARITY_ODD, PARITY_MARK, PARITY_SPACE
-from serial import STOPBITS_ONE, STOPBITS_ONE_POINT_FIVE, STOPBITS_TWO
-import time
+from serial import (EIGHTBITS, FIVEBITS, PARITY_EVEN, PARITY_MARK, PARITY_NONE,
+                    PARITY_ODD, PARITY_SPACE, SEVENBITS, SIXBITS, STOPBITS_ONE,
+                    STOPBITS_ONE_POINT_FIVE, STOPBITS_TWO)
+
+from nplab.instrument.message_bus_instrument import MessageBusInstrument
 
 
 class SerialInstrument(MessageBusInstrument):

@@ -1,15 +1,15 @@
-from __future__ import division
-from __future__ import print_function
-from builtins import range
-from past.utils import old_div
-import numpy as np 
-import matplotlib.pyplot as plt 
-import scipy.signal
+from __future__ import division, print_function
 
-from nplab import datafile as df 
+from builtins import range
+
+import matplotlib.pyplot as plt
+import numpy as np
+import scipy.signal
+from past.utils import old_div
+
+from nplab import datafile as df
 from nplab.analysis.smoothing import convex_smooth
 from nplab.instrument import Instrument
-
 
 f = df.DataFile("maxwell_room_light_spectrum_calibration.hdf5","r")
 spectrum = np.array(f["calibration"]["spectrum_1"])

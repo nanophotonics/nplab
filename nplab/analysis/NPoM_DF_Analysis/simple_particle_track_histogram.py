@@ -1,11 +1,11 @@
 import matplotlib.pyplot as plt
 import numpy as np
-
 from scipy.signal import argrelextrema
 
 from nplab.analysis import Spectrum, latest_scan, load_h5
 from nplab.analysis.particle_exclusion.utils import load_rejected
 from nplab.datafile import current
+
 
 def closest(iterable, val):
     ''' return the closest element in an iterable to val'''

@@ -1,10 +1,13 @@
 from __future__ import division
-from builtins import range
-from past.utils import old_div
-import numpy as np
-import matplotlib.pyplot as plt
+
 import math
+from builtins import range
+
+import matplotlib.pyplot as plt
+import numpy as np
 import scipy.signal
+from past.utils import old_div
+
 
 def diff(voltage):
 	d_voltage = voltage[0:-1] - voltage[1:]

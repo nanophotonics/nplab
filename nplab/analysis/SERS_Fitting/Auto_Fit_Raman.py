@@ -1,9 +1,11 @@
 from __future__ import division
+
 from builtins import range
-from past.utils import old_div
-import numpy as np 
+
+import numpy as np
 import scipy.ndimage.filters as imf
 import scipy.optimize as spo
+from past.utils import old_div
 
 """
 Author: jpg66 October 2018

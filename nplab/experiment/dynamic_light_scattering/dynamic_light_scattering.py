@@ -1,20 +1,26 @@
 from __future__ import print_function
+
 from builtins import str
+
+import matplotlib
+
 from nplab.utils import gui_generator
-import matplotlib 
+
 matplotlib.use('Qt4Agg')
-from nplab.instrument import Instrument
-from nplab.instrument.electronics.adlink9812 import Adlink9812, Adlink9812UI
-from nplab.instrument.stage.Thorlabs_NR360SM import Thorlabs_NR360SM
-from nplab.instrument.light_sources.fianium import Fianium
-from nplab import datafile
-from nplab.utils.gui_generator import GuiGenerator
-from nplab.utils.gui import *
-from nplab.ui.ui_tools import UiTools
-import nplab.experiment.dynamic_light_scattering as dls
+import json
 import os
 import threading
-import json
+
+import nplab.experiment.dynamic_light_scattering as dls
+from nplab import datafile
+from nplab.instrument import Instrument
+from nplab.instrument.electronics.adlink9812 import Adlink9812, Adlink9812UI
+from nplab.instrument.light_sources.fianium import Fianium
+from nplab.instrument.stage.Thorlabs_NR360SM import Thorlabs_NR360SM
+from nplab.ui.ui_tools import UiTools
+from nplab.utils.gui import *
+from nplab.utils.gui_generator import GuiGenerator
+
 
 class DynamicLightScattering(Instrument):
 

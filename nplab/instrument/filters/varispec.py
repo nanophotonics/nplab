@@ -5,10 +5,11 @@ Created on Fri Aug  6 15:40:03 2021
 @author: Hera
 """
 
-from nplab.instrument.serial_instrument import SerialInstrument
-from nplab.utils.notified_property import NotifiedProperty
-from nplab.ui.ui_tools import QuickControlBox
 import serial
+
+from nplab.instrument.serial_instrument import SerialInstrument
+from nplab.ui.ui_tools import QuickControlBox
+from nplab.utils.notified_property import NotifiedProperty
 
 
 class VariSpec(SerialInstrument):

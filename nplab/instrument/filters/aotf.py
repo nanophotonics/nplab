@@ -1,10 +1,13 @@
 from __future__ import print_function
+
+import time
 from builtins import range
-import numpy as np 
-import nplab.instrument.serial_instrument as serial 
+
+import numpy as np
+
+import nplab.instrument.serial_instrument as serial
 from nplab.ui.ui_tools import *
 from nplab.utils.gui import *
-import time
 
 
 class AOTF(serial.SerialInstrument):

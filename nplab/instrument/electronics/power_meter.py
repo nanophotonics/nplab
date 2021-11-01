@@ -6,16 +6,19 @@ Created on Thu Dec 19 16:24:49 2019
 """
 
 
+import os
+import threading
+import time
+import winsound
+
 import numpy as np
 
-import time
-from nplab.utils.gui import QtCore, QtWidgets, uic
-from nplab.utils.notified_property import DumbNotifiedProperty, register_for_property_changes
-from nplab.ui.ui_tools import UiTools
 from nplab.instrument import Instrument
-import threading
-import os
-import winsound
+from nplab.ui.ui_tools import UiTools
+from nplab.utils.gui import QtCore, QtWidgets, uic
+from nplab.utils.notified_property import (DumbNotifiedProperty,
+                                           register_for_property_changes)
+
 
 class PowerMeter(Instrument):
     '''

@@ -11,13 +11,19 @@ from __future__ import print_function
 
 __author__ = 'alansanders, richard bowman'
 
-from nplab.utils.thread_utils import locked_action, background_action, background_actions_running
-from nplab.instrument import Instrument
-from nplab.utils.notified_property import NotifiedProperty, DumbNotifiedProperty
-from collections import deque
-import numpy as np
 import threading
 import warnings
+from collections import deque
+
+import numpy as np
+
+from nplab.instrument import Instrument
+from nplab.utils.notified_property import (DumbNotifiedProperty,
+                                           NotifiedProperty)
+from nplab.utils.thread_utils import (background_action,
+                                      background_actions_running,
+                                      locked_action)
+
 
 class ExperimentStopped(Exception):
     """An exception raised to stop an experiment running in a background thread."""

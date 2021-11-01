@@ -1,4 +1,5 @@
 from __future__ import print_function
+
 __author__ = 'alansanders'
 
 import nplab.instrument.serial_instrument as serial
@@ -87,8 +88,9 @@ class Fianium(LightSource, serial.SerialInstrument):
 
 if __name__ == '__main__':
     import sys
-    from nplab.utils.gui import *
+
     from nplab.instrument.shutter.thorlabs_sc10 import ThorLabsSC10
+    from nplab.utils.gui import *
     app = get_qt_app()
     #shutter = ThorLabsSC10('COM12')
     fianium = Fianium('COM1')

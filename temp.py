@@ -1,7 +1,9 @@
 from threading import Thread
 from time import sleep
+
 from traits.api import *
-from traitsui.api import View, Item, ButtonEditor
+from traitsui.api import ButtonEditor, Item, View
+
 
 class TextDisplay(HasTraits):
     string =  String()

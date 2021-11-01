@@ -3,6 +3,14 @@
 Auto-aligning spectrometer: centres in on a nanoparticle after a short scan
 """
 
+import threading
+import time
+
+#from nplab.utils.traitsui_mpl_qt import MPLFigureEditor
+import matplotlib.pyplot as plt
+import numpy as np
+import scipy.optimize
+from matplotlib.figure import Figure
 #import traits
 #from traits.api import HasTraits, Property, Instance, Float, Range, Array, Int, String, Button, Bool, on_trait_change
 ##import traitsui
@@ -12,17 +20,12 @@ Auto-aligning spectrometer: centres in on a nanoparticle after a short scan
 #from chaco.api import ArrayPlotData, Plot
 #from enable.component_editor import ComponentEditor
 from past.utils import old_div
-import threading
-import numpy as np
+
 import nplab.instrument.spectrometer
 import nplab.instrument.stage
 from nplab.instrument import Instrument
 from nplab.utils.array_with_attrs import ArrayWithAttrs
-import time
-#from nplab.utils.traitsui_mpl_qt import MPLFigureEditor
-import matplotlib.pyplot as plt
-from matplotlib.figure import Figure
-import scipy.optimize
+
 #from scipy.odr import odrpack as odr
 
 class SpectrometerAligner(Instrument):

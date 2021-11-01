@@ -5,9 +5,13 @@ Created on Tue Jul 25 16:06:25 2017
 @author: wmd22
 """
 from __future__ import division
-from past.utils import old_div
-import nplab.datafile as df
+
 import numpy as np
+from past.utils import old_div
+
+import nplab.datafile as df
+
+
 def process_datafile_spectrum(h5object):
     """Process a spectrum for a h5file dataset"""
     Data = np.array(h5object)

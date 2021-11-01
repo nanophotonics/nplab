@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
-from nplab.utils.gui import QtWidgets, QtCore, uic
-from nplab.instrument.camera.camera_scaled_roi import DisplayWidgetRoiScale, CameraRoiScale
-from nplab.instrument.camera.Hamamatsu_streak.streak_sdk import StreakSdk, StreakError
-from weakref import WeakSet
 import os
+from weakref import WeakSet
+
+from nplab.instrument.camera.camera_scaled_roi import (CameraRoiScale,
+                                                       DisplayWidgetRoiScale)
+from nplab.instrument.camera.Hamamatsu_streak.streak_sdk import (StreakError,
+                                                                 StreakSdk)
+from nplab.utils.gui import QtCore, QtWidgets, uic
 
 
 class Streak(StreakSdk, CameraRoiScale):

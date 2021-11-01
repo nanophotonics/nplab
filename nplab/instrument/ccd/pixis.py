@@ -5,14 +5,16 @@ import os
 
 pvcam=PVCAM = ct.WinDLL(os.path.dirname(__file__) +"/DLL/Pvcam32.dll")
 
-import nplab.instrument.ccd.pvcam_h as pv
-import numpy as np
 import time
-from nplab.instrument.ccd import CCD
-from nplab.instrument.camera import Camera
-from nplab.utils.gui import *
-from nplab.ui.ui_tools import UiTools
+
+import numpy as np
+
+import nplab.instrument.ccd.pvcam_h as pv
 from nplab import inherit_docstring
+from nplab.instrument.camera import Camera
+from nplab.instrument.ccd import CCD
+from nplab.ui.ui_tools import UiTools
+from nplab.utils.gui import *
 
 
 class PixisError(Exception):

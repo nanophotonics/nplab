@@ -11,9 +11,10 @@ software from Lumenera's website).
 
 @author: Richard Bowman (rwb27@cam.ac.uk)
 """
+import ctypes
 import sys
 import time
-import ctypes
+
 # asVoidPtr = ctypes.pythonapi.PyCObject_AsVoidPtr #this function converts PyCObject to void *, why is it not in ctypes natively...?
 # asVoidPtr.restype = ctypes.c_void_p #we need to set the result and argument types of the imported function
 # asVoidPtr.argtypes = [ctypes.py_object]
@@ -38,10 +39,13 @@ Capture), and that its version matches your Python architecture (64 or 32 bit).
         raise ImportError(explanation) 
 
 import numpy as np
-from nplab.instrument.camera import Camera, CameraParameter, CameraControlWidget
-from nplab.utils.notified_property import NotifiedProperty
+
+from nplab.instrument.camera import (Camera, CameraControlWidget,
+                                     CameraParameter)
 from nplab.ui.ui_tools import QuickControlBox
-        
+from nplab.utils.notified_property import NotifiedProperty
+
+
 class LumeneraCamera(Camera):
     last_frame_time = -1
     fps = -1

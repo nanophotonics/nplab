@@ -1,9 +1,11 @@
 from __future__ import division
+
 from builtins import range
-from past.utils import old_div
-import scipy.ndimage.filters as ndimf
-import numpy as np 
+
+import numpy as np
 import scipy.interpolate as scint
+import scipy.ndimage.filters as ndimf
+from past.utils import old_div
 
 """
 Author: Jack Griffiths 0ct 2019

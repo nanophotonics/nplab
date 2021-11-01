@@ -1,12 +1,16 @@
 from __future__ import print_function
+
 from builtins import range
+
 __author__ = 'alansanders'
 
-from nplab.instrument.visa_instrument import VisaInstrument
-from nplab.instrument.stage import Stage, StageUI
 import time
-import numpy as np
 from functools import partial
+
+import numpy as np
+
+from nplab.instrument.stage import Stage, StageUI
+from nplab.instrument.visa_instrument import VisaInstrument
 
 
 class PIStage(VisaInstrument, Stage):

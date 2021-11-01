@@ -1,6 +1,8 @@
 from __future__ import division
 
 from past.utils import old_div
+
+
 def wavelength_to_rgb(wavelength, gamma=0.8):
 
     '''This converts a given wavelength of light to an 

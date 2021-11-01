@@ -6,10 +6,11 @@ Created on Wed Apr 27 19:32:16 2016
 """
 
 import nplab
-from nplab.instrument.camera.opencv import OpenCVCamera
 from nplab.instrument.camera import CameraControlWidget
-from nplab.utils.gui import QtWidgets, QtCore, QtGui
+from nplab.instrument.camera.opencv import OpenCVCamera
 from nplab.ui.ui_tools import QuickControlBox
+from nplab.utils.gui import QtCore, QtGui, QtWidgets
+
 
 class MyOpenCVCamera(OpenCVCamera):
     def get_control_widget(self):

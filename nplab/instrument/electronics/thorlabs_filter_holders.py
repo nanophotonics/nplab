@@ -4,10 +4,10 @@ Created on Fri Aug  6 16:52:49 2021
 
 @author: Hera
 """
-from nplab.instrument.serial_instrument import SerialInstrument
 from nplab.instrument import Instrument
-from nplab.utils.notified_property import NotifiedProperty
+from nplab.instrument.serial_instrument import SerialInstrument
 from nplab.ui.ui_tools import QuickControlBox
+from nplab.utils.notified_property import NotifiedProperty
 
 
 def bytes_to_binary(bytearr, debug=0):

@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 
-from past.utils import old_div
-from nplab.instrument.serial_instrument import SerialInstrument
-from serial import EIGHTBITS, PARITY_NONE, STOPBITS_ONE
 import time
+
+from past.utils import old_div
+from serial import EIGHTBITS, PARITY_NONE, STOPBITS_ONE
+
+from nplab.instrument.serial_instrument import SerialInstrument
 
 
 class VariableRetarder(SerialInstrument):

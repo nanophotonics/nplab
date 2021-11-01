@@ -7,6 +7,7 @@ Created on Fri Mar 12 16:51:30 2021
 import nplab
 from nplab.instrument.serial_instrument import SerialInstrument
 
+
 class TGF4242(SerialInstrument):
     
     def __init__(self, port=None):

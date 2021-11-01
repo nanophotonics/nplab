@@ -24,14 +24,20 @@ Development notes:
 """
 
 import ctypes as ct
+import logging
+import os
+import sys
+import time
+
 import numpy as np
 from matplotlib import pyplot as plt
+
 from nplab.instrument.camera import Camera
-import sys,os, time
 
-from .picam_constants import PicamSensorTemperatureStatus,PicamParameter,PicamValueType,PicamError,transpose_dictionary,PI_V,PicamConstraintType
+from .picam_constants import (PI_V, PicamConstraintType, PicamError,
+                              PicamParameter, PicamSensorTemperatureStatus,
+                              PicamValueType, transpose_dictionary)
 
-import logging
 PARENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 

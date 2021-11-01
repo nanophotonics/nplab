@@ -7,6 +7,7 @@ Created on Mon Mar  8 18:08:38 2021
 
 from nplab.instrument import Instrument
 
+
 class GradStudent(Instrument):
     angry = False
     catchphrase = "This is fine"
@@ -43,7 +44,9 @@ class GradStudent(Instrument):
 student = GradStudent()   
 #%% 
 import os
+
 from nplab.utils.gui import QtWidgets, uic
+
 # same as from PyQt5 import QtWidgets, uic
 
 class GradStudentUI(QtWidgets.QWidget):

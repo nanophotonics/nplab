@@ -1,9 +1,10 @@
 __author__ = 'alansanders'
 
-from nplab.experiment.scanning_experiment import ContinuousLinearScan, ContinuousLinearScanQt
+from nplab import inherit_docstring
+from nplab.experiment.scanning_experiment import (ContinuousLinearScan,
+                                                  ContinuousLinearScanQt)
 from nplab.instrument.stage import Stage
 from nplab.utils.gui import *
-from nplab import inherit_docstring
 
 
 @inherit_docstring(ContinuousLinearScan)
@@ -69,11 +70,13 @@ class ContinuousLinearStageScanQt(ContinuousLinearStageScan, ContinuousLinearSca
 if __name__ == '__main__':
     import matplotlib
     matplotlib.use('Qt4Agg')
-    from nplab.ui.mpl_gui import FigureCanvasWithDeferredDraw as FigureCanvas
-    from matplotlib.figure import Figure
-    import numpy as np
-    from nplab.instrument.stage import DummyStage
     import time
+
+    import numpy as np
+    from matplotlib.figure import Figure
+
+    from nplab.instrument.stage import DummyStage
+    from nplab.ui.mpl_gui import FigureCanvasWithDeferredDraw as FigureCanvas
 
     class DummyLinearStageScan(ContinuousLinearStageScanQt):
         def __init__(self):

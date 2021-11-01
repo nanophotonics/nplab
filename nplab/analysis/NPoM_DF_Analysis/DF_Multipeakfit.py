@@ -8,25 +8,26 @@ Contains all necessary functions for analysis of NPoM darkfield and photolumines
 Best used in conjunction with Condense_Fit_DF control script
 
 """
-from __future__ import division
-from __future__ import print_function
-from builtins import zip
-from builtins import str
-from builtins import range
+from __future__ import division, print_function
+
+from builtins import range, str, zip
+
 from past.utils import old_div
+
 if __name__ == '__main__':
     print('Importing modules...')
 
-import h5py
-import numpy as np
 import os
-import matplotlib.pyplot as plt
-from scipy.signal import butter, filtfilt
-from lmfit.models import GaussianModel
+import re
 import time
 from random import randint
-import re
+
+import h5py
+import matplotlib.pyplot as plt
+import numpy as np
 import scipy.optimize as spo
+from lmfit.models import GaussianModel
+from scipy.signal import butter, filtfilt
 from scipy.signal import savgol_filter as sgFilt
 
 if __name__ == '__main__':

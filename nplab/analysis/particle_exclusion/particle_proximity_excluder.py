@@ -8,14 +8,15 @@ import cv2
 import numpy as np
 import pyqtgraph as pg
 import qdarkstyle
+from PyQt5 import QtWidgets
+from tqdm import tqdm
+
 from nplab.analysis import latest_scan, load_h5
 from nplab.analysis.particle_exclusion.utils import distance, save_rejected
 from nplab.ui.ui_tools import QuickControlBox
 from nplab.utils.image_filter_box import Image_Filter_box
 from nplab.utils.notified_property import (DumbNotifiedProperty,
                                            register_for_property_changes)
-from PyQt5 import QtWidgets
-from tqdm import tqdm
 
 
 class ParticleProximityExcluder(QtWidgets.QWidget):

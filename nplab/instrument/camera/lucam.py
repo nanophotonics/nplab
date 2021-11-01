@@ -83,11 +83,11 @@ Examples
 Refer to the test() function at the end of the document for more examples.
 
 """
-import sys
+import copy
 import ctypes
+import sys
 
 import numpy
-import copy
 
 __version__ = '2013.01.18'
 __docformat__ = 'restructuredtext en'
@@ -102,10 +102,11 @@ def API():
     Raise WindowsError if the LuCam drivers are not installed.
 
     """
+    from ctypes import POINTER, WINFUNCTYPE, c_char_p, c_int, c_void_p
+    from ctypes.wintypes import (BOOL, BYTE, DWORD, FLOAT, HANDLE, HMENU, HWND,
+                                 LONG, LPCSTR, LPCWSTR, ULONG, USHORT)
+
     from numpy.ctypeslib import ndpointer
-    from ctypes import c_int, c_char_p, c_void_p, POINTER, WINFUNCTYPE
-    from ctypes.wintypes import (BOOL, BYTE, FLOAT, LONG, ULONG, USHORT,
-                                 DWORD, LPCSTR, LPCWSTR, HANDLE, HWND, HMENU)
 
     pUCHAR_LUT = ndpointer(dtype=numpy.uint8, ndim=1, flags='C_CONTIGUOUS')
     pUCHAR_RGB = ndpointer(dtype=numpy.uint8, ndim=3, flags='C_CONTIGUOUS')

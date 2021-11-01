@@ -1,19 +1,22 @@
-from __future__ import division
-from __future__ import print_function
-from builtins import range
-from builtins import object
+from __future__ import division, print_function
+
+from builtins import object, range
+
 from past.utils import old_div
+
 __author__ = 'alansanders'
 
 import os
+from itertools import product
+
 import numpy as np
+from np_analysis_methods.centroid_fitting import fit_centroid
+from nputils import get_nearest, get_roi
 #import numpy.ma as ma
 from nputils.data_loader import load_data
-from nputils import get_roi, get_nearest
-from .colour_reconstruction_image import colour_reconstruction as cr
-from np_analysis_methods.centroid_fitting import fit_centroid
 from scipy.optimize import curve_fit
-from itertools import product
+
+from .colour_reconstruction_image import colour_reconstruction as cr
 
 h = 6.63e-34
 c = 3e8

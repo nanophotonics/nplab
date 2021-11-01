@@ -1,13 +1,13 @@
 """
 tl_color.py
 """
-from ctypes import cdll, POINTER, c_int, c_ushort, c_void_p, c_float, c_ubyte
-from traceback import format_exception
 import logging
+from ctypes import POINTER, c_float, c_int, c_ubyte, c_ushort, c_void_p, cdll
+from traceback import format_exception
 
 import numpy as np
 
-from .tl_color_enums import FORMAT, FILTER_ARRAY_PHASE, FILTER_TYPE
+from .tl_color_enums import FILTER_ARRAY_PHASE, FILTER_TYPE, FORMAT
 
 _logger = logging.getLogger(__name__)
 

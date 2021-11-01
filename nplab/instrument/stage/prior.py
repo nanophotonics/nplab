@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 
+import re
+import time
+
+import numpy as np
+
 import nplab.instrument.serial_instrument as serial
 import nplab.instrument.stage as stage
-import re
-import numpy as np
-import time
 
 
 class ProScan(serial.SerialInstrument, stage.Stage):

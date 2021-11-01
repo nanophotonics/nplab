@@ -8,11 +8,12 @@ A few functions for quick calculation ofs MPE's
 """
 from __future__ import division
 
-from past.utils import old_div
 import matplotlib
 #%matplotlib inline
 import matplotlib.pyplot as plt
 import numpy as np
+from past.utils import old_div
+
 
 #,average_power, rep_rate = 80E6,
 def single_pulse_MPE(wavelength,pulse_width = 100E-15,divergence = 1.1):

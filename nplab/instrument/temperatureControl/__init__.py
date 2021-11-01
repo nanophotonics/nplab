@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 
-from nplab.utils import monitor_property
 import threading
 import time
+
+from nplab.utils import monitor_property
 
 
 class TemperatureControlMixin():

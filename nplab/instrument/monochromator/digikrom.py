@@ -4,16 +4,17 @@ Created on Tue Apr 24 11:35:36 2018
 
 @author: WMD
 """
-from __future__ import division
-from __future__ import print_function
+from __future__ import division, print_function
 
 from builtins import chr
+
+import numpy as np
+import serial
 from past.utils import old_div
+
 from nplab.instrument.serial_instrument import SerialInstrument
 from nplab.utils.notified_property import NotifiedProperty
 
-import serial
-import numpy as np
 
 class Digikrom(SerialInstrument):
     port_settings = dict(baudrate=9600,

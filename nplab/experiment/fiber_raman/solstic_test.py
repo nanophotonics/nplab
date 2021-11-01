@@ -1,7 +1,12 @@
 from __future__ import print_function
-from nplab.instrument.light_sources.SolsTiS import SolsTiS
+
 import time
-import numpy as np 
+
+import numpy as np
+
+from nplab.instrument.light_sources.SolsTiS import SolsTiS
+
+
 def get_wavelength(laser):
 	laser.system_status()
 	wl = laser.message_in_history[-1]["message"]["parameters"]["wavelength"]

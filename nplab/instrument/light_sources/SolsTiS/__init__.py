@@ -15,18 +15,19 @@ __author__: Yago
 from __future__ import print_function
 
 from future import standard_library
-standard_library.install_aliases()
-from builtins import str
-from past.builtins import basestring
-from nplab.utils.gui import QtWidgets, QtCore, uic
-from nplab.instrument import Instrument
 
+standard_library.install_aliases()
 import collections
 import json
 import os
 import socket
 import time
+from builtins import str
 
+from past.builtins import basestring
+
+from nplab.instrument import Instrument
+from nplab.utils.gui import QtCore, QtWidgets, uic
 
 BUFFER_SIZE = 1000
 TIMEOUT = 10.
@@ -392,7 +393,9 @@ def download_logs():
 
     Script that can be used to download the logs created by automatic logging in the laser
     '''
-    import urllib.request, urllib.error, urllib.parse
+    import urllib.error
+    import urllib.parse
+    import urllib.request
     # import numpy as np
     from datetime import date, timedelta
 

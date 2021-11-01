@@ -1,12 +1,14 @@
-from __future__ import print_function
-from __future__ import absolute_import
-from nplab.instrument.spectrometer.acton_2300i import Acton
-import pyqtgraph as pg
-from PyQt4 import QtGui
-import numpy as np 
+from __future__ import absolute_import, print_function
+
 import time
 
+import numpy as np
+import pyqtgraph as pg
+from PyQt4 import QtGui
+
 from nplab.instrument.camera.Picam.pixis import Pixis
+from nplab.instrument.spectrometer.acton_2300i import Acton
+
 from .Pacton import Pacton
 
 

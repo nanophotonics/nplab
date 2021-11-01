@@ -1,19 +1,18 @@
-from __future__ import division
-from __future__ import print_function
-from builtins import range
-from past.utils import old_div
-import numpy as np 
-import matplotlib.pyplot as plt 
+from __future__ import division, print_function
+
 import sys
-from scipy.signal import resample
-from nplab import datafile as df 
-from nplab.analysis.signal_alignment import correlation_align
-from scipy.signal import find_peaks_cwt, argrelmax,correlate
-from nplab.analysis.wavelets import SUREShrink
-from nplab.analysis.smoothing import convex_smooth
+from builtins import range
+
+import matplotlib.pyplot as plt
+import numpy as np
+from past.utils import old_div
 from scipy.interpolate import interp1d
+from scipy.signal import argrelmax, correlate, find_peaks_cwt, resample
+
+from nplab import datafile as df
+from nplab.analysis.signal_alignment import correlation_align
 from nplab.analysis.smoothing import convex_smooth
-	
+from nplab.analysis.wavelets import SUREShrink
 
 # def find_index_closest_to_value(value, array):
 # 	index = np.argmin(np.abs(array - value))

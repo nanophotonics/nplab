@@ -10,15 +10,15 @@ rwb27, May 2016
 """
 
 import nplab
-import nplab.utils.gui 
-from nplab.instrument.spectrometer import Spectrometer
-from nplab.instrument.shutter import Shutter
+import nplab.utils.gui
 from nplab.experiment import Experiment, ExperimentStopped
+from nplab.instrument.shutter import Shutter
+from nplab.instrument.spectrometer import Spectrometer
+from nplab.ui.ui_tools import QuickControlBox, UiTools
+from nplab.utils.gui import (QtCore, QtGui, QtWidgets, get_qt_app, show_guis,
+                             uic)
 from nplab.utils.notified_property import DumbNotifiedProperty
-from nplab.ui.ui_tools import QuickControlBox
-from nplab.utils.gui import show_guis
-from nplab.utils.gui import QtWidgets, QtCore, QtGui, get_qt_app, uic
-from nplab.ui.ui_tools import UiTools
+
 
 class DumbIrradiationExperiment(Experiment):
     """An example experiment that opens and closes a shutter, and takes spectra."""
@@ -90,8 +90,8 @@ class DumbIrradiationExperiment_Gui(QtWidgets.QMainWindow, UiTools):
     
             
 if __name__ == '__main__':
-    from nplab.instrument.spectrometer import DummySpectrometer
-    from nplab.instrument.shutter import DummyShutter    
+    from nplab.instrument.shutter import DummyShutter
+    from nplab.instrument.spectrometer import DummySpectrometer    
     
     spectrometer = DummySpectrometer()
     shutter = DummyShutter()

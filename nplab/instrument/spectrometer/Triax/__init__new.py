@@ -4,11 +4,13 @@ Created on Tue Apr 14 18:45:32 2015
 @author: jpg66. Based on code by Hamid Ohadi (hamid.ohadi@gmail.com)
 """
 
-from nplab.instrument.visa_instrument import VisaInstrument
-import numpy as np
-import time
 import copy
+import time
+
+import numpy as np
 import scipy.interpolate as scint
+
+from nplab.instrument.visa_instrument import VisaInstrument
 
 """
 This is the base class for the Triax spectrometer. This should be wrapped for each lab use, due to the differences in calibrations.

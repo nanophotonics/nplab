@@ -3,12 +3,14 @@ The base scanning experiment classes are found in this file, supporting the basi
 of scanning experiments and adding supporting for utilising HDF5 files for data storage.
 """
 from __future__ import print_function
+
 __author__ = 'alansanders'
 
-from nplab.experiment.experiment import ExperimentWithDataDeque
-from threading import Thread
 import time
+from threading import Thread
+
 from nplab import datafile
+from nplab.experiment.experiment import ExperimentWithDataDeque
 
 
 class ScanningExperiment(ExperimentWithDataDeque):

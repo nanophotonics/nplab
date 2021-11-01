@@ -1,15 +1,17 @@
 from past.utils import old_div
+
 __author__ = 'alansanders, chrisgrosse'
 
-import ctypes, time
-from ctypes import byref, c_int, c_uint
-#from nplab.instrument import Instrument
-from nplab.instrument.stage import PiezoStage, StageUI, PiezoStageUI
+import ctypes
 import os
+import time
+from ctypes import byref, c_int, c_uint
+
+#from nplab.instrument import Instrument
+from nplab.instrument.stage import PiezoStage, PiezoStageUI, StageUI
+from nplab.ui.ui_tools import UiTools
 from nplab.utils.gui import *
 from nplab.utils.gui import uic
-from nplab.ui.ui_tools import UiTools
-
 
 try:
     mcsc = ctypes.cdll.MCSControl # load C library from MCSControl.h
@@ -667,8 +669,10 @@ class SmaractStageUI(StageUI):
 
 
 
-from nplab.instrument.serial_instrument import SerialInstrument
 import serial
+
+from nplab.instrument.serial_instrument import SerialInstrument
+
 
 class MCSSerialError(Exception):
     def __init__(self, error_msg):

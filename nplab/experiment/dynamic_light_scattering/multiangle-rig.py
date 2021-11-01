@@ -1,9 +1,12 @@
 from __future__ import print_function
+
 from builtins import range
-from nplab.instrument.stage.Thorlabs_NR360SM import Thorlabs_NR360SM
+from datetime import datetime
+
 from nplab.instrument.electronics.gamari_fpga import Timetagger
 from nplab.instrument.shutter.thorlabs_sc10 import ThorLabsSC10
-from datetime import datetime
+from nplab.instrument.stage.Thorlabs_NR360SM import Thorlabs_NR360SM
+
 PATH_TEMPLATE ="~/dataspace/{}"
 s = Thorlabs_NR360SM(port='/dev/ttyUSB0', source=0x01, destination=0x11)
 t = Timetagger()
@@ -13,6 +16,7 @@ shutter.close_shutter()
 s.home()
 s._waitFinishMove(axis="x")
 import time
+
 angles = list(range(10,50,10))
 print(angles)
 for angle in angles:

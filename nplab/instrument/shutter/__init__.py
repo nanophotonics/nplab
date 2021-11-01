@@ -1,12 +1,14 @@
 __author__ = 'alansanders'
 
-from nplab.instrument import Instrument
-from nplab.utils.gui import QtCore, QtGui, QtWidgets, get_qt_app, uic
-from nplab.ui.ui_tools import UiTools, QuickControlBox
+import contextlib
 import os
 import time
-from nplab.utils.notified_property import DumbNotifiedProperty, register_for_property_changes
-import contextlib
+
+from nplab.instrument import Instrument
+from nplab.ui.ui_tools import QuickControlBox, UiTools
+from nplab.utils.gui import QtCore, QtGui, QtWidgets, get_qt_app, uic
+from nplab.utils.notified_property import (DumbNotifiedProperty,
+                                           register_for_property_changes)
 
 
 class Shutter(Instrument):

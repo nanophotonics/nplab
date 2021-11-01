@@ -5,14 +5,13 @@ Created on Tue May 13 16:08:24 2014
 @author: alansanders
 """
 
-from scipy import interpolate
-
 import colorpy.ciexyz as cp
 import colorpy.colormodels as cpm
-
 import numpy as np
-cimport numpy as np
+from scipy import interpolate
+
 cimport cython
+cimport numpy as np
 
 
 #np.ndarray[np.uint8_t, ndim=3]

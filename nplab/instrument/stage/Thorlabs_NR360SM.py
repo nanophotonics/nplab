@@ -1,13 +1,16 @@
-import sys, numpy as np
-from nplab.instrument.stage import Stage, StageUI
-from nplab.instrument.stage.apt_vcp_motor import APT_VCP_motor
-import json,struct
-from nplab.utils.gui import *
-from nplab.ui.ui_tools import *
+import json
+import struct
+import sys
 import threading
 import time
+
+import numpy as np
 from qtpy import QtCore
 
+from nplab.instrument.stage import Stage, StageUI
+from nplab.instrument.stage.apt_vcp_motor import APT_VCP_motor
+from nplab.ui.ui_tools import *
+from nplab.utils.gui import *
 
 DEBUG = False 
 class Thorlabs_NR360SM(APT_VCP_motor):
@@ -283,6 +286,7 @@ class Thorlabs_NR360SM_UI(QtWidgets.QWidget, UiTools):
 
 if __name__ == "__main__":
 	import sys
+
 	from nplab.utils.gui import get_qt_app
 	s = Thorlabs_NR360SM(port='/dev/ttyUSB0', source=0x01, destination=0x11)
 	# s.set_limswitchparams()

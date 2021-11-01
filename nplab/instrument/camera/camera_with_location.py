@@ -15,23 +15,28 @@ you should use its `color_image`, `gray_image` and `raw_image` methods rather th
 
 NB see the note on coordinate systems in utils/image_with_location.py
 """
-import nplab
-from nplab.instrument.camera import Camera
-import nplab.instrument.camera
-from nplab.instrument.stage import Stage
-from nplab.instrument import Instrument
-import numpy as np
-from nplab.utils.image_with_location import ImageWithLocation, ensure_3d, ensure_2d, locate_feature_in_image, datum_pixel
-from nplab.experiment import Experiment, ExperimentStopped
-from nplab.experiment.gui import ExperimentWithProgressBar, run_function_modally
-from nplab.utils.gui import QtCore, QtGui, QtWidgets
+import time
+
 import cv2
+import numpy as np
 #import cv2.cv
 from scipy import ndimage
 from scipy.signal import argrelextrema
+
+import nplab
+import nplab.instrument.camera
+from nplab.experiment import Experiment, ExperimentStopped
+from nplab.experiment.gui import (ExperimentWithProgressBar,
+                                  run_function_modally)
+from nplab.instrument import Instrument
+from nplab.instrument.camera import Camera
+from nplab.instrument.stage import Stage
 from nplab.ui.ui_tools import QuickControlBox, UiTools
+from nplab.utils.gui import QtCore, QtGui, QtWidgets
+from nplab.utils.image_with_location import (ImageWithLocation, datum_pixel,
+                                             ensure_2d, ensure_3d,
+                                             locate_feature_in_image)
 from nplab.utils.notified_property import DumbNotifiedProperty
-import time
 
 
 def distance(p1, p2): # between two ndarrays

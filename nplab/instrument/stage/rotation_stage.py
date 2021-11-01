@@ -1,9 +1,12 @@
-from past.utils import old_div
-import struct
-from nplab.instrument import serial_instrument as serial
-import numpy as np
-import time
 import os
+import struct
+import time
+
+import numpy as np
+from past.utils import old_div
+
+from nplab.instrument import serial_instrument as serial
+
 
 class Rotation_Stage_Backend(serial.SerialInstrument):
     

@@ -4,8 +4,9 @@ Classes related to the Keithley 2635A SMU.
 
 __author__ = 'alansanders'
 
-from nplab.instrument.visa_instrument import VisaInstrument, queried_property
 import numpy as np
+
+from nplab.instrument.visa_instrument import VisaInstrument, queried_property
 from nplab.utils.gui import *
 from nplab.utils.gui import uic
 

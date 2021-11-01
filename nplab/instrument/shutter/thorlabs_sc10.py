@@ -1,7 +1,8 @@
 __author__ = 'alansanders'
 
-from nplab.instrument.shutter import Shutter
 import nplab.instrument.serial_instrument as serial
+from nplab.instrument.shutter import Shutter
+
 
 def bool_to_state(Bool):
     if Bool:

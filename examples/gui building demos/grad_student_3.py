@@ -5,7 +5,9 @@ Created on Mon Mar  8 18:08:38 2021
 @author: Eoin
 """
 from nplab.instrument import Instrument
-from nplab.utils.notified_property import DumbNotifiedProperty, NotifiedProperty
+from nplab.utils.notified_property import (DumbNotifiedProperty,
+                                           NotifiedProperty)
+
 
 class GradStudent(Instrument):
     angry = DumbNotifiedProperty(False) 
@@ -39,7 +41,8 @@ class GradStudent(Instrument):
     def get_qt_ui(self):
         return GradStudentUI(self) 
     
-from nplab.ui.ui_tools import QuickControlBox ###
+from nplab.ui.ui_tools import QuickControlBox  # ##
+
 
 class GradStudentUI(QuickControlBox): ###
     def __init__(self, student):

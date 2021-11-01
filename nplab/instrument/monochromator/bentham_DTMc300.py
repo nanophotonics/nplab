@@ -1,10 +1,13 @@
 from __future__ import print_function
+
 import ctypes
-from nplab.instrument import Instrument
-from ctypes import CDLL, c_char_p,byref,c_char, POINTER, ARRAY, WinDLL
 import os
-import numpy as np
 import time
+from ctypes import ARRAY, CDLL, POINTER, WinDLL, byref, c_char, c_char_p
+
+import numpy as np
+
+from nplab.instrument import Instrument
 
 FILEPATH = os.path.realpath(__file__)
 DIRPATH = os.path.dirname(FILEPATH)

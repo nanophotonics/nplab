@@ -1,14 +1,15 @@
-from __future__ import division
-from __future__ import print_function
-from builtins import range
-from past.utils import old_div
-import numpy as np 
-import scipy.ndimage.filters as ndimf
-import scipy.interpolate as scintp
+from __future__ import division, print_function
+
 import copy
-import scipy.optimize as spo
+from builtins import range
+
 import matplotlib.pyplot as pl
+import numpy as np
 import scipy.integrate as scint
+import scipy.interpolate as scintp
+import scipy.ndimage.filters as ndimf
+import scipy.optimize as spo
+from past.utils import old_div
 
 """
 Author: Jack Griffiths Oct 2019

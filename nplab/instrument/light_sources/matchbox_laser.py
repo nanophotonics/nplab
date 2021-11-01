@@ -6,11 +6,12 @@ Created on Tue Oct 21 15:58:04 2014
 """
 from __future__ import print_function
 
-
-from nplab.instrument.serial_instrument import SerialInstrument
-from nplab.instrument.light_sources import LightSource
-import serial
 import numpy as np
+import serial
+
+from nplab.instrument.light_sources import LightSource
+from nplab.instrument.serial_instrument import SerialInstrument
+
 
 class MatchboxLaser(SerialInstrument, LightSource):
     def __init__(self, port=None):

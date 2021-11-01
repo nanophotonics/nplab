@@ -4,11 +4,12 @@ This is an interface module for instruments produced by Sigma Koki
 
 __author__: Yago
 """
-from nplab.utils.thread_utils import locked_action
-from nplab.instrument.stage import Stage
-from nplab.instrument.serial_instrument import SerialInstrument
-from nplab.instrument.visa_instrument import VisaInstrument
 import time
+
+from nplab.instrument.serial_instrument import SerialInstrument
+from nplab.instrument.stage import Stage
+from nplab.instrument.visa_instrument import VisaInstrument
+from nplab.utils.thread_utils import locked_action
 
 
 class GSC01(SerialInstrument, Stage):

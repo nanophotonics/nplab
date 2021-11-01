@@ -4,11 +4,11 @@ Created on Thu Jul 30 13:13:27 2015
 
 """
 
-from nplab.utils.gui import QtWidgets, uic, QtCore
 import os
 
-from nplab.instrument.visa_instrument import VisaInstrument
 from nplab.instrument.temperatureControl import TemperatureControlMixin
+from nplab.instrument.visa_instrument import VisaInstrument
+from nplab.utils.gui import QtCore, QtWidgets, uic
 
 
 class OxfordITC(VisaInstrument, TemperatureControlMixin):

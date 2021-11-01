@@ -1,35 +1,41 @@
-from __future__ import division
-from __future__ import print_function
-from builtins import zip
-from builtins import str
-from builtins import range
+from __future__ import division, print_function
+
+from builtins import range, str, zip
+
 from past.utils import old_div
+
 __author__ = 'alansanders'
 
-from nplab.experiment.scanning_experiment import ScanningExperimentHDF5, GridScanQt
-from nplab.instrument.stage import Stage
-from nplab.instrument.spectrometer import Spectrometer, Spectrometers
+import time
+import warnings
+
+import matplotlib
+import numpy as np
+
+from nplab.experiment.scanning_experiment import (GridScanQt,
+                                                  ScanningExperimentHDF5)
 from nplab.instrument.light_sources import LightSource
 from nplab.instrument.shutter import Shutter
+from nplab.instrument.spectrometer import Spectrometer, Spectrometers
+from nplab.instrument.stage import Stage
+from nplab.ui.ui_tools import UiTools
 from nplab.utils.gui import *
 from nplab.utils.gui import uic
-from nplab.ui.ui_tools import UiTools
-import numpy as np
-import matplotlib
-import warnings
-import time
 
 matplotlib.use('Qt4Agg')
-from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
-import matplotlib.gridspec as gridspec
-#from nplab.ui.mpl_gui import FigureCanvasWithDeferredDraw as FigureCanvas
-from matplotlib.figure import Figure
+import inspect
 from functools import partial
 from types import MethodType
-import inspect
+
+import matplotlib.gridspec as gridspec
+import pyqtgraph as pg
+from matplotlib.backends.backend_qt4agg import \
+    FigureCanvasQTAgg as FigureCanvas
+#from nplab.ui.mpl_gui import FigureCanvasWithDeferredDraw as FigureCanvas
+from matplotlib.figure import Figure
+
 from nplab.ui.hdf5_browser import HDF5Browser
 
-import pyqtgraph as pg
 pg.setConfigOption('background', 'w')
 pg.setConfigOption('foreground', 'k')
 
@@ -412,9 +418,10 @@ class HyperspectralScanUI(QtWidgets.QWidget, UiTools):
 
 if __name__ == '__main__':
     import sys
-    from nplab.instrument.stage import DummyStage
-    from nplab.instrument.spectrometer import DummySpectrometer, Spectrometers
+
     from nplab import datafile
+    from nplab.instrument.spectrometer import DummySpectrometer, Spectrometers
+    from nplab.instrument.stage import DummyStage
 
     f = datafile.get_file()
 

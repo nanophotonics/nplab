@@ -1,17 +1,18 @@
 # -*- coding: utf-8 -*-
 
-from nplab.utils.gui import QtWidgets, QtCore, uic, QtGui
-from nplab.instrument.camera.camera_scaled_roi import CameraRoiScale
-from nplab.instrument.camera.Andor.andor_sdk import AndorBase
-from nplab.utils.notified_property import register_for_property_changes
-import nplab.datafile as df
-
 import os
 import re
-import numpy as np
-from nplab.ui.ui_tools import UiTools
-from weakref import WeakSet
 import time
+from weakref import WeakSet
+
+import numpy as np
+
+import nplab.datafile as df
+from nplab.instrument.camera.Andor.andor_sdk import AndorBase
+from nplab.instrument.camera.camera_scaled_roi import CameraRoiScale
+from nplab.ui.ui_tools import UiTools
+from nplab.utils.gui import QtCore, QtGui, QtWidgets, uic
+from nplab.utils.notified_property import register_for_property_changes
 
 
 class Andor(CameraRoiScale, AndorBase):

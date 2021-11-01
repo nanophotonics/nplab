@@ -7,14 +7,12 @@ Does backlash correction.
 
 """
 
-from builtins import str
-from builtins import hex
-from builtins import range
-from builtins import object
 import struct
-from nplab.instrument import serial_instrument as serial
+from builtins import hex, object, range, str
+
 import numpy as np
 
+from nplab.instrument import serial_instrument as serial
 
 
 class ELL18K(object):

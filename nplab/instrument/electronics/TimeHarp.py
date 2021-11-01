@@ -6,15 +6,16 @@ Created on Wed Sept 20 2017
 """
 from __future__ import print_function
 
-
-
+import sys
+import time
 from builtins import str
 from ctypes import *
-import sys
-from nplab.instrument import Instrument
-import time
-import numpy as np
+
 import matplotlib.pyplot as plt
+import numpy as np
+
+from nplab.instrument import Instrument
+
 #from nplab.utils.notified_property import NotifiedProperty
 #from nplab.ui.ui_tools import QuickControlBox
 #from nplab.utils.gui import QtWidgets

@@ -1,12 +1,12 @@
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
-from .pixis import Pixis256EQt
-import pyqtgraph as pg
-from PyQt5 import QtGui
-import numpy as np 
 import time
 
+import numpy as np
+import pyqtgraph as pg
+from PyQt5 import QtGui
+
+from .pixis import Pixis256EQt
 
 EXPOSURE =1 
 def initialize_measurement():

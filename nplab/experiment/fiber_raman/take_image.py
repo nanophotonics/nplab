@@ -1,10 +1,11 @@
-from __future__ import print_function
-from __future__ import absolute_import
-import numpy as np 
-import matplotlib.pyplot as plt 
+from __future__ import absolute_import, print_function
 
-from nplab.instrument.spectrometer.acton_2300i import Acton
+import matplotlib.pyplot as plt
+import numpy as np
+
 from nplab.instrument.camera.Picam.pixis import Pixis
+from nplab.instrument.spectrometer.acton_2300i import Acton
+
 from .Pacton import Pacton
 
 

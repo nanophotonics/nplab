@@ -6,12 +6,12 @@ Created on Tue Jul 21 10:22:28 2015
 """
 from __future__ import print_function
 
-import nplab.instrument.serial_instrument as si
-from nplab.instrument.stage import Stage
-import serial
 import time
 
+import serial
 
+import nplab.instrument.serial_instrument as si
+from nplab.instrument.stage import Stage
 
 ERROR_CODE = {'0': 'No error',
               '2': 'Driver fault (thermal shut down)',

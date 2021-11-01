@@ -3,21 +3,23 @@ Base class and interface for Stages.
 """
 __author__ = 'alansanders, richardbowman'
 
-import numpy as np
-from collections import OrderedDict
+import collections
+import inspect
 import itertools
-from nplab.instrument import Instrument
-import time
 import threading
+import time
+from collections import OrderedDict
+from functools import partial
+
+import numpy as np
+
+import nplab.ui
+from nplab.instrument import Instrument
+from nplab.ui.ui_tools import UiTools
+from nplab.ui.widgets.position_widgets import XYZPositionWidget
+from nplab.utils.formatting import engineering_format
 from nplab.utils.gui import *
 from nplab.utils.gui import uic
-from nplab.ui.ui_tools import UiTools
-import nplab.ui
-from nplab.ui.widgets.position_widgets import XYZPositionWidget
-import inspect
-from functools import partial
-from nplab.utils.formatting import engineering_format
-import collections
 
 
 class Stage(Instrument):
@@ -613,6 +615,7 @@ class DummyStage(Stage):
 
 if __name__ == '__main__':
     import sys
+
     from nplab.utils.gui import get_qt_app
 
     stage = DummyStage()

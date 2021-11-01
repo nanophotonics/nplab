@@ -1,21 +1,19 @@
 """
 jpg66
 """
-from __future__ import division
-from __future__ import print_function
-
-from builtins import str
-from builtins import range
-from past.utils import old_div
-from nplab.instrument.visa_instrument import VisaInstrument
-import numpy as np
-import time
+from __future__ import division, print_function
 
 import os
-import scipy.optimize as spo
-from nplab.utils.gui import QtGui, QtWidgets, uic
-from nplab.ui.ui_tools import UiTools
+import time
+from builtins import range, str
 
+import numpy as np
+import scipy.optimize as spo
+from past.utils import old_div
+
+from nplab.instrument.visa_instrument import VisaInstrument
+from nplab.ui.ui_tools import UiTools
+from nplab.utils.gui import QtGui, QtWidgets, uic
 
 """
 This is the base class for the Triax spectrometer. This should be wrapped for each lab use, due to the differences in calibrations.

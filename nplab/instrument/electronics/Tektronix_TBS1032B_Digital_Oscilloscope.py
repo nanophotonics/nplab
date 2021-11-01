@@ -5,8 +5,10 @@ Created on Mon Apr  5 15:28:19 2021
 @author: Hera
 """
 
-from nplab.instrument.visa_instrument import VisaInstrument, queried_property
 from functools import partial
+
+from nplab.instrument.visa_instrument import VisaInstrument, queried_property
+
 
 class TBS1032B(VisaInstrument):
     """Visa Interface for TBS1032B Tektronix Digital Oscilloscope"""

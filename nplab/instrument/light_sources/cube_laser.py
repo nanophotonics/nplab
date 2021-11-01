@@ -6,12 +6,15 @@ Created on Tue Oct 21 15:58:04 2014
 """
 from __future__ import print_function
 
-from builtins import str
-from nplab.instrument.serial_instrument import SerialInstrument
-from nplab.instrument.light_sources import LightSource
-import serial
 import sys
+from builtins import str
+
+import serial
 from PyQt5 import QtGui
+
+from nplab.instrument.light_sources import LightSource
+from nplab.instrument.serial_instrument import SerialInstrument
+
 
 class CubeLaser(SerialInstrument, LightSource):
     def __init__(self, port=None):

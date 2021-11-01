@@ -1,17 +1,17 @@
 """
 jpg66
 """
-from __future__ import division
-from __future__ import print_function
+from __future__ import division, print_function
 
-from builtins import input
-from builtins import str
-from past.utils import old_div
-from nplab.instrument.spectrometer.Triax import Triax
-import numpy as np
-from nplab.instrument.camera.Andor import Andor, AndorUI
 import types
+from builtins import input, str
+
 import future
+import numpy as np
+from past.utils import old_div
+
+from nplab.instrument.camera.Andor import Andor, AndorUI
+from nplab.instrument.spectrometer.Triax import Triax
 
 Calibration_Arrays=[]
 

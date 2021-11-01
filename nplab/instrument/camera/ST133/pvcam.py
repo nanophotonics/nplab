@@ -19,22 +19,26 @@ Original Odemis was tested on Linux with a PI PIXIS. This was tested on Windows 
 
 
 import ctypes as ct
-from nplab.instrument.camera.ST133 import *  # Dictionary linking metadata names with codes
 import math
-import numpy as np
+import operator
 import os
 import threading
 import time
-from nplab.instrument.camera.camera_scaled_roi import CameraRoiScale, DisplayWidgetRoiScale
+from weakref import WeakSet
+
+import numpy as np
+
 import nplab.datafile as df
-from nplab.utils.notified_property import NotifiedProperty
+from nplab.instrument.camera.camera_scaled_roi import (CameraRoiScale,
+                                                       DisplayWidgetRoiScale)
+from nplab.instrument.camera.ST133 import *  # Dictionary linking metadata names with codes
+from nplab.ui.ui_tools import UiTools
 from nplab.utils.gui import QtCore, QtGui, QtWidgets, uic
 from nplab.utils.log import create_logger
-from nplab.ui.ui_tools import UiTools
-from nplab.utils.notified_property import register_for_property_changes
-import operator
+from nplab.utils.notified_property import (NotifiedProperty,
+                                           register_for_property_changes)
+
 from . import pvcam_h as pv  # Dictionary linking variables with values
-from weakref import WeakSet
 
 
 def index_closest(val, l):

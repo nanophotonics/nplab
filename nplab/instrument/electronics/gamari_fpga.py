@@ -1,8 +1,12 @@
 import os
-from timetag.capture_pipeline import CapturePipeline
-import time
-from nplab.instrument import Instrument
 import subprocess
+import time
+
+from timetag.capture_pipeline import CapturePipeline
+
+from nplab.instrument import Instrument
+
+
 class Timetagger(Instrument):
 
 	def __init__(self,verbose=0):

@@ -7,6 +7,8 @@ Created on Thu Feb 27 10:36:15 2020
 
 from nplab.instrument.serial_instrument import SerialInstrument
 from nplab.instrument.shutter import ShutterWithEmulatedRead
+
+
 class ArduinoShutter(ShutterWithEmulatedRead, SerialInstrument):
     def __init__(self, port):
         self.termination_character = '\r'

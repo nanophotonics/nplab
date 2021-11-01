@@ -7,12 +7,9 @@ Created on Fri Oct 12 13:17:20 2018
 
 # Save as server.py 
 # Message Receiver
-import socket 
+import socket
 
 from nplab.instrument import Instrument
-
-
-
 
 
 class Talk2Computer(Instrument):

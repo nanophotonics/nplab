@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import division
-from builtins import zip
-from builtins import range
-from past.utils import old_div
+
+from builtins import range, zip
+
+import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib import gridspec
+from past.utils import old_div
 # import pyfftw
 from scipy import misc
-import matplotlib.pyplot as plt
-from matplotlib import gridspec
-
 
 # TODO: performance quantifiers for IFT algorithms (smoothness, efficiency)
 # TODO: compare initial phase methods in IFT algorithms: quadratic phase; starting in the real plane with a flat phase

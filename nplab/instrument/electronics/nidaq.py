@@ -1,10 +1,12 @@
 from past.utils import old_div
+
 __author__ = 'alansanders'
 
-from nplab.instrument import Instrument
-from pydaqmx import *
-import pydaqmx as pdmx #pointess line of code ?
 import numpy as np
+import pydaqmx as pdmx  # pointess line of code ?
+from pydaqmx import *
+
+from nplab.instrument import Instrument
 
 
 class NIDAQ(Instrument):
@@ -211,9 +213,10 @@ class Itask(Task):
      
     
 if __name__ == '__main__':
-    from pylab import plot, show
     import timeit
     from time import sleep
+
+    from pylab import plot, show
 
     def multi_read(d):
         print(5./6000)

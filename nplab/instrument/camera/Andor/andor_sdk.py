@@ -1,16 +1,17 @@
 # -*- coding: utf-8 -*-
-from nplab.instrument.camera import CameraParameter
-from nplab.utils.thread_utils import locked_action
-from nplab.utils.log import create_logger
-import nplab.datafile as df
 import os
 import platform
+import shutil
+import tempfile
 import time
 from ctypes import *
-import numpy as np
-import tempfile
-import shutil
 
+import numpy as np
+
+import nplab.datafile as df
+from nplab.instrument.camera import CameraParameter
+from nplab.utils.log import create_logger
+from nplab.utils.thread_utils import locked_action
 
 LOGGER = create_logger('Andor SDK')
 TEMPORARY_PREFIX = '_andortemporary'

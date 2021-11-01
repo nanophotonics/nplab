@@ -4,8 +4,9 @@ This is a very simple script that pops up a data browser for one file.
 """
 from __future__ import print_function
 
-import nplab.datafile
 import argparse
+
+import nplab.datafile
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Browse the contents of an HDF5 file")

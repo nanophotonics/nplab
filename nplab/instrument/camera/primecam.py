@@ -5,16 +5,17 @@ Created on Thu Sep 12 15:35:06 2019
 @author: np-albali
 """
 
-from nplab.instrument.camera import Camera, CameraControlWidget
-from pyvcam.camera import Camera as VCamera
-from pyvcam import pvc
-
-from nplab.utils.notified_property import NotifiedProperty
-from nplab.utils.thread_utils import locked_action, background_action
-from nplab.utils.array_with_attrs import ArrayWithAttrs
-from nplab.ui.ui_tools import QuickControlBox
 from functools import wraps
+
 import numpy as np
+from pyvcam import pvc
+from pyvcam.camera import Camera as VCamera
+
+from nplab.instrument.camera import Camera, CameraControlWidget
+from nplab.ui.ui_tools import QuickControlBox
+from nplab.utils.array_with_attrs import ArrayWithAttrs
+from nplab.utils.notified_property import NotifiedProperty
+from nplab.utils.thread_utils import background_action, locked_action
 
 try: 
     pvc.uninit_pvcam()

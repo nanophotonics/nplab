@@ -1,8 +1,11 @@
 from __future__ import print_function
-import os 
-import numpy as np 
+
+import os
+
+import matplotlib.pyplot as plt
+import numpy as np
 from scipy.interpolate import interp1d
-import matplotlib.pyplot as plt 
+
 from nplab import datafile as df
 
 DIRPATH = os.path.dirname(os.path.abspath(__file__))

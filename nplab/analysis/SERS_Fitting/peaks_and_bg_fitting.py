@@ -82,23 +82,23 @@ This script uses cm-1 for shifts. Using wavelengths is fine, but make sure and a
 The time taken to fit increases a lot with spectrum size/length, so cutting out irrelevant regions such as the notch is important, 
 as is fitting the stokes and anti-stokes spectra separately. 
 """
-from __future__ import division
-from __future__ import print_function
-from builtins import zip
-from builtins import range
-from builtins import object
-from past.utils import old_div
-import numpy as np
-from scipy.optimize import minimize
+from __future__ import division, print_function
+
+from builtins import object, range, zip
+
 import matplotlib.pyplot as plt
+import numpy as np
+import pywt
 import scipy.interpolate as scint
 import scipy.ndimage.filters as ndimf
+from past.utils import old_div
 from scipy import constants as constants
 from scipy.interpolate import interp1d as interp
-from scipy.optimize import curve_fit
-import pywt
 from scipy.ndimage.filters import gaussian_filter
+from scipy.optimize import curve_fit, minimize
 from scipy.signal import argrelextrema
+
+
 def sm(spec, sigma=3):
     return gaussian_filter(spec, sigma)
 

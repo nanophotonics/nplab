@@ -5,9 +5,11 @@ Created on Fri Aug 04 13:52:33 2017
 @author: Hera
 """
 
-from ctypes import *
-from nplab.instrument import Instrument
 import os
+from ctypes import *
+
+from nplab.instrument import Instrument
+
 
 class SuperChrome(Instrument):
     """ A class for controlling the fianium superchrome filter

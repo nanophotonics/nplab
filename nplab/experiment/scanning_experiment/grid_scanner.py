@@ -4,27 +4,27 @@ AcquisitionThread and GridScanController. The AcquisitionThread takes the GridSc
 which defines the scan, and runs its methods in a thread as called by the GridScanController,
 which controls the overall experiment.
 """
-from __future__ import division
-from __future__ import print_function
+from __future__ import division, print_function
 
-from builtins import zip
-from builtins import str
-from builtins import range
-from past.utils import old_div
+from builtins import range, str, zip
 from functools import reduce
+
+from past.utils import old_div
+
 __author__ = 'alansanders'
 
-import numpy as np
+import operator
 import threading
 import time
-import operator
+from functools import partial, reduce
+
+import numpy as np
+
+from nplab import inherit_docstring
 from nplab.experiment.scanning_experiment import ScanningExperiment, TimedScan
 from nplab.instrument.stage import Stage
-from functools import partial
-from nplab.utils.gui import *
 from nplab.ui.ui_tools import UiTools
-from nplab import inherit_docstring
-from functools import reduce
+from nplab.utils.gui import *
 
 
 class GridScan(ScanningExperiment, TimedScan):
@@ -461,13 +461,17 @@ class GridScanUI(QtWidgets.QWidget, UiTools):
 
 if __name__ == '__main__':
     import sys
-    from nplab.instrument.stage import DummyStage
+
     import matplotlib
+
+    from nplab.instrument.stage import DummyStage
     matplotlib.use('Qt4Agg')
-    from nplab.ui.mpl_gui import FigureCanvasWithDeferredDraw as FigureCanvas
-    from matplotlib.figure import Figure
     import cProfile
     import pstats
+
+    from matplotlib.figure import Figure
+
+    from nplab.ui.mpl_gui import FigureCanvasWithDeferredDraw as FigureCanvas
 
     test = 'qt'
     if test == 'qt':

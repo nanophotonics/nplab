@@ -4,11 +4,13 @@ Created on Mon Mar 20 20:43:17 2017
 
 @author: Will
 """
-import serial
-import serial.tools.list_ports as list_ports
 import struct
 import time
 from collections import deque
+
+import serial
+import serial.tools.list_ports as list_ports
+
 import nplab.instrument.serial_instrument as serial_instrument
 
 

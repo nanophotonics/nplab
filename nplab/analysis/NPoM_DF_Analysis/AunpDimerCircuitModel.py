@@ -19,6 +19,7 @@ All output values are in nm
 
 import numpy as np
 
+
 class VirtualDimer:
     def __init__(self, np_size, gap_size, gap_ri, env_ri = 1, conductance = 0, inductance = None, facet_width = None):
         self.np_size = np_size #AuNP diameter in nm

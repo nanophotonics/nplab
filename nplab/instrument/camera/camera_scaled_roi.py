@@ -3,14 +3,16 @@
 Subclass of Camera that has units for its axis. The GUI also provides crosshairs for defining ROIs
 """
 
-from nplab.utils.gui import QtCore, QtGui, QtWidgets
-from nplab.ui.widgets.imageview import ExtendedImageView
-from nplab.instrument.camera import Camera
-import pyqtgraph
-import numpy as np
-from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 from weakref import WeakSet
+
+import numpy as np
+import pyqtgraph
+from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
+
+from nplab.instrument.camera import Camera
+from nplab.ui.widgets.imageview import ExtendedImageView
 from nplab.utils.array_with_attrs import ArrayWithAttrs
+from nplab.utils.gui import QtCore, QtGui, QtWidgets
 
 
 class CameraRoiScale(Camera):
@@ -276,6 +278,7 @@ class DummyCameraRoiScale(CameraRoiScale):
 
 if __name__ == '__main__':
     import sys
+
     from nplab.utils.gui import get_qt_app
     app = get_qt_app()
 

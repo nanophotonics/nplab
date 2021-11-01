@@ -4,21 +4,26 @@ Created on Wed Jun 11 17:20:36 2014
 
 @author: Hera
 """
-from __future__ import division
-from __future__ import print_function
+from __future__ import division, print_function
+
+import threading
+import time
 from builtins import range
+
+import cv2
+import matplotlib
+import matplotlib.pyplot as plt
+import numpy as np
 from past.utils import old_div
+from scipy import ndimage
+from traits.api import (Array, Button, Float, HasTraits, Instance, Int,
+                        Property, Range, on_trait_change)
+from traitsui.api import Item, VGroup, View
+
 import nplab.instrument.camera
 import nplab.instrument.stage
 from nplab.instrument import Instrument
-import cv2
-from scipy import ndimage
-from traits.api import HasTraits, Button, Float, Int, Property, Range, Array, on_trait_change, Instance
-from traitsui.api import View, VGroup, Item
-import numpy as np
-import matplotlib
-import matplotlib.pyplot as plt
-import time, threading
+
 
 class CameraStageMapper(Instrument, HasTraits):
     """

@@ -8,17 +8,16 @@ This base class
 @author: Richard Bowman
 """
 
-from past.builtins import basestring
-from builtins import str
-from builtins import zip
-from builtins import map
-from builtins import object
 import re
-import nplab.instrument
-from functools import partial
 import threading
-import numpy as np
 import types
+from builtins import map, object, str, zip
+from functools import partial
+
+import numpy as np
+from past.builtins import basestring
+
+import nplab.instrument
 
 
 class MessageBusInstrument(nplab.instrument.Instrument):

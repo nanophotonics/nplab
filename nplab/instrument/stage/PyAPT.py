@@ -31,8 +31,9 @@ Installation Notes [Ilya Manyakin,im354m, 05/04/2018]
                 Site for download [tested 05/04/2018]: https://www.microsoft.com/en-us/download/details.aspx?id=30679
 
 '''
-import os,platform 
-from ctypes import c_long, c_buffer, c_float, windll, pointer
+import os
+import platform
+from ctypes import c_buffer, c_float, c_long, pointer, windll
 
 PARENT_DIR = os.path.dirname(os.path.abspath(__file__))
 if DEBUG: 

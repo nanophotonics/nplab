@@ -1,6 +1,6 @@
 
-import numpy as np 
-import scipy.optimize as spo 
+import numpy as np
+import scipy.optimize as spo
 
 """
 Author: Jack Griffiths October 2019

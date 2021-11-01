@@ -7,16 +7,18 @@ GUI which controls a uc480 camera
 # documentation:
 # http://instrumental-lib.readthedocs.io/en/latest/uc480-cameras.html
 
-import os
 import datetime
+import os
 import time
+
+import numpy as np
+import pyqtgraph as pg
+from instrumental import instrument, list_instruments
 from qtpy import QtCore, QtWidgets, uic
 from scipy.misc import imsave
-import pyqtgraph as pg
-import numpy as np
+
 import nplab
 from nplab.ui.ui_tools import UiTools
-from instrumental import list_instruments, instrument
 
 
 class uc480(QtWidgets.QMainWindow, UiTools):

@@ -1,6 +1,6 @@
 __author__ = 'alansanders'
 
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 setup(name='nplab',
       version='1.0',

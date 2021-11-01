@@ -6,12 +6,15 @@ When a new SLM class is called, the GUI created adds any of the following to a p
 name (so the naming of these classes is not arbitrary).
 """
 from __future__ import division
-from builtins import str
-from past.utils import old_div
-from nplab.utils.gui import QtWidgets, uic
-from nplab.ui.ui_tools import UiTools
+
 import os
+from builtins import str
+
 import numpy as np
+from past.utils import old_div
+
+from nplab.ui.ui_tools import UiTools
+from nplab.utils.gui import QtWidgets, uic
 
 
 class BaseUi(QtWidgets.QWidget, UiTools):

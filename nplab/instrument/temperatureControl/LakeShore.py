@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from nplab.instrument.visa_instrument import VisaInstrument
 from nplab.instrument.temperatureControl import TemperatureControlMixin
+from nplab.instrument.visa_instrument import VisaInstrument
 
 
 class LS331(VisaInstrument, TemperatureControlMixin):

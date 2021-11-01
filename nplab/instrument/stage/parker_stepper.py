@@ -4,13 +4,14 @@ Created on Fri Aug  3 16:53:34 2018
 
 @author: ep558,wmd22
 """
-from __future__ import division
-from __future__ import print_function
-
+from __future__ import division, print_function
 
 from builtins import str
+
 from past.utils import old_div
+
 import nplab.instrument.serial_instrument as si
+
 
 class ParkerStepper(si.SerialInstrument):
     '''Stepper object for controlling timedelay
@@ -133,9 +134,11 @@ class ParkerStepper(si.SerialInstrument):
             self.ui = Stepper_Ui(self)
         return self.ui
  #       'New code starts here
-from nplab.utils.gui import QtCore, QtGui, QtWidgets, uic
-from nplab.ui.ui_tools import UiTools
 import os
+
+from nplab.ui.ui_tools import UiTools
+from nplab.utils.gui import QtCore, QtGui, QtWidgets, uic
+
 
 class Stepper_Ui(QtWidgets.QWidget, UiTools):
     def __init__(self,stepper):

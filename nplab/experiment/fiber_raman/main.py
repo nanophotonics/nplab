@@ -1,9 +1,10 @@
 from builtins import range
-import numpy as np 
-import matplotlib.pyplot as plt
 
-from nplab.instrument.spectrometer.acton import Acton
+import matplotlib.pyplot as plt
+import numpy as np
+
 from nplab.instrument.camera.pixis import Pixis
+from nplab.instrument.spectrometer.acton import Acton
 
 p = Pixis()
 p.StartUp()

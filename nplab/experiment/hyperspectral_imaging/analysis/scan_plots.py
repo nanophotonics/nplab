@@ -1,15 +1,16 @@
-from __future__ import division
-from __future__ import absolute_import
+from __future__ import absolute_import, division
+
 from past.utils import old_div
+
 __author__ = 'alansanders'
 
 import matplotlib as mpl
 from matplotlib.patches import Rectangle
 from mpl_toolkits.axes_grid1 import ImageGrid
-
 from nputils.figure_setup import setup_figure
 from nputils.plot_functions import make_dummy_subplot
 from nputils.spectra_plotting import *
+
 from .hyperspectral_plots import *
 
 

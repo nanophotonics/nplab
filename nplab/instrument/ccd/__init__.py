@@ -1,13 +1,15 @@
 
 __author__ = 'alansanders'
 
-from nplab.instrument import Instrument
+import datetime
 import inspect
 import os
+
 import h5py
-import datetime
 import numpy as np
 import numpy.ma as ma
+
+from nplab.instrument import Instrument
 
 
 class CCD(Instrument):

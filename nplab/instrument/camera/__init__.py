@@ -5,23 +5,26 @@ Created on Wed Jun 11 12:28:18 2014
 @author: Richard Bowman
 """
 
-import nplab.utils.gui #load Qt correctly - do this BEFORE traits
-from nplab.utils.gui import QtCore, QtGui, QtWidgets, uic
-from nplab.ui.ui_tools import UiTools
-import threading
-import numpy as np
-import traceback
-import os
 import datetime
+import os
+import threading
 import time
-from PIL import Image
+import traceback
 import warnings
-import pyqtgraph as pg
-from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
 from weakref import WeakSet
 
+import numpy as np
+import pyqtgraph as pg
+from PIL import Image
+from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
+
+import nplab.utils.gui  # load Qt correctly - do this BEFORE traits
 from nplab.instrument import Instrument
-from nplab.utils.notified_property import NotifiedProperty, DumbNotifiedProperty, register_for_property_changes
+from nplab.ui.ui_tools import UiTools
+from nplab.utils.gui import QtCore, QtGui, QtWidgets, uic
+from nplab.utils.notified_property import (DumbNotifiedProperty,
+                                           NotifiedProperty,
+                                           register_for_property_changes)
 
 
 class CameraParameter(NotifiedProperty):

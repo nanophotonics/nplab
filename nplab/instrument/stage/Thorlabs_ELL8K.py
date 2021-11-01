@@ -3,13 +3,15 @@ author: im354
 '''
 
 import sys
+import time
 
-import numpy as np 
+import numpy as np
+
 from nplab.instrument.serial_instrument import SerialInstrument
 from nplab.instrument.stage import Stage
-from nplab.utils.gui import *
 from nplab.ui.ui_tools import *
-import time
+from nplab.utils.gui import *
+
 
 def bytes_to_binary(bytearr,debug = 0):
     '''

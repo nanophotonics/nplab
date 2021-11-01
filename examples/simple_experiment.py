@@ -7,11 +7,16 @@ can run more efficiently.
 from __future__ import print_function
 
 from future import standard_library
+
 standard_library.install_aliases()
 __author__ = 'alansanders'
 
-import numpy as np, matplotlib.pyplot as plt, threading, timeit
-from time import time, sleep
+import threading
+import timeit
+from time import sleep, time
+
+import matplotlib.pyplot as plt
+import numpy as np
 
 
 def experiment():

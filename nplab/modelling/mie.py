@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 
+import matplotlib.pyplot as plt
 import numpy as np
 import requests
-import matplotlib.pyplot as plt
-from scipy.special import riccati_jn,riccati_yn
-from nplab.utils.refractive_index_db import RefractiveIndexInfoDatabase
-from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
+from mpl_toolkits.mplot3d import Axes3D
+from scipy.special import riccati_jn, riccati_yn
+
+from nplab.utils.refractive_index_db import RefractiveIndexInfoDatabase
 
 #Initialized after first request
 WAVELENGTHS = None
@@ -122,6 +123,8 @@ def calculate_a_b_coefficients(m,x,n_max):
     return a(), b()
 
 from scipy.special import jv, yv
+
+
 def Mie_ab(m,x,n_max):
     #  http://pymiescatt.readthedocs.io/en/latest/forward.html#Mie_ab
     mx = m*x

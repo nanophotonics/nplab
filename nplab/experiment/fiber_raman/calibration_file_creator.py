@@ -1,18 +1,18 @@
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
+
+import time
 from builtins import range
+
 import matplotlib.pyplot as plt
 import numpy as np
 
-from nplab import datafile as df 
+from nplab import datafile as df
 from nplab.analysis.smoothing import convex_smooth
-
-from nplab.instrument.spectrometer.acton_2300i import Acton
 from nplab.instrument.camera.Picam.pixis import Pixis
-from .Pacton import Pacton
-
 from nplab.instrument.light_sources.SolsTiS import SolsTiS
-import time
+from nplab.instrument.spectrometer.acton_2300i import Acton
+
+from .Pacton import Pacton
 
 laser_ip = ('172.24.60.15',39933)
 

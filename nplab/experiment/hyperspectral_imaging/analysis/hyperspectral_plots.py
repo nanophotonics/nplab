@@ -1,19 +1,21 @@
 from __future__ import division
-from builtins import str
-from builtins import range
+
+from builtins import range, str
+
 from past.utils import old_div
+
 __author__ = 'alansanders'
 
-import numpy as np
-from scipy.ndimage.filters import gaussian_filter
 import matplotlib.pyplot as plt
-# required for formatting image axes
-from matplotlib.ticker import MultipleLocator, FormatStrFormatter
-from matplotlib.ticker import AutoMinorLocator, MaxNLocator
-from matplotlib.ticker import NullLocator, NullFormatter
+import numpy as np
 from matplotlib import cm, gridspec
-from nputils.plotting.plot_functions import scale_axes
+# required for formatting image axes
+from matplotlib.ticker import (AutoMinorLocator, FormatStrFormatter,
+                               MaxNLocator, MultipleLocator, NullFormatter,
+                               NullLocator)
 from nputils.plotting import np_cmap
+from nputils.plotting.plot_functions import scale_axes
+from scipy.ndimage.filters import gaussian_filter
 
 locs = {'upper right' : (0.95,0.95),
         'upper left'  : (0.05,0.95),

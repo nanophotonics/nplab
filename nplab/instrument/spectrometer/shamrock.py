@@ -11,16 +11,17 @@ Created on Fri Apr 10 08:43:56 2015
 # - output slit
 # - Shutter
 import platform
-
-from ctypes import *
-import time
 import sys
+import time
+from ctypes import *
+
 from nplab.instrument import Instrument
-from nplab.utils.notified_property import NotifiedProperty
-from nplab.ui.ui_tools import QuickControlBox
-from nplab.utils.gui import QtWidgets
 from nplab.ui.ui_tools import *
+from nplab.ui.ui_tools import QuickControlBox
 from nplab.utils.gui import *
+from nplab.utils.gui import QtWidgets
+from nplab.utils.notified_property import NotifiedProperty
+
 
 class Shamrock(Instrument):
     def __init__(self):

@@ -7,17 +7,17 @@ Created on Tue Jul 03 13:04:50 2018
 Gathers Raman data and attributes from directory full of .spc files and turns it into an h5 file'''
 Put this script in the same folder as a list of .spc files (must be exported directly from WiRE at time of measurement), set cwd and run
 """
-from __future__ import division
-from __future__ import print_function
+from __future__ import division, print_function
 
-from builtins import range
-from past.utils import old_div
-from builtins import object
 import os
-import spc
+from builtins import object, range
+
 import h5py
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+import spc
+from past.utils import old_div
+
 
 class Raman_Spectrum(object):
     #Object class containing spectral data and metadata for single Raman spectrum

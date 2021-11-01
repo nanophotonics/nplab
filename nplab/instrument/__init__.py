@@ -11,19 +11,23 @@ There's also some support mechanisms for metadata creation, and the bundling
 of metadata in ArrayWithAttrs objects that include both data and metadata.
 """
 
-from nplab.utils.thread_utils import locked_action_decorator, background_action_decorator
-import nplab
+import datetime
+import inspect
+import logging
+import os
+from contextlib import contextmanager
 from weakref import WeakSet
+
+import h5py
+
+import nplab
 import nplab.utils.log
 from nplab.utils.array_with_attrs import ArrayWithAttrs
-from nplab.utils.show_gui_mixin import ShowGUIMixin
-import logging
 from nplab.utils.log import create_logger
-import inspect
-import os
-import h5py
-import datetime
-from contextlib import contextmanager
+from nplab.utils.show_gui_mixin import ShowGUIMixin
+from nplab.utils.thread_utils import (background_action_decorator,
+                                      locked_action_decorator)
+
 LOGGER = create_logger('Instrument')
 LOGGER.setLevel('INFO')
 

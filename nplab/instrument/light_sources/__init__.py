@@ -1,12 +1,14 @@
 from __future__ import print_function
+
 from builtins import str
+
 __author__ = 'alansanders'
 
 from nplab.instrument import Instrument
+from nplab.instrument.shutter import Shutter
+from nplab.ui.ui_tools import UiTools
 from nplab.utils.gui import *
 from nplab.utils.gui import uic
-from nplab.ui.ui_tools import UiTools
-from nplab.instrument.shutter import Shutter
 
 
 class LightSource(Instrument):

@@ -5,6 +5,7 @@ Created on Wed Jun 11 12:28:18 2014
 @author: Richard
 """
 import sys
+
 try:
     import cv2
 except ImportError:
@@ -28,7 +29,8 @@ We are using Python %d.%d, so get the corresponding package.
         raise ImportError(explanation) 
     
 from nplab.instrument.camera import Camera, CameraParameter
-    
+
+
 class OpenCVCamera(Camera):
     def __init__(self,capturedevice=0):
         self.cap=cv2.VideoCapture(capturedevice)

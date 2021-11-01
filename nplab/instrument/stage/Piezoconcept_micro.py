@@ -5,13 +5,15 @@ Created on Thu Oct 01 11:52:44 2015
 @author: wmd22
 """
 from __future__ import print_function
+
+import time
 from builtins import str
+
+import numpy as np
 import serial
 
 from nplab.instrument.serial_instrument import SerialInstrument
 from nplab.instrument.stage import Stage
-import time
-import numpy as np
 
 
 class Piezoconcept(SerialInstrument, Stage):

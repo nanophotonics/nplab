@@ -311,9 +311,8 @@ if __name__ == '__main__':
     import timeit
 
     import qdarkstyle
-    from PyQt5.QtWidgets import QApplication
-
     from mim import MIM
+    from PyQt5.QtWidgets import QApplication
     from QNM_viewer import wl_to_ev
     pi = 3.1415
     def Lorentz(wls, center_wl, eff):

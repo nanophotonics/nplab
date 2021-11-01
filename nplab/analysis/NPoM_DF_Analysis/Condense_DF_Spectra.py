@@ -15,15 +15,17 @@ if __name__ == '__main__':
 
 import os
 import re
-import h5py
-import numpy as np
-from random import randint
 import time
-from scipy.signal import butter, filtfilt
+from random import randint
+
+import h5py
 import matplotlib.pyplot as plt
+import numpy as np
 import scipy.optimize as spo
+from lmfit.models import ExponentialModel, GaussianModel, PowerLawModel
+from scipy.signal import butter, filtfilt
+
 import nplab.analysis.NPoM_DF_Analysis.DF_Multipeakfit as mpf
-from lmfit.models import ExponentialModel, PowerLawModel, GaussianModel
 
 if __name__ == '__main__':
     print('Modules imported\n')
@@ -769,6 +771,7 @@ def boltzmann(x, height, center, x0 = 0):
 
 from scipy import sparse
 from scipy.sparse.linalg import spsolve
+
 
 def baseline_als(y, lam, p, niter=10):
     L = len(y)

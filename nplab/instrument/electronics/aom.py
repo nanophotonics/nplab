@@ -1,10 +1,12 @@
 
-from past.utils import old_div
-import pyvisa as visa
-import numpy as np
 import time
 
+import numpy as np
+import pyvisa as visa
+from past.utils import old_div
+
 from nplab.instrument.visa_instrument import VisaInstrument
+
 
 def Sigmoid(x,Shift=0.68207277,Scale=8.49175969):
     Zero=1./(np.exp(Shift*Scale)+1)

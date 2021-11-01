@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
-from __future__ import division
-from __future__ import print_function
+from __future__ import division, print_function
+
+import numpy as np
 from past.utils import old_div
-import numpy as np 
+
 #Script to get rough estimates of damage thresholds for optics components as specified on Thorlabs
 
 #Source of code is the Thorlabs tutorial on Laser Induced Damage Thresholds:

@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
 
-from nplab.instrument.visa_instrument import VisaInstrument
 import os
 import pprint
+import re
 import socket
 import struct
 import time
+
 import numpy as np
-import re
 import pyvisa as visa
 
+from nplab.instrument.visa_instrument import VisaInstrument
 
 PrettyPrinter = pprint.PrettyPrinter(indent=4)
 

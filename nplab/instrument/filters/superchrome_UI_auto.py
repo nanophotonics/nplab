@@ -6,11 +6,11 @@ Created on Thu Aug  8 08:53:24 2019
 """
 from __future__ import division
 
-from builtins import str
-from builtins import object
+from builtins import object, str
+
+import numpy as np
 from past.utils import old_div
 from pywinauto.application import Application
-import numpy as np
 
 
 class SuperChromeUIAuto(object):

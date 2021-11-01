@@ -5,20 +5,20 @@ Created on Fri May 28 15:50:10 2021
 @author: Eoin
 """
 
-import sys, os, time
+import os
+import sys
+import time
 from functools import wraps
 from pathlib import Path
-
-from nplab.instrument.camera import Camera, CameraControlWidget
-from nplab.utils.notified_property import NotifiedProperty
-from nplab.utils.thread_utils import locked_action
-from nplab.ui.ui_tools import QuickControlBox
 
 from thorlabs_tsi_sdk.tl_camera import TLCameraSDK
 from thorlabs_tsi_sdk.tl_camera_enums import SENSOR_TYPE
 from thorlabs_tsi_sdk.tl_mono_to_color_processor import MonoToColorProcessorSDK
 
-
+from nplab.instrument.camera import Camera, CameraControlWidget
+from nplab.ui.ui_tools import QuickControlBox
+from nplab.utils.notified_property import NotifiedProperty
+from nplab.utils.thread_utils import locked_action
 
 dll_path = Path(__file__).parent / 'dlls'
 is_64bits = sys.maxsize > 2**32

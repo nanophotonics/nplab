@@ -5,7 +5,9 @@ Created on Thu Feb 27 10:36:15 2020
 @author: Eoin Elliott
 """
 import time
+
 from nplab.instrument.serial_instrument import SerialInstrument
+
 
 class ArduinoRotator(SerialInstrument):
     STEPS_PER_REV = 16334.982528149094

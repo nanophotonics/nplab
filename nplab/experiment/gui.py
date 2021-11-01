@@ -6,9 +6,11 @@ Basic GUI methods for the Experiment class.
 from __future__ import print_function
 
 from builtins import object
+
 from nplab.experiment import Experiment, ExperimentStopped
+from nplab.ui.ui_tools import QuickControlBox, UiTools
 from nplab.utils.gui import QtCore, QtGui, QtWidgets
-from nplab.ui.ui_tools import UiTools, QuickControlBox
+
 
 class ExperimentGuiMixin(object):
     """This class will add a basic GUI to an experiment, showing logs & data.

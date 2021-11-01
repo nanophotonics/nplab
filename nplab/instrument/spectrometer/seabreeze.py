@@ -30,18 +30,22 @@ Contents:
 @author: Richard Bowman (rwb27)
 """
 import ctypes
-from ctypes import byref, c_int, c_ulong, c_double
-import numpy as np
-import threading
-from nplab.instrument import Instrument
-from nplab.utils.gui import QtCore, QtGui, QtWidgets, uic
-from nplab.instrument.spectrometer import Spectrometer, Spectrometers, SpectrometerControlUI, SpectrometerDisplayUI, SpectrometerUI
-import os
-import h5py
-import inspect
 import datetime
-from nplab.utils.array_with_attrs import ArrayWithAttrs
+import inspect
+import os
+import threading
+from ctypes import byref, c_double, c_int, c_ulong
+
+import h5py
+import numpy as np
+
 from nplab.datafile import DataFile
+from nplab.instrument import Instrument
+from nplab.instrument.spectrometer import (Spectrometer, SpectrometerControlUI,
+                                           SpectrometerDisplayUI,
+                                           Spectrometers, SpectrometerUI)
+from nplab.utils.array_with_attrs import ArrayWithAttrs
+from nplab.utils.gui import QtCore, QtGui, QtWidgets, uic
 
 try:
     seabreeze = ctypes.cdll.seabreeze
@@ -477,8 +481,9 @@ class OceanOpticsControlUI(SpectrometerControlUI):
 
 
 def main():
-    from nplab.instrument.spectrometer import Spectrometers
     import sys
+
+    from nplab.instrument.spectrometer import Spectrometers
     from nplab.utils.gui import get_qt_app
 
     try:

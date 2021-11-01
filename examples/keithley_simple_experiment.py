@@ -4,14 +4,17 @@ Instrument subclass which allows a user to get a previously created instance of 
 class to use during the experiment.
 """
 from future import standard_library
+
 standard_library.install_aliases()
 __author__ = 'alansanders'
 
-from nplab.instrument.electronics.keithley_2635a_smu import Keithley2635A
-import numpy as np
-import matplotlib.pyplot as plt
-from time import sleep
 from threading import Thread
+from time import sleep
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+from nplab.instrument.electronics.keithley_2635a_smu import Keithley2635A
 
 
 def run_experiment(voltages, currents):

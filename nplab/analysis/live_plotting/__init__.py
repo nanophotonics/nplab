@@ -10,7 +10,7 @@ a gui.
 import numpy as np
 import pyqtgraph as pg
 import qdarkstyle
-from qtpy import QtGui, QtWidgets, QtCore
+from qtpy import QtCore, QtGui, QtWidgets
 
 pg.setConfigOption('background', 'w')
 pg.setConfigOption('foreground', 'k')

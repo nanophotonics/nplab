@@ -17,13 +17,12 @@ Changing spyder's matplotlib backed to inline makes it faster.
 """
 import time
 
-import matplotlib.pyplot as plt
 import h5py
+import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
+
 from nplab.analysis.utils import load_rejected, save_rejected
-
-
 
 plt.ion()
 

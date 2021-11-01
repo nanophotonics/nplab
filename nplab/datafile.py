@@ -10,17 +10,19 @@ This module provides the DataFile class, a subclass of h5py's File class with a 
 
 __author__ = "rwb27"
 
-import h5py
+import datetime
 import os
 import os.path
-import datetime
 import re
 import sys
 from collections import Sequence
-import nplab.utils.version
+
+import h5py
 import numpy as np
-from nplab.utils.show_gui_mixin import ShowGUIMixin
+
+import nplab.utils.version
 from nplab.utils.array_with_attrs import DummyHDF5Group
+from nplab.utils.show_gui_mixin import ShowGUIMixin
 
 
 def attributes_from_dict(group_or_dataset, dict_of_attributes):
@@ -424,8 +426,7 @@ def current(create_if_none=True, create_if_closed=True, mode='a',working_directo
             working_directory=os.getcwd()
         try:  # we try to pop up a Qt file dialog
             import nplab.utils.gui
-            from nplab.utils.gui import QtGui
-            from nplab.utils.gui import QtWidgets
+            from nplab.utils.gui import QtGui, QtWidgets
             app = nplab.utils.gui.get_qt_app()  # ensure Qt is running
             fname = QtWidgets.QFileDialog.getSaveFileName(
                 caption="Select Data File",
@@ -507,7 +508,7 @@ def open_file(set_current_bool = True,mode = 'a'):
     global _current_datafile
     try:  # we try to pop up a Qt file dialog
         import nplab.utils.gui
-        from nplab.utils.gui import QtGui,QtWidgets
+        from nplab.utils.gui import QtGui, QtWidgets
         app = nplab.utils.gui.get_qt_app()  # ensure Qt is running
         fname = QtWidgets.QFileDialog.getOpenFileName(
             caption="Select Existing Data File",
@@ -536,7 +537,7 @@ def create_file(set_current_bool = False,mode = 'a'):
     global _current_datafile
     try:  # we try to pop up a Qt file dialog
         import nplab.utils.gui
-        from nplab.utils.gui import QtGui,QtWidgets
+        from nplab.utils.gui import QtGui, QtWidgets
         app = nplab.utils.gui.get_qt_app()  # ensure Qt is running
         fname = QtWidgets.QFileDialog.getSaveFileName(
             caption="Select Existing Data File",

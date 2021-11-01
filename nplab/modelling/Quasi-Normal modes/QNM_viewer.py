@@ -4,15 +4,14 @@ Created on Tue Jun  8 19:32:29 2021
 
 @author: Eoin
 """
+import json
 from collections import defaultdict
 from functools import cache
 from pathlib import Path
-import json
 
 import qdarkstyle  # dark theme
-from PyQt5.QtWidgets import QApplication
-
 from mim import MIM
+from PyQt5.QtWidgets import QApplication
 from widgets import GraphWithPinAndClearButtons, LivePlotWindow, Parameter
 
 pi = 3.14159265

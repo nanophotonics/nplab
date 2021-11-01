@@ -4,10 +4,12 @@ Created on Mon Jul 31 11:10:09 2017
 
 @author: Hera
 """
-from nplab.instrument.stage import Stage
-from UltrafastRig.Equipment.Piezoconcept_micro import Piezoconcept
-from nplab.instrument.stage.apt_vcp_motor import DC_APT
 import numpy as np
+from UltrafastRig.Equipment.Piezoconcept_micro import Piezoconcept
+
+from nplab.instrument.stage import Stage
+from nplab.instrument.stage.apt_vcp_motor import DC_APT
+
 
 class fake_stage(Stage):
     def move(self,a,axis = 1,relative = False):

@@ -1,8 +1,9 @@
 """
 
 """
-from nplab.instrument.stage import Stage
 import numpy as np
+
+from nplab.instrument.stage import Stage
 
 
 class XY_ZWrapper(Stage):

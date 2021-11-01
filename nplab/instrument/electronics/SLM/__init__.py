@@ -1,16 +1,18 @@
 # -*- coding: utf-8 -*-
 
-from past.utils import old_div
-from nplab.utils.gui import QtWidgets, QtGui, QtCore, uic, get_qt_app
-from nplab.ui.ui_tools import UiTools
-from nplab.instrument import Instrument
-import pyqtgraph.dockarea as dockarea
-import numpy as np
-import os
 import math
-from . import gui
-from . import pattern_generators
+import os
+
+import numpy as np
+import pyqtgraph.dockarea as dockarea
+from past.utils import old_div
 from scipy.interpolate import interp1d
+
+from nplab.instrument import Instrument
+from nplab.ui.ui_tools import UiTools
+from nplab.utils.gui import QtCore, QtGui, QtWidgets, get_qt_app, uic
+
+from . import gui, pattern_generators
 
 
 def zernike_polynomial(array_size, n, m, beam_size=1, unit_circle=True):

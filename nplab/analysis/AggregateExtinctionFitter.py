@@ -3,28 +3,27 @@ For use with AuNP aggregate extinction timescan .h5 data from OO Spectrometer in
 Just call "fitAllSpectra('your_filename.h5')" to run
 '''
 
-import time
 import os
+import time
+from importlib import reload
+
 import h5py
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 import numpy as np
 from cycler import cycler
-import matplotlib.pyplot as plt
-from matplotlib import cm
-from importlib import reload
-from scipy.integrate import quad as spQuad
-from scipy import sparse
-from scipy.sparse.linalg import spsolve
-import nplab.analysis.NPoM_DF_Analysis.DF_Multipeakfit as mpf
-from matplotlib.ticker import (MultipleLocator, FormatStrFormatter, AutoMinorLocator)
-import matplotlib as mpl
 from IPython import display as ipDisp
-from lmfit.models import LorentzianModel
-from lmfit.models import GaussianModel
-from lmfit.models import StepModel
-from lmfit.models import ExpressionModel
-from lmfit.models import LinearModel
-from lmfit.models import ConstantModel
 from lmfit import Model
+from lmfit.models import (ConstantModel, ExpressionModel, GaussianModel,
+                          LinearModel, LorentzianModel, StepModel)
+from matplotlib import cm
+from matplotlib.ticker import (AutoMinorLocator, FormatStrFormatter,
+                               MultipleLocator)
+from scipy import sparse
+from scipy.integrate import quad as spQuad
+from scipy.sparse.linalg import spsolve
+
+import nplab.analysis.NPoM_DF_Analysis.DF_Multipeakfit as mpf
 
 rootDir = os.getcwd()
 np.seterr('ignore')

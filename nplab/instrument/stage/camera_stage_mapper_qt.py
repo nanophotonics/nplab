@@ -4,19 +4,22 @@ Created on Tue Apr 11 11:26:55 2017
 
 @author: Will
 """
+import threading
+import time
+
+import cv2
+import matplotlib
+import matplotlib.pyplot as plt
+import numpy as np
+import pyqtgraph as pg
 from past.utils import old_div
+from scipy import ndimage
+
 import nplab.instrument.camera
 import nplab.instrument.stage
 from nplab.instrument import Instrument
-import numpy as np
-import matplotlib
-import matplotlib.pyplot as plt
-import time, threading
-import pyqtgraph as pg
-from nplab.utils.gui import QtCore, QtGui, QtWidgets
 from nplab.ui.ui_tools import UiTools
-import cv2
-from scipy import ndimage
+from nplab.utils.gui import QtCore, QtGui, QtWidgets
 
 
 class CameraStageMapper(Instrument):

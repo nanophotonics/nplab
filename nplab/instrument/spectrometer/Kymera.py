@@ -4,6 +4,7 @@ Created on Fri Apr 10 08:43:56 2015
 
 @author: Felix Benz (fb400), William Deacon(wmd22)
 """
+import os
 #TODO: Implement functions for:
 # - focus mirror
 # - flipper mirror
@@ -11,19 +12,19 @@ Created on Fri Apr 10 08:43:56 2015
 # - output slit
 # - Shutter
 import platform
-
-from ctypes import *
-import time
 import sys
-from nplab.instrument import Instrument
-from nplab.utils.notified_property import NotifiedProperty
-from nplab.utils.gui import QtGui, QtWidgets, uic
-from nplab.ui.ui_tools import UiTools
+import time
+from ctypes import *
 
-from nplab.ui.ui_tools import *
-from nplab.utils.gui import *
 import cv2
-import os
+
+from nplab.instrument import Instrument
+from nplab.ui.ui_tools import *
+from nplab.ui.ui_tools import UiTools
+from nplab.utils.gui import *
+from nplab.utils.gui import QtGui, QtWidgets, uic
+from nplab.utils.notified_property import NotifiedProperty
+
 
 class Kymera(Instrument):
     def __init__(self):

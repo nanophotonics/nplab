@@ -7,11 +7,13 @@ Created on Fri Jun 13 09:01:53 2014
 from __future__ import print_function
 
 from future import standard_library
+
 standard_library.install_aliases()
-from builtins import range
-from builtins import object
-import numpy as np
+from builtins import object, range
 from io import StringIO
+
+import numpy as np
+
 
 class IviumDataFile(object):
     def __init__(self, data_file):

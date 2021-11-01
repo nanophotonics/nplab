@@ -8,7 +8,7 @@ Created on Fri Oct 12 13:17:20 2018
 # Save as server.py 
 # Message Receiver
 import os
-import socket 
+import socket
 
 host = ""
 port = 13000

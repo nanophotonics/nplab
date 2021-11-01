@@ -9,7 +9,11 @@ Created on Tue Jul 14 18:50:08 2015
 @author: wmd22
 """
 from time import sleep
-import numpy as np, nplab.instrument.visa_instrument as vi
+
+import numpy as np
+
+import nplab.instrument.visa_instrument as vi
+
 
 class Lockin_SR810(vi.VisaInstrument):
     """Software control for the Stanford Research Systems SR844 Lockin

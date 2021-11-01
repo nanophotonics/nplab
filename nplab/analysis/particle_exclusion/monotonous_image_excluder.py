@@ -9,10 +9,11 @@ from pathlib import Path
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-from nplab.analysis import latest_scan, load_h5
-from nplab.analysis.particle_exclusion.utils import save_rejected
 from scipy import ndimage, signal
 from tqdm import tqdm
+
+from nplab.analysis import latest_scan, load_h5
+from nplab.analysis.particle_exclusion.utils import save_rejected
 
 
 def center_of_mass(grey_image, circle_position, radius):

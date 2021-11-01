@@ -4,11 +4,15 @@ Created on Thu Nov 19 18:00:32 2015
 
 @author: Felix Benz (fb400)
 """
-from nplab.instrument import Instrument
+import os
+
 import pyvisa as visa
+
+from nplab.instrument import Instrument
 from nplab.ui.ui_tools import UiTools
 from nplab.utils.gui import QtWidgets, uic
-import os
+
+
 class FW212C(Instrument):
     def __init__(self, address = 'ASRLCOM7::INSTR'):
         self.visa_address = str(address)

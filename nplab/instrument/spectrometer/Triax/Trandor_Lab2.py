@@ -1,5 +1,4 @@
-from __future__ import division
-from __future__ import print_function
+from __future__ import division, print_function
 
 # -*- coding: utf-8 -*-
 # -*- coding: utf-8 -*-
@@ -18,19 +17,19 @@ Created on Tue Apr 14 18:45:32 2015
 @author: jpg66. Based on code by Hamid Ohadi (hamid.ohadi@gmail.com)
 """
 
-from nplab.instrument.visa_instrument import VisaInstrument
-import numpy as np
-import time
 import copy
-import scipy.interpolate as scint
-from builtins import input
-from builtins import str
-from past.utils import old_div
-import numpy as np
-from nplab.instrument.camera.Andor import Andor, AndorUI
-import types
-import future
 import os
+import time
+import types
+from builtins import input, str
+
+import future
+import numpy as np
+import scipy.interpolate as scint
+from past.utils import old_div
+
+from nplab.instrument.camera.Andor import Andor, AndorUI
+from nplab.instrument.visa_instrument import VisaInstrument
 
 Calibration_Arrays=[]
 
@@ -367,8 +366,10 @@ class Triax(VisaInstrument):
     def exitAxial(self):
         self.write("f0\r")
         self.write("d0\r")  # sets the entrance mirror to axial as well
-from nplab.utils.gui import QtGui, QtWidgets, uic 
-from nplab.ui.ui_tools import UiTools  
+from nplab.ui.ui_tools import UiTools
+from nplab.utils.gui import QtGui, QtWidgets, uic
+
+
 class TriaxUI(QtWidgets.QWidget,UiTools):
     def __init__(self, triax, ui_file =os.path.join(os.path.dirname(__file__),'triax_ui.ui'),  parent=None):
         assert isinstance(triax, Triax), "instrument must be a Triax"

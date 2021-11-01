@@ -9,6 +9,7 @@ from nplab.instrument.shutter import Shutter
 from nplab.ui.ui_tools import QuickControlBox
 from nplab.utils.notified_property import NotifiedProperty
 
+
 class Arduino_TTL_shutter(SerialInstrument,Shutter):
     '''A class for the Piezoconcept objective collar '''
 

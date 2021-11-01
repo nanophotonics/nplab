@@ -6,21 +6,25 @@ Created on Thu Aug 01 16:38:56 2019
 """
 
 import os
-import numpy as np
-from scipy import interpolate
 import time
+
+import numpy as np
 from qtpy import QtWidgets, uic
-from nplab.ui.ui_tools import UiTools
-from nplab.experiment.gui import run_function_modally
-from nplab.instrument import Instrument
-from nplab.instrument.stage import Stage
-from nplab.instrument.electronics.aom import AOM as Aom
-from nplab.instrument.stage.Thorlabs_ELL8K import Thorlabs_ELL8K as RStage
-from nplab.instrument.electronics.power_meter import PowerMeter
-from nplab.instrument.electronics.thorlabs_pm100 import ThorlabsPowermeter
+from scipy import interpolate
+
 from nplab import datafile
 from nplab.datafile import sort_by_timestamp
-from nplab.utils.notified_property import NotifiedProperty, DumbNotifiedProperty
+from nplab.experiment.gui import run_function_modally
+from nplab.instrument import Instrument
+from nplab.instrument.electronics.aom import AOM as Aom
+from nplab.instrument.electronics.power_meter import PowerMeter
+from nplab.instrument.electronics.thorlabs_pm100 import ThorlabsPowermeter
+from nplab.instrument.stage import Stage
+from nplab.instrument.stage.Thorlabs_ELL8K import Thorlabs_ELL8K as RStage
+from nplab.ui.ui_tools import UiTools
+from nplab.utils.notified_property import (DumbNotifiedProperty,
+                                           NotifiedProperty)
+
 
 def isMonotonic(A):
 
@@ -203,10 +207,10 @@ class PowerControl_UI(QtWidgets.QWidget, UiTools):
 
 if __name__ == '__main__':
 
-    from nplab.instrument.shutter.BX51_uniblitz import Uniblitz
-    from nplab.instrument.electronics.thorlabs_pm100 import ThorlabsPowermeter
-    from nplab.instrument.shutter.thorlabs_sc10 import ThorLabsSC10
     from nplab import datafile
+    from nplab.instrument.electronics.thorlabs_pm100 import ThorlabsPowermeter
+    from nplab.instrument.shutter.BX51_uniblitz import Uniblitz
+    from nplab.instrument.shutter.thorlabs_sc10 import ThorLabsSC10
 
     filter_wheel = RStage('COM8')    
     powermeter = ThorlabsPowermeter('USB0::0x1313::0x807B::201029132::0::INSTR')

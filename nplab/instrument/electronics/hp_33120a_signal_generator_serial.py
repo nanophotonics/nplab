@@ -1,9 +1,12 @@
 __author__ = 'alansanders'
 
-from nplab.instrument.serial_instrument import SerialInstrument
-from nplab.instrument.message_bus_instrument import queried_property
 from functools import partial
+
 import serial
+
+from nplab.instrument.message_bus_instrument import queried_property
+from nplab.instrument.serial_instrument import SerialInstrument
+
 
 class SignalGenerator(SerialInstrument):
     port_settings = dict(baudrate=9600,

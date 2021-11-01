@@ -4,20 +4,25 @@ Created on Thu May 31 01:11:45 2018
 
 @author: car72
 """
-from __future__ import division
-from __future__ import print_function
+from __future__ import division, print_function
+
 from past.utils import old_div
+
 if __name__ == '__main__':
     print('Importing modules...')
 
 #import h5py
 import os
+
 rootDir = os.getcwd()
-import numpy as np
 import time
+
 import matplotlib.pyplot as plt
-from nplab.analysis.NPoM_DF_Analysis import DF_Multipeakfit as mpf
+import numpy as np
+
 from nplab.analysis.NPoM_DF_Analysis import Condense_DF_Spectra as cdf
+from nplab.analysis.NPoM_DF_Analysis import DF_Multipeakfit as mpf
+
 os.chdir(rootDir) #Important
 
 if __name__ == '__main__':

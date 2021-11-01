@@ -1,11 +1,14 @@
-import struct,sys,math
-import numpy as np 
+import math
+import struct
+import sys
+
+import numpy as np
+
+from nplab.instrument.apt_virtual_com_port import APT_VCP
 from nplab.instrument.serial_instrument import SerialInstrument
 from nplab.instrument.stage import Stage
-from nplab.utils.gui import *
 from nplab.ui.ui_tools import *
-from nplab.instrument.apt_virtual_com_port import APT_VCP
-
+from nplab.utils.gui import *
 
 
 class Thorlabs_BSC103(APT_VCP):

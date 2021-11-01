@@ -5,12 +5,13 @@ Created on Thu Jul 06 13:57:22 2017
 @author: Hera
 """
 from builtins import str
-import serial
+
 import numpy as np
+import serial
 
 from nplab.instrument.serial_instrument import SerialInstrument
-from nplab.utils.notified_property import NotifiedProperty
 from nplab.ui.ui_tools import QuickControlBox
+from nplab.utils.notified_property import NotifiedProperty
 
 
 class Maitai(SerialInstrument):

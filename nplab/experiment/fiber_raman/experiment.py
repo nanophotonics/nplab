@@ -1,16 +1,18 @@
-from __future__ import print_function
-from __future__ import absolute_import
-from builtins import zip
-from builtins import range
-import numpy as np 
-import matplotlib.pyplot as plt 
+from __future__ import absolute_import, print_function
 
-from nplab.instrument.spectrometer.acton_2300i import Acton
+from builtins import range, zip
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+from nplab import datafile as df
 from nplab.instrument.camera.Picam.pixis import Pixis
-from .Pacton import Pacton
-from nplab import datafile as df 
+from nplab.instrument.spectrometer.acton_2300i import Acton
 
-from .spectrum_aligner_ir import grating_300gmm as get_wavelength_map #grating_300gmm
+from .Pacton import Pacton
+from .spectrum_aligner_ir import \
+    grating_300gmm as get_wavelength_map  # grating_300gmm
+
 mapper = get_wavelength_map()
 
 def SetSensorTemperatureSetPoint(self,temperature):

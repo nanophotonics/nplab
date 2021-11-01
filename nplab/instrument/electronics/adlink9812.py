@@ -1,21 +1,25 @@
-from past.utils import old_div
-import os,sys,math, numpy as np, matplotlib.pyplot as plt 
 import ctypes
+import datetime
+import logging
+import math
+import os
+import sys
+import threading
+import timeit
 from ctypes import *
 
+import matplotlib
+import matplotlib.pyplot as plt
+import numpy as np
+import scipy.stats
+from past.utils import old_div
+
 import nplab
+from nplab.experiment.dynamic_light_scattering import dls_signal_postprocessing
 from nplab.instrument import Instrument
 from nplab.instrument.electronics import adlink9812_constants
-from nplab.utils.gui import *
 from nplab.ui.ui_tools import *
-from nplab.experiment.dynamic_light_scattering import dls_signal_postprocessing 
-
-import datetime
-import matplotlib 
-import scipy.stats
-import threading
-import logging
-import timeit
+from nplab.utils.gui import *
 
 ### Steps of PCI-DASK applications:
 #

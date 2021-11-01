@@ -1,10 +1,14 @@
 from __future__ import print_function
+
+import os
+import time
 from builtins import str
-import time, os
-import numpy as np
 from datetime import datetime
 
+import numpy as np
+
 from nplab import datafile as df
+
 
 def list_datafile_content(filepath, folderpath):
     """
@@ -105,7 +109,8 @@ def mapped_extractor(filepath, folderpath, mapper):
 
 if __name__ == "__main__":
 	print("start")
-	from nplab.experiment.fiber_raman.spectrum_aligner_ir import grating_1200gmm as make_mapper
+	from nplab.experiment.fiber_raman.spectrum_aligner_ir import \
+	    grating_1200gmm as make_mapper
 	mapper_1200 = make_mapper()
 	FILEPATH = 'C:\\Users\\Hera\\OneDrive - University Of Cambridge\\20190522\\Spectra\\840_1s_38mW.hdf5'
 	FOLDERPATH = 'spectrum'

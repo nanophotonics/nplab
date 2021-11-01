@@ -1,5 +1,7 @@
 import numpy as np
+
 from nplab.instrument.controller import Controller
+
 
 class StaticTuner(Controller):
 	#Control the output of one intrument using another instrument

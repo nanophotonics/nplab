@@ -6,10 +6,13 @@ Created on Tue Jun 14 11:51:46 2016
 """
 from __future__ import print_function
 
-from nplab.instrument.shutter import ShutterWithEmulatedRead
-from nplab.instrument.serial_instrument import SerialInstrument
-import serial
 import time
+
+import serial
+
+from nplab.instrument.serial_instrument import SerialInstrument
+from nplab.instrument.shutter import ShutterWithEmulatedRead
+
 
 class ILShutter(SerialInstrument, ShutterWithEmulatedRead):
     def __init__(self, port):

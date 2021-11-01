@@ -2,9 +2,13 @@
 
 __author__ = 'alansanders'
 
-from nplab.instrument.message_bus_instrument import MessageBusInstrument, queried_property, queried_channel_property
-import pyvisa as visa
 from functools import partial
+
+import pyvisa as visa
+
+from nplab.instrument.message_bus_instrument import (MessageBusInstrument,
+                                                     queried_channel_property,
+                                                     queried_property)
 
 
 class VisaInstrument(MessageBusInstrument):

@@ -4,16 +4,20 @@ Created on Tue Mar 21 17:04:11 2017
 
 @author: Will, Yago
 """
-from past.utils import old_div
-import serial
 import struct
+import time
+import types
+
 import numpy as np
+import serial
+from past.utils import old_div
+
 from nplab.instrument.apt_virtual_com_port import APT_VCP
 from nplab.instrument.stage import Stage
-from nplab.utils.notified_property import NotifiedProperty, DumbNotifiedProperty, register_for_property_changes
-import types
-import time
 from nplab.ui.ui_tools import QuickControlBox
+from nplab.utils.notified_property import (DumbNotifiedProperty,
+                                           NotifiedProperty,
+                                           register_for_property_changes)
 
 DC_status_motors = {'BBD102/BBD103': [], 'TDC001': [], 'KDCT101': []}
 DEBUG = False
