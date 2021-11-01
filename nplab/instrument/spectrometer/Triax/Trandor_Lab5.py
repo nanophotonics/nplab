@@ -75,19 +75,21 @@ class Trandor(Andor):  # Andor
         return self.triax.slit
 
     @background_action
-    def take_calibration_spectra(self, step_bounds=(5_000, 10_000), steps=200):
+    def take_calibration_spectra(self, step_bounds=(3500, 7000), steps=200):
         '''todo'''
 
         step_range = np.linspace(*step_bounds, steps)
         specs = []
         for step in tqdm(step_range):
             self.triax.motor_steps = step
-            time.sleep(0.2)
+            time.sleep(0.1)
             spec = self.raw_image(update_latest_frame=True)
             specs.append(spec)
-        with h5py.File(self.calibration_filepath, 'w') as calibration_file:
+        with h5py.File(self.calibration_filepath, 'a') as calibration_file:
+            if (name := f'wavelength_calibration_grating_{self.triax.grating}') in calibration_file:
+                del calibration_file[name]
             dset = calibration_file.create_dataset(
-                f'wavelength_calibration_grating_{self.triax.grating}',
+                name,
                 data=specs)
             dset.attrs['steps'] = step_range
 

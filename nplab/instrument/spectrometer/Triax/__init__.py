@@ -68,7 +68,9 @@ class Triax(VisaInstrument):
         return int(self.query("Z452,0,0,0\r")[1:])
 
     def set_grating(self, grating_number):
-        assert grating_number in (0, 1, 2), 'Invalid grating'
+        
+        
+        assert grating_number in (0,1,2), 'Invalid grating'
         self.write("Z451,0,0,0,%i\r" % (grating_number))
         self.calibrator.grating = grating_number
         self.waitTillReady()
@@ -163,7 +165,7 @@ class Triax(VisaInstrument):
         Start_Time = time.time()
 
         while self._isBusy():
-            time.sleep(1)
+            time.sleep(0.2)
             if (time.time() - Start_Time) > Timeout:
                 self._logger.warn('Timed out')
                 print('Timed out')
@@ -178,6 +180,7 @@ class Triax(VisaInstrument):
     """
 
     def reset(self):
+
         self.instr.write_raw(b'\xde')
         time.sleep(5)
         buff = self.query(" ")
@@ -189,12 +192,15 @@ class Triax(VisaInstrument):
             self.setup()
 
     def setup(self):
+        self.grating = 1
+        time.sleep(5)
         self._logger.info("Initiating motor. This will take some time...")
         self.write("A")
-        # time.sleep(60)
-        # self.waitTillReady()
-        # self.Grating(1)
-        # self.Grating_Number = self.Grating()
+        time.sleep(120)
+        self.waitTillReady()
+        print("changing to G1")
+        self.grating = 1
+        #self.Grating_Number = self.Grating()
 
     def exitLateral(self):
         self.write("e0\r")
