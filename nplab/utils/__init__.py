@@ -2,9 +2,9 @@
 __author__ = 'alansanders,rwb27'
 #__all__ = ['gui','thread_utils']
 
-import time
-import threading
 import collections
+import threading
+import time
 
 
 def monitor_property(instance, property_name, how_long, how_often, warn_limits=None):

@@ -67,7 +67,9 @@ object to be passed in.
 
 import functools
 from weakref import WeakKeyDictionary
+
 import numpy as np
+
 
 class Property():
     """Emulate PyProperty_Type() in Objects/descrobject.c

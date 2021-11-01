@@ -6,11 +6,14 @@ unfortunately, this needs a GUI to test it - so it's not compatible with
 automated unit testing (yet...)
 """
 
-import nplab
-import nplab.experiment, nplab.instrument
-from nplab.experiment import Experiment
 from traits.api import Button, Int
-from traitsui.api import View, VGroup, Item
+from traitsui.api import Item, VGroup, View
+
+import nplab
+import nplab.experiment
+import nplab.instrument
+from nplab.experiment import Experiment
+
 
 class Blinky(nplab.instrument.Instrument):
     status = Int(0)

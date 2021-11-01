@@ -1,10 +1,12 @@
 from __future__ import print_function
+
+import inspect
+import os
 from builtins import object
+
+import numpy as np
 import requests
 import yaml
-import os, inspect
-import numpy as np
-
 
 
 class RefractiveIndexInfoDatabase(object):

@@ -5,12 +5,15 @@ Created on Mon Mar  1 16:21:57 2021
 @author: ee306
 """
 
-from nplab.utils.gui import QtWidgets, uic
-from nplab.ui.ui_tools import UiTools
-from nplab.utils.notified_property import DumbNotifiedProperty, register_for_property_changes
+import os
+
 from nplab import datafile
+from nplab.ui.ui_tools import UiTools
+from nplab.utils.gui import QtWidgets, uic
+from nplab.utils.notified_property import (DumbNotifiedProperty,
+                                           register_for_property_changes)
 from nplab.utils.show_gui_mixin import ShowGUIMixin
-import os 
+
 
 class DataGroupCreator(QtWidgets.QWidget,UiTools, ShowGUIMixin):
     

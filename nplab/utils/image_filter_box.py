@@ -4,13 +4,17 @@ Created on Tue Jul 25 10:18:49 2017
 
 @author: wmd22
 """
-from numpy.lib.stride_tricks import as_strided
 import cv2
 import numpy as np
-from nplab.utils.notified_property import DumbNotifiedProperty, NotifiedProperty, register_for_property_changes
+from numpy.lib.stride_tricks import as_strided
+
 from nplab.instrument import Instrument
 from nplab.ui.ui_tools import QuickControlBox
 from nplab.utils.image_with_location import ImageWithLocation
+from nplab.utils.notified_property import (DumbNotifiedProperty,
+                                           NotifiedProperty,
+                                           register_for_property_changes)
+
 
 class Image_Filter_box(Instrument):
     threshold = DumbNotifiedProperty()

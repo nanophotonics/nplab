@@ -23,11 +23,13 @@ is called ``M`` in mathematical expressions.  To convert a pixel coordinate to a
 coordinate by the matrix, i.e. ``l = p.M`` and to convert the other way we use the inverse of ``M`` so ``p = l.M``
 where the dot denotes matrix multiplication using `numpy.dot`.
 """
-import numpy as np
-from nplab.utils.array_with_attrs import ArrayWithAttrs
 import cv2
+import numpy as np
 #import cv2.cv
 from scipy import ndimage
+
+from nplab.utils.array_with_attrs import ArrayWithAttrs
+
 
 class ImageWithLocation(ArrayWithAttrs):
     """An image, as a numpy array, with attributes to provide location information"""

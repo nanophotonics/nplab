@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 
-from qtconsole.rich_jupyter_widget import RichJupyterWidget
+import os
+import sys
+
+from IPython.lib import guisupport
 from qtconsole.inprocess import QtInProcessKernelManager
+from qtconsole.rich_jupyter_widget import RichJupyterWidget
+
 # from IPython.qt.console.rich_ipython_widget import RichIPythonWidget
 # from IPython.qt.inprocess import QtInProcessKernelManager
 from nplab.utils.gui import QtCore
-import sys
-import os
-from IPython.lib import guisupport
 
 
 class Ipython():

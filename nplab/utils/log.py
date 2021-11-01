@@ -8,12 +8,15 @@ Instrument (or possibly Experiment) should call self.log instead.
 """
 from __future__ import print_function
 
-from builtins import range
-import nplab
-import numpy as np
-import sys
-import os
 import logging
+import os
+import sys
+from builtins import range
+
+import numpy as np
+
+import nplab
+
 if 'PYCHARM_HOSTED' not in os.environ:
     import colorama
     colorama.init()

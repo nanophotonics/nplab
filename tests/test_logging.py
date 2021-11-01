@@ -1,10 +1,13 @@
 from __future__ import print_function
-from builtins import str
-from builtins import range
-import nplab
-from nplab.instrument import Instrument
-import nplab.datafile
+
+from builtins import range, str
+
 import pytest
+
+import nplab
+import nplab.datafile
+from nplab.instrument import Instrument
+
 
 class InstrumentA(Instrument):
     def do_something(self):

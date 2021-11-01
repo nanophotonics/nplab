@@ -5,10 +5,12 @@ Created on Wed Oct 21 18:41:41 2015
 @author: rwb27
 """
 
-from past.utils import old_div
-from nplab.utils.array_with_attrs import ArrayWithAttrs
-import numpy as np
 import cv2
+import numpy as np
+from past.utils import old_div
+
+from nplab.utils.array_with_attrs import ArrayWithAttrs
+
 
 def jpeg_encode(image, quality=90):
     """Encode an image from a numpy array to a JPEG.

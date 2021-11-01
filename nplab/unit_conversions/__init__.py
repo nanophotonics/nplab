@@ -36,7 +36,6 @@ from nplab.unit_conversions.raman_conversions import raman_conversions
 from nplab.unit_conversions.spectroscopy_conversions import \
     spectroscopy_conversions
 
-
 full_unit_names = {
     'hz': 'Hertz',
     'thz': 'TeraHertz',

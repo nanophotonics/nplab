@@ -8,11 +8,12 @@ system to display the datasets.  See `nplab.ui.data_renderers` for that.
 
 __author__ = 'Alan Sanders, Will Deacon, Richard Bowman'
 
-import nplab
-from nplab.utils.gui import QtCore, QtWidgets
+import h5py
 import matplotlib
 import numpy as np
-import h5py
+
+import nplab
+from nplab.utils.gui import QtCore, QtWidgets
 
 try:
     from matplotlib.backends.qt_compat import is_pyqt5
@@ -26,16 +27,15 @@ if is_pyqt5():
 else:
     matplotlib.use('Qt4Agg')
 
+import datetime
+import functools
+import os
+import subprocess
+
+import nplab.datafile as df
 from nplab.ui.data_renderers import suitable_renderers
 from nplab.ui.ui_tools import UiTools
-import functools
 from nplab.utils.array_with_attrs import DummyHDF5Group
-import nplab.datafile as df
-
-import subprocess
-import os
-import datetime
-
 
 # base, widget = uic.loadUiType(os.path.join(os.path.dirname(__file__), 'hdf5_browser.ui'))
 

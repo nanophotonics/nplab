@@ -1,19 +1,20 @@
-from __future__ import division
-from __future__ import print_function
-from builtins import map
-from builtins import range
+from __future__ import division, print_function
+
+from builtins import map, range
+
 from past.utils import old_div
+
 __author__ = 'chrisgrosse'
 
 
 import sys
-from qtpy.QtWidgets import QWidget, QGridLayout, QHBoxLayout
+
+import numpy as np
+import pyqtgraph as pg
 from qtpy import QtCore
 from qtpy.QtCore import Qt
-from qtpy.QtGui import QPainter, QColor, QPen
-import pyqtgraph as pg
-import numpy as np
-
+from qtpy.QtGui import QColor, QPainter, QPen
+from qtpy.QtWidgets import QGridLayout, QHBoxLayout, QWidget
 
 """ A small vertical bar indicating, for example, the position of a piezo scanner.
 

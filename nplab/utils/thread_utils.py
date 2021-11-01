@@ -17,10 +17,12 @@ Decorating a function with @background_action means that it will happen in a thr
 
 A function running in the background returns a thread object; to find the return value, you can call t.join_and_return_result() (you may want to check if the thread has finished first with t.is_alive()).
 """
-import time
-import threading
 import functools
+import threading
+import time
+
 import numpy as np
+
 
 def locked_action_decorator(wait_for_lock=True):
     """This decorates a function, to prevent it being called simultaneously from

@@ -1,5 +1,9 @@
+import os
+import platform
+import sys
+
 import nplab
-import os, sys, platform
+
 
 class GitFolderMissing(Exception):
     """Exception to be raised if the git folder is not found."""

@@ -1,12 +1,15 @@
 from builtins import range
+
 __author__ = 'alansanders'
 
-import traits.api
-from traits.api import Property
-from matplotlib.figure import Figure
-from nplab.utils.traitsui_mpl_qt import MPLFigureEditor
 from multiprocessing.pool import ThreadPool
+
+import traits.api
+from matplotlib.figure import Figure
+from traits.api import Property
+
 from nplab.experiment.gridscanner import *
+from nplab.utils.traitsui_mpl_qt import MPLFigureEditor
 
 
 class GridScannerChild(GridScanner):

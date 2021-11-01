@@ -1,8 +1,11 @@
 from __future__ import print_function
-from builtins import str
-from builtins import range
+
+from builtins import range, str
+
 import numpy as np
+
 from nplab.instrument.camera.camera_with_location import ImageWithLocation
+
 
 def test_metadata_slicing():
     # Make a sample image

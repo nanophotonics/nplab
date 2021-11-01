@@ -3,8 +3,8 @@ Formatting Utilities
 ====================
 """
 
-from past.utils import old_div
 import numpy as np
+from past.utils import old_div
 
 
 def engineering_format(number, base_unit='', significant_figures=None, digits_of_precision=None,

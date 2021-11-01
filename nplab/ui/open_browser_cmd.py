@@ -8,8 +8,10 @@ A Python file that allows you to run the databrowser from cmd line on a h5 file
 """
 
 import sys
-import nplab.datafile as df
+
 import h5py
+
+import nplab.datafile as df
 
 file_path = sys.argv[1] #Take the file location from sys.argv list
 

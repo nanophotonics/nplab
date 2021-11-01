@@ -1,15 +1,18 @@
 from __future__ import print_function
-from builtins import input
-from builtins import range
+
+import threading
+import time
+from builtins import input, range
+
 import nplab
 import nplab.instrument.camera.opencv
+from nplab.experiment.gui import (ExperimentWithProgressBar,
+                                  run_function_modally)
 from nplab.instrument.camera import CameraControlWidget
+from nplab.ui.ui_tools import QuickControlBox
 from nplab.utils.gui import QtCore, QtGui, show_guis
 from nplab.utils.notified_property import DumbNotifiedProperty
-from nplab.ui.ui_tools import QuickControlBox
-from nplab.experiment.gui import ExperimentWithProgressBar, run_function_modally
-import time
-import threading
+
 
 class DumbOpenCVCameraWithTimelapse(nplab.instrument.camera.opencv.OpenCVCamera):
     timelapse_n = DumbNotifiedProperty(5)

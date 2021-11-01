@@ -10,6 +10,7 @@ author: Richard Bowman
 """
 import qdarkstyle
 
+
 class ShowGUIMixin():
     """A mixin class to provide standard GUI functionality.
 

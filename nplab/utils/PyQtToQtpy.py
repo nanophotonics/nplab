@@ -6,17 +6,14 @@ Created on Fri Dec 23 14:29:47 2016
 """
 
 import fileinput
-import sys
-import os
 import fnmatch
+import os
 import re
+import sys
 
-
-from qtpy import QtGui,QtWidgets
+from qtpy import QtGui, QtWidgets
 
 import nplab.utils.gui
-
-
 
 
 def Convert_Pyqt_to_qtpy(path,avoid_files = None):

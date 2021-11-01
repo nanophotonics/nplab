@@ -1,5 +1,7 @@
-import numpy as np
 from pathlib import Path
+
+import numpy as np
+
 bins = Path(__file__).parent / 'binaries'
 coef = np.load(bins / 'coef.npy', )
 intercept = np.load(bins / 'intercept.npy', )

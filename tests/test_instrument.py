@@ -6,17 +6,18 @@ This uses some trivial dummy classes to test the auto-finding features of
 the instrument class.
 """
 from __future__ import print_function
-from builtins import str
-from builtins import range
-import pytest
+
 import os
+from builtins import range, str
+
+import numpy as np
+import pytest
 
 import nplab
 import nplab.datafile
 import nplab.instrument
-import numpy as np
-
 from nplab.instrument import Instrument
+
 
 class InstrumentA(Instrument):
     integration_time = 42.3

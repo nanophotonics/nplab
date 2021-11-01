@@ -2,11 +2,13 @@
 __author__ = 'alansanders'
 
 
-from nplab.utils.gui import QtCore, QtGui, QtWidgets, uic
-from nplab.utils.notified_property import NotifiedProperty, register_for_property_changes
+import inspect
 import os
 import sys
-import inspect
+
+from nplab.utils.gui import QtCore, QtGui, QtWidgets, uic
+from nplab.utils.notified_property import (NotifiedProperty,
+                                           register_for_property_changes)
 
 
 def strip_suffices(name, suffices=[]):

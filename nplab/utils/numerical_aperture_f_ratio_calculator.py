@@ -1,5 +1,6 @@
-import numpy as np 
 import cmath
+
+import numpy as np
 
 #definitions
 #	Numerical Aperture: NA = n*sin(alpha) = n*(r/x)

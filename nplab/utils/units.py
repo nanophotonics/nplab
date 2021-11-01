@@ -9,10 +9,11 @@ you only wanted to move 1um...)
 
 @author: rwb27
 """
+import pint
 from past.utils import old_div
+
 from nplab import ArrayWithAttrs
 from nplab.utils.array_with_attrs import ensure_attrs
-import pint
 
 ureg = pint.UnitRegistry() #this should always be where the unit registry comes from
 

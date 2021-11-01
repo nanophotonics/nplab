@@ -27,8 +27,9 @@ def _status_check(self):
 """
 from __future__ import print_function
 
-import smtplib
 import imp
+import smtplib
+
 
 def SendMessage(address,msg,subject):    
         "get the username and password from a file"        
@@ -78,5 +79,6 @@ def send_email(to_address, message, subject="[nplab] Notification", raise_except
 
 if __name__ == "__main__":
     import datetime
+
     #send_email("rwb27@cam.ac.uk", "Test email from nplab, sent at {0}".format(datetime.datetime.now().isoformat()))
     

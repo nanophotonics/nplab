@@ -4,14 +4,14 @@ Created on Fri Oct 02 20:13:01 2015
 
 @author: rwb27
 """
-from __future__ import division
-from __future__ import print_function
+from __future__ import division, print_function
 
-from past.utils import old_div
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
-import matplotlib
+from past.utils import old_div
 from scipy import ndimage
+
 
 def plot_skewed_image(image, corners, axes=None, *args, **kwargs):
     """Plot an image in a quadrilateral that has the given corners.

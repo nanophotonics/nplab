@@ -7,6 +7,7 @@ Created on Tue May 26 08:08:14 2015
 
 import numpy as np
 
+
 class AttributeDict(dict):
     """This class extends a dictionary to have a "create" method for
     compatibility with h5py attrs objects."""

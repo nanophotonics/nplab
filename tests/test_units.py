@@ -5,12 +5,13 @@ Created on Tue May 26 16:11:56 2015
 @author: rwb27
 """
 
+import numpy as np
+import pytest
+
 import nplab
 import nplab.utils.units as units
-from nplab.utils.units import ensure_unit, unit_to_string, get_unit_string, get_units, array_with_units, convert_quantity
-import numpy as np
-
-import pytest
+from nplab.utils.units import (array_with_units, convert_quantity, ensure_unit,
+                               get_unit_string, get_units, unit_to_string)
 
 
 def test_array_with_attrs_init():

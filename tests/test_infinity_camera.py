@@ -5,11 +5,11 @@ runs in the main block.
 """
 from __future__ import print_function
 
-from builtins import input
-from builtins import zip
-from builtins import range
+from builtins import input, range, zip
+
 import nplab
 import nplab.instrument.camera.lumenera as lumenera
+
 
 def invert_image(rgb):
     return 255-rgb

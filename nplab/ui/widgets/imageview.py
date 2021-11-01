@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-from builtins import zip
-from builtins import map
-from nplab.utils.gui import QtCore, QtWidgets, uic
-import pyqtgraph as pg
-import numpy as np
+
 import os.path
+from builtins import map, zip
+
+import numpy as np
+import pyqtgraph as pg
+
+from nplab.utils.gui import QtCore, QtWidgets, uic
 
 
 class ArbitraryAxis(pg.AxisItem):

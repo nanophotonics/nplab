@@ -11,17 +11,18 @@ http://markmail.org/message/z3hnoqruk56g2bje
 adapted and tested to work with PySide from Anaconda in March 2014
 """
 
+import matplotlib
+
 from nplab.utils.gui import *
 
-import matplotlib
 # We want matplotlib to use a QT backend
 matplotlib.use('Qt4Agg')
-from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt4agg import \
+    FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-
 from traits.api import Any, Instance
-from traitsui.qt4.editor import Editor
 from traitsui.qt4.basic_editor_factory import BasicEditorFactory
+from traitsui.qt4.editor import Editor
 
 
 class FigureCanvasWithDeferredDraw(FigureCanvas):
@@ -66,9 +67,9 @@ class MPLFigureEditor(BasicEditorFactory):
 
 if __name__ == "__main__":
     # Create a window to demo the editor
-    from traits.api import HasTraits, Int, Float, on_trait_change
-    from traitsui.api import View, Item
-    from numpy import sin, cos, linspace, pi
+    from numpy import cos, linspace, pi, sin
+    from traits.api import Float, HasTraits, Int, on_trait_change
+    from traitsui.api import Item, View
 
     class Test(HasTraits):
 

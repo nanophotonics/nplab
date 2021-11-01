@@ -1,18 +1,17 @@
-from nplab.utils.gui import QtWidgets, uic, QtCore, get_qt_app
-from nplab.ui.ui_tools import UiTools
-import nplab.datafile as df
-from nplab.utils.log import create_logger, ColoredFormatter
-
+import inspect
+import logging
 import os
 import sys
-import inspect
-import numpy as np
 
+import numpy as np
 import pyqtgraph
 import pyqtgraph.dockarea
 import qdarkstyle
 
-import logging
+import nplab.datafile as df
+from nplab.ui.ui_tools import UiTools
+from nplab.utils.gui import QtCore, QtWidgets, get_qt_app, uic
+from nplab.utils.log import ColoredFormatter, create_logger
 
 LOGGER = create_logger('GeneratedGUI')
 
@@ -221,6 +220,7 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
         if self.dock_settings_path == None:
             import nplab.utils.gui
             from nplab.utils.gui import QtGui, QtWidgets
+
             #     app = nplab.utils.gui.get_qt_app()  # ensure Qt is running
             self.dock_settings_path = QtWidgets.QFileDialog.getSaveFileName(
                 caption="Create new dock settings file",
@@ -236,6 +236,7 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
         if self.dock_settings_path == None:
             import nplab.utils.gui
             from nplab.utils.gui import QtGui, QtWidgets
+
             #          app = nplab.utils.gui.get_qt_app()  # ensure Qt is running
             self.dock_settings_path = QtWidgets.QFileDialog.getOpenFileName(
                 caption="Select Existing Data File",

@@ -12,7 +12,9 @@ Example:
 from __future__ import print_function
 
 from builtins import object
-from nplab.utils.notified_property import NotifiedProperty, DumbNotifiedProperty
+
+from nplab.utils.notified_property import (DumbNotifiedProperty,
+                                           NotifiedProperty)
 
 
 def a_changed(a):
