@@ -61,16 +61,15 @@ class Triax(VisaInstrument):
 
         except:
             raise Exception('Triax communication error!')
-        self.CCD_horizontal_resolution = CCD_size
+        self.ccd_size = CCD_size
         self.calibrator = calibrator
 
     def get_grating(self):
         return int(self.query("Z452,0,0,0\r")[1:])
 
     def set_grating(self, grating_number):
-        
-        
-        assert grating_number in (0,1,2), 'Invalid grating'
+
+        assert grating_number in (0, 1, 2), 'Invalid grating'
         self.write("Z451,0,0,0,%i\r" % (grating_number))
         self.calibrator.grating = grating_number
         self.waitTillReady()
@@ -118,7 +117,7 @@ class Triax(VisaInstrument):
     center_wavelength = property(get_center_wavelength, set_center_wavelength)
 
     def get_wavelength_axis(self):
-        return self.calibrator.wavelength_axis(self.motor_steps)
+        return np.asarray(self.calibrator.wavelength_axis(self.motor_steps))
 
     wavelength_axis = property(get_wavelength_axis)
 

@@ -11,19 +11,22 @@ from nplab.utils.thread_utils import background_action
 import time
 from tqdm import tqdm
 
-
 # Grating 1
 # 633 is at 6134
 # 785 is at 8500 steps
 # so steps = 14.38wl -2790
 # rougly 5_000 steps to 10_000 steps
+
+#TODO manually handle 0-order request
+
+
 class Trandor(Andor):  # Andor
     ''' Wrapper class for the Triax and the andor
     '''
     CCD_size = 1600  # Size of ccd in pixels
 
     def __new__(cls, *args, **kwargs):
-        cls.metadata_property_names += ('slit_width', 'wavelengths')
+        cls.metadata_property_names += ('slit_width', 'wavelengths', 'shifts')
         return super(Trandor, cls).__new__(cls)  #, *args, **kwargs)
 
     def __init__(self,
@@ -51,8 +54,9 @@ class Trandor(Andor):  # Andor
                 centre_wl = 632.8
             elif self.laser == '_785':
                 centre_wl = 784.81
-            wavelengths = np.array(self.triax.wavelength_axis[::-1])
-            return (1. / (centre_wl * 1e-9) - 1. / (wavelengths * 1e-9)) / 100
+
+            return (1. / (centre_wl * 1e-9) - 1. /
+                    (self.wavelengths * 1e-9)) / 100
         else:
             return self.wavelengths
 
@@ -60,11 +64,7 @@ class Trandor(Andor):  # Andor
 
     @property
     def wavelengths(self):
-        return self.x_axis
-
-    @property
-    def wavelengths(self):
-        return range(self.CCD_size)
+        return self.triax.wavelength_axis[::-1]
 
     @property
     def shifts(self):
@@ -86,11 +86,10 @@ class Trandor(Andor):  # Andor
             spec = self.raw_image(update_latest_frame=True)
             specs.append(spec)
         with h5py.File(self.calibration_filepath, 'a') as calibration_file:
-            if (name := f'wavelength_calibration_grating_{self.triax.grating}') in calibration_file:
+            if (name := f'wavelength_calibration_grating_{self.triax.grating}'
+                ) in calibration_file:
                 del calibration_file[name]
-            dset = calibration_file.create_dataset(
-                name,
-                data=specs)
+            dset = calibration_file.create_dataset(name, data=specs)
             dset.attrs['steps'] = step_range
 
 
@@ -110,6 +109,6 @@ def Capture(_AndorUI):
 
 if __name__ == '__main__':
     from triax_calibration.auto_calibrate import Calibrator
-    t = Trandor(calibrator=Calibrator())
+    t = Trandor(calibrator=Calibrator(Trandor.CCD_size))
     t.show_gui(False)
-    # t.triax.show_gui(False)
+    t.triax.show_gui(False)
