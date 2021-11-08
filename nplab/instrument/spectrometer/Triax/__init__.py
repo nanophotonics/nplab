@@ -1,19 +1,14 @@
 """
 jpg66
 """
-from __future__ import division
-from __future__ import print_function
 
-from builtins import str
-from builtins import range
-from past.utils import old_div
 from nplab.instrument.visa_instrument import VisaInstrument
 import numpy as np
 import time
 
 import os
-import scipy.optimize as spo
-from nplab.utils.gui import QtGui, QtWidgets, uic
+
+from nplab.utils.gui import QtWidgets, uic
 from nplab.ui.ui_tools import UiTools
 """
 This is the base class for the Triax spectrometer. This should be wrapped for each lab use, due to the differences in calibrations.
@@ -27,14 +22,11 @@ class Triax(VisaInstrument):
         """
         Initialisation function for the triax class. Address in the port address of the triax connection.
 
-        For each grating, a list of wavelengths used for calibration (in acending order) is put into Calibration Data, 
-        followed by experimental data points for each quadratic coefficient. Pass an empty list to just get the pixel array back for that grating.
-
-        CCD_Horizontal_Resolution is an integer for the horizontal size of the camera used with the triax.
-
-        To calculate the wavelengths hitting each pixel, an inverse process is used. It is possible to find (approximate) the grating stepper motor position 
-        required to put a wavelength on a given pixel. To calculate the wavelength array, a quadratic curve is returned such that the motor position required to 
-        put each wavelength on each pixel is as close as possible to the real stepper motor position.
+        calibrator is a Calibrator instance that needs 3 methods:
+            calibrator.wl_to_steps(steps) - converterts a given wavelength to motor steps
+            calibrator.steps_to_wl(wl) - the inverse
+            calibrator.wavelength_axis property - returns a wavelength axis of appropriate length
+        it should also support switching between gratings.
         """
 
         #--------Attempt to open communication------------
