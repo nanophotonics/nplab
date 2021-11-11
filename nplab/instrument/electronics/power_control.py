@@ -193,7 +193,6 @@ class PowerControl_UI(QtWidgets.QWidget, UiTools):
             __file__), 'power_control.ui'), self)
         self.PC = PC
         self.auto_connect_by_name(controlled_object=self.PC)
-        self.calibrate_power_gui_pushButton.clicked.connect(self.calibrate_power_gui)
         self.title_label.setText(self.PC.title)
     
     def calibrate_power_gui(self):
