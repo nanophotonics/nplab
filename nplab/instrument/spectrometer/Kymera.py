@@ -33,15 +33,12 @@ class Kymera(Instrument):
 
         self.dll = CDLL(r"C:\Program Files\Andor SDK\ATSpectrograph\64\atspectrograph.dll")
 
-            
-        # tekst = c_char()
         error = self.dll.ATSpectrographInitialize("")#(byref(tekst))
-            
         self.current_kymera = 0 #for more than one kymera this has to be varied, see KymeraGetNumberDevices
-        # self.Initialize()
+        self._logger.setLevel('WARNING')
         
     def verbose(self, error, function=''):
-        self.log( "[%s]: %s" %(function, error),level = 'info')
+        self.log( "[%s]: %s" %(function, error), level='info')
     
     #basic Kymera features    
     def Initialize(self):
