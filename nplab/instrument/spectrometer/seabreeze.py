@@ -171,6 +171,13 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
         self.integration_time = self.minimum_integration_time
         self._tec_enabled = True
         self.enable_tec = True
+        
+        self._file = inspect.getfile(self.__class__)
+        
+        # https://bugs.python.org/issue12920 getfile fails when running the script directly,
+        # or when using IPython after script execution
+    
+        
 
     def __del__(self):
         self._close()
@@ -199,8 +206,8 @@ class OceanOpticsSpectrometer(Spectrometer, Instrument):
 
     def open_config_file(self):
         if self._config_file is None:
-            f = inspect.getfile(self.__class__)
-            d = os.path.dirname(f)
+            
+            d = os.path.dirname(self._file)
             self._config_file = DataFile(h5py.File(os.path.join(d, self.model_name+'_'+self.serial_number+'_config.h5'), 'a'))
             self._config_file.attrs['date'] = datetime.datetime.now().strftime("%H:%M %d/%m/%y")
         return self._config_file
