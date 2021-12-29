@@ -47,6 +47,12 @@ class Tango(Stage):
         Instrument.__init__(self)
         self.unit = unit
 
+        # Connect to Tango
+        self.lsid = ctypes.c_int()
+        tango_wrapper.CreateLSID(ctypes.byref(self.lsid))
+        tango_wrapper.ConnectSimple(self.lsid, ctypes.c_int(-1), None, ctypes.c_int(57600),
+                                    ctypes.c_bool(False))
+
     def move(self, pos, axis=None, relative=False):
         raise NotImplementedError("You must override move() in a Stage subclass")
 
