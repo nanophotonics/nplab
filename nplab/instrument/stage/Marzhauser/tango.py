@@ -18,6 +18,30 @@ tango_dll.LSX_Disconnect.argtypes = [ctypes.c_int]
 tango_dll.LSX_FreeLSID.argtypes = [ctypes.c_int]
 
 
+class TangoWrapper():
+    # Every time we call functions in the DLL, we want to check for errors
+    # To simplify the Tango class, we move all that boilerplate into TangoWrapper
+    def CreateLSID(self, lsid_ref):
+        return_value = tango_dll.LSX_CreateLSID(lsid_ref)
+        assert return_value != 0, f'Tango.LSX_CreateLSID returned {return_value}'
+
+    def ConnectSimple(self, lsid, interface_type, com_name, baud_rate, show_protocol):
+        return_value = tango_dll.LSX_ConnectSimple(lsid, interface_type, com_name, baud_rate,
+                                                   show_protocol)
+        assert return_value != 0, f'Tango.LSX_ConnectSimple returned {return_value}'
+
+    def Disconnect(self, lsid):
+        return_value = tango_dll.LSX_Disconnect(lsid)
+        assert return_value != 0, f'Tango.LSX_Disconnect returned {return_value}'
+
+    def FreeLSID(self, lsid):
+        return_value = tango_dll.LSX_FreeLSID(lsid)
+        assert return_value != 0, f'Tango.LSX_FreeLSID returned {return_value}'
+
+
+tango_wrapper = TangoWrapper()
+
+
 class Tango(Stage):
     def __init__(self, unit='m'):
         Instrument.__init__(self)
