@@ -53,6 +53,10 @@ class Tango(Stage):
         tango_wrapper.ConnectSimple(self.lsid, ctypes.c_int(-1), None, ctypes.c_int(57600),
                                     ctypes.c_bool(False))
 
+    def close(self):
+        tango_wrapper.Disconnect(self.lsid)
+        tango_wrapper.FreeLSID(self.lsid)
+
     def move(self, pos, axis=None, relative=False):
         raise NotImplementedError("You must override move() in a Stage subclass")
 
