@@ -16,6 +16,8 @@ tango_dll.LSX_ConnectSimple.argtypes = [ctypes.c_int, ctypes.c_int,
                                         ctypes.c_int, ctypes.c_bool]
 tango_dll.LSX_Disconnect.argtypes = [ctypes.c_int]
 tango_dll.LSX_FreeLSID.argtypes = [ctypes.c_int]
+tango_dll.LSX_SetDimensions.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int,
+                                        ctypes.c_int, ctypes.c_int]
 
 
 class Tango(Stage):
@@ -28,6 +30,7 @@ class Tango(Stage):
         Tango.CreateLSID(ctypes.byref(self.lsid))
         Tango.ConnectSimple(self.lsid, ctypes.c_int(-1), None, ctypes.c_int(57600),
                             ctypes.c_bool(False))
+        self.set_units(unit)
 
     def close(self):
         Tango.Disconnect(self.lsid)
@@ -42,6 +45,34 @@ class Tango(Stage):
     def is_moving(self, axes=None):
         """Returns True if any of the specified axes are in motion."""
         raise NotImplementedError("The is_moving method must be subclassed and implemented before it's any use!")
+
+    def set_units(self, unit):
+        """Sets all dimensions to the desired unit"""
+        unit_code = Tango.translate_unit(unit)
+        Tango.SetDimensions(self.lsid, unit_code, unit_code, unit_code, unit_code)
+
+    @staticmethod
+    def translate_unit(unit):
+        if (unit == 'Microsteps'):
+            return ctypes.c_int(0)
+        elif (unit == 'um'):
+            return ctypes.c_int(1)
+        elif (unit == 'mm'):
+            return ctypes.c_int(2)
+        elif (unit == 'degree'):
+            return ctypes.c_int(3)
+        elif (unit == 'revolutions'):
+            return ctypes.c_int(4)
+        elif (unit == 'cm'):
+            return ctypes.c_int(5)
+        elif (unit == 'm'):
+            return ctypes.c_int(6)
+        elif (unit == 'inch'):
+            return ctypes.c_int(7)
+        elif (unit == 'mil'):
+            return ctypes.c_int(8)
+        else:
+            raise f'Tried to put Tango into unknown unit: {unit}'
 
     @staticmethod
     def CreateLSID(lsid_ref):
