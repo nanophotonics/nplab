@@ -32,27 +32,25 @@ class Tango(Stage):
         # Connect to Tango
         self.lsid = ctypes.c_int()
         Tango.CreateLSID(ctypes.byref(self.lsid))
-        Tango.ConnectSimple(self.lsid, ctypes.c_int(-1), None, ctypes.c_int(57600),
-                            ctypes.c_bool(False))
+        self.ConnectSimple(ctypes.c_int(-1), None, ctypes.c_int(57600),
+                           ctypes.c_bool(False))
         self.set_units(unit)
 
     def close(self):
-        Tango.Disconnect(self.lsid)
-        Tango.FreeLSID(self.lsid)
+        self.Disconnect()
+        self.FreeLSID()
 
     def move(self, pos, axis, relative=False):
         """Move the stage along a single axis"""
         if axis not in self.axis_names:
             raise f'{axis} is not a valid axis, must be one of {self.axis_names}'
-        axis_number = Tango.translate_axis(axis)
+        axis_number = self.translate_axis(axis)
         if relative:
-            Tango.MoveRelSingleAxis(self.lsid, axis_number,
-                                    ctypes.c_double(pos),
-                                    ctypes.c_bool(True))
+            self.MoveRelSingleAxis(axis_number, ctypes.c_double(pos),
+                                   ctypes.c_bool(True))
         else:
-            Tango.MoveAbsSingleAxis(self.lsid, axis_number,
-                                    ctypes.c_double(pos),
-                                    ctypes.c_bool(True))
+            self.MoveAbsSingleAxis(axis_number, ctypes.c_double(pos),
+                                   ctypes.c_bool(True))
 
     def get_position(self, axis=None):
         raise NotImplementedError("You must override get_position in a Stage subclass.")
@@ -64,7 +62,7 @@ class Tango(Stage):
     def set_units(self, unit):
         """Sets all dimensions to the desired unit"""
         unit_code = Tango.translate_unit(unit)
-        Tango.SetDimensions(self.lsid, unit_code, unit_code, unit_code, unit_code)
+        Tango.SetDimensions(unit_code, unit_code, unit_code, unit_code)
 
     @staticmethod
     def translate_unit(unit):
@@ -107,28 +105,25 @@ class Tango(Stage):
         return_value = tango_dll.LSX_CreateLSID(lsid_ref)
         assert return_value != 0, f'Tango.LSX_CreateLSID returned {return_value}'
 
-    @staticmethod
-    def ConnectSimple(lsid, interface_type, com_name, baud_rate, show_protocol):
-        return_value = tango_dll.LSX_ConnectSimple(lsid, interface_type, com_name, baud_rate,
+    def ConnectSimple(self, interface_type, com_name, baud_rate, show_protocol):
+        return_value = tango_dll.LSX_ConnectSimple(self.lsid, interface_type,
+                                                   com_name, baud_rate,
                                                    show_protocol)
         assert return_value != 0, f'Tango.LSX_ConnectSimple returned {return_value}'
 
-    @staticmethod
-    def Disconnect(lsid):
-        return_value = tango_dll.LSX_Disconnect(lsid)
+    def Disconnect(self):
+        return_value = tango_dll.LSX_Disconnect(self.lsid)
         assert return_value != 0, f'Tango.LSX_Disconnect returned {return_value}'
 
-    @staticmethod
-    def FreeLSID(lsid):
-        return_value = tango_dll.LSX_FreeLSID(lsid)
+    def FreeLSID(self):
+        return_value = tango_dll.LSX_FreeLSID(self.lsid)
         assert return_value != 0, f'Tango.LSX_FreeLSID returned {return_value}'
 
-    @staticmethod
-    def SetDimensions(lsid, x_dim, y_dim, z_dim, a_dim):
-        return_value = tango_dll.LSX_SetDimensions(lsid, x_dim, y_dim, z_dim, a_dim)
+    def SetDimensions(self, x_dim, y_dim, z_dim, a_dim):
+        return_value = tango_dll.LSX_SetDimensions(self.lsid, x_dim, y_dim, z_dim, a_dim)
         assert return_value != 0, f'Tango.LSX_SetDimensions returned {return_value}'
 
-    @staticmethod
-    def MoveAbsSingleAxis(lsid, axis_number, value, wait):
-        return_value = tango_dll.LSX_MoveAbsSingleAxis(lsid, axis_number, value, wait)
+    def MoveAbsSingleAxis(self, axis_number, value, wait):
+        return_value = tango_dll.LSX_MoveAbsSingleAxis(self.lsid, axis_number, value, wait)
+        assert return_value != 0, f'Tango.LSX_MoveAbsSingleAxis returned {return_value}'
         assert return_value != 0, f'Tango.LSX_MoveAbsSingleAxis returned {return_value}'
