@@ -34,8 +34,7 @@ class Tango(Stage):
         return_value = tango_dll.LSX_CreateLSID(ctypes.byref(lsid))
         assert return_value != 0, f'Tango.LSX_CreateLSID returned {return_value}'
         self.lsid = lsid.value
-        self.ConnectSimple(ctypes.c_int(-1), None, ctypes.c_int(57600),
-                           ctypes.c_bool(False))
+        self.ConnectSimple(-1, None, 57600, False)
 
         self.set_units(unit)
 
@@ -49,11 +48,9 @@ class Tango(Stage):
             raise f'{axis} is not a valid axis, must be one of {self.axis_names}'
         axis_number = self.translate_axis(axis)
         if relative:
-            self.MoveRelSingleAxis(axis_number, ctypes.c_double(pos),
-                                   ctypes.c_bool(True))
+            self.MoveRelSingleAxis(axis_number, pos, True)
         else:
-            self.MoveAbsSingleAxis(axis_number, ctypes.c_double(pos),
-                                   ctypes.c_bool(True))
+            self.MoveAbsSingleAxis(axis_number, pos, True)
 
     def get_position(self, axis=None):
         raise NotImplementedError("You must override get_position in a Stage subclass.")
@@ -65,49 +62,56 @@ class Tango(Stage):
     def set_units(self, unit):
         """Sets all dimensions to the desired unit"""
         unit_code = Tango.translate_unit(unit)
-        Tango.SetDimensions(unit_code, unit_code, unit_code, unit_code)
+        self.SetDimensions(unit_code, unit_code, unit_code, unit_code)
 
     @staticmethod
     def translate_unit(unit):
         if (unit == 'Microsteps'):
-            return ctypes.c_int(0)
+            return 0
         elif (unit == 'um'):
-            return ctypes.c_int(1)
+            return 1
         elif (unit == 'mm'):
-            return ctypes.c_int(2)
+            return 2
         elif (unit == 'degree'):
-            return ctypes.c_int(3)
+            return 3
         elif (unit == 'revolutions'):
-            return ctypes.c_int(4)
+            return 4
         elif (unit == 'cm'):
-            return ctypes.c_int(5)
+            return 5
         elif (unit == 'm'):
-            return ctypes.c_int(6)
+            return 6
         elif (unit == 'inch'):
-            return ctypes.c_int(7)
+            return 7
         elif (unit == 'mil'):
-            return ctypes.c_int(8)
+            return 8
         else:
             raise f'Tried to put translate unknown unit: {unit}'
 
     @staticmethod
     def translate_axis(axis):
         if (axis == 'x'):
-            return ctypes.c_int(1)
+            return 1
         elif (axis == 'y'):
-            return ctypes.c_int(2)
+            return 2
         elif (axis == 'z'):
-            return ctypes.c_int(3)
+            return 3
         elif (axis == 'a'):
-            return ctypes.c_int(4)
+            return 4
         else:
             raise f'Tried to translate unknown axis: {axis}'
 
+    # ============== Wrapped DLL Functions ==============
+    # The following functions directly correspond to Tango DLL functions
+    # As much as possible, they should present Python-like interfaces:
+    # 1) Accept and return Python variables, not ctype types
+    # 2) Return values rather than set them to referenced variables
+    # 3) Check for error codes and raise exceptions
     def ConnectSimple(self, interface_type, com_name, baud_rate, show_protocol):
         return_value = tango_dll.LSX_ConnectSimple(ctypes.c_int(self.lsid),
-                                                   interface_type,
-                                                   com_name, baud_rate,
-                                                   show_protocol)
+                                                   ctypes.c_int(interface_type),
+                                                   ctypes.byref(ctypes.c_char(com_name)),
+                                                   ctypes.c_int(baud_rate),
+                                                   ctypes.c_bool(show_protocol))
         assert return_value != 0, f'Tango.LSX_ConnectSimple returned {return_value}'
 
     def Disconnect(self):
@@ -120,16 +124,24 @@ class Tango(Stage):
 
     def SetDimensions(self, x_dim, y_dim, z_dim, a_dim):
         return_value = tango_dll.LSX_SetDimensions(ctypes.c_int(self.lsid),
-                                                   x_dim, y_dim, z_dim, a_dim)
+                                                   ctypes.c_int(x_dim),
+                                                   ctypes.c_int(y_dim),
+                                                   ctypes.c_int(z_dim),
+                                                   ctypes.c_int(a_dim))
         assert return_value != 0, f'Tango.LSX_SetDimensions returned {return_value}'
 
     def MoveAbsSingleAxis(self, axis_number, value, wait):
         return_value = tango_dll.LSX_MoveAbsSingleAxis(ctypes.c_int(self.lsid),
-                                                       axis_number, value, wait)
+                                                       ctypes.c_int(axis_number),
+                                                       ctypes.c_double(value),
+                                                       ctypes.c_bool(wait))
         assert return_value != 0, f'Tango.LSX_MoveAbsSingleAxis returned {return_value}'
 
     def MoveRelSingleAxis(self, axis_number, value, wait):
         return_value = tango_dll.LSX_MoveRelSingleAxis(ctypes.c_int(self.lsid),
-                                                       axis_number, value, wait)
+                                                       ctypes.c_int(axis_number),
+                                                       ctypes.c_double(value),
+                                                       ctypes.c_bool(wait))
         assert return_value != 0, f'Tango.LSX_MoveRelSingleAxis returned {return_value}'
+
         assert return_value != 0, f'Tango.LSX_MoveAbsSingleAxis returned {return_value}'
