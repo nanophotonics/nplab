@@ -30,10 +30,13 @@ class Tango(Stage):
         self.unit = unit
 
         # Connect to Tango
-        self.lsid = ctypes.c_int()
-        Tango.CreateLSID(ctypes.byref(self.lsid))
+        lsid = ctypes.c_int()
+        return_value = tango_dll.LSX_CreateLSID(ctypes.byref(lsid))
+        assert return_value != 0, f'Tango.LSX_CreateLSID returned {return_value}'
+        self.lsid = lsid.value
         self.ConnectSimple(ctypes.c_int(-1), None, ctypes.c_int(57600),
                            ctypes.c_bool(False))
+
         self.set_units(unit)
 
     def close(self):
@@ -99,11 +102,6 @@ class Tango(Stage):
             return ctypes.c_int(4)
         else:
             raise f'Tried to translate unknown axis: {axis}'
-
-    @staticmethod
-    def CreateLSID(lsid_ref):
-        return_value = tango_dll.LSX_CreateLSID(lsid_ref)
-        assert return_value != 0, f'Tango.LSX_CreateLSID returned {return_value}'
 
     def ConnectSimple(self, interface_type, com_name, baud_rate, show_protocol):
         return_value = tango_dll.LSX_ConnectSimple(self.lsid, interface_type,
