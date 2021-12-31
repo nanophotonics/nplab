@@ -126,4 +126,8 @@ class Tango(Stage):
     def MoveAbsSingleAxis(self, axis_number, value, wait):
         return_value = tango_dll.LSX_MoveAbsSingleAxis(self.lsid, axis_number, value, wait)
         assert return_value != 0, f'Tango.LSX_MoveAbsSingleAxis returned {return_value}'
+
+    def MoveRelSingleAxis(self, axis_number, value, wait):
+        return_value = tango_dll.LSX_MoveRelSingleAxis(self.lsid, axis_number, value, wait)
+        assert return_value != 0, f'Tango.LSX_MoveRelSingleAxis returned {return_value}'
         assert return_value != 0, f'Tango.LSX_MoveAbsSingleAxis returned {return_value}'
