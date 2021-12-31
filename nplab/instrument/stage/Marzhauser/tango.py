@@ -191,6 +191,6 @@ class Tango(Stage):
                                             ctypes.byref(y_velocity),
                                             ctypes.byref(z_velocity),
                                             ctypes.byref(a_velocity))
-        assert return_value != 0, f'Tango.LSX_MoveAbsSingleAxis returned {return_value}'
+        assert return_value != 0, f'Tango.LSX_GetVel returned {return_value}'
         return {'x': x_velocity.value, 'y': y_velocity.value,
                 'z': z_velocity.value, 'a': a_velocity.value}
