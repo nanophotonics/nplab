@@ -22,6 +22,12 @@ tango_dll.LSX_MoveRelSingleAxis.argtypes = [ctypes.c_int, ctypes.c_int,
                                             ctypes.c_double, ctypes.c_bool]
 tango_dll.LSX_MoveAbsSingleAxis.argtypes = [ctypes.c_int, ctypes.c_int,
                                             ctypes.c_double, ctypes.c_bool]
+tango_dll.LSX_GetPos.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.c_double),
+                                 ctypes.POINTER(ctypes.c_double),
+                                 ctypes.POINTER(ctypes.c_double),
+                                 ctypes.POINTER(ctypes.c_double)]
+tango_dll.LSX_GetPosSingleAxis.argtypes = [ctypes.c_int, ctypes.c_int,
+                                           ctypes.POINTER(ctypes.c_double)]
 tango_dll.LSX_GetVel.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.c_double),
                                  ctypes.POINTER(ctypes.c_double),
                                  ctypes.POINTER(ctypes.c_double),
@@ -57,7 +63,9 @@ class Tango(Stage):
             self.MoveAbsSingleAxis(axis_number, pos, True)
 
     def get_position(self, axis=None):
-        raise NotImplementedError("You must override get_position in a Stage subclass.")
+        if axis is None:
+            return self.GetPos()
+        return self.GetPosSingleAxis(axis)
 
     def is_moving(self, axes=None):
         """Returns True if any of the specified axes are in motion."""
@@ -151,6 +159,27 @@ class Tango(Stage):
                                                        ctypes.c_double(value),
                                                        ctypes.c_bool(wait))
         assert return_value != 0, f'Tango.LSX_MoveRelSingleAxis returned {return_value}'
+
+    def GetPos(self):
+        x_pos = ctypes.c_double()
+        y_pos = ctypes.c_double()
+        z_pos = ctypes.c_double()
+        a_pos = ctypes.c_double()
+        return_value = tango_dll.LSX_GetPos(ctypes.c_int(self.lsid),
+                                            ctypes.byref(x_pos),
+                                            ctypes.byref(y_pos),
+                                            ctypes.byref(z_pos),
+                                            ctypes.byref(a_pos))
+        assert return_value != 0, f'Tango.LSX_GetPos returned {return_value}'
+        return {'x': x_pos.value, 'y': y_pos.value,
+                'z': z_pos.value, 'a': a_pos.value}
+
+    def GetPosSingleAxis(self, axis_number):
+        pos = ctypes.double()
+        return_value = tango_dll.LSX_GetPosSingleAxis(ctypes.c_int(self.lsid),
+                                                      ctypes.byref(pos))
+        assert return_value != 0, f'Tango.LSX_GetPosSingleAxis returned {return_value}'
+        return pos.value
 
     def GetVel(self):
         x_velocity = ctypes.c_double()
