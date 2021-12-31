@@ -22,6 +22,10 @@ tango_dll.LSX_MoveRelSingleAxis.argtypes = [ctypes.c_int, ctypes.c_int,
                                             ctypes.c_double, ctypes.c_bool]
 tango_dll.LSX_MoveAbsSingleAxis.argtypes = [ctypes.c_int, ctypes.c_int,
                                             ctypes.c_double, ctypes.c_bool]
+tango_dll.LSX_GetVel.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.c_double),
+                                 ctypes.POINTER(ctypes.c_double),
+                                 ctypes.POINTER(ctypes.c_double),
+                                 ctypes.POINTER(ctypes.c_double)]
 
 
 class Tango(Stage):
@@ -57,7 +61,11 @@ class Tango(Stage):
 
     def is_moving(self, axes=None):
         """Returns True if any of the specified axes are in motion."""
-        raise NotImplementedError("The is_moving method must be subclassed and implemented before it's any use!")
+        velocities = self.GetVel()
+        for velocity in velocities.values():
+            if velocity != 0:
+                return True
+        return False
 
     def set_units(self, unit):
         """Sets all dimensions to the desired unit"""
@@ -144,4 +152,16 @@ class Tango(Stage):
                                                        ctypes.c_bool(wait))
         assert return_value != 0, f'Tango.LSX_MoveRelSingleAxis returned {return_value}'
 
+    def GetVel(self):
+        x_velocity = ctypes.c_double()
+        y_velocity = ctypes.c_double()
+        z_velocity = ctypes.c_double()
+        a_velocity = ctypes.c_double()
+        return_value = tango_dll.LSX_GetVel(ctypes.c_int(self.lsid),
+                                            ctypes.byref(x_velocity),
+                                            ctypes.byref(y_velocity),
+                                            ctypes.byref(z_velocity),
+                                            ctypes.byref(a_velocity))
         assert return_value != 0, f'Tango.LSX_MoveAbsSingleAxis returned {return_value}'
+        return {'x': x_velocity.value, 'y': y_velocity.value,
+                'z': z_velocity.value, 'a': a_velocity.value}
