@@ -104,28 +104,32 @@ class Tango(Stage):
             raise f'Tried to translate unknown axis: {axis}'
 
     def ConnectSimple(self, interface_type, com_name, baud_rate, show_protocol):
-        return_value = tango_dll.LSX_ConnectSimple(self.lsid, interface_type,
+        return_value = tango_dll.LSX_ConnectSimple(ctypes.c_int(self.lsid),
+                                                   interface_type,
                                                    com_name, baud_rate,
                                                    show_protocol)
         assert return_value != 0, f'Tango.LSX_ConnectSimple returned {return_value}'
 
     def Disconnect(self):
-        return_value = tango_dll.LSX_Disconnect(self.lsid)
+        return_value = tango_dll.LSX_Disconnect(ctypes.c_int(self.lsid))
         assert return_value != 0, f'Tango.LSX_Disconnect returned {return_value}'
 
     def FreeLSID(self):
-        return_value = tango_dll.LSX_FreeLSID(self.lsid)
+        return_value = tango_dll.LSX_FreeLSID(ctypes.c_int(self.lsid))
         assert return_value != 0, f'Tango.LSX_FreeLSID returned {return_value}'
 
     def SetDimensions(self, x_dim, y_dim, z_dim, a_dim):
-        return_value = tango_dll.LSX_SetDimensions(self.lsid, x_dim, y_dim, z_dim, a_dim)
+        return_value = tango_dll.LSX_SetDimensions(ctypes.c_int(self.lsid),
+                                                   x_dim, y_dim, z_dim, a_dim)
         assert return_value != 0, f'Tango.LSX_SetDimensions returned {return_value}'
 
     def MoveAbsSingleAxis(self, axis_number, value, wait):
-        return_value = tango_dll.LSX_MoveAbsSingleAxis(self.lsid, axis_number, value, wait)
+        return_value = tango_dll.LSX_MoveAbsSingleAxis(ctypes.c_int(self.lsid),
+                                                       axis_number, value, wait)
         assert return_value != 0, f'Tango.LSX_MoveAbsSingleAxis returned {return_value}'
 
     def MoveRelSingleAxis(self, axis_number, value, wait):
-        return_value = tango_dll.LSX_MoveRelSingleAxis(self.lsid, axis_number, value, wait)
+        return_value = tango_dll.LSX_MoveRelSingleAxis(ctypes.c_int(self.lsid),
+                                                       axis_number, value, wait)
         assert return_value != 0, f'Tango.LSX_MoveRelSingleAxis returned {return_value}'
         assert return_value != 0, f'Tango.LSX_MoveAbsSingleAxis returned {return_value}'
