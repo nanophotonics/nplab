@@ -18,6 +18,10 @@ tango_dll.LSX_Disconnect.argtypes = [ctypes.c_int]
 tango_dll.LSX_FreeLSID.argtypes = [ctypes.c_int]
 tango_dll.LSX_SetDimensions.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int,
                                         ctypes.c_int, ctypes.c_int]
+tango_dll.LSX_MoveRelSingleAxis.argtypes = [ctypes.c_int, ctypes.c_int,
+                                            ctypes.c_double, ctypes.c_bool]
+tango_dll.LSX_MoveAbsSingleAxis.argtypes = [ctypes.c_int, ctypes.c_int,
+                                            ctypes.c_double, ctypes.c_bool]
 
 
 class Tango(Stage):
@@ -36,8 +40,19 @@ class Tango(Stage):
         Tango.Disconnect(self.lsid)
         Tango.FreeLSID(self.lsid)
 
-    def move(self, pos, axis=None, relative=False):
-        raise NotImplementedError("You must override move() in a Stage subclass")
+    def move(self, pos, axis, relative=False):
+        """Move the stage along a single axis"""
+        if axis not in self.axis_names:
+            raise f'{axis} is not a valid axis, must be one of {self.axis_names}'
+        axis_number = Tango.translate_axis(axis)
+        if relative:
+            Tango.MoveRelSingleAxis(self.lsid, axis_number,
+                                    ctypes.c_double(pos),
+                                    ctypes.c_bool(True))
+        else:
+            Tango.MoveAbsSingleAxis(self.lsid, axis_number,
+                                    ctypes.c_double(pos),
+                                    ctypes.c_bool(True))
 
     def get_position(self, axis=None):
         raise NotImplementedError("You must override get_position in a Stage subclass.")
@@ -72,7 +87,20 @@ class Tango(Stage):
         elif (unit == 'mil'):
             return ctypes.c_int(8)
         else:
-            raise f'Tried to put Tango into unknown unit: {unit}'
+            raise f'Tried to put translate unknown unit: {unit}'
+
+    @staticmethod
+    def translate_axis(axis):
+        if (axis == 'x'):
+            return ctypes.c_int(1)
+        elif (axis == 'y'):
+            return ctypes.c_int(2)
+        elif (axis == 'z'):
+            return ctypes.c_int(3)
+        elif (axis == 'a'):
+            return ctypes.c_int(4)
+        else:
+            raise f'Tried to translate unknown axis: {axis}'
 
     @staticmethod
     def CreateLSID(lsid_ref):
@@ -99,3 +127,8 @@ class Tango(Stage):
     def SetDimensions(lsid, x_dim, y_dim, z_dim, a_dim):
         return_value = tango_dll.LSX_SetDimensions(lsid, x_dim, y_dim, z_dim, a_dim)
         assert return_value != 0, f'Tango.LSX_SetDimensions returned {return_value}'
+
+    @staticmethod
+    def MoveAbsSingleAxis(lsid, axis_number, value, wait):
+        return_value = tango_dll.LSX_MoveAbsSingleAxis(lsid, axis_number, value, wait)
+        assert return_value != 0, f'Tango.LSX_MoveAbsSingleAxis returned {return_value}'
