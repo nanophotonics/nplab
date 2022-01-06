@@ -14,7 +14,7 @@ tango_dll = ctypes.cdll.LoadLibrary(f'{path_here}/DLL/{system_bits}/Tango_DLL.dl
 # The DLL can have up to 8 simultaneously connected Tangos
 tango_dll.LSX_CreateLSID.argtypes = [ctypes.POINTER(ctypes.c_int)]
 tango_dll.LSX_ConnectSimple.argtypes = [ctypes.c_int, ctypes.c_int,
-                                        ctypes.POINTER(ctypes.c_char),
+                                        ctypes.POINTER(ctypes.c_char_p),
                                         ctypes.c_int, ctypes.c_bool]
 tango_dll.LSX_Disconnect.argtypes = [ctypes.c_int]
 tango_dll.LSX_FreeLSID.argtypes = [ctypes.c_int]
@@ -129,7 +129,7 @@ class Tango(Stage):
         try:
             return_value = tango_dll.LSX_ConnectSimple(ctypes.c_int(self.lsid),
                                                        ctypes.c_int(interface_type),
-                                                       ctypes.byref(ctypes.c_char(com_name)),
+                                                       ctypes.byref(ctypes.c_char_p(com_name)),
                                                        ctypes.c_int(baud_rate),
                                                        ctypes.c_bool(show_protocol))
         except Exception as e:
