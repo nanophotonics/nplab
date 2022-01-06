@@ -124,6 +124,7 @@ class Tango(Stage):
     # 1) Accept and return Python variables, not ctype types
     # 2) Return values rather than set them to referenced variables
     # 3) Check for error codes and raise exceptions
+    # Note: error codes and explanations are in the Tango DLL documentation
     def ConnectSimple(self, interface_type, com_name, baud_rate, show_protocol):
         try:
             return_value = tango_dll.LSX_ConnectSimple(ctypes.c_int(self.lsid),
