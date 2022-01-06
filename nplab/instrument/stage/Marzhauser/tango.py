@@ -44,7 +44,7 @@ class Tango(Stage):
         # Connect to Tango
         lsid = ctypes.c_int()
         return_value = tango_dll.LSX_CreateLSID(ctypes.byref(lsid))
-        assert return_value != 0, f'Tango.LSX_CreateLSID returned {return_value}'
+        assert return_value == 0, f'Tango.LSX_CreateLSID returned {return_value}'
         self.lsid = lsid.value
         self.ConnectSimple(-1, None, 57600, False)
 
@@ -103,7 +103,7 @@ class Tango(Stage):
         elif (unit == 'mil'):
             return 8
         else:
-            raise f'Tried to put translate unknown unit: {unit}'
+            raise Exception(f'Tried to put translate unknown unit: {unit}')
 
     @staticmethod
     def translate_axis(axis):
@@ -116,7 +116,7 @@ class Tango(Stage):
         elif (axis == 'a'):
             return 4
         else:
-            raise f'Tried to translate unknown axis: {axis}'
+            raise Exception(f'Tried to translate unknown axis: {axis}')
 
     # ============== Wrapped DLL Functions ==============
     # The following functions directly correspond to Tango DLL functions
@@ -125,62 +125,86 @@ class Tango(Stage):
     # 2) Return values rather than set them to referenced variables
     # 3) Check for error codes and raise exceptions
     def ConnectSimple(self, interface_type, com_name, baud_rate, show_protocol):
-        return_value = tango_dll.LSX_ConnectSimple(ctypes.c_int(self.lsid),
-                                                   ctypes.c_int(interface_type),
-                                                   ctypes.byref(ctypes.c_char(com_name)),
-                                                   ctypes.c_int(baud_rate),
-                                                   ctypes.c_bool(show_protocol))
-        assert return_value != 0, f'Tango.LSX_ConnectSimple returned {return_value}'
+        try:
+            return_value = tango_dll.LSX_ConnectSimple(ctypes.c_int(self.lsid),
+                                                       ctypes.c_int(interface_type),
+                                                       ctypes.byref(ctypes.c_char(com_name)),
+                                                       ctypes.c_int(baud_rate),
+                                                       ctypes.c_bool(show_protocol))
+        except Exception as e:
+            raise Exception(f'Tango.LSX_ConnectSimple raised exception: {str(e)}')
+        assert return_value == 0, f'Tango.LSX_ConnectSimple returned {return_value}'
 
     def Disconnect(self):
-        return_value = tango_dll.LSX_Disconnect(ctypes.c_int(self.lsid))
-        assert return_value != 0, f'Tango.LSX_Disconnect returned {return_value}'
+        try:
+            return_value = tango_dll.LSX_Disconnect(ctypes.c_int(self.lsid))
+        except Exception as e:
+            raise Exception(f'Tango.LSX_Disconnect raised exception: {str(e)}')
+        assert return_value == 0, f'Tango.LSX_Disconnect returned {return_value}'
 
     def FreeLSID(self):
-        return_value = tango_dll.LSX_FreeLSID(ctypes.c_int(self.lsid))
-        assert return_value != 0, f'Tango.LSX_FreeLSID returned {return_value}'
+        try:
+            return_value = tango_dll.LSX_FreeLSID(ctypes.c_int(self.lsid))
+        except Exception as e:
+            raise Exception(f'Tango.LSX_FreeLSID raised exception: {str(e)}')
+        assert return_value == 0, f'Tango.LSX_FreeLSID returned {return_value}'
 
     def SetDimensions(self, x_dim, y_dim, z_dim, a_dim):
-        return_value = tango_dll.LSX_SetDimensions(ctypes.c_int(self.lsid),
-                                                   ctypes.c_int(x_dim),
-                                                   ctypes.c_int(y_dim),
-                                                   ctypes.c_int(z_dim),
-                                                   ctypes.c_int(a_dim))
-        assert return_value != 0, f'Tango.LSX_SetDimensions returned {return_value}'
+        try:
+            return_value = tango_dll.LSX_SetDimensions(ctypes.c_int(self.lsid),
+                                                       ctypes.c_int(x_dim),
+                                                       ctypes.c_int(y_dim),
+                                                       ctypes.c_int(z_dim),
+                                                       ctypes.c_int(a_dim))
+        except Exception as e:
+            raise Exception(f'Tango.LSX_SetDimensions raised exception: {str(e)}')
+        assert return_value == 0, f'Tango.LSX_SetDimensions returned {return_value}'
 
     def MoveAbsSingleAxis(self, axis_number, value, wait):
-        return_value = tango_dll.LSX_MoveAbsSingleAxis(ctypes.c_int(self.lsid),
-                                                       ctypes.c_int(axis_number),
-                                                       ctypes.c_double(value),
-                                                       ctypes.c_bool(wait))
-        assert return_value != 0, f'Tango.LSX_MoveAbsSingleAxis returned {return_value}'
+        try:
+            return_value = tango_dll.LSX_MoveAbsSingleAxis(ctypes.c_int(self.lsid),
+                                                           ctypes.c_int(axis_number),
+                                                           ctypes.c_double(value),
+                                                           ctypes.c_bool(wait))
+        except Exception as e:
+            raise Exception(f'Tango.LSX_MoveAbsSingleAxis raised exception: {str(e)}')
+        assert return_value == 0, f'Tango.LSX_MoveAbsSingleAxis returned {return_value}'
 
     def MoveRelSingleAxis(self, axis_number, value, wait):
-        return_value = tango_dll.LSX_MoveRelSingleAxis(ctypes.c_int(self.lsid),
-                                                       ctypes.c_int(axis_number),
-                                                       ctypes.c_double(value),
-                                                       ctypes.c_bool(wait))
-        assert return_value != 0, f'Tango.LSX_MoveRelSingleAxis returned {return_value}'
+        try:
+            return_value = tango_dll.LSX_MoveRelSingleAxis(ctypes.c_int(self.lsid),
+                                                           ctypes.c_int(axis_number),
+                                                           ctypes.c_double(value),
+                                                           ctypes.c_bool(wait))
+        except Exception as e:
+            raise Exception(f'Tango.LSX_MoveRelSingleAxis raised exception: {str(e)}')
+        assert return_value == 0, f'Tango.LSX_MoveRelSingleAxis returned {return_value}'
 
     def GetPos(self):
         x_pos = ctypes.c_double()
         y_pos = ctypes.c_double()
         z_pos = ctypes.c_double()
         a_pos = ctypes.c_double()
-        return_value = tango_dll.LSX_GetPos(ctypes.c_int(self.lsid),
-                                            ctypes.byref(x_pos),
-                                            ctypes.byref(y_pos),
-                                            ctypes.byref(z_pos),
-                                            ctypes.byref(a_pos))
-        assert return_value != 0, f'Tango.LSX_GetPos returned {return_value}'
+        try:
+            return_value = tango_dll.LSX_GetPos(ctypes.c_int(self.lsid),
+                                                ctypes.byref(x_pos),
+                                                ctypes.byref(y_pos),
+                                                ctypes.byref(z_pos),
+                                                ctypes.byref(a_pos))
+        except Exception as e:
+            raise Exception(f'Tango.LSX_GetPos raised exception: {str(e)}')
+        assert return_value == 0, f'Tango.LSX_GetPos returned {return_value}'
         return {'x': x_pos.value, 'y': y_pos.value,
                 'z': z_pos.value, 'a': a_pos.value}
 
     def GetPosSingleAxis(self, axis_number):
         pos = ctypes.double()
-        return_value = tango_dll.LSX_GetPosSingleAxis(ctypes.c_int(self.lsid),
-                                                      ctypes.byref(pos))
-        assert return_value != 0, f'Tango.LSX_GetPosSingleAxis returned {return_value}'
+        try:
+            return_value = tango_dll.LSX_GetPosSingleAxis(ctypes.c_int(self.lsid),
+                                                          ctypes.byref(pos))
+        except Exception as e:
+            raise Exception(f'Tango.LSX_GetPosSingleAxis raised exception: {str(e)}')
+        assert return_value == 0, f'Tango.LSX_GetPosSingleAxis returned {return_value}'
         return pos.value
 
     def GetVel(self):
@@ -188,11 +212,14 @@ class Tango(Stage):
         y_velocity = ctypes.c_double()
         z_velocity = ctypes.c_double()
         a_velocity = ctypes.c_double()
-        return_value = tango_dll.LSX_GetVel(ctypes.c_int(self.lsid),
-                                            ctypes.byref(x_velocity),
-                                            ctypes.byref(y_velocity),
-                                            ctypes.byref(z_velocity),
-                                            ctypes.byref(a_velocity))
-        assert return_value != 0, f'Tango.LSX_GetVel returned {return_value}'
+        try:
+            return_value = tango_dll.LSX_GetVel(ctypes.c_int(self.lsid),
+                                                ctypes.byref(x_velocity),
+                                                ctypes.byref(y_velocity),
+                                                ctypes.byref(z_velocity),
+                                                ctypes.byref(a_velocity))
+        except Exception as e:
+            raise Exception(f'Tango.LSX_GetVel raised exception: {str(e)}')
+        assert return_value == 0, f'Tango.LSX_GetVel returned {return_value}'
         return {'x': x_velocity.value, 'y': y_velocity.value,
                 'z': z_velocity.value, 'a': a_velocity.value}
