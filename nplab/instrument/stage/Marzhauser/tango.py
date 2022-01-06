@@ -2,10 +2,12 @@ from nplab.instrument import Instrument
 from nplab.instrument.stage import Stage
 import ctypes
 import sys
+import os
 
 # Load the Tango DLL
 system_bits = '64' if (sys.maxsize > 2**32) else '32'
-tango_dll = ctypes.cdll.LoadLibrary(f'DLL/{system_bits}/Tango_DLL')
+path_here = os.path.dirname(__file__)
+tango_dll = ctypes.cdll.LoadLibrary(f'{path_here}/DLL/{system_bits}/Tango_DLL.dll')
 
 # Set arg types for all dll functions we call
 # LSID: Used to tell the DLL which Tango we are sending a command to
