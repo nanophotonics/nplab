@@ -137,7 +137,13 @@ class Tango(Stage):
                                                        ctypes.c_bool(show_protocol))
         except Exception as e:
             raise Exception(f'Tango.LSX_ConnectSimple raised exception: {str(e)}')
-        assert return_value == 0, f'Tango.LSX_ConnectSimple returned {return_value}'
+        if return_value == 4005:
+            raise Exception('Tango DLL raised error 4005: "Error while ' \
+                            'initializing interface." This can happen if ' \
+                            'you specify the wrong port, or other software ' \
+                            'is already be connected to the Tango.')
+        else:
+            assert return_value == 0, f'Tango.LSX_ConnectSimple returned {return_value}'
 
     def Disconnect(self):
         try:
