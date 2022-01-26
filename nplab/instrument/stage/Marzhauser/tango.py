@@ -37,7 +37,7 @@ tango_dll.LSX_GetVel.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.c_double),
 
 
 class Tango(Stage):
-    def __init__(self, unit='m'):
+    def __init__(self, unit='u'):
         Instrument.__init__(self)
         self.unit = unit
 
