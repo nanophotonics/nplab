@@ -4,7 +4,7 @@ Author: James Stevenson
 
 from nplab.instrument import Instrument
 from nplab.instrument.stage import Stage
-import ctypes
+from ctypes import c_int, c_double, c_bool, c_char_p, byref, POINTER, cdll
 import sys
 import os
 
@@ -20,8 +20,8 @@ class Tango(Stage):
         self.unit = unit
 
         # Connect to Tango
-        lsid = ctypes.c_int()
-        return_value = tango_dll.LSX_CreateLSID(ctypes.byref(lsid))
+        lsid = c_int()
+        return_value = tango_dll.LSX_CreateLSID(byref(lsid))
         assert return_value == 0, f'Tango.LSX_CreateLSID returned {return_value}'
         self.lsid = lsid.value
         self.ConnectSimple(-1, None, 57600, False)
@@ -113,11 +113,11 @@ class Tango(Stage):
         if type(com_name) == str:
             com_name = com_name.encode('utf-8')
         try:
-            return_value = tango_dll.LSX_ConnectSimple(ctypes.c_int(self.lsid),
-                                                       ctypes.c_int(interface_type),
+            return_value = tango_dll.LSX_ConnectSimple(c_int(self.lsid),
+                                                       c_int(interface_type),
                                                        com_name,
-                                                       ctypes.c_int(baud_rate),
-                                                       ctypes.c_bool(show_protocol))
+                                                       c_int(baud_rate),
+                                                       c_bool(show_protocol))
         except Exception as e:
             raise Exception(f'Tango.LSX_ConnectSimple raised exception: {str(e)}')
         if return_value == 4005:
@@ -131,7 +131,7 @@ class Tango(Stage):
     def Disconnect(self):
         """Wrapper for DLL function LSX_Disconnect"""
         try:
-            return_value = tango_dll.LSX_Disconnect(ctypes.c_int(self.lsid))
+            return_value = tango_dll.LSX_Disconnect(c_int(self.lsid))
         except Exception as e:
             raise Exception(f'Tango.LSX_Disconnect raised exception: {str(e)}')
         assert return_value == 0, f'Tango.LSX_Disconnect returned {return_value}'
@@ -139,7 +139,7 @@ class Tango(Stage):
     def FreeLSID(self):
         """Wrapper for DLL function LSX_FreeLSID"""
         try:
-            return_value = tango_dll.LSX_FreeLSID(ctypes.c_int(self.lsid))
+            return_value = tango_dll.LSX_FreeLSID(c_int(self.lsid))
         except Exception as e:
             raise Exception(f'Tango.LSX_FreeLSID raised exception: {str(e)}')
         assert return_value == 0, f'Tango.LSX_FreeLSID returned {return_value}'
@@ -147,11 +147,11 @@ class Tango(Stage):
     def SetDimensions(self, x_dim, y_dim, z_dim, a_dim):
         """Wrapper for DLL function LSX_SetDimensions"""
         try:
-            return_value = tango_dll.LSX_SetDimensions(ctypes.c_int(self.lsid),
-                                                       ctypes.c_int(x_dim),
-                                                       ctypes.c_int(y_dim),
-                                                       ctypes.c_int(z_dim),
-                                                       ctypes.c_int(a_dim))
+            return_value = tango_dll.LSX_SetDimensions(c_int(self.lsid),
+                                                       c_int(x_dim),
+                                                       c_int(y_dim),
+                                                       c_int(z_dim),
+                                                       c_int(a_dim))
         except Exception as e:
             raise Exception(f'Tango.LSX_SetDimensions raised exception: {str(e)}')
         assert return_value == 0, f'Tango.LSX_SetDimensions returned {return_value}'
@@ -159,10 +159,10 @@ class Tango(Stage):
     def MoveAbsSingleAxis(self, axis_number, value, wait):
         """Wrapper for DLL function LSX_MoveAbsSingleAxis"""
         try:
-            return_value = tango_dll.LSX_MoveAbsSingleAxis(ctypes.c_int(self.lsid),
-                                                           ctypes.c_int(axis_number),
-                                                           ctypes.c_double(value),
-                                                           ctypes.c_bool(wait))
+            return_value = tango_dll.LSX_MoveAbsSingleAxis(c_int(self.lsid),
+                                                           c_int(axis_number),
+                                                           c_double(value),
+                                                           c_bool(wait))
         except Exception as e:
             raise Exception(f'Tango.LSX_MoveAbsSingleAxis raised exception: {str(e)}')
         assert return_value == 0, f'Tango.LSX_MoveAbsSingleAxis returned {return_value}'
@@ -170,26 +170,26 @@ class Tango(Stage):
     def MoveRelSingleAxis(self, axis_number, value, wait):
         """Wrapper for DLL function LSX_MoveRelSingleAxis"""
         try:
-            return_value = tango_dll.LSX_MoveRelSingleAxis(ctypes.c_int(self.lsid),
-                                                           ctypes.c_int(axis_number),
-                                                           ctypes.c_double(value),
-                                                           ctypes.c_bool(wait))
+            return_value = tango_dll.LSX_MoveRelSingleAxis(c_int(self.lsid),
+                                                           c_int(axis_number),
+                                                           c_double(value),
+                                                           c_bool(wait))
         except Exception as e:
             raise Exception(f'Tango.LSX_MoveRelSingleAxis raised exception: {str(e)}')
         assert return_value == 0, f'Tango.LSX_MoveRelSingleAxis returned {return_value}'
 
     def GetPos(self):
         """Wrapper for DLL function LSX_GetPos"""
-        x_pos = ctypes.c_double()
-        y_pos = ctypes.c_double()
-        z_pos = ctypes.c_double()
-        a_pos = ctypes.c_double()
+        x_pos = c_double()
+        y_pos = c_double()
+        z_pos = c_double()
+        a_pos = c_double()
         try:
-            return_value = tango_dll.LSX_GetPos(ctypes.c_int(self.lsid),
-                                                ctypes.byref(x_pos),
-                                                ctypes.byref(y_pos),
-                                                ctypes.byref(z_pos),
-                                                ctypes.byref(a_pos))
+            return_value = tango_dll.LSX_GetPos(c_int(self.lsid),
+                                                byref(x_pos),
+                                                byref(y_pos),
+                                                byref(z_pos),
+                                                byref(a_pos))
         except Exception as e:
             raise Exception(f'Tango.LSX_GetPos raised exception: {str(e)}')
         assert return_value == 0, f'Tango.LSX_GetPos returned {return_value}'
@@ -198,10 +198,10 @@ class Tango(Stage):
 
     def GetPosSingleAxis(self, axis_number):
         """Wrapper for DLL function LSX_GetPosSingleAxis"""
-        pos = ctypes.double()
+        pos = c_double()
         try:
-            return_value = tango_dll.LSX_GetPosSingleAxis(ctypes.c_int(self.lsid),
-                                                          ctypes.byref(pos))
+            return_value = tango_dll.LSX_GetPosSingleAxis(c_int(self.lsid),
+                                                          byref(pos))
         except Exception as e:
             raise Exception(f'Tango.LSX_GetPosSingleAxis raised exception: {str(e)}')
         assert return_value == 0, f'Tango.LSX_GetPosSingleAxis returned {return_value}'
@@ -212,16 +212,16 @@ class Tango(Stage):
         Returns axis velocities as they are set to move at, whether they are
         moving now or not.
         """
-        x_velocity = ctypes.c_double()
-        y_velocity = ctypes.c_double()
-        z_velocity = ctypes.c_double()
-        a_velocity = ctypes.c_double()
+        x_velocity = c_double()
+        y_velocity = c_double()
+        z_velocity = c_double()
+        a_velocity = c_double()
         try:
-            return_value = tango_dll.LSX_GetVel(ctypes.c_int(self.lsid),
-                                                ctypes.byref(x_velocity),
-                                                ctypes.byref(y_velocity),
-                                                ctypes.byref(z_velocity),
-                                                ctypes.byref(a_velocity))
+            return_value = tango_dll.LSX_GetVel(c_int(self.lsid),
+                                                byref(x_velocity),
+                                                byref(y_velocity),
+                                                byref(z_velocity),
+                                                byref(a_velocity))
         except Exception as e:
             raise Exception(f'Tango.LSX_GetVel raised exception: {str(e)}')
         assert return_value == 0, f'Tango.LSX_GetVel returned {return_value}'
@@ -232,16 +232,16 @@ class Tango(Stage):
         """Wrapper for DLL function LSX_IsVel
         Gets the actual velocities at which the axes are currently travelling.
         """
-        x_velocity = ctypes.c_double()
-        y_velocity = ctypes.c_double()
-        z_velocity = ctypes.c_double()
-        a_velocity = ctypes.c_double()
+        x_velocity = c_double()
+        y_velocity = c_double()
+        z_velocity = c_double()
+        a_velocity = c_double()
         try:
-            return_value = tango_dll.LSX_IsVel(ctypes.c_int(self.lsid),
-                                                ctypes.byref(x_velocity),
-                                                ctypes.byref(y_velocity),
-                                                ctypes.byref(z_velocity),
-                                                ctypes.byref(a_velocity))
+            return_value = tango_dll.LSX_IsVel(c_int(self.lsid),
+                                               byref(x_velocity),
+                                               byref(y_velocity),
+                                               byref(z_velocity),
+                                               byref(a_velocity))
         except Exception as e:
             raise Exception(f'Tango.LSX_IsVel raised exception: {str(e)}')
         assert return_value == 0, f'Tango.LSX_IsVel returned {return_value}'
@@ -253,9 +253,9 @@ class Tango(Stage):
         Set velocity a single axis is to move at, whether it is moving now or not.
         """
         try:
-            return_value = tango_dll.LSX_SetVelSingleAxis(ctypes.c_int(self.lsid),
-                                                          ctypes.c_int(axis_number),
-                                                          ctypes.c_double(velocity))
+            return_value = tango_dll.LSX_SetVelSingleAxis(c_int(self.lsid),
+                                                          c_int(axis_number),
+                                                          c_double(velocity))
         except Exception as e:
             raise Exception(f'Tango.LSX_SetVelSingleAxis raised exception: {str(e)}')
         assert return_value == 0, f'Tango.LSX_SetVelSingleAxis returned {return_value}'
@@ -266,36 +266,23 @@ class Tango(Stage):
 # =============================================================================
 system_bits = '64' if (sys.maxsize > 2**32) else '32'
 path_here = os.path.dirname(__file__)
-tango_dll = ctypes.cdll.LoadLibrary(f'{path_here}/DLL/{system_bits}/Tango_DLL.dll')
+tango_dll = cdll.LoadLibrary(f'{path_here}/DLL/{system_bits}/Tango_DLL.dll')
 
 # Set arg types for all dll functions we call
 # LSID: Used to tell the DLL which Tango we are sending a command to
 # The DLL can have up to 8 simultaneously connected Tangos
-tango_dll.LSX_CreateLSID.argtypes = [ctypes.POINTER(ctypes.c_int)]
-tango_dll.LSX_ConnectSimple.argtypes = [ctypes.c_int, ctypes.c_int,
-                                        ctypes.c_char_p,
-                                        ctypes.c_int, ctypes.c_bool]
-tango_dll.LSX_Disconnect.argtypes = [ctypes.c_int]
-tango_dll.LSX_FreeLSID.argtypes = [ctypes.c_int]
-tango_dll.LSX_SetDimensions.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int,
-                                        ctypes.c_int, ctypes.c_int]
-tango_dll.LSX_MoveRelSingleAxis.argtypes = [ctypes.c_int, ctypes.c_int,
-                                            ctypes.c_double, ctypes.c_bool]
-tango_dll.LSX_MoveAbsSingleAxis.argtypes = [ctypes.c_int, ctypes.c_int,
-                                            ctypes.c_double, ctypes.c_bool]
-tango_dll.LSX_GetPos.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.c_double),
-                                 ctypes.POINTER(ctypes.c_double),
-                                 ctypes.POINTER(ctypes.c_double),
-                                 ctypes.POINTER(ctypes.c_double)]
-tango_dll.LSX_GetPosSingleAxis.argtypes = [ctypes.c_int, ctypes.c_int,
-                                           ctypes.POINTER(ctypes.c_double)]
-tango_dll.LSX_GetVel.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.c_double),
-                                 ctypes.POINTER(ctypes.c_double),
-                                 ctypes.POINTER(ctypes.c_double),
-                                 ctypes.POINTER(ctypes.c_double)]
-tango_dll.LSX_IsVel.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.c_double),
-                                ctypes.POINTER(ctypes.c_double),
-                                ctypes.POINTER(ctypes.c_double),
-                                ctypes.POINTER(ctypes.c_double)]
-tango_dll.LSX_SetVelSingleAxis.argtypes = [ctypes.c_int, ctypes.c_int,
-                                           ctypes.c_double]
+tango_dll.LSX_CreateLSID.argtypes = [POINTER(c_int)]
+tango_dll.LSX_ConnectSimple.argtypes = [c_int, c_int, c_char_p, c_int, c_bool]
+tango_dll.LSX_Disconnect.argtypes = [c_int]
+tango_dll.LSX_FreeLSID.argtypes = [c_int]
+tango_dll.LSX_SetDimensions.argtypes = [c_int, c_int, c_int, c_int, c_int]
+tango_dll.LSX_MoveRelSingleAxis.argtypes = [c_int, c_int, c_double, c_bool]
+tango_dll.LSX_MoveAbsSingleAxis.argtypes = [c_int, c_int, c_double, c_bool]
+tango_dll.LSX_GetPos.argtypes = [c_int, POINTER(c_double), POINTER(c_double),
+                                 POINTER(c_double), POINTER(c_double)]
+tango_dll.LSX_GetPosSingleAxis.argtypes = [c_int, c_int, POINTER(c_double)]
+tango_dll.LSX_GetVel.argtypes = [c_int, POINTER(c_double), POINTER(c_double),
+                                 POINTER(c_double), POINTER(c_double)]
+tango_dll.LSX_IsVel.argtypes = [c_int, POINTER(c_double), POINTER(c_double),
+                                POINTER(c_double), POINTER(c_double)]
+tango_dll.LSX_SetVelSingleAxis.argtypes = [c_int, c_int, c_double]
