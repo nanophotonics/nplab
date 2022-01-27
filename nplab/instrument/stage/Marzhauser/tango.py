@@ -62,44 +62,6 @@ class Tango(Stage):
         unit_code = Tango.translate_unit(unit)
         self.SetDimensions(unit_code, unit_code, unit_code, unit_code)
 
-    @staticmethod
-    def translate_unit(unit):
-        """Translate English looking unit to unit code that Tango understands"""
-        if (unit == 'Microsteps'):
-            return 0
-        elif (unit == 'um'):
-            return 1
-        elif (unit == 'mm'):
-            return 2
-        elif (unit == 'degree'):
-            return 3
-        elif (unit == 'revolutions'):
-            return 4
-        elif (unit == 'cm'):
-            return 5
-        elif (unit == 'm'):
-            return 6
-        elif (unit == 'inch'):
-            return 7
-        elif (unit == 'mil'):
-            return 8
-        else:
-            raise Exception(f'Tried to put translate unknown unit: {unit}')
-
-    @staticmethod
-    def translate_axis(axis):
-        """Translate an axis (x, y, z, a) to axis-code that Tango understands"""
-        if (axis == 'x'):
-            return 1
-        elif (axis == 'y'):
-            return 2
-        elif (axis == 'z'):
-            return 3
-        elif (axis == 'a'):
-            return 4
-        else:
-            raise Exception(f'Tried to translate unknown axis: {axis}')
-
     # ============== Wrapped DLL Functions ==============
     # The following functions directly correspond to Tango DLL functions
     # As much as possible, they should present Python-like interfaces:
@@ -260,9 +222,49 @@ class Tango(Stage):
             raise Exception(f'Tango.LSX_SetVelSingleAxis raised exception: {str(e)}')
         assert return_value == 0, f'Tango.LSX_SetVelSingleAxis returned {return_value}'
 
+# =============================================================================
+# ============================== Module functions =============================
+# =============================================================================
+def translate_unit(unit):
+    """Translate English looking unit to unit code that Tango understands"""
+    if unit == 'Microsteps':
+        return 0
+    elif unit == 'um':
+        return 1
+    elif unit == 'mm':
+        return 2
+    elif unit == 'degree':
+        return 3
+    elif unit == 'revolutions':
+        return 4
+    elif unit == 'cm':
+        return 5
+    elif unit == 'm':
+        return 6
+    elif unit == 'inch':
+        return 7
+    elif unit == 'mil':
+        return 8
+    else:
+        raise Exception(f'Tried to put translate unknown unit: {unit}')
+
+
+def translate_axis(axis):
+    """Translate an axis (x, y, z, a) to axis-code that Tango understands"""
+    if axis == 'x':
+        return 1
+    elif axis == 'y':
+        return 2
+    elif axis == 'z':
+        return 3
+    elif axis == 'a':
+        return 4
+    else:
+        raise Exception(f'Tried to translate unknown axis: {axis}')
+
 
 # =============================================================================
-# =============================== Import the DLL ==============================
+# ================================ DLL Import =================================
 # =============================================================================
 system_bits = '64' if (sys.maxsize > 2**32) else '32'
 path_here = os.path.dirname(__file__)
