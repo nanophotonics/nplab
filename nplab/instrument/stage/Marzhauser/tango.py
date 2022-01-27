@@ -1,3 +1,7 @@
+"""Created January 2022
+Author: James Stevenson
+"""
+
 from nplab.instrument import Instrument
 from nplab.instrument.stage import Stage
 import ctypes
@@ -6,6 +10,11 @@ import os
 
 
 class Tango(Stage):
+    """Control object for Marzhauser Tango stages
+
+    Originally written for a Tango 3 Desktop 3-axis stage. The Tango DLL looks
+    valid for all Tango stages, so hopefully this class works for others too.
+    """
     def __init__(self, unit='u'):
         Instrument.__init__(self)
         self.unit = unit
@@ -20,6 +29,7 @@ class Tango(Stage):
         self.set_units(unit)
 
     def close(self):
+        """Close Tango connection and perform necessary cleanup"""
         self.Disconnect()
         self.FreeLSID()
 
@@ -34,6 +44,7 @@ class Tango(Stage):
             self.MoveAbsSingleAxis(axis_number, pos, True)
 
     def get_position(self, axis=None):
+        """Get current positions of all axes, or, optionally, a single axis"""
         if axis is None:
             return self.GetPos()
         return self.GetPosSingleAxis(axis)
@@ -53,6 +64,7 @@ class Tango(Stage):
 
     @staticmethod
     def translate_unit(unit):
+        """Translate English looking unit to unit code that Tango understands"""
         if (unit == 'Microsteps'):
             return 0
         elif (unit == 'um'):
@@ -76,6 +88,7 @@ class Tango(Stage):
 
     @staticmethod
     def translate_axis(axis):
+        """Translate an axis (x, y, z, a) to axis-code that Tango understands"""
         if (axis == 'x'):
             return 1
         elif (axis == 'y'):
@@ -95,6 +108,7 @@ class Tango(Stage):
     # 3) Check for error codes and raise exceptions
     # Note: error codes and explanations are in the Tango DLL documentation
     def ConnectSimple(self, interface_type, com_name, baud_rate, show_protocol):
+        """Wrapper for DLL function LSX_ConnectSimple"""
         #  com_name must be a bytes object, which we get by encoding as utf8
         if type(com_name) == str:
             com_name = com_name.encode('utf-8')
@@ -115,6 +129,7 @@ class Tango(Stage):
             assert return_value == 0, f'Tango.LSX_ConnectSimple returned {return_value}'
 
     def Disconnect(self):
+        """Wrapper for DLL function LSX_Disconnect"""
         try:
             return_value = tango_dll.LSX_Disconnect(ctypes.c_int(self.lsid))
         except Exception as e:
@@ -122,6 +137,7 @@ class Tango(Stage):
         assert return_value == 0, f'Tango.LSX_Disconnect returned {return_value}'
 
     def FreeLSID(self):
+        """Wrapper for DLL function LSX_FreeLSID"""
         try:
             return_value = tango_dll.LSX_FreeLSID(ctypes.c_int(self.lsid))
         except Exception as e:
@@ -129,6 +145,7 @@ class Tango(Stage):
         assert return_value == 0, f'Tango.LSX_FreeLSID returned {return_value}'
 
     def SetDimensions(self, x_dim, y_dim, z_dim, a_dim):
+        """Wrapper for DLL function LSX_SetDimensions"""
         try:
             return_value = tango_dll.LSX_SetDimensions(ctypes.c_int(self.lsid),
                                                        ctypes.c_int(x_dim),
@@ -140,6 +157,7 @@ class Tango(Stage):
         assert return_value == 0, f'Tango.LSX_SetDimensions returned {return_value}'
 
     def MoveAbsSingleAxis(self, axis_number, value, wait):
+        """Wrapper for DLL function LSX_MoveAbsSingleAxis"""
         try:
             return_value = tango_dll.LSX_MoveAbsSingleAxis(ctypes.c_int(self.lsid),
                                                            ctypes.c_int(axis_number),
@@ -150,6 +168,7 @@ class Tango(Stage):
         assert return_value == 0, f'Tango.LSX_MoveAbsSingleAxis returned {return_value}'
 
     def MoveRelSingleAxis(self, axis_number, value, wait):
+        """Wrapper for DLL function LSX_MoveRelSingleAxis"""
         try:
             return_value = tango_dll.LSX_MoveRelSingleAxis(ctypes.c_int(self.lsid),
                                                            ctypes.c_int(axis_number),
@@ -160,6 +179,7 @@ class Tango(Stage):
         assert return_value == 0, f'Tango.LSX_MoveRelSingleAxis returned {return_value}'
 
     def GetPos(self):
+        """Wrapper for DLL function LSX_GetPos"""
         x_pos = ctypes.c_double()
         y_pos = ctypes.c_double()
         z_pos = ctypes.c_double()
@@ -177,6 +197,7 @@ class Tango(Stage):
                 'z': z_pos.value, 'a': a_pos.value}
 
     def GetPosSingleAxis(self, axis_number):
+        """Wrapper for DLL function LSX_GetPosSingleAxis"""
         pos = ctypes.double()
         try:
             return_value = tango_dll.LSX_GetPosSingleAxis(ctypes.c_int(self.lsid),
@@ -187,7 +208,10 @@ class Tango(Stage):
         return pos.value
 
     def GetVel(self):
-        """Get target velocity of each axis"""
+        """Wrapper for DLL function LSX_GetVel
+        Returns axis velocities as they are set to move at, whether they are
+        moving now or not.
+        """
         x_velocity = ctypes.c_double()
         y_velocity = ctypes.c_double()
         z_velocity = ctypes.c_double()
@@ -205,7 +229,9 @@ class Tango(Stage):
                 'z': z_velocity.value, 'a': a_velocity.value}
 
     def IsVel(self):
-        """Get the actual velocities at which the axes are currently travelling"""
+        """Wrapper for DLL function LSX_IsVel
+        Gets the actual velocities at which the axes are currently travelling.
+        """
         x_velocity = ctypes.c_double()
         y_velocity = ctypes.c_double()
         z_velocity = ctypes.c_double()
@@ -223,7 +249,9 @@ class Tango(Stage):
                 'z': z_velocity.value, 'a': a_velocity.value}
 
     def SetVelSingleAxis(self, axis_number, velocity):
-        """Set single-axis target velocity"""
+        """Wrapper for DLL function LSX_SetVelSingleAxis
+        Set velocity a single axis is to move at, whether it is moving now or not.
+        """
         try:
             return_value = tango_dll.LSX_SetVelSingleAxis(ctypes.c_int(self.lsid),
                                                           ctypes.c_int(axis_number),
