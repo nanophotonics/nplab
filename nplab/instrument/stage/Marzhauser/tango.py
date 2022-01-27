@@ -22,7 +22,7 @@ class Tango(Stage):
         # Connect to Tango
         lsid = c_int()
         return_value = tango_dll.LSX_CreateLSID(byref(lsid))
-        assert return_value == 0, f'Tango.LSX_CreateLSID returned {return_value}'
+        assert return_value == 0, get_useful_error_message(return_value, 'LSX_CreateLSID')
         self.lsid = lsid.value
         self.ConnectSimple(-1, None, 57600, False)
 
@@ -82,13 +82,7 @@ class Tango(Stage):
                                                        c_bool(show_protocol))
         except Exception as e:
             raise Exception(f'Tango.LSX_ConnectSimple raised exception: {str(e)}')
-        if return_value == 4005:
-            raise Exception('Tango DLL raised error 4005: "Error while ' \
-                            'initializing interface." This can happen if ' \
-                            'you specify the wrong port, or other software ' \
-                            'is already be connected to the Tango.')
-        else:
-            assert return_value == 0, f'Tango.LSX_ConnectSimple returned {return_value}'
+        assert return_value == 0, get_useful_error_message(return_value, 'LSX_ConnectSimple')
 
     def Disconnect(self):
         """Wrapper for DLL function LSX_Disconnect"""
@@ -96,7 +90,7 @@ class Tango(Stage):
             return_value = tango_dll.LSX_Disconnect(c_int(self.lsid))
         except Exception as e:
             raise Exception(f'Tango.LSX_Disconnect raised exception: {str(e)}')
-        assert return_value == 0, f'Tango.LSX_Disconnect returned {return_value}'
+        assert return_value == 0, get_useful_error_message(return_value, 'LSX_Disconnect')
 
     def FreeLSID(self):
         """Wrapper for DLL function LSX_FreeLSID"""
@@ -104,7 +98,7 @@ class Tango(Stage):
             return_value = tango_dll.LSX_FreeLSID(c_int(self.lsid))
         except Exception as e:
             raise Exception(f'Tango.LSX_FreeLSID raised exception: {str(e)}')
-        assert return_value == 0, f'Tango.LSX_FreeLSID returned {return_value}'
+        assert return_value == 0, get_useful_error_message(return_value, 'LSX_FreeLSID')
 
     def SetDimensions(self, x_dim, y_dim, z_dim, a_dim):
         """Wrapper for DLL function LSX_SetDimensions"""
@@ -116,7 +110,7 @@ class Tango(Stage):
                                                        c_int(a_dim))
         except Exception as e:
             raise Exception(f'Tango.LSX_SetDimensions raised exception: {str(e)}')
-        assert return_value == 0, f'Tango.LSX_SetDimensions returned {return_value}'
+        assert return_value == 0, get_useful_error_message(return_value, 'LSX_SetDimensions')
 
     def MoveAbsSingleAxis(self, axis_number, value, wait):
         """Wrapper for DLL function LSX_MoveAbsSingleAxis"""
@@ -127,7 +121,7 @@ class Tango(Stage):
                                                            c_bool(wait))
         except Exception as e:
             raise Exception(f'Tango.LSX_MoveAbsSingleAxis raised exception: {str(e)}')
-        assert return_value == 0, f'Tango.LSX_MoveAbsSingleAxis returned {return_value}'
+        assert return_value == 0, get_useful_error_message(return_value, 'LSX_MoveAbsSingleAxis')
 
     def MoveRelSingleAxis(self, axis_number, value, wait):
         """Wrapper for DLL function LSX_MoveRelSingleAxis"""
@@ -138,7 +132,7 @@ class Tango(Stage):
                                                            c_bool(wait))
         except Exception as e:
             raise Exception(f'Tango.LSX_MoveRelSingleAxis raised exception: {str(e)}')
-        assert return_value == 0, f'Tango.LSX_MoveRelSingleAxis returned {return_value}'
+        assert return_value == 0, get_useful_error_message(return_value, 'LSX_MoveRelSingleAxis')
 
     def GetPos(self):
         """Wrapper for DLL function LSX_GetPos"""
@@ -154,7 +148,7 @@ class Tango(Stage):
                                                 byref(a_pos))
         except Exception as e:
             raise Exception(f'Tango.LSX_GetPos raised exception: {str(e)}')
-        assert return_value == 0, f'Tango.LSX_GetPos returned {return_value}'
+        assert return_value == 0, get_useful_error_message(return_value, 'LSX_GetPos')
         return {'x': x_pos.value, 'y': y_pos.value,
                 'z': z_pos.value, 'a': a_pos.value}
 
@@ -166,7 +160,7 @@ class Tango(Stage):
                                                           byref(pos))
         except Exception as e:
             raise Exception(f'Tango.LSX_GetPosSingleAxis raised exception: {str(e)}')
-        assert return_value == 0, f'Tango.LSX_GetPosSingleAxis returned {return_value}'
+        assert return_value == 0, get_useful_error_message(return_value, 'LSX_GetPosSingleAxis')
         return pos.value
 
     def GetVel(self):
@@ -186,7 +180,7 @@ class Tango(Stage):
                                                 byref(a_velocity))
         except Exception as e:
             raise Exception(f'Tango.LSX_GetVel raised exception: {str(e)}')
-        assert return_value == 0, f'Tango.LSX_GetVel returned {return_value}'
+        assert return_value == 0, get_useful_error_message(return_value, 'LSX_GetVel')
         return {'x': x_velocity.value, 'y': y_velocity.value,
                 'z': z_velocity.value, 'a': a_velocity.value}
 
@@ -206,7 +200,7 @@ class Tango(Stage):
                                                byref(a_velocity))
         except Exception as e:
             raise Exception(f'Tango.LSX_IsVel raised exception: {str(e)}')
-        assert return_value == 0, f'Tango.LSX_IsVel returned {return_value}'
+        assert return_value == 0, get_useful_error_message(return_value, 'LSX_IsVel')
         return {'x': x_velocity.value, 'y': y_velocity.value,
                 'z': z_velocity.value, 'a': a_velocity.value}
 
@@ -220,7 +214,7 @@ class Tango(Stage):
                                                           c_double(velocity))
         except Exception as e:
             raise Exception(f'Tango.LSX_SetVelSingleAxis raised exception: {str(e)}')
-        assert return_value == 0, f'Tango.LSX_SetVelSingleAxis returned {return_value}'
+        assert return_value == 0, get_useful_error_message(return_value, 'LSX_SetVelSingleAxis')
 
 # =============================================================================
 # ============================== Module functions =============================
@@ -261,6 +255,54 @@ def translate_axis(axis):
         return 4
     else:
         raise Exception(f'Tried to translate unknown axis: {axis}')
+
+
+#  Error codes from Tango DLL have explanations in the documentation
+#  If you learn anything helpful about an error, add it in (e.g. error 4005)
+#  These are labelled "DLL Error Messages", but there are also "Tango Error
+#  Messages" in the docs. I don't know when those might arise.
+tango_error_strings = {
+    4001: 'internal error',
+    4002: 'internal error',
+    4003: 'function call with wrong LSID value or maximum of 8 open connections reached',
+    4004: 'Unknown interface type (may appear with Connect...)',
+    4005: """Error while initializing interface
+    Dev comment: This can happen if you specify the wrong port, or other software is already be connected to the Tango.""",
+    4006: 'No connection with controller (e.g. if SetPitch is called before Connect)',
+    4007: 'Timeout while reading from interface',
+    4008: 'Error during command transmission to Tango controller',
+    4009: 'Command aborted (with SetAbortFlag)',
+    4010: 'Command is not supported by Tango controller',
+    4011: 'Manual Joystick mode switched on (may appear with SetJoystickOn/Off)',
+    4012: 'No move command possible, because manual joystick enabled',
+    4013: 'Closed Loop Controller Timeout (could not settle within target window)',
+    #  No reference to code 4014 in docs
+    4015: 'Limit switch activated in travel direction',
+    4016: 'Repeated vector start!! (Closed Loop controller)',
+    4017: 'Error while calibrating (Limit switch not correctly released)',
+    #  Docs have a visual gap here but don't say why
+    4101: 'No valid axis name',
+    4102: 'No executable instruction',
+    4103: 'Too many characters in command line',
+    4104: 'Invalid instruction',
+    4105: 'Number is not inside allowed range',
+    4106: 'Wrong number of parameters',
+    4107: 'Either ! or ? is missing',
+    4108: 'No TVR possible, while axis active',
+    4109: '-', #  Yes, that is what the docs say
+    4110: 'Function not configured',
+    4111: '-', #  Yes, that is what the docs say
+    4112: 'Limit switch active',
+    4113: 'Function not executable, because encoder detected'
+}
+
+
+def get_useful_error_message(error_code, function_name=None):
+    """Generate an error message with a useful explanation."""
+    error_string = tango_error_strings[error_code]
+    if function_name is None:
+        return f'Tango DLL returned error code {error_code}: {error_string}'
+    return f'Tango.{function_name} returned error code {error_code}: {error_string}'
 
 
 # =============================================================================
