@@ -33,7 +33,7 @@ class Tango(Stage):
         self.Disconnect()
         self.FreeLSID()
 
-    def move(self, pos, axis, relative=False):
+    def move(self, pos, axis=None, relative=False):
         """Move the stage along a single axis"""
         if axis not in self.axis_names:
             raise f'{axis} is not a valid axis, must be one of {self.axis_names}'
@@ -69,7 +69,6 @@ class Tango(Stage):
                 self.SetVelSingleAxis(translate_axis(axis_name), velocity)
         else:
             self.SetVelSingleAxis(translate_axis(axis), velocity)
-
 
     # ============== Wrapped DLL Functions ==============
     # The following functions directly correspond to Tango DLL functions
@@ -166,6 +165,7 @@ class Tango(Stage):
         pos = c_double()
         try:
             return_value = tango_dll.LSX_GetPosSingleAxis(c_int(self.lsid),
+                                                          c_int(axis_number),
                                                           byref(pos))
         except Exception as e:
             raise Exception(f'Tango.LSX_GetPosSingleAxis raised exception: {str(e)}')
@@ -225,6 +225,7 @@ class Tango(Stage):
             raise Exception(f'Tango.LSX_SetVelSingleAxis raised exception: {str(e)}')
         assert return_value == 0, get_useful_error_message(return_value, 'LSX_SetVelSingleAxis')
 
+
 # =============================================================================
 # ============================== Module functions =============================
 # =============================================================================
@@ -276,7 +277,7 @@ tango_error_strings = {
     4003: 'function call with wrong LSID value or maximum of 8 open connections reached',
     4004: 'Unknown interface type (may appear with Connect...)',
     4005: """Error while initializing interface
-    Dev comment: This can happen if you specify the wrong port, or other software is already be connected to the Tango.""",
+    Dev comment: This can happen if you specify the wrong port, or other software is already connected to the Tango.""",
     4006: 'No connection with controller (e.g. if SetPitch is called before Connect)',
     4007: 'Timeout while reading from interface',
     4008: 'Error during command transmission to Tango controller',
@@ -285,11 +286,11 @@ tango_error_strings = {
     4011: 'Manual Joystick mode switched on (may appear with SetJoystickOn/Off)',
     4012: 'No move command possible, because manual joystick enabled',
     4013: 'Closed Loop Controller Timeout (could not settle within target window)',
-    #  No reference to code 4014 in docs
+    # No reference to code 4014 in docs
     4015: 'Limit switch activated in travel direction',
     4016: 'Repeated vector start!! (Closed Loop controller)',
     4017: 'Error while calibrating (Limit switch not correctly released)',
-    #  Docs have a visual gap here but don't say why
+    # Docs have a visual gap here but don't say why
     4101: 'No valid axis name',
     4102: 'No executable instruction',
     4103: 'Too many characters in command line',
@@ -298,9 +299,9 @@ tango_error_strings = {
     4106: 'Wrong number of parameters',
     4107: 'Either ! or ? is missing',
     4108: 'No TVR possible, while axis active',
-    4109: '-', #  Yes, that is what the docs say
+    4109: '-',  # Yes, that is what the docs say
     4110: 'Function not configured',
-    4111: '-', #  Yes, that is what the docs say
+    4111: '-',  # Yes, that is what the docs say
     4112: 'Limit switch active',
     4113: 'Function not executable, because encoder detected'
 }
