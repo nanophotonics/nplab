@@ -138,7 +138,7 @@ class Tango(Stage):
         try:
             return_value = tango_dll.LSX_ConnectSimple(ctypes.c_int(self.lsid),
                                                        ctypes.c_int(interface_type),
-                                                       com_name),
+                                                       com_name,
                                                        ctypes.c_int(baud_rate),
                                                        ctypes.c_bool(show_protocol))
         except Exception as e:
