@@ -4,43 +4,6 @@ import ctypes
 import sys
 import os
 
-# Load the Tango DLL
-system_bits = '64' if (sys.maxsize > 2**32) else '32'
-path_here = os.path.dirname(__file__)
-tango_dll = ctypes.cdll.LoadLibrary(f'{path_here}/DLL/{system_bits}/Tango_DLL.dll')
-
-# Set arg types for all dll functions we call
-# LSID: Used to tell the DLL which Tango we are sending a command to
-# The DLL can have up to 8 simultaneously connected Tangos
-tango_dll.LSX_CreateLSID.argtypes = [ctypes.POINTER(ctypes.c_int)]
-tango_dll.LSX_ConnectSimple.argtypes = [ctypes.c_int, ctypes.c_int,
-                                        ctypes.c_char_p,
-                                        ctypes.c_int, ctypes.c_bool]
-tango_dll.LSX_Disconnect.argtypes = [ctypes.c_int]
-tango_dll.LSX_FreeLSID.argtypes = [ctypes.c_int]
-tango_dll.LSX_SetDimensions.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int,
-                                        ctypes.c_int, ctypes.c_int]
-tango_dll.LSX_MoveRelSingleAxis.argtypes = [ctypes.c_int, ctypes.c_int,
-                                            ctypes.c_double, ctypes.c_bool]
-tango_dll.LSX_MoveAbsSingleAxis.argtypes = [ctypes.c_int, ctypes.c_int,
-                                            ctypes.c_double, ctypes.c_bool]
-tango_dll.LSX_GetPos.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.c_double),
-                                 ctypes.POINTER(ctypes.c_double),
-                                 ctypes.POINTER(ctypes.c_double),
-                                 ctypes.POINTER(ctypes.c_double)]
-tango_dll.LSX_GetPosSingleAxis.argtypes = [ctypes.c_int, ctypes.c_int,
-                                           ctypes.POINTER(ctypes.c_double)]
-tango_dll.LSX_GetVel.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.c_double),
-                                 ctypes.POINTER(ctypes.c_double),
-                                 ctypes.POINTER(ctypes.c_double),
-                                 ctypes.POINTER(ctypes.c_double)]
-tango_dll.LSX_IsVel.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.c_double),
-                                ctypes.POINTER(ctypes.c_double),
-                                ctypes.POINTER(ctypes.c_double),
-                                ctypes.POINTER(ctypes.c_double)]
-tango_dll.LSX_SetVelSingleAxis.argtypes = [ctypes.c_int, ctypes.c_int,
-                                           ctypes.c_double]
-
 
 class Tango(Stage):
     def __init__(self, unit='u'):
@@ -268,3 +231,43 @@ class Tango(Stage):
         except Exception as e:
             raise Exception(f'Tango.LSX_SetVelSingleAxis raised exception: {str(e)}')
         assert return_value == 0, f'Tango.LSX_SetVelSingleAxis returned {return_value}'
+
+
+# =============================================================================
+# =============================== Import the DLL ==============================
+# =============================================================================
+system_bits = '64' if (sys.maxsize > 2**32) else '32'
+path_here = os.path.dirname(__file__)
+tango_dll = ctypes.cdll.LoadLibrary(f'{path_here}/DLL/{system_bits}/Tango_DLL.dll')
+
+# Set arg types for all dll functions we call
+# LSID: Used to tell the DLL which Tango we are sending a command to
+# The DLL can have up to 8 simultaneously connected Tangos
+tango_dll.LSX_CreateLSID.argtypes = [ctypes.POINTER(ctypes.c_int)]
+tango_dll.LSX_ConnectSimple.argtypes = [ctypes.c_int, ctypes.c_int,
+                                        ctypes.c_char_p,
+                                        ctypes.c_int, ctypes.c_bool]
+tango_dll.LSX_Disconnect.argtypes = [ctypes.c_int]
+tango_dll.LSX_FreeLSID.argtypes = [ctypes.c_int]
+tango_dll.LSX_SetDimensions.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int,
+                                        ctypes.c_int, ctypes.c_int]
+tango_dll.LSX_MoveRelSingleAxis.argtypes = [ctypes.c_int, ctypes.c_int,
+                                            ctypes.c_double, ctypes.c_bool]
+tango_dll.LSX_MoveAbsSingleAxis.argtypes = [ctypes.c_int, ctypes.c_int,
+                                            ctypes.c_double, ctypes.c_bool]
+tango_dll.LSX_GetPos.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.c_double),
+                                 ctypes.POINTER(ctypes.c_double),
+                                 ctypes.POINTER(ctypes.c_double),
+                                 ctypes.POINTER(ctypes.c_double)]
+tango_dll.LSX_GetPosSingleAxis.argtypes = [ctypes.c_int, ctypes.c_int,
+                                           ctypes.POINTER(ctypes.c_double)]
+tango_dll.LSX_GetVel.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.c_double),
+                                 ctypes.POINTER(ctypes.c_double),
+                                 ctypes.POINTER(ctypes.c_double),
+                                 ctypes.POINTER(ctypes.c_double)]
+tango_dll.LSX_IsVel.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.c_double),
+                                ctypes.POINTER(ctypes.c_double),
+                                ctypes.POINTER(ctypes.c_double),
+                                ctypes.POINTER(ctypes.c_double)]
+tango_dll.LSX_SetVelSingleAxis.argtypes = [ctypes.c_int, ctypes.c_int,
+                                           ctypes.c_double]
