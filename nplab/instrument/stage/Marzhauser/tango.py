@@ -34,6 +34,12 @@ tango_dll.LSX_GetVel.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.c_double),
                                  ctypes.POINTER(ctypes.c_double),
                                  ctypes.POINTER(ctypes.c_double),
                                  ctypes.POINTER(ctypes.c_double)]
+tango_dll.LSX_IsVel.argtypes = [ctypes.c_int, ctypes.POINTER(ctypes.c_double),
+                                ctypes.POINTER(ctypes.c_double),
+                                ctypes.POINTER(ctypes.c_double),
+                                ctypes.POINTER(ctypes.c_double)]
+tango_dll.LSX_SetVelSingleAxis.argtypes = [ctypes.c_int, ctypes.c_int,
+                                           ctypes.c_double]
 
 
 class Tango(Stage):
@@ -218,6 +224,7 @@ class Tango(Stage):
         return pos.value
 
     def GetVel(self):
+        """Get target velocity of each axis"""
         x_velocity = ctypes.c_double()
         y_velocity = ctypes.c_double()
         z_velocity = ctypes.c_double()
@@ -233,3 +240,31 @@ class Tango(Stage):
         assert return_value == 0, f'Tango.LSX_GetVel returned {return_value}'
         return {'x': x_velocity.value, 'y': y_velocity.value,
                 'z': z_velocity.value, 'a': a_velocity.value}
+
+    def IsVel(self):
+        """Get the actual velocities at which the axes are currently travelling"""
+        x_velocity = ctypes.c_double()
+        y_velocity = ctypes.c_double()
+        z_velocity = ctypes.c_double()
+        a_velocity = ctypes.c_double()
+        try:
+            return_value = tango_dll.LSX_IsVel(ctypes.c_int(self.lsid),
+                                                ctypes.byref(x_velocity),
+                                                ctypes.byref(y_velocity),
+                                                ctypes.byref(z_velocity),
+                                                ctypes.byref(a_velocity))
+        except Exception as e:
+            raise Exception(f'Tango.LSX_IsVel raised exception: {str(e)}')
+        assert return_value == 0, f'Tango.LSX_IsVel returned {return_value}'
+        return {'x': x_velocity.value, 'y': y_velocity.value,
+                'z': z_velocity.value, 'a': a_velocity.value}
+
+    def SetVelSingleAxis(self, axis_number, velocity):
+        """Set single-axis target velocity"""
+        try:
+            return_value = tango_dll.LSX_SetVelSingleAxis(ctypes.c_int(self.lsid),
+                                                          ctypes.c_int(axis_number),
+                                                          ctypes.c_double(velocity))
+        except Exception as e:
+            raise Exception(f'Tango.LSX_SetVelSingleAxis raised exception: {str(e)}')
+        assert return_value == 0, f'Tango.LSX_SetVelSingleAxis returned {return_value}'
