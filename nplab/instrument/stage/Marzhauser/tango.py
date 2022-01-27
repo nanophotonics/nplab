@@ -37,7 +37,7 @@ class Tango(Stage):
         """Move the stage along a single axis"""
         if axis not in self.axis_names:
             raise f'{axis} is not a valid axis, must be one of {self.axis_names}'
-        axis_number = self.translate_axis(axis)
+        axis_number = translate_axis(axis)
         if relative:
             self.MoveRelSingleAxis(axis_number, pos, True)
         else:
@@ -59,7 +59,7 @@ class Tango(Stage):
 
     def set_units(self, unit):
         """Sets all dimensions to the desired unit"""
-        unit_code = Tango.translate_unit(unit)
+        unit_code = translate_unit(unit)
         self.SetDimensions(unit_code, unit_code, unit_code, unit_code)
 
     # ============== Wrapped DLL Functions ==============
