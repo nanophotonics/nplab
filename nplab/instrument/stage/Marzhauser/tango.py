@@ -62,6 +62,15 @@ class Tango(Stage):
         unit_code = translate_unit(unit)
         self.SetDimensions(unit_code, unit_code, unit_code, unit_code)
 
+    def set_velocity(self, velocity, axis=None):
+        """Set velocity for all axes or, optionally, a specified axis"""
+        if axis is None:
+            for axis_name in self.axis_names:
+                self.SetVelSingleAxis(translate_axis(axis_name), velocity)
+        else:
+            self.SetVelSingleAxis(translate_axis(axis), velocity)
+
+
     # ============== Wrapped DLL Functions ==============
     # The following functions directly correspond to Tango DLL functions
     # As much as possible, they should present Python-like interfaces:
