@@ -57,9 +57,14 @@ class Tango(Stage):
     def is_moving(self, axes=None):
         """Returns True if any of the specified axes are in motion."""
         velocities = self.IsVel()
-        for velocity in velocities.values():
-            if velocity != 0:
-                return True
+        if axes is not None:
+            for axis in axes:
+                if velocities[axis] != 0:
+                    return True
+        else:
+            for velocity in velocities.values():
+                if velocity != 0:
+                    return True
         return False
 
     def set_units(self, unit):
