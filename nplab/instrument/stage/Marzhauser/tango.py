@@ -78,7 +78,7 @@ class Tango(Stage):
     # ============== Wrapped DLL Functions ==============
     # The following functions directly correspond to Tango DLL functions
     # As much as possible, they should present Python-like interfaces:
-    # 1) Accept and return Python variables, not ctype types
+    # 1) Accept and return Python variables, not ctypes types
     # 2) Return values rather than set them to referenced variables
     # 3) Check for error codes and raise exceptions
     # Note: error codes and explanations are in the Tango DLL documentation
