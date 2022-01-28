@@ -15,7 +15,7 @@ class Tango(Stage):
     Originally written for a Tango 3 Desktop 3-axis stage. The Tango DLL looks
     valid for all Tango stages, so hopefully this class works for others too.
     """
-    def __init__(self, unit='u'):
+    def __init__(self, unit='u', com_name=None):
         Instrument.__init__(self)
         self.unit = unit
 
@@ -24,7 +24,12 @@ class Tango(Stage):
         return_value = tango_dll.LSX_CreateLSID(byref(lsid))
         assert return_value == 0, get_useful_error_message(return_value, 'LSX_CreateLSID')
         self.lsid = lsid.value
-        self.ConnectSimple(-1, None, 57600, False)
+        if com_name is None:
+            # Connect to the first Tango found on USB or PCI
+            self.ConnectSimple(-1, None, 57600, False)
+        else:
+            # Connect to Tango on a specified port
+            self.ConnectSimple(1, com_name, 57600, False)
 
         self.set_units(unit)
 
