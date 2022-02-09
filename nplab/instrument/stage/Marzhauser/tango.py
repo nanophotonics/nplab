@@ -243,7 +243,7 @@ def translate_unit(unit):
     """Translate English looking unit to unit code that Tango understands"""
     if unit == 'Microsteps':
         return 0
-    elif unit == 'um':
+    elif unit == 'um' or unit == 'u':
         return 1
     elif unit == 'mm':
         return 2
