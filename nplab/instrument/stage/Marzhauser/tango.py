@@ -67,6 +67,10 @@ class Tango(Stage):
                     return True
         return False
 
+    @property
+    def position(self):
+        return self.get_position()
+
     def set_units(self, unit):
         """Sets all dimensions to the desired unit"""
         unit_code = translate_unit(unit)
@@ -167,8 +171,7 @@ class Tango(Stage):
         except Exception as e:
             raise Exception(f'Tango.LSX_GetPos raised exception: {str(e)}')
         assert return_value == 0, get_useful_error_message(return_value, 'LSX_GetPos')
-        return {'x': x_pos.value, 'y': y_pos.value,
-                'z': z_pos.value, 'a': a_pos.value}
+        return x_pos.value, y_pos.value, z_pos.value, a_pos.value
 
     def GetPosSingleAxis(self, axis_number):
         """Wrapper for DLL function LSX_GetPosSingleAxis"""
