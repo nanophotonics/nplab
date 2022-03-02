@@ -60,7 +60,8 @@ for spec in stack:
 
 averages = {
     group: Spectrum(np.mean(spectra, axis=0), wl)
-    for group, spectra in grouped.items()
+    if spectra else Spectrum(np.zeros(len(wl)), wl)
+    for group, spectra in grouped.items() 
 }
 #%% plot
 fig, ax = plt.subplots()
