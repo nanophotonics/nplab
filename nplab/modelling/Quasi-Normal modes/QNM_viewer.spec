@@ -5,7 +5,7 @@ block_cipher = None
 
 
 a = Analysis(['QNM_viewer.py'],
-             pathex=['C:\\Users\\Eoin\\Documents\\GitHub\\nplab\\nplab\\modelling\\Quasi-Normal modes'],
+             pathex=[],
              binaries=[],
              datas=[('geometries', 'geometries'), ('mim/binaries', 'mim/binaries')],
              hiddenimports=[],

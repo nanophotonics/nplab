@@ -90,11 +90,10 @@ class LorentzGraphWidget(pg.PlotWidget):
             self.plot_item.removeItem(self.plots_to_remove.pop())
 
         xs = np.linspace(*self.xlim_func(), self.resolution)  # x axis changes
-        ys = np.zeros((len(self.modes), self.resolution))
+        _sum = np.zeros(len(xs))
         for i, (name, mode) in enumerate(self.modes.items()):
             y = mode['Lorentz'](xs)
-            
-            ys[i] = y
+            _sum += y
             wl, eff = mode['annotate']()
             label = f'{name}, wl={round(wl)}nm, efficiency={np.around(eff, 2)}'
             self._plot(xs,
@@ -105,7 +104,7 @@ class LorentzGraphWidget(pg.PlotWidget):
                                     width=5),
                        name=label,
                        remove=remove)
-        self._plot(xs, (ys**2 / ys.sum(axis=0)).sum(axis=0),
+        self._plot(xs, _sum,
                    pen=pg.mkPen(color=pg.mkColor(
                        (0, 0, 0, 100 + 155 * remove)),
                                 width=5,
