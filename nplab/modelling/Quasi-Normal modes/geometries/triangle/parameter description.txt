@@ -1,11 +1,11 @@
 f: facet fraction.
 
 Analoguous to the ratio of facet diameter to spherical nanoparticle diameter.
-$f = fs/(2\sqrt3 a)$,
+$f = (fs/a)*(3^(1/4))/(2*sqrt(2(1+sqrt(2)))),
 where a is Rhombicuboctohedral side length, and fs is the facet side length.
 This definition was chosen to preserve the ratio of areas on the facet to the middle 
 cross-section of the nanoparticle in the spherical and rhombicuboctohedral cases.
-for a regular rhombicuboctohedron, use $\frac{\sqrt[4]{3}}{2\sqrt{2(1+\sqrt{2})}} \simeq 0.3$
+for a regular rhombicuboctohedron, use (3^(1/4))/(2*sqrt(2(1+sqrt(2)))) ~ 0.3$
     Range: 0.15 - 0.6
 ---------------------------------------------------------------------------
 D (nm): roughly equivalent to Diameter.

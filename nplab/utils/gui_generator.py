@@ -355,7 +355,10 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
             self.terminalWindow.run_script(scriptname)
         else:
             self._logger.debug('Running %s' % os.path.join(self.scripts_path, scriptname))
-            runfile(scriptname, current_namespace=True)
+            try:
+                runfile(scriptname, current_namespace=True)
+            except Exception as e:
+                print(e)
             # exec(open(os.path.join(self.scripts_path, scriptname)).read())
             
     def VerboseChanged(self, action):
