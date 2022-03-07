@@ -199,6 +199,7 @@ class Iris(Instrument):
         xi.lib.set_engine_settings(self.device_id, byref(eng))
         self.set_speed(500_000)
         xi.lib.command_homezero(self.device_id)
+        self._wait()
         self.close_fully()
         self.open_fully()
         
@@ -212,40 +213,44 @@ class Iris(Instrument):
         rang = sst.TravelRange
         return rang
     
-    def close_fully(self):
-        self._close_fully()
-        self._wait()
         
     def _close_fully(self):
         xi.lib.command_left(self.device_id)
-        self._close_pos = self.get_position() # open, closed
-        self._open_fraction = 0
         
     def _open_fully(self):
         xi.lib.command_right(self.device_id)
-        self._open_pos = self.get_position()
-        self._open_fraction = 1.
+        
+    def close_fully(self):
+        self._close_fully()
+        self._wait()
+        self._close_pos = self.get_position() # open, closed    
+        self._close_fraction = 1
         
     def open_fully(self):
         self._open_fully()
         self._wait()
+        self._close_fraction = 0
+        self._open_pos = self.get_position()
+        
     
     def close_partially(self, frac):
         try:
-            self.set_position(*(int((o - c)*frac + c) for c, o in zip(self._close_pos, self._open_pos)))
-            self._open_fraction = frac
+            self.set_position(*(int((c - o)*frac + o) for c, o in zip(self._close_pos, self._open_pos)))
+            self._close_fraction = frac
         except AttributeError:
             self.log('must close fully before partially to calibrate range', level='warn')
     def open_partially(self, frac):
         self.close_partially(1-frac)
         
+    def get_close_fraction(self):
+        return self._close_fraction
+    
     def get_open_fraction(self):
-        return self._open_fraction
+        return 1 - self.get_close_fraction()
     
     open_fraction = NotifiedProperty(get_open_fraction, open_partially)
         
     
-        
     def set_position(self, pos, upos):
         xi.lib.command_move(self.device_id, pos, upos)
         self._wait()
@@ -293,8 +298,11 @@ class Iris(Instrument):
 
     def _close(self):
         xi.lib.close_device(byref(xi.cast(self.device_id, POINTER(c_int))))
+        
     def get_qt_ui(self):
         return IrisGui(self)
+    
+    
 class IrisGui(QuickControlBox):
     def __init__(self, iris):
         self.iris = iris
