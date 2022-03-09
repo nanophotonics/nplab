@@ -562,7 +562,9 @@ def extractAllSpectra(rootDir, returnIndividual = True, pl = False, dodgyThresho
                         x = zScan.attrs['wavelengths']
                         bg = zScan.attrs['background']
                         ref = zScan.attrs['reference']
-
+                        ref -= bg
+                        ref = np.where(ref != 0, ref, 1)
+                        
                     except:
                         print('Z-Stack not found in %s' % (groupName))
                         cancelled += 1
