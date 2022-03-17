@@ -14,10 +14,10 @@ from nplab.utils.notified_property import NotifiedProperty
 from nplab.utils.thread_utils import locked_action
 from nplab.ui.ui_tools import QuickControlBox
 
-from thorlabs_tsi_sdk.tl_camera import TLCameraSDK
-from thorlabs_tsi_sdk.tl_camera_enums import SENSOR_TYPE
-from thorlabs_tsi_sdk.tl_mono_to_color_processor import MonoToColorProcessorSDK
-
+from nplab.instrument.camera.thorlabs.thorlabs_tsi_sdk.tl_camera import TLCameraSDK
+from nplab.instrument.camera.thorlabs.thorlabs_tsi_sdk.tl_camera_enums import SENSOR_TYPE
+from nplab.instrument.camera.thorlabs.thorlabs_tsi_sdk.tl_mono_to_color_processor import MonoToColorProcessorSDK
+import numpy as np
 
 
 dll_path = Path(__file__).parent / 'dlls'
@@ -62,14 +62,14 @@ class Kiralux(Camera):
     disarmed_properties = ('roi', 'binx', 'biny', 'frames_per_trigger_zero_for_unlimited')
     # properties that need the camera to be disarmed to set - there may be more.
     notified_properties = ('gain',) # properties that are in the gui
-    def __init__(self):
+    def __init__(self, square_image=False):
         super().__init__()
         self._sdk = TLCameraSDK()
         self._camera = self._sdk.open_camera(self._sdk.discover_available_cameras()[0])
         
         if self._camera.camera_sensor_type != SENSOR_TYPE.BAYER:
             # Sensor type is not compatible with the color processing library
-            self.process_frame = lambda f: f # no processing for grey images
+            process_frame = lambda f: np.asarray(f) # no processing for grey images
         else:
             self._mono_to_color_sdk = MonoToColorProcessorSDK()
             self._image_width = self._camera.image_width_pixels
@@ -81,7 +81,11 @@ class Kiralux(Camera):
                 self._camera.get_default_white_balance_matrix(),
                 self._camera.bit_depth
             )
-            self.process_frame = self.process_color_frame
+            process_frame = self.process_color_frame
+        if square_image:
+           self.process_frame = lambda f: self.make_square(process_frame(f)) 
+        else:
+            self.process_frame = process_frame
         self._bit_depth = self._camera.bit_depth
         self._camera.image_poll_timeout_ms = 0  
         self._populate_properties()
@@ -137,12 +141,19 @@ class Kiralux(Camera):
             pass
         return f
     
-    def process_color_frame(self, frame):
+    def process_color_frame(self, frame, square_image=False):
         color_image_data = self._mono_to_color_processor.transform_to_24(frame.image_buffer,
                                                                               self._image_width,
                                                                           self._image_height)
         color_image_data = color_image_data.reshape(self._image_height, self._image_width, 3)
-        return color_image_data
+        # return color_image_data
+        return color_image_data[::-1, ::-1, :]
+
+    
+    def make_square(self, color_image_data):
+        dif = (self._image_width - self._image_height)//2 
+        return color_image_data[:, dif:self._image_width-dif,:]
+         
     
     def raw_snapshot(self):
         if not self.live_view:
@@ -162,7 +173,8 @@ class Kiralux(Camera):
             # decorator should trigger as self.live_view == True
         else:
             self.frames_per_trigger_zero_for_unlimited = 1 # disarms and rearms
-            
+    # def color_image(self, **kwargs):
+        
     def get_control_widget(self):
         "Get a Qt widget with the camera's controls (but no image display)"
         return KiraluxCameraControlWidget(self)
