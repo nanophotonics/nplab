@@ -5,6 +5,7 @@ import numpy as np
 from pathlib import Path
 import h5py
 from scipy.ndimage import gaussian_filter
+from scipy.signal import savgol_filter
 from functools import cached_property
 
 
@@ -93,6 +94,9 @@ class Spectrum(np.ndarray):
     def smooth(self, sigma):
         '''smooth using scipy.ndimage.guassian_smooth'''
         return self.__class__(gaussian_filter(self, sigma), self.x)
+    
+    def savgol_smooth(self, *args, **kwargs):
+        return self.__class__(savgol_filter(self, *args, **kwargs), self.x)
     
     def remove_cosmic_ray(self,
                           thresh=5,
