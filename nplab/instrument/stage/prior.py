@@ -54,8 +54,19 @@ class ProScan(serial.SerialInstrument, stage.Stage):
         self.use_si_units = use_si_units
         self.axis_names = ('x', 'y', 'z')
         
-    def move_rel(self, dx, block=True):
+    def move_rel(self, dx, block=True, ignore_zlim=False):
         """Make a relative move by dx microns/metres (see move)"""
+        """Add a few safety lines to avoid accidentally making a large move in z axis"""
+        
+        if abs(dx[-1]) >= 5 and ignore_zlim is False:
+            raise Exception('Be careful of moving a large distance in z direction (The objective may crash to the sample!!!);\n' 
+                            'Set (ignore_zlim = True) to release the limitation')
+        elif abs(dx[-1]) > 50:
+            answer= input('Are you sure to move such a large distance? Y/N:')
+            if answer=='Y':
+                pass
+            else:
+                raise Exception('Please double check the moving distance!')
         return self.move(dx, relative=True, block=block)
 
     def move(self, x, relative=False, axis=None, block=True):
