@@ -108,11 +108,10 @@ def make_graph_widget(folder):
     def xlim_func():
         reals = [mode['real'](f, D, t, n) for mode in modes.values()]
         return min(reals) * 0.8, max(reals) * 1.1
-    degeneracies = json.load(open(folder / 'degeneracies.json'))
-    degeneracies = {k+' mode': v for k, v in degeneracies.items()}
+
+
     return GraphWithPinAndClearButtons(modes,
                                        xlim_func,
-                                       degeneracies=degeneracies,
                                        resolution=100,
                                        title=folder.stem,                                      
                                        )
@@ -125,7 +124,7 @@ if __name__ == '__main__':
         app = QApplication([])
     app.setStyleSheet(qdarkstyle.load_stylesheet())
 
-    f = Parameter('Facet', 0.3, Min=0.1, Max=0.4)
+    f = Parameter('Facet', 0.3, Min=0.15, Max=0.6)
     D = Parameter('Diameter', 80., Min=40, Max=100, units='nm')
     t = Parameter('gap thickness', 1., Min=0.75, Max=6., units='nm')
     n = Parameter(

@@ -129,8 +129,8 @@ class CameraWithLocation(Instrument):
     @staticmethod
     def crop_centered(image, size=(100,100)):
         if size is None: return image
-        return image[image.shape[0]//2-size[0]//2:image.shape[0]//2)+size[0]//2,
-                     image.shape[1]//2-size[1]//2:image.shape[1]//2)+size[1]//2]
+        return image[image.shape[0]//2-size[0]//2:image.shape[0]//2+size[0]//2,
+                     image.shape[1]//2-size[1]//2:image.shape[1]//2+size[1]//2]
     
     def thumb_image(self, size=(100,100)):
         """Return a cropped "thumb" from the CWL with size  """

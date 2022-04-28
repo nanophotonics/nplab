@@ -13,8 +13,8 @@ import sys
 import numpy as np 
 from nplab.instrument.serial_instrument import SerialInstrument
 from nplab.instrument.stage import Stage
-from nplab.utils.gui import *
-from nplab.ui.ui_tools import *
+# from nplab.utils.gui import *
+from nplab.ui.ui_tools import QuickControlBox
 import time
 from nplab.utils.notified_property import NotifiedProperty
 
@@ -436,6 +436,7 @@ class ELL20UI(QuickControlBox):
 
     def __init__(self, stage):
         super().__init__()
+        
         self.add_doublespinbox('position', 0, stage.TRAVEL)
         self.auto_connect_by_name(controlled_object=stage)   
 

@@ -32,7 +32,7 @@ class MonotonousImageExcluder():
     def __init__(self,
                  scan,
                  image_name='CWL.thumb_image_0',
-                 exclusion_radius=13,
+                 exclusion_radius=13, #pixels
                  sigma=2):
         self.scan = scan
         self.image_name = image_name
@@ -76,7 +76,7 @@ class MonotonousImageExcluder():
                 rejected.add(name)
 
             if plot:
-                fig, axs = plt.subplots(1, 3)
+                fig, axs = plt.subplots(1, 3, figsize=(9,3), dpi=80)
                 status = 'rejected' if len(maxima) else 'accepted'
                 fig.suptitle(f'{name}, {status}')
                 axs[0].imshow(cv2.circle(im[()], com, 13, (255, 255, 255), 1))
