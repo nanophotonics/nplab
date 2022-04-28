@@ -36,7 +36,7 @@ class Raman_Spectrum(object):
         self.ramanIntensities = ramanIntensities
         self.absRamanIntensities = absRamanIntensities
 
-def extractRamanSpc(path, bg_path = False, combine_statics = False):
+def extractRamanSpc(path, bg_path = False, combine_statics = False, encoding = 'utf-8'):
     '''Takes all .spc files from a directory and creates Raman_Spectrum object for each and also background subtracts, if specified
        .spc files must be directly exported at time of measurement. 
        Also plots table for background files if user specifies bg_table = True'''
@@ -83,7 +83,7 @@ def extractRamanSpc(path, bg_path = False, combine_statics = False):
 
     for n, spcFile in enumerate(spcFiles):
         filename = spcFile[:-4] #Removes extension from filename string
-        #print(filename)
+        print(filename)
         f = spc.File(spcFile)
         plt.show()
         #try:
@@ -187,7 +187,7 @@ def extractRamanSpc(path, bg_path = False, combine_statics = False):
 
     return spectra
 
-def populateH5(spectra, h5File):
+def populateH5(spectra, h5File, nameOnly = False):
 
     print('\nPopulating h5 file...')
 
@@ -204,6 +204,9 @@ def populateH5(spectra, h5File):
                 name = 'Spectrum %03d: %s' % (n, spectrum.filename)
             elif len(spectra) < 10000:
                 name = 'Spectrum %04d: %s' % (n, spectrum.filename)
+            
+            if nameOnly == True:
+                name = spectrum.filename
 
             gSpectrum = gSpectra.create_group(name)
             attrs = spectrum.metadata
@@ -262,7 +265,10 @@ def populateH5(spectra, h5File):
         gAbs = f.create_group('All Abs')
         gNorm = f.create_group('All Norm')
 
-        spectraNames = sorted(list(f['Spectra'].keys()), key = lambda spectrumName: int(spectrumName.split(':')[0][9:]))
+        if nameOnly == False:
+            spectraNames = sorted(f['Spectra'].keys(), key = lambda spectrumName: int(spectrumName.split(':')[0][9:]))
+        else:
+            spectraNames = sorted(f['Spectra'].keys())
 
         for spectrumName in spectraNames:
             dRaw = f['Spectra'][spectrumName]['Raman (cts)']
@@ -303,12 +309,12 @@ def createOutputFile(filename):
     print('\tOutput file %s created' % outputFile)
     return outputFile
 
-def run():
+def run(encoding = 'utf-8', nameOnly = False):
     rootDir = os.getcwd()
-    spectra = extractRamanSpc(rootDir)
+    spectra = extractRamanSpc(rootDir, encoding = encoding)
     dirName = '%s Raman Data' % rootDir.split('\\')[-1]
     h5FileName = createOutputFile(dirName)
-    populateH5(spectra, h5FileName)
+    populateH5(spectra, h5FileName, nameOnly = nameOnly)
 
 if __name__ == '__main__':
     run()
