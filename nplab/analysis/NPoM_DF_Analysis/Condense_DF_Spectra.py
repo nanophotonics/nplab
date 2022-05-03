@@ -444,7 +444,7 @@ def consoliData(rootDir):
                         newDataset.attrs.update(gParticleOld[dataName].attrs)
 
 def extractAllSpectra(rootDir, returnIndividual = True, pl = False, dodgyThreshold = 0.4, start = 0, finish = 0,
-                      raiseExceptions = True, consolidated = False, extractZ = True, avgZScans = False):
+                      raiseExceptions = True, customScan = None, consolidated = False, extractZ = True, avgZScans = False):
 
     os.chdir(rootDir)
 
@@ -456,7 +456,10 @@ def extractAllSpectra(rootDir, returnIndividual = True, pl = False, dodgyThresho
         print('File not found')
 
     print('About to extract data from %s' % inputFile)
-    outputFile = createOutputFile('summary')
+    if customScan is not None:
+        outputFile = createOutputFile(f'summary_{customScan}')
+    else:
+        outputFile = createOutputFile('summary')
 
     with h5py.File(inputFile, 'a') as ipf:
         
@@ -490,6 +493,9 @@ def extractAllSpectra(rootDir, returnIndividual = True, pl = False, dodgyThresho
 
             allScans = sorted([groupName for groupName in list(ipf.keys()) if groupName.startswith(gScanFormat)],
                               key = lambda groupName: len(list(ipf[groupName].keys())))[::-1]
+
+            if customScan is not None:
+                allScans = [customScan]
 
             if fileType == 'post-2018':
                 particleN = 0

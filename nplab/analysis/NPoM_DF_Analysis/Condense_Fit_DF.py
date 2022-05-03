@@ -29,7 +29,7 @@ pl = False #bool; Set to True if your dataset contains PL measurments
 npSize = 80 #int (50, 60, 70, 80); Specify np diameter (nm) to ensure analysis looks for peaks in the right place
 npomTypes = ['All NPoMs', 'Ideal NPoMs']
 consolidateScans = False #bool; set this to true if you have multiple particle tracks in the file and want to combine them
-customScan = None #int; if your file contains multiple particle tracks from different samples, use this to specify the correct one
+customScan = 'ParticleScannerScan_1' #int; if your file contains multiple particle tracks from different samples, use this to specify the correct one
 extractFirst = True #bool; set to false if your summary file already exists, true to create another
 avgZScans = False #bool; if your data ends up with a weird, rising baseline, set this to True and try again
 upperCutoff = 900 #int; upper wavelength limit (nm) for peak detection; fiddle with this if the code keeps finding "peaks" in the noisy longer-wavelength region
@@ -57,7 +57,7 @@ def run(raiseExceptions = raiseExceptions, intensityRatios = intensityRatios,
         
         if extractFirst == True:
             summaryFile = cdf.extractAllSpectra(os.getcwd(), returnIndividual = True, start = startSpec,
-                                                finish = finishSpec, raiseExceptions = raiseExceptions,
+                                                finish = finishSpec, raiseExceptions = raiseExceptions, customScan = customScan,
                                                 consolidated = consolidateScans, avgZScans = avgZScans)#condenses Z-stack (inc. background subtraction and referencing) for each particle and makes summary file
     
             if pl == True:
@@ -69,7 +69,7 @@ def run(raiseExceptions = raiseExceptions, intensityRatios = intensityRatios,
         if raiseExceptions == True:
             outputFileName = mpf.createOutputFile('MultiPeakFitOutput')
             mpf.fitAllSpectra(os.getcwd(), outputFileName, npSize = npSize, first = startSpec, last = finishSpec,
-                              pl = pl, closeFigures = True, stats = True, npomTypes = npomTypes, customScan = customScan,
+                              pl = pl, closeFigures = True, stats = True, npomTypes = npomTypes,
                               raiseExceptions = raiseExceptions, raiseSpecExceptions = raiseExceptions, 
                               intensityRatios = intensityRatios, upperCutoff = upperCutoff, lowerCutoff = lowerCutoff)
 
@@ -102,5 +102,6 @@ def run(raiseExceptions = raiseExceptions, intensityRatios = intensityRatios,
 
     else:
         print('\nFinished in %s min %s sec' % (mins, secs))
+
 if __name__ == '__main__':
     run()
