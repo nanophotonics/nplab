@@ -22,7 +22,7 @@ import h5py
 import numpy as np
 import os
 import matplotlib.pyplot as plt
-plt.rcParams['pcolor.shading'] = 'auto'
+#plt.rcParams['pcolor.shading'] = 'auto'
 plt.rcParams['xtick.direction'] = 'in'
 from scipy.signal import butter, filtfilt
 from lmfit.models import GaussianModel
