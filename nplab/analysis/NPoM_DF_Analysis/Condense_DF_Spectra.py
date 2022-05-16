@@ -24,6 +24,7 @@ import matplotlib.pyplot as plt
 import scipy.optimize as spo
 import nplab.analysis.NPoM_DF_Analysis.DF_Multipeakfit as mpf
 from lmfit.models import ExponentialModel, PowerLawModel, GaussianModel
+from past.utils import old_div
 
 if __name__ == '__main__':
     print('Modules imported\n')
@@ -146,13 +147,13 @@ def butterLowpassFiltFilt(data, cutoff = 2000, fs = 20000, order=5):
 
     if len(data) < 18:
         padded = True
-        pad = 18 - old_div(len(data),2)
+        pad = 18 - len(data)/2
         startPad = np.array([data[0]] * (int(pad) + 1))
         endPad = np.array([data[0]] * (int(pad) + 1))
         data = np.concatenate((startPad, data, endPad))
 
     nyq = 0.5 * fs
-    normalCutoff = old_div(cutoff, nyq)
+    normalCutoff = cutoff/nyq
     b, a = butter(order, normalCutoff, btype='low', analog=False)
     yFiltered = filtfilt(b, a, data)
 
@@ -266,7 +267,6 @@ def lInterp(Value1,Value2,Frac):
 
 def condenseZscan(zScan, returnMaxs = False, dz = None, threshold = 0.2, Smoothing_width = 1.5, aligned = True, avgZScans = False):
     """
-    
     zScan is assumed to already be background subtracted and referenced.
     """
     if aligned == False:
@@ -309,7 +309,6 @@ def condenseZscan(zScan, returnMaxs = False, dz = None, threshold = 0.2, Smoothi
     zProfile = []
 
     for n, centroid in enumerate(centroids):
-        
         try:
             if len(zT[n]) < len(dz):
                 print('Wl %s z stack too short' % n)
@@ -344,7 +343,10 @@ def condenseZscan(zScan, returnMaxs = False, dz = None, threshold = 0.2, Smoothi
             zProfile.append(lInterp(dz[lower], dz[upper], frac))
         except Exception as e:
             print(n, lower, upper, frac)
-            raise e
+            aligned = False
+            avgZScans = True
+            print(e)
+            #raise e
 
     if aligned == False and avgZScans == True:
         print('Averaging')
@@ -442,7 +444,7 @@ def consoliData(rootDir):
                         newDataset.attrs.update(gParticleOld[dataName].attrs)
 
 def extractAllSpectra(rootDir, returnIndividual = True, pl = False, dodgyThreshold = 0.4, start = 0, finish = 0,
-                      raiseExceptions = True, consolidated = False, extractZ = True, avgZScans = False):
+                      raiseExceptions = True, customScan = None, consolidated = False, extractZ = True, avgZScans = False):
 
     os.chdir(rootDir)
 
@@ -454,7 +456,10 @@ def extractAllSpectra(rootDir, returnIndividual = True, pl = False, dodgyThresho
         print('File not found')
 
     print('About to extract data from %s' % inputFile)
-    outputFile = createOutputFile('summary')
+    if customScan is not None:
+        outputFile = createOutputFile(f'summary_{customScan}')
+    else:
+        outputFile = createOutputFile('summary')
 
     with h5py.File(inputFile, 'a') as ipf:
         
@@ -488,6 +493,9 @@ def extractAllSpectra(rootDir, returnIndividual = True, pl = False, dodgyThresho
 
             allScans = sorted([groupName for groupName in list(ipf.keys()) if groupName.startswith(gScanFormat)],
                               key = lambda groupName: len(list(ipf[groupName].keys())))[::-1]
+
+            if customScan is not None:
+                allScans = [customScan]
 
             if fileType == 'post-2018':
                 particleN = 0
@@ -544,8 +552,8 @@ def extractAllSpectra(rootDir, returnIndividual = True, pl = False, dodgyThresho
 
                     if 100 * nn//len(particleGroups) in nummers:
                         currentTime = time.time() - scanStart
-                        mins = int(old_div(currentTime, 60))
-                        secs = old_div((np.round((currentTime % 60)*100)),100)
+                        mins = int(currentTime/60)
+                        secs = np.round((currentTime % 60)*100)/100
                         print('%s%% (%s particles) complete in %s min %s sec' % (nummers[0], nn, mins, secs))
                         nummers = nummers[1:]
 
@@ -553,7 +561,7 @@ def extractAllSpectra(rootDir, returnIndividual = True, pl = False, dodgyThresho
                     
                     if dParticleFormat not in particleGroup.keys():
                         for dSetName in particleGroup.keys():
-                            if dSetName.startswith('alinger.z_scan') or dSetName.startswith('zScan') or 'z_scan_0':
+                            if dSetName.startswith('alinger.z_scan') or dSetName.startswith('zScan'):
                                 dParticleFormat = dSetName
                                 
                     try:
@@ -626,8 +634,8 @@ def extractAllSpectra(rootDir, returnIndividual = True, pl = False, dodgyThresho
 
                 currentTime = time.time() - scanStart
 
-                mins = int(old_div(currentTime, 60))
-                secs = old_div((np.round((currentTime % 60)*100)),100)
+                mins = int(currentTime/60)
+                secs = (np.round((currentTime % 60)*100))/100
                 print('100%% (%s particles) complete in %s min %s sec' % (nn, mins, secs))
                 percentDefocused = old_div(100 * len(dodgyParticles), len(spectra))
 
@@ -638,7 +646,7 @@ def extractAllSpectra(rootDir, returnIndividual = True, pl = False, dodgyThresho
                 else:
                     alignment = 'Good'
 
-                print('Adding condensed spectra to %s/spectra...' % scanName)
+                print('\nAdding condensed spectra to %s/spectra...' % scanName)
 
                 spectra = np.array(spectra)
                 dScan = gScan.create_dataset('spectra', data = spectra)
@@ -648,7 +656,7 @@ def extractAllSpectra(rootDir, returnIndividual = True, pl = False, dodgyThresho
 
                 dScan.attrs.update(attrs)
 
-    print('\nAll spectra condensed and added to summary file\n')
+                print(f'{len(spectra)} spectra condensed and added to summary file\n')
 
     return outputFile #String of output file name for easy identification later
 
@@ -797,9 +805,9 @@ def approximateLaserBg(xPl, yPl, yDf, plRange = [540, 820], plot = False):
     
     for xN, yN in zip(xDfTrunc, yDfTrunc):
         if not np.isfinite(yN):
-            print(f'nan value at {xN} nm for {groupName}')
+            #print(f'nan value at {xN} nm for {groupName}')
             plt.plot(xDfTrunc, yDfTrunc)
-            plt.title(groupName)
+            #plt.title(groupName)
             plt.show()
         
     yDfNorm = np.where(yDfNorm >= 0, np.sqrt(abs(yDfNorm)), -np.sqrt(abs(yDfNorm)))
@@ -808,6 +816,7 @@ def approximateLaserBg(xPl, yPl, yDf, plRange = [540, 820], plot = False):
     yRef = mpf.removeNaNs(yPl)
     
     x1, y1 = truncateSpectrum(xPl, yRef, startWl = 505, finishWl = plRange[0])
+
     
     xJoin = np.concatenate((x1, x2))
     yJoin = np.concatenate((y1, y2))
@@ -835,40 +844,50 @@ def approximateLaserBg(xPl, yPl, yDf, plRange = [540, 820], plot = False):
     yOut = mpf.removeNaNs(yOut)
 
     if plot == True:
-        fig, ax1 = plt.subplots()
-        ax2 = ax1.twinx()
+        fig, (ax0, ax1, ax2) = plt.subplots(3, sharex = True, figsize = (10, 12))
+        ax_df = ax0.twinx()
         yTruncSub = truncateSpectrum(xPl, yOut, startWl = 505, finishWl = plRange[1])[1]
-        ax1.plot(xTrunc, yTruncSub, label = 'Processed')
-        ax1.plot(x2, y2)
+        ax2.plot(xTrunc, yTruncSub, label = 'PL (Processed)', color = plt.cm.Dark2(0))
         yTruncFit = truncateSpectrum(xPl, yFit, startWl = 505, finishWl = plRange[1])[1]
-        ax1.plot(xTrunc, yTrunc, label = 'Raw')
+        ax0.plot(xTrunc, yTrunc, label = 'PL (Raw)', color = plt.cm.Dark2(1))
         yTruncRef = truncateSpectrum(xPl, yPl, startWl = 505, finishWl = plRange[1])[1]
-        ax1.plot(xTrunc, yTruncRef, label = 'Referenced')
-        ax1.plot(xTrunc, yTruncFit, label = 'Exponential Fit')
+        refPlot = ax1.plot(xTrunc, yTruncRef, label = 'PL (Corrected)', color = plt.cm.Dark2(2))
+        ax1.plot(x2, y2, color = refPlot[0].get_color())
         xDf, yDf = truncateSpectrum(xPl, yDf, startWl = 505, finishWl = plRange[1])
-        ax2.plot(xDf, yDf, 'k', alpha = 0.5)
-        comps = expOut.eval_components()
-        print(expOut.params)
-        for compName in comps.keys():
-            ax1.plot(xJoin, comps[compName], '--', label = compName)
+        ax_df.plot(xDf, yDf, 'k', alpha = 0.5)
+        ax0.plot([], 'k', alpha = 0.5, label = 'DF Spectrum')
+        comps = expOut.eval_components(x = xTrunc)
+        #print(expOut.params)
+        for compN, compName in enumerate(comps.keys()):
+            ax1.plot(xTrunc, comps[compName] + yJoinMin, '--', label = f'Exp {compN}', color = plt.cm.Dark2(4 + compN))
+        ax1.plot(xTrunc, yTruncFit, label = 'Exp Sum', color = plt.cm.Dark2(3))
         #ax1.plot(xTrunc, initFit, 'k--', label = 'init')
 
         ax1.legend()
+        ax0.legend(loc = 'upper left', bbox_to_anchor = (0.15, 1))
+        ax2.legend()
+        ax1.set_ylabel('PL Intensity')
+        ax_df.set_ylabel('DF Intensity', rotation = 270, va = 'bottom')
+        ax2.set_xlim(505, plRange[1])
+        ax2.set_ylim(bottom = 0)
+        ax2.set_xlabel('Wavelength (nm)')
+
+        for ax in (ax0, ax1, ax2, ax_df):
+            ax.set_yticks([])
+
+        plt.subplots_adjust(hspace = 0)
         plt.show()
 
     return yOut, yRef
 
 def subtractPlBg(xPl, yPl, plBg, xDf, yDf, remove0 = False, returnArea = True, startWl = 505):
-
     plBg = truncateSpectrum(xPl, plBg, startWl = startWl, finishWl = 1000)[1]
     xDf, yDf = truncateSpectrum(xDf, yDf, startWl = startWl, finishWl = 1000)
     yDf = threshold(yDf, 2e-4)
     xPl, yPl = truncateSpectrum(xPl, yPl, startWl = startWl, finishWl = 1000)
 
-
     fig, ax1 = plt.subplots()
     ax2 = ax1.twinx()
-
     
     ax2.plot(xDf, yDf, 'k', alpha = 0.5)
     #ax1.plot(xPl, plBg)
@@ -930,7 +949,8 @@ def removeLaserLeak(x, y, plotAll = False, plotFinal = False, plRange = [580, 85
 
     return xTrunc, yBld
 
-def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [580, 820], plGroupName = 'PL Spectra'):
+def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [580, 820], 
+                      plGroupName = 'PL Spectra', laserBgPlot = False):
 
     os.chdir(rootDir)
 
@@ -1012,6 +1032,7 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
                                 key = lambda groupName: int(groupName.split('_')[-1]))
 
                 print('%s particles found in %s' % (len(particleGroups), scanName))
+                x_temp = opf[f'particleScanSummaries/scan{n}/spectra'].attrs['wavelengths']
 
                 if finish == 0:
                     particleGroups = particleGroups[start:]
@@ -1023,8 +1044,13 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
                 scanStart = time.time()
 
                 plSpectra = []
-
+                
                 for nn, groupName in enumerate(particleGroups):
+                    if nn > 25 and len(plSpectra) == 0:
+                        print('\nNo PL Spectra detected after 25 particles. Setting PL = False')
+                        print()
+                        pl = False
+                        return outputFile, pl
 
                     particleGroup = scan[groupName]
                     plGroupNames = [i for i in ['dark field with irradiation', 'PL Spectra'] if i in particleGroup.keys()]
@@ -1033,9 +1059,23 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
                         plGroupName = plGroupNames[0]
                         if nn == 0:
                             print(plGroupName)
-                            
+                    
                     if dParticleFormat not in particleGroup.keys():
-                        print(f'No Z-Stack in {groupName}')
+                        for dSetName in particleGroup.keys():
+                            if dSetName.startswith('alinger.z_scan') or dSetName.startswith('zScan'):
+                                dParticleFormat = dSetName
+                                                    
+                    if dParticleFormat not in particleGroup.keys():
+                        print(f'No Z-Stack in {groupName}')                    
+                        y_temp = np.zeros(len(x_temp))
+                        plSpectra.append(y_temp)
+                        plSpecName = f'PL Spectrum {nn}'
+                        
+                        if plSpecName not in list(gPlScan.keys()):
+                            gPlScan.create_dataset(plSpecName, data = y_temp)
+
+                        dPl = gPlScan[plSpecName]
+                        dPl.attrs['wavelengths'] = x_temp
                         continue
 
                     bg = particleGroup[dParticleFormat].attrs['background']
@@ -1051,6 +1091,15 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
                     if plGroupName not in particleGroup.keys():
                         print(f'{plGroupName} not found in {groupName}')
                         print('No PL spectra in %s' % (groupName))
+                        y_temp = np.zeros(len(x_temp))
+                        plSpectra.append(y_temp)
+                        plSpecName = f'PL Spectrum {nn}'
+                        
+                        if plSpecName not in list(gPlScan.keys()):
+                            gPlScan.create_dataset(plSpecName, data = y_temp)
+
+                        dPl = gPlScan[plSpecName]
+                        dPl.attrs['wavelengths'] = x_temp
                         continue
 
                     plGroup = particleGroup[plGroupName]
@@ -1060,6 +1109,15 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
 
                     if len(plSpecNames) == 0:
                         print('No PL spectrum found for %s' % groupName)
+                        y_temp = np.zeros(len(x_temp))
+                        plSpectra.append(y_temp)
+                        plSpecName = f'PL Spectrum {nn}'
+                        
+                        if plSpecName not in list(gPlScan.keys()):
+                            gPlScan.create_dataset(plSpecName, data = y_temp)
+
+                        dPl = gPlScan[plSpecName]
+                        dPl.attrs['wavelengths'] = x_temp
                         continue
 
                     for specName in plSpecNames:
@@ -1109,7 +1167,7 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
                     xDf = dfBefore.attrs['wavelengths']
                     yDf = dfBefore[()]
 
-                    yPl, yRef = approximateLaserBg(xPl, yRaw, yDf, plRange = plRange, plot = False)
+                    yPl, yRef = approximateLaserBg(xPl, yRaw, yDf, plRange = plRange, plot = laserBgPlot)
                     
                     #xPl, yRef, yBoltz, area, bgScale = subtractPlBg(xPl, y, plBg, xDf, yDf, remove0 = False, returnArea = True)
                     plSpectra.append(yPl)
@@ -1161,21 +1219,22 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
                             dfData = 'N/A' 
 
                     dPl.attrs['DF After'] = dfData#truncateSpectrum(x, dfData, startWl = startWl, finishWl = 1000)[1]'''
-
+                
                 plSpectra = np.array(plSpectra)
                 dAll = gAllPlScan.create_dataset('PL spectra', data = plSpectra)
                 dAll.attrs['laser_power'] = laserPower
                 #dAll.attrs['Average PL Background'] = plBgDict[laserPower]
                 dAll.attrs['wavelengths'] = xPl
+                print(f'\t{len(plSpectra)} PL spectra transferred to summary file')
 
     currentTime = time.time() - scanStart
     mins = int(old_div(currentTime, 60))
     secs = old_div((np.round((currentTime % 60)*100)),100)
     print('100%% complete in %s min %s sec' % (mins, secs))
 
-    print('\tAll PL data transferred to summary file')
+    
 
-    return outputFile #String of output file name for easy identification later
+    return outputFile, True #String of output file name for easy identification later
 
 if __name__ == '__main__':
 
