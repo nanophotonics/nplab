@@ -49,6 +49,19 @@ class Spectrum(np.ndarray):
             return np.array(obj)
         self.wavelengths = getattr(
             obj, 'wavelengths', np.arange(obj.shape[-1]))
+     
+    def __reduce__(self):
+        # Get the parent's __reduce__ tuple
+        pickled_state = super().__reduce__()
+        # Create our own tuple to pass to __setstate__
+        new_state = pickled_state[2] + (self.wavelengths,)
+        # Return a tuple that replaces the parent's __setstate__ tuple with our own
+        return (pickled_state[0], pickled_state[1], new_state)
+
+    def __setstate__(self, state):
+        self.wavelengths = state[-1]  # Set the info attribute
+        # Call the parent's __setstate__ with the other tuple elements.
+        super().__setstate__(state[0:-1])
 
     @classmethod
     def from_h5(cls, dataset):
@@ -163,6 +176,19 @@ class RamanSpectrum(Spectrum):
                                    'wavelengths',
                                    np.arange(obj.shape[-1]))
         self._shifts = getattr(obj, '_shifts', None)
+    
+    def __reduce__(self):
+        # Get the parent's __reduce__ tuple
+        pickled_state = super().__reduce__()
+        # Create our own tuple to pass to __setstate__
+        new_state = pickled_state[2] + (self.wavelengths,)
+        # Return a tuple that replaces the parent's __setstate__ tuple with our own
+        return (pickled_state[0], pickled_state[1], new_state)
+
+    def __setstate__(self, state):
+        self.wavelengths = state[-1]  # Set the info attribute
+        # Call the parent's __setstate__ with the other tuple elements.
+        super().__setstate__(state[0:-1])
         
     @classmethod
     def from_h5(cls, dataset):
