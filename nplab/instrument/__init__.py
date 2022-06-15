@@ -116,7 +116,7 @@ class Instrument(ShowGUIMixin):
         will be saved in the current HDF5 file and optionally shown in the
         nplab console.
         """
-        nplab.utils.log.log(message, from_object=self,level = level)
+        nplab.utils.log.log(message, from_object=self, level=level)
 
     def get_metadata(self, 
                      property_names=[], 

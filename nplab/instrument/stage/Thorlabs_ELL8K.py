@@ -7,6 +7,7 @@ import sys
 import numpy as np 
 from nplab.instrument.serial_instrument import SerialInstrument
 from nplab.instrument.stage import Stage
+from nplab.instrument.stage.Thorlabs_ELL20 import BusDistributor
 from nplab.utils.gui import *
 from nplab.ui.ui_tools import *
 import time
@@ -75,23 +76,7 @@ def int_to_twos_complement(integer, padded_length=16, debug=0):
         return int("0b"+twos_complement, base=2)
 
 
-class BusDistributor(SerialInstrument):
-    ''' a class to handle the port settings of a thorlabs ELLB distributor bus.
-    Each of these can have several devices attached. They are assigned device
-    indices by the thorlabs Ello software - otherwise they all default to 0 and
-    don't work separately. 
-    '''
 
-    def __init__(self, port):
-        self.termination_character = '\n'
-        self.port_settings = dict(baudrate=9600,
-                                  bytesize=8,
-                                  stopbits=1,
-                                  parity='N',
-                                  timeout=2,
-                                  writeTimeout=2,
-                                  xonxoff=False)
-        super().__init__(port)
 
 
 class Thorlabs_ELL8K(Stage):
@@ -102,7 +87,7 @@ class Thorlabs_ELL8K(Stage):
 
     # How much a stage sleeps (in seconds) between successive calls to .get_position.
     # Used to make blocking calls to move_absolute and move_relative.
-    BLOCK_SLEEPING_TIME = 0.02
+    BLOCK_SLEEPING_TIME = 0.1
     # Theshold for position accuracy when stage is meant to be stationary
     # If difference between successive calls to get_position returns value
     # whose difference is less than jitter - consider stage to have stopped
@@ -536,4 +521,5 @@ def test_ui():
 
 if __name__ == "__main__":
 
-    stage = Thorlabs_ELL8K("COM14", debug=False)
+    stage = Thorlabs_ELL8K("COM11", debug=False)
+    stage.show_gui(False)

@@ -111,7 +111,7 @@ def background_actions_running(obj):
             return True
     return False
 
-if __file__ == "__main__":
+if __name__ == "__main__":
     import time
     
     class Foo(object):
@@ -130,6 +130,7 @@ if __file__ == "__main__":
                 time.sleep(0.1)
                 print((c), end=' ')
             return len(message)
+        
 
     class Bar(object):
         def sayhello(self):

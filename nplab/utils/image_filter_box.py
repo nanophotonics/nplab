@@ -209,9 +209,13 @@ def STBOC_with_size_filter(g,
            centers.append(center)
            radii.append(radius)
    if return_centers:
-       return np.array(centers)[:,::-1] # in numpy indexing
+       if centers:
+           return np.array(centers)[:,::-1] # in numpy indexing
+       return None
    if return_centers_and_radii:
-      return np.array(centers)[:,::-1], np.array(radii)
+       if centers:
+           return np.array(centers)[:,::-1], np.array(radii)
+       return None
    elif return_original_with_particles:
  #      g = cv2.cvtColor(g,cv2.COLOR_GRAY2RGB)
   #     g = g#/255.0
