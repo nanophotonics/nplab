@@ -75,5 +75,5 @@ if __name__ == '__main__':
        
         
     with 'Your_File_here' as File:   
-        rejected = accept_reject(File['ParticleScannerScan_0'], plot_function, rejected)    
+        rejected = reject(File['ParticleScannerScan_0'], plot_function, rejected)    
         save_rejected(rejected)

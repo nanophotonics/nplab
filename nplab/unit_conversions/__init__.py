@@ -35,6 +35,7 @@ from functools import wraps
 from nplab.unit_conversions.raman_conversions import raman_conversions
 from nplab.unit_conversions.spectroscopy_conversions import spectroscopy_conversions
 
+import numpy as np
 
 full_unit_names = {
     "hz": "Hertz",
@@ -52,8 +53,9 @@ class _to:
 
 def _conversion_factory(conversions_dict, start_unit, end_unit):
     f = conversions_dict["to_hz"][start_unit]
-
+    
     @wraps(f)
+    @np.vectorize
     def conv(value, *args, **kwargs):
         return conversions_dict["hz_to"][end_unit](
             f(value, *args, **kwargs), *args, **kwargs
