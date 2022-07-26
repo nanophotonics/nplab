@@ -7,7 +7,7 @@ Created on Fri Aug  6 16:52:49 2021
 
 from nplab.utils.notified_property import NotifiedProperty
 from nplab.ui.ui_tools import QuickControlBox
-from nplab.instrument.stage.thorlabs_ello import ElloDevice
+from nplab.instrument.stage.thorlabs_ello.ello_device import ElloDevice
 
 
 class Ell6(ElloDevice):
@@ -15,7 +15,7 @@ class Ell6(ElloDevice):
 
     def __init__(self, serial_device, device_index=0, debug=0):
         '''can be passed either a BusDistributor instance, or  "COM5"  '''
-        super().__init__(serial_device, device_index=0, debug=0)
+        super().__init__(serial_device, device_index=device_index, debug=debug)
         self.home()
 
     def home(self):
