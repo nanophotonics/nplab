@@ -1,24 +1,11 @@
 # -*- coding: utf-8 -*-
 from nplab.utils.gui import QtCore, QtGui, QtWidgets, get_qt_app, uic
 from nplab.utils.array_with_attrs import ArrayWithAttrs
-import matplotlib
-
-def is_pyqt5():
-    return QtCore.qVersion().startswith('5')
-    
-if is_pyqt5():
-    matplotlib.use('Qt5Agg')
-else:
-    matplotlib.use('Qt4Agg')
-    from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.figure import Figure
-import pyqtgraph as pg
-import numpy as np
 import nplab.datafile as df
-import operator
 import h5py
 import os
-
+import pyqtgraph as pg
+import numpy as np
 
 """
 Created on Thu Oct 29 10:36:07 2015
