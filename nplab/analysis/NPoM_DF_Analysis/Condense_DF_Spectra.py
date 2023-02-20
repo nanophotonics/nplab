@@ -466,12 +466,8 @@ def extractAllSpectra(rootDir, returnIndividual = True, pl = False, dodgyThresho
         if 'particleScans' in ipf.keys():
             fileType = 'pre-2018'
 
-        elif 'nplab_log' in ipf.keys():
-            fileType = 'post-2018'
-
         else:
-            print('File format not recognised')
-            return
+            fileType = 'post-2018'
 
         with h5py.File(outputFile, 'a') as opf:
 
@@ -490,18 +486,23 @@ def extractAllSpectra(rootDir, returnIndividual = True, pl = False, dodgyThresho
             elif fileType == 'post-2018':
                 gScanFormat = 'ParticleScannerScan_'
                 gParticleFormat = 'Particle_'
+            
+            print(gScanFormat)
 
             allScans = sorted([groupName for groupName in list(ipf.keys()) if groupName.startswith(gScanFormat)],
                               key = lambda groupName: len(list(ipf[groupName].keys())))[::-1]
 
             if customScan is not None:
                 allScans = [customScan]
+            
+            possible_z_scan_names = ['alinger.z_scan', 'zScan', 'z_scan_0', 'lab.z_scan']
 
             if fileType == 'post-2018':
                 particleN = 0
-                while dParticleFormat is None:                    
-                    for dSetName in list(ipf[allScans[0]]['Particle_'+str(particleN)].keys()):
-                        if dSetName.startswith('alinger.z_scan') or dSetName.startswith('zScan') or dSetName.startswith('z_scan_0'):
+                while dParticleFormat is None:         
+                    print(allScans)
+                    for dSetName in list(ipf[allScans[0]][f'Particle_{particleN}'].keys()):
+                        if True in [dSetName.startswith(z_scan_name) for z_scan_name in possible_z_scan_names]:
                             dParticleFormat = dSetName
                             break
                     
@@ -561,7 +562,7 @@ def extractAllSpectra(rootDir, returnIndividual = True, pl = False, dodgyThresho
                     
                     if dParticleFormat not in particleGroup.keys():
                         for dSetName in particleGroup.keys():
-                            if dSetName.startswith('alinger.z_scan') or dSetName.startswith('zScan'):
+                            if True in [dSetName.startswith(z_scan_name) for z_scan_name in possible_z_scan_names]:
                                 dParticleFormat = dSetName
                                 
                     try:
@@ -816,8 +817,6 @@ def approximateLaserBg(xPl, yPl, yDf, plRange = [540, 820], plot = False):
     yRef = mpf.removeNaNs(yPl)
     
     x1, y1 = truncateSpectrum(xPl, yRef, startWl = 505, finishWl = plRange[0])
-
-    
     xJoin = np.concatenate((x1, x2))
     yJoin = np.concatenate((y1, y2))
     yJoinMin = np.average(y2[-len(y2)//5:])
@@ -1001,12 +1000,15 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
 
             allScans = sorted([groupName for groupName in list(ipf.keys()) if groupName.startswith(gScanFormat)],
                               key = lambda groupName: len(list(ipf[groupName].keys())))[::-1]
+            
+            possible_z_scan_names = ['alinger.z_scan', 'zScan', 'z_scan_0', 'lab.z_scan']
+        
             dParticleFormat = None
             if fileType == 'post-2018':
                 particleN = 0
                 while dParticleFormat is None:                    
                     for dSetName in list(ipf[allScans[0]][f'Particle_{particleN}'].keys()):
-                        if dSetName.startswith('alinger.z_scan') or dSetName.startswith('zScan'):
+                        if True in [dSetName.startswith(z_scan_name) for z_scan_name in possible_z_scan_names]:
                             dParticleFormat = dSetName
                             break
                     
@@ -1054,15 +1056,21 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
 
                     particleGroup = scan[groupName]
                     plGroupNames = [i for i in ['dark field with irradiation', 'PL Spectra'] if i in particleGroup.keys()]
+                    plDsetNames = [i for i in particleGroup.keys() if i.startswith('kinetic_laserOn')]
                     
                     if len(plGroupNames) > 0:
                         plGroupName = plGroupNames[0]
+                        plGroup = particleGroup[plGroupName]
                         if nn == 0:
                             print(plGroupName)
+
+                    if len(plDsetNames) > 0:
+                        plGroup = particleGroup
+                        #print('kinetic_laserOn')
                     
                     if dParticleFormat not in particleGroup.keys():
                         for dSetName in particleGroup.keys():
-                            if dSetName.startswith('alinger.z_scan') or dSetName.startswith('zScan'):
+                            if True in [dSetName.startswith(z_scan_name) for z_scan_name in possible_z_scan_names]:
                                 dParticleFormat = dSetName
                                                     
                     if dParticleFormat not in particleGroup.keys():
@@ -1088,24 +1096,24 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
                         print('%s%% (%s spectra) transferred in %s min %s sec' % (nummers[0], nn, mins, secs))
                         nummers = nummers[1:]
 
-                    if plGroupName not in particleGroup.keys():
-                        print(f'{plGroupName} not found in {groupName}')
-                        print('No PL spectra in %s' % (groupName))
+                    if len(plGroupNames) == 0 and len(plDsetNames) == 0:
+                        print(f'No PL spectra found in {groupName}')
                         y_temp = np.zeros(len(x_temp))
                         plSpectra.append(y_temp)
                         plSpecName = f'PL Spectrum {nn}'
                         
-                        if plSpecName not in list(gPlScan.keys()):
+                        if plSpecName not in gPlScan.keys():
                             gPlScan.create_dataset(plSpecName, data = y_temp)
 
                         dPl = gPlScan[plSpecName]
                         dPl.attrs['wavelengths'] = x_temp
                         continue
 
-                    plGroup = particleGroup[plGroupName]
-
                     maxDict = {}
-                    plSpecNames = [i for i in list(plGroup.keys()) if i.startswith('PL')]
+                    if len(plDsetNames) > 0:
+                        plSpecNames = plDsetNames
+                    else:
+                        plSpecNames = [i for i in plGroup.keys() if i.startswith('PL')]
 
                     if len(plSpecNames) == 0:
                         print('No PL spectrum found for %s' % groupName)
@@ -1113,7 +1121,7 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
                         plSpectra.append(y_temp)
                         plSpecName = f'PL Spectrum {nn}'
                         
-                        if plSpecName not in list(gPlScan.keys()):
+                        if plSpecName not in gPlScan.keys():
                             gPlScan.create_dataset(plSpecName, data = y_temp)
 
                         dPl = gPlScan[plSpecName]
@@ -1132,10 +1140,15 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
 
                         x = plData.attrs['wavelengths']
                         y = plData[()]
+                        #print(y.shape, groupName, specName)
+                        
+                        if len(y.shape) == 2:                            
+                            y = np.sum(y, axis = 0)
 
                         xTrunc, yTrunc = truncateSpectrum(x, y, startWl = plRange[0], finishWl = plRange[1])
                         ySmooth = butterLowpassFiltFilt(y)
-                        maxima = detectMinima(-ySmooth)
+                        
+                        maxima = mpf.detectMinima(-ySmooth)
 
                         if len(maxima) == 0:
                             continue
@@ -1151,18 +1164,27 @@ def transferPlSpectra(rootDir, start = 0, finish = 0, startWl = 505, plRange = [
 
                     plData = plGroup[maxPlName]
                     
+                    #try:
+                    bg = plData.attrs.get('background', bg)
+                    ref = plData.attrs.get('reference', ref)
+                    xPl = plData.attrs['wavelengths']
+                    timeStamp = plData.attrs['creation_timestamp']
                     try:
-                        bg = plData.attrs.get('background', bg)
-                        ref = plData.attrs.get('reference', ref)
-                        xPl = plData.attrs['wavelengths']
-                        timeStamp = plData.attrs['creation_timestamp']
-                        laserPower = plData.attrs['laser_power']
-                        plSpecName = f'PL Spectrum {nn}'
-                    except Exception as e:
-                        plSpecName = f'PL Spectrum {nn}'
-                        print(f'{plSpecName} transfer failed because {e}')
+                        laserPower = plData.attrs.get('laser_power', specName.split('power')[1].split('_')[0])
+                    except:
+                        laserPower = 'NaN'
+                        print(specName)
+                    plSpecName = f'PL Spectrum {nn}'
+                    #except Exception as e:
+                    #    plSpecName = f'PL Spectrum {nn}'
+                    #    print(f'{plSpecName} transfer failed because {e}')
 
-                    yRaw = (plData[()] - bg)/ref
+                    yRaw = plData[()]
+                    
+                    if len(yRaw.shape) == 2:                          
+                        yRaw = np.sum(yRaw, axis = 0)
+                                        
+                    yRaw = (yRaw - bg)/ref
                     dfBefore = opf[f'Individual NPoM Spectra/scan0/Spectrum {nn}']
                     xDf = dfBefore.attrs['wavelengths']
                     yDf = dfBefore[()]

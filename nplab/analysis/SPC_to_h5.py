@@ -180,11 +180,6 @@ def extractRamanSpc(path, bg_path = False, combine_statics = False, encoding = '
         spectra.append(Raman_Spectrum(filename, timestamp, metadata, laserWl, laserPower, absLaserPower, integrationTime, accumulations, nScans,
                                       wavenumbers, ramanIntensities, absRamanIntensities))
 
-        #except Exception as e:
-        #    print 'Something went wrong with %s:' % filename
-        #    print e
-        #    continue
-
     return spectra
 
 def populateH5(spectra, h5File, nameOnly = False):
@@ -197,13 +192,13 @@ def populateH5(spectra, h5File, nameOnly = False):
         for n, spectrum in enumerate(spectra):
             
             if len(spectra) < 10:
-                name = 'Spectrum %01d: %s' % (n, spectrum.filename)
+                name = '%01d: %s' % (n, spectrum.filename)
             elif len(spectra) < 100:
-                name = 'Spectrum %02d: %s' % (n, spectrum.filename)
+                name = '%02d: %s' % (n, spectrum.filename)
             elif len(spectra) < 1000:
-                name = 'Spectrum %03d: %s' % (n, spectrum.filename)
+                name = '%03d: %s' % (n, spectrum.filename)
             elif len(spectra) < 10000:
-                name = 'Spectrum %04d: %s' % (n, spectrum.filename)
+                name = '%04d: %s' % (n, spectrum.filename)
             
             if nameOnly == True:
                 name = spectrum.filename
@@ -315,6 +310,7 @@ def run(encoding = 'utf-8', nameOnly = False):
     dirName = '%s Raman Data' % rootDir.split('\\')[-1]
     h5FileName = createOutputFile(dirName)
     populateH5(spectra, h5FileName, nameOnly = nameOnly)
+    return h5FileName
 
 if __name__ == '__main__':
     run()
