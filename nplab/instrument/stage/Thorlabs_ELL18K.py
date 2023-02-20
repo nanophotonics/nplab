@@ -141,6 +141,7 @@ class ELL18K(object):
 		Integer=360.*float(Integer)/self.Counts_per_Rev
 		return Integer
 
+
 	def Rotate_To(self,Angle):
 		"""
 		Rotates the stage to a given angle. Returns final angle or status report

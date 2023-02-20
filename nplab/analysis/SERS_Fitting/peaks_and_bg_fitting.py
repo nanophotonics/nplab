@@ -96,7 +96,7 @@ import scipy.ndimage.filters as ndimf
 from scipy import constants as constants
 from scipy.interpolate import interp1d as interp
 from scipy.optimize import curve_fit
-import pywt
+# import pywt
 from scipy.ndimage.filters import gaussian_filter
 from scipy.signal import argrelextrema
 def sm(spec, sigma=3):
@@ -827,8 +827,8 @@ if __name__ == '__main__':
     spec = SERS_and_shifts[0]
     shifts = SERS_and_shifts[1]
     spec, shifts = truncate(spec, shifts, 190, np.inf)
-    ff = fullfit(spec, shifts, lineshape='G', order=9)
-    ff.Run(verbose=True)
+    ff = fullfit(spec, shifts, lineshape='G', order=5)
+    ff.run(verbose=True)
     ff.plot_result()
     plt.figure()
     plt.plot(ff.shifts, ff.signal)

@@ -7,24 +7,9 @@ system to display the datasets.  See `nplab.ui.data_renderers` for that.
 """
 
 __author__ = 'Alan Sanders, Will Deacon, Richard Bowman'
-
-import nplab
 from nplab.utils.gui import QtCore, QtWidgets
-import matplotlib
 import numpy as np
 import h5py
-
-try:
-    from matplotlib.backends.qt_compat import is_pyqt5
-except (AttributeError, ImportError): 
-    from matplotlib.backends.qt_compat import QT_API
-    def is_pyqt5():
-        return (QT_API[:5] == 'PyQt5')
-
-if is_pyqt5():
-    matplotlib.use('Qt5Agg')
-else:
-    matplotlib.use('Qt4Agg')
 
 from nplab.ui.data_renderers import suitable_renderers
 from nplab.ui.ui_tools import UiTools

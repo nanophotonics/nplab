@@ -132,7 +132,7 @@ class Camera_filter_Control_ui(QuickControlBox):
         self.auto_connect_by_name(controlled_object = self.filter_box)
 
             
-def strided_rescale(g, bin_fac= 4):
+def strided_rescale(g, bin_fac=4):
     try:
         attrs = g.attrs
         return_image_with_loc = True
@@ -145,8 +145,8 @@ def strided_rescale(g, bin_fac= 4):
             strides=((g.strides[0]*bin_fac, g.strides[1]*bin_fac)+g.strides))
         strided = strided.sum(axis=-1).sum(axis=-1)
         strided = np.uint8((strided-np.min(strided))*254.0/(np.max(strided)-np.min(strided)))
-        strided=strided.repeat(bin_fac,0)
-        strided=strided.repeat(bin_fac,1)
+        strided = strided.repeat(bin_fac,0)
+        strided = strided.repeat(bin_fac,1)
         if return_image_with_loc==True:
             return ImageWithLocation(np.copy(strided),attrs = attrs)
         else:
@@ -209,9 +209,13 @@ def STBOC_with_size_filter(g,
            centers.append(center)
            radii.append(radius)
    if return_centers:
-       return np.array(centers)[:,::-1] # in numpy indexing
+       if centers:
+           return np.array(centers)[:,::-1] # in numpy indexing
+       return None
    if return_centers_and_radii:
-      return np.array(centers)[:,::-1], np.array(radii)
+       if centers:
+           return np.array(centers)[:,::-1], np.array(radii)
+       return None
    elif return_original_with_particles:
  #      g = cv2.cvtColor(g,cv2.COLOR_GRAY2RGB)
   #     g = g#/255.0
