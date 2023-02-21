@@ -391,7 +391,6 @@ def remove_nans(data, too_noisy = False):
     Array size/shape is preserved
 
     !!! add option to call calc_noise function and allow auto-detection of too_noisy !!!
-
     '''
 
     y = np.array(data)
@@ -711,9 +710,36 @@ class Timescan(Spectrum):
         self.y = np.average(self.Y, axis = 0)# average of Y data, for 1D plotting
         self.t_raw = np.arange(self.Y.shape[0])
 
+    def determine_v_lims(self, min_std = 2, max_std = 10, **kwargs):
+        '''
+        Calculates appropriate intensity limits for 2D plot of timescan, based on frequency distribution of intensities.
+        !!! add more comments
+        '''
+
+        Y_flat = self.Y.flatten()
+        frequencies, bins = np.histogram(Y_flat, bins = 100, range = (0, Y_flat.max()), density = False)
+        bin_centres = np.linspace(np.average([bins[0], bins[1]]), np.average([bins[-2], bins[-1]]), len(frequencies))
+        
+        mode = bin_centres[frequencies.argmax()]
+        
+        std = np.std(Y_flat)
+        v_min, v_max = (max(mode - min_std*std, 1), mode + max_std*std)
+        
+        if min_std == 0 or min_std is None:
+            v_min = 0
+        
+        if max_std == 0 or max_std is None:
+            v_max = Y_flat.max()
+        
+        self.v_min = v_min
+        self.v_max = v_max
+
     def plot_timescan(self, ax = None, y_label = None, rc_params = timescan_params, x_lim = None, 
                       x_scale = 1, x_shift = 0,
                       plot_averages = False, avg_chunks = 10, avg_color = 'white', cmap = 'inferno', **kwargs):
+        '''
+        !!! needs docstring
+        '''
 
         old_rc_params = plt.rcParams.copy()
 
@@ -780,26 +806,3 @@ class Timescan(Spectrum):
         if external_ax == False:
             plt.show()
             plt.rcParams.update(old_rc_params)#put rcParams back to normal when done
-
-    def determine_v_lims(self, min_std = 2, max_std = 10):
-        '''
-        Calculates appropriate intensity limits for 2D plot of timescan, based on frequency distribution of intensities.
-        '''
-
-        Y_flat = self.Y.flatten()
-        frequencies, bins = np.histogram(Y_flat, bins = 100, range = (0, Y_flat.max()), density = False)
-        bin_centres = np.linspace(np.average([bins[0], bins[1]]), np.average([bins[-2], bins[-1]]), len(frequencies))
-        
-        mode = bin_centres[frequencies.argmax()]
-        
-        std = np.std(Y_flat)
-        v_min, v_max = (max(mode - min_std*std, 1), mode + max_std*std)
-        
-        if min_std == 0 or min_std is None:
-            v_min = 0
-        
-        if max_std == 0 or max_std is None:
-            v_max = Y_flat.max()
-        
-        self.v_min = v_min
-        self.v_max = v_max

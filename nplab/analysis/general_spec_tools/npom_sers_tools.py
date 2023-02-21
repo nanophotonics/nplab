@@ -26,11 +26,13 @@ from nplab.analysis.general_spec_tools import all_rc_params
 timescan_params = all_rc_params.master_param_dict['NPoM SERS Timescan']
 
 def summarise_h5(data_dir, h5_files, summary_filename = 'SERS Summary.h5', scan_format = 'ParticleScannerScan_', 
-                 particle_format = 'Particle_', sers_format = 'kinetic_SERS', z_scan_format = 'lab.z_scan',
+                 scans_to_omit = [], particle_format = 'Particle_', sers_format = 'kinetic_SERS', z_scan_format = 'lab.z_scan',
                  img_format = 'CWL.thumb_image'):
     '''
     Condenses data from multiple h5_files and/or ParticleScannerScan_ groups therein into one file
     Creates h5 file containing only Particle_0, Particle_1, ..., Particle_{n} groups, each with SERS, image and/or z_scan datasets
+    Returns filename of new h5 summary file
+    If you want to omit scans from the analysis, add their numbers to the scans_to_omit list
     '''
 
     os.chdir(data_dir)
@@ -44,12 +46,13 @@ def summarise_h5(data_dir, h5_files, summary_filename = 'SERS Summary.h5', scan_
     print('Assembling list of particle groups...')
 
     all_particle_groups = {}
+    scans_to_omit = [f'{scan_format}{n}' for n in scans_to_omit]
 
     for h5_file in h5_files:
         with h5py.File(h5_file, 'r') as F:
-            scan_groups = [i for i in F.items()
-                           if i[0].startswith(scan_format)
-                           and len(i[1]) > 3
+            scan_groups = [(scan_name, scan_group) for scan_name, scan_group in F.items()
+                           if scan_name.startswith(scan_format)
+                           and len(scan_group) > 3 and scan_name not in scans_to_omit
                           ]
 
             all_particle_groups[h5_file] = []
@@ -111,6 +114,8 @@ def summarise_h5(data_dir, h5_files, summary_filename = 'SERS Summary.h5', scan_
 
             print('Done')
 
+    return summary_filename
+
 def plot_all_timescans(h5_summary, data_dir = None, powder_spectrum = None, agg_sers_spectrum = None, 
                        dft_collection = None, sers_format = 'kinetic_SERS', save_figs = True, 
                        x_scale = 1, x_shift = 0,
@@ -168,7 +173,7 @@ class NPoM_SERS_Timescan(spt.Timescan):
             NB: leave raman_excitation = None if x input is already in wavenumbers
     '''
     def __init__(self, *args, powder_spectrum = None, agg_sers_spectrum = None, dft_collection = None,
-                 raman_excitation = 633, use_powder_xlim = True, particle_name = 'Particle_', **kwargs):
+                 raman_excitation = 633, use_powder_xlim = True, particle_name = 'Particle_', find_dft = True, **kwargs):
 
         super().__init__(*args, raman_excitation = raman_excitation, **kwargs)
 
@@ -193,7 +198,7 @@ class NPoM_SERS_Timescan(spt.Timescan):
                 self.x_min = self.agg_sers_spectrum.x.min()
                 self.x_max = self.agg_sers_spectrum.x.max()            
 
-        if self.dft_collection is None and self.dft_collection != False:
+        if self.dft_collection is None and find_dft == True:
             self.dft_collection = drt.DFT_Raman_Collection(x_min = self.x_min, x_max = self.x_max, **kwargs)
             if len(self.dft_collection.dft_dict) == 0:
                 print('No DFT Raman found')
