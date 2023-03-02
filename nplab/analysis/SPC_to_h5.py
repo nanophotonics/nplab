@@ -14,10 +14,16 @@ from builtins import range
 from past.utils import old_div
 from builtins import object
 import os
-import spc
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
+
+try:
+    import spc
+except Exception as e:
+    print('spc module not installed!')
+    print('spc is not available via pip; instead, clone from https://github.com/rohanisaac/spc and install')
+    raise e
 
 class Raman_Spectrum(object):
     #Object class containing spectral data and metadata for single Raman spectrum

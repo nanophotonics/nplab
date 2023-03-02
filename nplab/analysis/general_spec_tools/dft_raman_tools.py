@@ -14,6 +14,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from nplab.analysis.general_spec_tools import sers_tools_david as std
 from nplab.analysis.general_spec_tools import spectrum_tools as spt
+from IPython.utils import io
 
 from nplab.analysis.general_spec_tools import all_rc_params
 
@@ -40,7 +41,7 @@ def gaussian_from_area(x, area, centre, fwhm):
     return height*np.exp(-(((x-centre)**2)/(2*fwhm**2))) # calculates curve based on height, centre and fwhm
 
 def broaden_raman_activities(vib_freqs, raman_activities, scale_factor = 0.9671, fwhm = 2, x_min = 0, 
-                             x_max = None, n_points = 5000, plot = False):
+                             x_max = None, n_points = 5000, plot = False, **kwargs):
     '''
     Processes DFT Raman data into a more useful continuous spectrum
 
@@ -495,17 +496,25 @@ class Gaussian_Output:
     Currently contains functions for extracting and processing calculated Raman activities
     '''
     def __init__(self, filename, scale_factor = 0.9671, process_data = True, x_min = None, x_max = None,
-                 write_csv = False, csv_filename = None, polarisation_vector = None,
+                 write_csv = False, csv_filename = None, polarisation_vector = None, fwhm = 5,
                  **kwargs):
 
         self.filename = filename
         self.scale_factor = scale_factor
-        self.csv_filename = csv_filename
+
+        if csv_filename is None:
+            csv_filename = filename
+            if csv_filename[-4] == '.':
+                csv_filename = csv_filename[:-4]
+                csv_filename += '.csv'
+
+        self.csv_filename = csv_filename        
         self.x_cont = None
         self.y_cont = None
 
         self.x_min = x_min
         self.x_max = x_max
+        self.fwhm = fwhm
 
         self.vector_dict = {
                               'x' : (1, 0, 0),
@@ -563,12 +572,10 @@ class Gaussian_Output:
             F_lines = F.readlines()
 
         self.vib_freqs = np.array([i.split()[-3:] for i in F_lines if 'Frequencies' in i]).flatten().astype(float)
-        self.raman_activities = np.array([i.split()[-3:] for i in F_lines if 'Raman Activ' in i]).flatten().astype(float)
-
-        
+        self.raman_activities = np.array([i.split()[-3:] for i in F_lines if 'Raman Activ' in i]).flatten().astype(float)    
 
         self.x_cont, self.y_cont = broaden_raman_activities(self.vib_freqs, self.raman_activities, 
-                                                            scale_factor = self.scale_factor, 
+                                                            scale_factor = self.scale_factor,
                                                             x_min = self.x_min, x_max = self.x_max,
                                                             **kwargs)
 
@@ -612,15 +619,38 @@ class Gaussian_Output:
             print(f'{polarisation_vector}')
             self.extract_sers_activities(polarisation_vector = polarisation_vector, **kwargs)
 
-    def write_to_csv(self):
+    def write_to_csv(self, write_spectrum = True, write_activities = False, polarisations = None, **kwargs):
         if 'csv' not in os.listdir():
             os.mkdir('csv')
 
-        print('Writing to csv')
+        print(f'Writing to csv')
 
-        with open(f'csv/{self.csv_filename}', 'w') as G:
-            for x, y in zip(self.x_cont, self.y_cont):
-                G.write(f'{x},{y}\n')
+        if polarisations is None:
+            polarisations = ['iso']
+
+        elif polarisations == 'all':
+            polarisations = list(self.sers_activities_dict.keys())
+
+        elif type(polarisations) in (str, tuple):
+            polarisations = [polarisations]
+
+        for polarisation in polarisations:
+            if polarisation not in self.sers_activities_dict.keys():
+                self.extract_sers_activities(polarisation_vector = polarisation, **kwargs)        
+
+            if write_activities == True:
+                print(f'Writing csv/{self.csv_filename}_activities_{polarisation}')
+                freqs, activities = self.sers_activities_dict[polarisation]
+                with open(f'csv/{self.csv_filename[:-4]}_activities_{polarisation}.csv', 'w') as G:
+                    for x, y in zip(freqs, activities):
+                        G.write(f'{x},{y}\n')
+
+            if write_spectrum == True:
+                print(f'Writing csv/{self.csv_filename}_spectrum_{polarisation}')
+                x_cont, y_cont = self.polarised_spectrum_dict[polarisation]
+                with open(f'csv/{self.csv_filename[:-4]}_spectrum_{polarisation}.csv', 'w') as G:
+                    for x, y in zip(x_cont, y_cont):
+                        G.write(f'{x},{y}\n')
 
     def plot(self, ax = None, polarisation = None, rc_params = dft_rc_params, **kwargs):
     
@@ -655,14 +685,15 @@ class Gaussian_Output:
             plt.rcParams.update(old_rc_params)
 
 class DFT_Raman_Collection:
-    def __init__(self, dft_dir = None, dft_names = None, polarisation = None, x_min = None, x_max = None, **kwargs):
+    def __init__(self, dft_dir = None, dft_names = None, polarisations = None, x_min = None, x_max = None, fwhm = 5, **kwargs):
         root_dir = os.getcwd()
-        self.dft_dict = process_all_dft_raman(data_dir = dft_dir, filenames = dft_names, 
-                                              polarisation = polarisation, x_min = x_min, x_max = x_max)
+        self.dft_dict = process_all_dft_raman(data_dir = dft_dir, filenames = dft_names, fwhm = fwhm,
+                                              polarisation = polarisation, x_min = x_min, x_max = x_max, **kwargs)
         os.chdir(root_dir)
 
         self.x_min = x_min
         self.x_max = x_max
+        self.fwhm = fwhm
 
         if self.x_min is None:
             self.x_min = min([i.x_cont.min() for i in self.dft_dict.values()])
@@ -688,7 +719,7 @@ class DFT_Raman_Collection:
         self.n_spectra = len([polar for polar_list in polar_dict.values() for polar in polar_list])
 
     def plot_dft(self, polarisations = {}, x_range = None, text_loc = None, text_pad = 0.2,
-                 ax = None, y_offset = 0, rc_params = dft_rc_params, **kwargs):
+                 ax = None, y_offset = 0, rc_params = dft_rc_params, fwhm = 5, **kwargs):
         '''
         Plots a selection of DFT Raman spectra on a given axes
         By default, plots Raman of all gaussian files in the collection and any polarisations specified when initialising the instance of DFT_Collection
@@ -731,9 +762,14 @@ class DFT_Raman_Collection:
         for n, (gaussian_filename, polarisations) in enumerate(self.polar_dict.items()):
             gaussian_job = self.dft_dict[gaussian_filename]
 
+            if fwhm != self.fwhm:
+                print('Re-calculating broadened spectra with new fwhm')
+
             for m, polarisation in enumerate(polarisations):
-                if polarisation not in gaussian_job.polarised_spectrum_dict.keys():
-                    gaussian_job.extract_sers_activities(polarisation)
+                if polarisation not in gaussian_job.polarised_spectrum_dict.keys() or fwhm != self.fwhm:
+                    with io.capture_output(fwhm != self.fwhm):
+                        gaussian_job.extract_sers_activities(polarisation, fwhm = fwhm)
+
 
                 x, y = gaussian_job.polarised_spectrum_dict[polarisation]
 
@@ -764,6 +800,9 @@ class DFT_Raman_Collection:
                         transform = ax.transData, ha = 'left', va = va, bbox = bbox_params,
                         fontsize = plt.rcParams['legend.fontsize']
                     )
+        if fwhm != self.fwhm:
+            print('\tDone')
+            self.fwhm = fwhm
 
         if external_ax == False:
             ax.set_xlabel('Raman Shift (cm$^{-1}$)')
@@ -774,5 +813,10 @@ class DFT_Raman_Collection:
 
         else:
             ax.set_ylim(top = y_norm.max() + 0.15)
+
+    def write_all_csv(self, **kwargs):
+        for filename, gaussian_output in self.dft_dict.items():
+            gaussian_output.write_to_csv(**kwargs)
+
 
         

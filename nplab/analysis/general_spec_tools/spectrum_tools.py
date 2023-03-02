@@ -595,9 +595,13 @@ class Spectrum:
         self.y_smooth = y_smooth
         self.dset = dset
         self.name = name
-
+        self.raman_excitation = raman_excitation
+        
         if rc_params is None:
             self.rc_params = plt.rcParams
+
+        else:
+            self.rc_params = rc_params
 
         self.x_lim = x_lim
 
@@ -652,9 +656,9 @@ class Spectrum:
         assert (self.y is not None), 'Please specify some data'
         assert (self.x is not None), 'Please specify an x axis'
 
-        if raman_excitation is not None:
+        if self.raman_excitation is not None:
             self.x_wl = self.x.copy()
-            self.x = wl_to_wn(self.x_wl, raman_excitation)
+            self.x = wl_to_wn(self.x_wl, self.raman_excitation)
 
         if attrs is not None and attrs is not False:#if attrs is False, do not copy h5 dataset attrs
             for key, attr in attrs.items():
@@ -666,11 +670,12 @@ class Spectrum:
              rc_params = None, title = False, **kwargs):
 
         old_rc_params = plt.rcParams.copy()#saves initial rcParams before overwriting them
-        
         if ax is None:
             if self.rc_params is not None:
+                print('self rc params')
                 plt.rcParams.update(self.rc_params)#use rc params specified with object
             if rc_params is not None:
+                print('rc params')
                 plt.rcParams.update(rc_params)#unless overridden when calling the function
 
             fig, ax = plt.subplots()#if no axes provided, create some
@@ -735,20 +740,25 @@ class Timescan(Spectrum):
         self.v_max = v_max
 
     def plot_timescan(self, ax = None, y_label = None, rc_params = timescan_params, x_lim = None, 
-                      x_scale = 1, x_shift = 0,
+                      x_scale = 1, x_shift = 0, x_label = 'Wavelength (nm)',
                       plot_averages = False, avg_chunks = 10, avg_color = 'white', cmap = 'inferno', **kwargs):
         '''
         !!! needs docstring
         '''
 
-        old_rc_params = plt.rcParams.copy()
-
+        old_rc_params = plt.rcParams.copy()#saves initial rcParams before overwriting them
+        
         if ax is None:
-            if rc_params is not None:                
-                plt.rcParams.update(timescan_params)
+            if self.rc_params is not None:
+                print('self rc params')
+                plt.rcParams.update(self.rc_params)#use rc params specified with object
+            if rc_params is not None:
+                print('rc params')
+                plt.rcParams.update(rc_params)#unless overridden when calling the function
 
+            fig, ax = plt.subplots()#if no axes provided, create some
             external_ax = False
-            fig, ax = plt.subplots()
+
         else:
             external_ax = True
 
@@ -804,5 +814,9 @@ class Timescan(Spectrum):
         ax.set_ylabel(y_label)
 
         if external_ax == False:
+            if self.raman_excitation is not None and x_label == 'Wavelength (nm)':
+                x_label = 'Raman Shift (cm$^{-1}$)'
+                
+            ax.set_xlabel(x_label)
             plt.show()
             plt.rcParams.update(old_rc_params)#put rcParams back to normal when done
