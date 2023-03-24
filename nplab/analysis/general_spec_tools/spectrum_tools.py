@@ -24,10 +24,147 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import os
 
-from nplab.analysis.general_spec_tools import all_rc_params
+from nplab.analysis.general_spec_tools import all_rc_params as arp
 
 #pyplot rcParams to make pretty Timescans:
-timescan_params = all_rc_params.master_param_dict['NPoM SERS Timescan']
+timescan_params = arp.master_param_dict['NPoM SERS Timescan']
+
+def approx_peak_gausses(x, y, smooth_first = True, threshold = 0.1, reverse = False, plot = False, height_frac = 0.5, **kwargs):
+    '''
+    Estimates FW{height_frac}M, center and height of peaks in a dataset
+        height_frac defaults to 0.5 (i.e. FWHM), but can be raised or lowered to suit the spectral shape
+
+    smooth: smooth spectrum before analysis; default = True (good for NPoM DF, Aggregate Extinction etc)
+    reverse: optionally reverses the x and y arrays before analysis
+    '''
+    #y_raw = y.copy()
+    #y = y/y.max()#normalise before analysis
+    
+    if smooth_first == True:#smooth spectrum before analysing; default = True
+        y = butter_lowpass_filt_filt(y)
+        
+    if reverse == True:#optionally reverse spectrum before analysing
+        x = x[::-1]
+        y = y[::-1]
+        if peak_index is not None:#flip peak index position accordingly
+            peak_index = -peak_index
+
+    y_temp = y.copy()
+    approx_gausses = []
+
+    n = 0
+    while True:
+        maxima = detect_maxima(y_temp, lower_threshold = threshold*y.max(), edges = True)
+
+        if len(maxima) == 0:
+            break
+
+        maxima = np.array(sorted(maxima, key = lambda i: x[i]))
+        residuals = []
+        temp_gausses = []
+
+        for peak_index in maxima:
+            #peak_index = maxima[-1]
+            height = y_temp[peak_index]
+            center = x[peak_index] #corresponding x and y locations of maximum
+            width_height = height*height_frac
+            
+            y_sub = y_temp - width_height #difference between y and half max
+            
+            y_diff_mins = detect_minima(abs(y_sub), upper_threshold = y.max()*1e-2)#find where y_sub crosses 0
+
+            diff_mins_left = y_diff_mins[y_diff_mins < peak_index]
+            diff_mins_right = y_diff_mins[y_diff_mins > peak_index]
+
+            if len(diff_mins_left) > 0:
+                windex_left = diff_mins_left[-1]
+                width_left = abs(center - x[windex_left])
+                y_left = y_temp[windex_left:peak_index]
+                x_left = x[windex_left:peak_index]
+                g_left = gaussian(x_left, height, center, width_left*2, height_frac)
+                residual_left = np.std(g_left - y_left)/height
+
+                if plot == True:
+                    plt.plot(x[windex_left], y_temp[windex_left], 'r.', zorder = 100)
+
+            else:
+                width_left = np.inf
+                residual_left = np.inf
+
+            if len(diff_mins_right) > 0:
+                windex_right = diff_mins_right[0]
+                width_right = abs(center - x[windex_right])
+                y_right = y_temp[peak_index:windex_right]
+                x_right = x[peak_index:windex_right]
+                g_right = gaussian(x_right, height, center, width_right*2, height_frac)
+                residual_right = np.std(g_right - y_right)/height
+
+                if plot == True:
+                    plt.plot(x[windex_right], y_temp[windex_right], 'r.', zorder = 100)
+
+            else:
+                width_right = np.inf
+                residual_right = np.inf
+
+            residual = min([residual_left, residual_right])
+            width = min([width_left, width_right])*2
+
+            if plot == True:
+                plt.plot(x, y_temp)
+                plt.plot(x, abs(y_sub), 'k--', alpha = 0.6)
+                plt.plot(center, height, 'o')
+
+                #if np.isfinite(fwhm):
+                gauss_approx = gaussian(x, height, center, width, height_frac)
+                ls = '--'
+
+                plt.plot(x, gauss_approx, ls)
+
+                #plt.plot(x, abs(y_sub))
+                plt.plot(x[y_diff_mins], y_temp[y_diff_mins], 'ko')
+                plt.title(f'Iteration {n}; {center:.2f}; {residual:.2e}')
+                #plt.legend(title = 'center & residual', loc = 'center left', bbox_to_anchor = (1, 0.5))
+                plt.show()
+
+            residuals.append(residual)
+            temp_gausses.append((height, center, width, height_frac))
+
+        min_residual, chosen_gauss_params = sorted(zip(residuals, temp_gausses), key = lambda r_g: r_g[0])[0]
+        height, center, width, height_frac = chosen_gauss_params
+    
+        if plot == True:
+            plt.plot(x, y_temp)
+            plt.plot(center, height, 'ko')
+
+            for peak_index, residual, gauss_params in zip(maxima, residuals, temp_gausses):
+                gauss_approx = gaussian(x, *gauss_params)
+                ls = '--'
+                if gauss_params == chosen_gauss_params:
+                    ls = 'k--'
+                plt.plot(x, gauss_approx, ls, label = f'{x[peak_index]:.1f}; {residual:.2e}')
+
+            #plt.plot(x, abs(y_sub))
+            plt.title(f'Iteration {n}')
+            plt.legend(title = 'center & residual', loc = 'center left', bbox_to_anchor = (1, 0.5))
+            plt.show()
+
+        approx_gausses.append(chosen_gauss_params)
+
+        gauss_approx = gaussian(x, *chosen_gauss_params)
+        y_temp -= gauss_approx
+        n += 1
+
+    if plot == True:
+        print(f'{len(approx_gausses)} peaks found')
+        plt.plot(x, y)
+        for g_n, (height, center, width, height_frac) in enumerate(approx_gausses):
+            gauss_approx = gaussian(x, height, center, width, height_frac)
+            plt.plot(x, gauss_approx, '--', label = f'g_{g_n}')
+
+        plt.title('Final')
+        plt.show()
+
+    return approx_gausses
 
 def baseline_als(y, lam, p, niter=10):
     '''
@@ -67,33 +204,34 @@ def boltzmann_dist(x, a, A):
     '''
     return A*np.sqrt(2/np.pi)*(x**2*np.exp(-x**2/(2*a**2)))/a**3
 
-def butter_lowpass_filt_filt(data, cutoff = 1500, fs = 60000, order=5, **kwargs):
+def butter_lowpass_filt_filt(y, cutoff = 1500, fs = 60000, order=5, **kwargs):
     '''
-    Smoothes data without shifting it
+    Smoothes y data without shifting it
     Play with values of cutoff and fs to control amount of wibbly wobbly in output
     !!! find out what order does and add info to docstring !!!
     '''
-    if len(data.shape) == 2:#if y is 2D array (ca. list of 1D spectra), each spectrum is smoothed individually through recursive calling
-        return np.array([butter_lowpass_filt_filt(y, cutoff, fs, order) for y in data])
+    y = np.array(y)
+
+    if len(y.shape) == 2:#if y is 2D array (ca. list of 1D spectra), each spectrum is smoothed individually through recursive calling
+        return np.array([butter_lowpass_filt_filt(yi, cutoff, fs, order) for yi in y])
 
     padded = False
 
-    if len(data) < 18:# len(data) must be >= 18 for function to work
+    if len(y) < 18:# len(y) must be >= 18 for function to work
         padded = True
-        pad = 18 - len(data)//2
-        start_pad = np.array([data[0]] * (int(pad) + 1))
-        end_pad = np.array([data[0]] * (int(pad) + 1))
-        data = np.concatenate((start_pad, data, end_pad))
+        pad = 18 - len(y)//2
+        start_pad = np.array([y[0]] * (int(pad) + 1))
+        end_pad = np.array([y[0]] * (int(pad) + 1))
+        y = np.concatenate((start_pad, y, end_pad))
 
     '''
     No idea what the next bit actually does
     I stole it off the internet and have been using it since 2016; it's very robust
     '''
-
     nyq = 0.5 * fs
     normal_cutoff = cutoff/nyq
     b, a = sp.signal.butter(order, normal_cutoff, btype = 'low', analog = False)
-    y_filtered = sp.signal.filtfilt(b, a, data)
+    y_filtered = sp.signal.filtfilt(b, a, y)
 
     if padded == True:
         y_filtered = y_filtered[len(start_pad):-len(end_pad)]
@@ -141,6 +279,23 @@ def cent_diff(x, y):
 
     return d
 
+def detect_maxima(y, upper_threshold = np.inf, lower_threshold = -np.inf, edges = False):
+    maxdices = detect_minima(-y)
+
+    if edges == True:
+        x = np.arange(len(y))
+        d1 = cent_diff(x, y)
+        if d1[0] < 0 and lower_threshold < y[0] < upper_threshold:
+            maxdices = np.insert(maxdices, 0, 0)
+        if d1[-1] > 0 and lower_threshold < y[-1] < upper_threshold:
+            maxdices = np.append(maxdices, len(y) - 1)
+
+    if len(maxdices) > 0:
+        maxdices = maxdices[lower_threshold < y[maxdices]]
+        maxdices = maxdices[y[maxdices] < upper_threshold]
+
+    return maxdices
+
 def detect_minima(y, upper_threshold = np.inf, lower_threshold = -np.inf):
     '''
     Returns indices of any minima in the input
@@ -184,7 +339,7 @@ def detect_minima(y, upper_threshold = np.inf, lower_threshold = -np.inf):
     mindices = np.array(mindices)
 
     if len(mindices) > 0:
-        mindices = mindices[lower_threshold < y[mindices]] 
+        mindices = mindices[lower_threshold < y[mindices]]
         mindices = mindices[y[mindices] < upper_threshold]
 
     return mindices
@@ -213,8 +368,12 @@ def nmToEv(nm):
     eV = joules / e
     return eV
 
-def find_d2_minima(x, y, threshold = 0.1, max_n_peaks = 5, plot = False, **kwargs):
-    y_smooth = butter_lowpass_filt_filt(y, **kwargs)
+def find_d2_minima(x, y, smoothed = False, threshold = 0.1, max_n_peaks = 5, plot = False, title = None, **kwargs):    
+    if smoothed == False:
+        y_smooth = butter_lowpass_filt_filt(y, **kwargs)
+    else:
+        y_smooth = y
+
     d1 = cent_diff(x, y_smooth)
     d2 = cent_diff(x, d1)
     d2 /= d2.max()
@@ -249,7 +408,10 @@ def find_d2_minima(x, y, threshold = 0.1, max_n_peaks = 5, plot = False, **kwarg
         
         ax.set_xlabel('Wavelength (nm)')
         ax.set_xlim(x.min(), x.max())
-        
+
+        if title is not None:
+            ax_d2.set_title(title)
+
         plt.subplots_adjust(hspace = 0)
         plt.show()
 
@@ -266,7 +428,14 @@ def gauss_area(height, fwhm):
 
     return area
 
-def gaussian(x, height, center, fwhm, offset = 0):
+def gaussian(x, height, center, width, width_height_frac = 0.5):
+    a = height
+    b = center
+    c = width/(2*np.sqrt(2*np.log(1/width_height_frac)))
+    
+    return a*np.exp(-(((x - b)**2)/(2*c**2)))
+
+def gaussian_old(x, height, center, fwhm, offset = 0):
     '''Gaussian as a function of height, centre, fwhm and offset'''
     a = height
     b = center
@@ -281,61 +450,13 @@ def gaussian(x, height, center, fwhm, offset = 0):
 
     return y
 
-def get_fwhm(x, y, peak_index = None, asymm_factor = 1.8, smooth = True, reverse = False):
+def linear_interp(a, b, frac):
     '''
-    Estimates FWHM, center and height of largest peak in a given dataset
-    If peak_index is specified, estimates FWHM of peak centred at that point
-    asymm_factor: threshold for peak asymmetry, if the HWHM is significantly different either side of the peak, FWHM is taken as double the smaller HWHM
-    smooth: smooth spectrum before analysis; default = True (good for NPoM DF, Aggregate Extinction etc)
-    reverse: optionally reverses the x and y arrays before analysis
+    interpolate fractionally between two values (a and b)
+    frac is between 0 and 1
     '''
-    y = y/y.max()#normalise before analysis
-    
-    if smooth == True:#smooth spectrum before analysing; default = True
-        y = spt.butter_lowpass_filt_filt(y)
-        
-    if reverse == True:#optionally reverse spectrum before analysing
-        x = x[::-1]
-        y = y[::-1]
-        if peak_index is not None:#flip peak index position accordingly
-            peak_index = -peak_index
-
-    if peak_index is None:#if peak is unspecified
-        peak_index = y.argmax()#find the global maximum
-        '''
-        If global maximum is at the first or last point in the array, the index is shifted inward by one to prevent errors
-        '''
-        if peak_index == 0:
-            peak_index = 1
-        elif peak_index == len(y) - 1:
-            peak_index = len(y) - 2
-    
-    y_max = y[peak_index]
-    x_max = x[peak_index] #corresponding x and y locations of maximum
-    y_hm = y_max/2
-    
-    y_sub = y - y_hm #difference between y and half max
-    
-    y_diff_mins = spt.detect_minima(abs(y_sub), upper_threshold = 1e-2)#find where y_sub crosses 0
-    
-    lower_hm_index = y_diff_mins[y_diff_mins < peak_index][-1]
-    upper_hm_index = y_diff_mins[y_diff_mins > peak_index][0]
-    
-    lower_hwhm = abs(x_max - x[lower_hm_index])
-    upper_hwhm = abs(x_max - x[upper_hm_index])
-    
-    '''
-    >>> !!! Work in progress !!! <<<
-    '''
-    
-    plt.plot(x, y)
-    plt.plot(x, abs(y_sub))
-    plt.plot(x[y_diff_mins], y[y_diff_mins], 'ko')
-    plt.plot(x[lower_hm_index], y[lower_hm_index], 'r.')
-    plt.plot(x[upper_hm_index], y[upper_hm_index], 'r.')
-    plt.show()
-
-    return
+    m = b - a
+    return (m * frac) + a
 
 def lorentzian(x, height, center, fwhm):
     I = height
@@ -348,37 +469,7 @@ def lorentzian(x, height, center, fwhm):
     y = I*quot
     return y
 
-def percent_progress(n, total, resolution = 10, indent = 0):
-    '''
-    Displays the percentage completion of a for loop
-    
-    arguments:
-        n: index of item in the loop; loop must be performed using enumerate()
-        total: length of iterable upon which the for loop is acting
-        resolution: resolution with which the percentage progress is displayed
-    '''
-    
-    import numpy as np
-    
-    progress = None
-    
-    if n == 0:
-        progress = 0 #prints 0% at start
-    
-    if n == total - 1:
-        progress = 100
-
-    int_percent = int(100*n/total)
-    
-    if int(100*(n - 1)/total) != int_percent:
-        if int_percent in np.arange(resolution, 100, resolution):
-            progress = int_percent   
-    
-    if progress is not None:
-        indent = '  '*indent
-        print(f'{indent}{progress}%')
-
-def remove_nans(data, too_noisy = False):
+def remove_nans(data, noisy_data = False, **kwargs):
     '''
     Interpolates across gaps left by NaN values in n-dimensional array
     if too_noisy == True: (use for very noisy data)
@@ -405,23 +496,21 @@ def remove_nans(data, too_noisy = False):
         print('WARNING: Entire array is NaNs')
         return y
     
-    if too_noisy == True:
+    '''
+    performs linear interpolation across "gaps" caused by NaN values
+    '''
+    x = np.arange(0, len(y))#keeps track of original array length
+    y_trunc = np.delete(y, np.where(np.isnan(y)))#deletes all NaNs and truncates array
+    x_trunc = np.delete(x, np.where(np.isnan(y)))#repeats with x
+    y_interp = np.interp(x, x_trunc, y_trunc)#interpolates using x and x_trunc as a reference
+
+    if noisy_data == True:
         '''
-        smoothes data and directly replaces NaNs with values from smoothed data
+        smoothes data and replaces NaNs with values from smoothed data
         good for very noisy data, but can generate artifacts in clean data
         '''
         y_smooth_interp = butter_lowpass_filt_filt(y_interp, **kwargs)#include cutoff and fs values in kwargs, if needed
         y_interp = np.where(np.isnan(y), y_smooth_interp, y)
-
-    else:
-        '''
-        performs linear interpolation across "gaps" caused by NaN values
-        recommended for clean data
-        '''
-        x = np.arange(0, len(y))#keeps track of original array length
-        y_trunc = np.delete(y, np.where(np.isnan(y)))#deletes all NaNs and truncates array
-        x_trunc = np.delete(x, np.where(np.isnan(y)))#repeats with x
-        y_interp = np.interp(x, x_trunc, y_trunc)#interpolates using x and x_trunc as a reference
 
     return y_interp
 
@@ -513,7 +602,7 @@ def wn_to_wl(wn, laser_wl = 633):
     
     return wl
 
-def remove_cosmic_rays(spectrum, thresh=5, smooth=30, max_iterations=10, **kwargs):
+def remove_cosmic_rays(y, threshold = 3, cutoff = 1500, fs = 60000, max_iterations = 10, **kwargs):
     '''
     a way of removing cosmic rays from spectra. Mainly tested with Dark-Field
     spectra, as the spikiness of Raman makes it very difficult to do simply.
@@ -530,47 +619,49 @@ def remove_cosmic_rays(spectrum, thresh=5, smooth=30, max_iterations=10, **kwarg
         are done in 1-3.
     
     '''
-    _len = len(spectrum)
-    cleaned = np.copy(spectrum) # prevent modification in place
+    _len = len(y)
+    y_clean = np.copy(y) # prevent modification in place
     
     for i in range(max_iterations): 
-        noise_spectrum = cleaned/sp.ndimage.gaussian_filter(cleaned, smooth)
+        #noise_spectrum = y_clean/sp.ndimage.gaussian_filter(y_clean, smoothing_factor)
+        y_noise = y_clean/butter_lowpass_filt_filt(y, cutoff, fs, **kwargs)
         # ^ should be a flat, noisy line, with a large spike where there's
         # a cosmic ray.
-        noise_level = np.sqrt(np.var(noise_spectrum))
+        noise_level = np.sqrt(np.var(y_noise))
         # average deviation of a datapoint from the mean
-        mean_noise = noise_spectrum.mean() # should be == 1
-        spikes = np.arange(_len)[noise_spectrum > mean_noise+(thresh*noise_level)]
+        mean_noise = y_noise.mean() # should be == 1
+        spikes = np.arange(_len)[y_noise > mean_noise + (threshold*noise_level)]
         # the indices of the datapoints that are above the threshold
        
         # now we add all data points to either side of the spike that are 
         # above the noise level (but not necessarily the thresh*noise_level)
-        rays = set()
+        ray_indices = set()
 
         for spike in spikes:
             for side in (-1, 1): # left and right
                 step = 0
 
-                while 0 <= (coord := spike + (side*step)) <= _len-1:
+                while 0 <= (coord := spike + (side*step)) <= _len - 1:
                     # staying in the spectrum
                     
-                    if noise_spectrum[coord] > mean_noise + noise_level:
-                        rays.add(coord)
+                    if y_noise[coord] > mean_noise + noise_level:
+                        ray_indices.add(coord)
                         step += 1
                     else:
                         break
 
-        rays = list(rays) # convert to list for indexing
+        ray_indices = list(ray_indices) # convert to list for indexing
 
-        if rays: # if there are any cosmic rays
-            cleaned[rays] = sp.ndimage.gaussian_filter(cleaned, smooth)[rays]
+        if len(ray_indices) > 0: # if there are any cosmic rays
+            #y_clean[ray_indices] = sp.ndimage.gaussian_filter(y_clean, smoothing_factor)[ray_indices]
+            y_clean[ray_indices] = butter_lowpass_filt_filt(y_clean, cutoff, fs, **kwargs)[ray_indices]
             # replace the regions with the smooothed spectrum
             continue # and repeat, as the smoothed spectrum will still be 
                      # quite affected by the cosmic ray. 
                      
         # until no cosmic rays are found
-        return cleaned
-    return cleaned
+        return y_clean
+    return y_clean
 
 class Spectrum:
     '''
@@ -586,9 +677,13 @@ class Spectrum:
         rc_params: plot style parameters with which to update plt.rcParams, if desired
         raman_excitation: excitation wavelength with which to convert wavelength to wavenumber
             NB: leave raman_excitation = None if x input is already in wavenumbers
+        x_min, x_max: x-axis values between which to truncate the spectrum (both x and y), if desired
+            self.x, self.y will be the truncated spectra
+            original x, y are copied and saved as self.x_raw and self.y_raw
     '''
     def __init__(self, *args, x = None, y = None, y_smooth = None, dset = None, name = None, rc_params = None, 
-                 x_lim  = None, attrs = None, raman_excitation = None, **kwargs):
+                 x_lim = None, x_min = None, x_max = None, attrs = None, raman_excitation = None, referenced = True, 
+                 **kwargs):
         
         self.x = x
         self.y = y
@@ -602,9 +697,6 @@ class Spectrum:
 
         else:
             self.rc_params = rc_params
-
-        self.x_lim = x_lim
-
 
         '''
         Next few blocks auto-identify which combination of possible args (x, y, dset, name) has bee provided
@@ -666,16 +758,50 @@ class Spectrum:
                 attr_name = attr_name.lower()#de-capitalise everything
                 setattr(self, attr_name, attr)#update object attrs with additonal metadata, if any
 
+        if x_lim is None:
+            x_lim = [self.x.min(), self.x.max()]
+
+        if x_min is not None:
+            x_lim[0] = x_min
+
+        if x_max is not None:
+            x_lim[1] = x_max
+
+        self.x_lim = x_lim
+
+        if referenced == False:
+            self.bg_and_ref()
+
+        self.x_raw = self.x.copy()
+        self.y_raw = self.y.copy()
+
+        self.x, self.y = truncate_spectrum(self.x, self.y, *self.x_lim)
+
+    def bg_and_ref(self, background = None, reference = None):
+        if background is None:
+            if 'background' in self.__dict__.keys():
+                background = self.background
+            assert background is not None, 'background not found; please specify'
+
+        if reference is None:
+            if 'reference' in self.__dict__.keys():
+                reference = self.reference
+            assert reference is not None, 'reference not found; please specify'
+
+        self.y = (self.y - background)/(reference - background)
+
+        if 'Y' in self.__dict__.keys():
+            #in case spectrum is 2D
+            self.Y = (self.Y - background)/(reference - background)
+
     def plot(self, ax = None, y_ticks = True, y_label = 'Intensity', x_label = 'Wavelength (nm)', 
              rc_params = None, title = False, **kwargs):
 
         old_rc_params = plt.rcParams.copy()#saves initial rcParams before overwriting them
         if ax is None:
             if self.rc_params is not None:
-                print('self rc params')
                 plt.rcParams.update(self.rc_params)#use rc params specified with object
             if rc_params is not None:
-                print('rc params')
                 plt.rcParams.update(rc_params)#unless overridden when calling the function
 
             fig, ax = plt.subplots()#if no axes provided, create some
@@ -715,46 +841,59 @@ class Timescan(Spectrum):
         self.y = np.average(self.Y, axis = 0)# average of Y data, for 1D plotting
         self.t_raw = np.arange(self.Y.shape[0])
 
-    def determine_v_lims(self, min_std = 2, max_std = 10, **kwargs):
+    def determine_v_lims(self, min_std = 0.5, max_std = 4, ignore_vlims = False, **kwargs):
         '''
         Calculates appropriate intensity limits for 2D plot of timescan, based on frequency distribution of intensities.
         !!! add more comments
         '''
 
         Y_flat = self.Y.flatten()
-        frequencies, bins = np.histogram(Y_flat, bins = 100, range = (0, Y_flat.max()), density = False)
+
+        if ignore_vlims == True:
+            v_min = Y_flat.min()
+            v_max = Y_flat.max()
+
+        frequencies, bins = np.histogram(Y_flat, bins = 1000, range = (0, Y_flat.max()), density = False)
         bin_centres = np.linspace(np.average([bins[0], bins[1]]), np.average([bins[-2], bins[-1]]), len(frequencies))
         
         mode = bin_centres[frequencies.argmax()]
-        
         std = np.std(Y_flat)
-        v_min, v_max = (max(mode - min_std*std, 1), mode + max_std*std)
-        
-        if min_std == 0 or min_std is None:
-            v_min = 0
         
         if max_std == 0 or max_std is None:
             v_max = Y_flat.max()
+        else:
+            v_max = mode + max_std*std
+
+        if min_std == 0 or min_std is None:
+            v_min = 0
+        else:
+            v_min = max(mode - min_std*std, mode)
+
+        print(v_min, v_max)
         
         self.v_min = v_min
         self.v_max = v_max
 
-    def plot_timescan(self, ax = None, y_label = None, rc_params = timescan_params, x_lim = None, 
-                      x_scale = 1, x_shift = 0, x_label = 'Wavelength (nm)',
-                      plot_averages = False, avg_chunks = 10, avg_color = 'white', cmap = 'inferno', **kwargs):
+    def plot_timescan(self, ax = None, y_label = None, rc_params = timescan_params, x_lim = None, title = None,
+                      x_scale = 1, x_shift = 0, x_label = 'Wavelength (nm)', figsize = None, save_fig = False, 
+                      img_name = None,
+                      plot_averages = False, avg_chunks = 10, avg_color = 'white', show = True, cmap = 'inferno', 
+                      **kwargs):
         '''
         !!! needs docstring
         '''
 
         old_rc_params = plt.rcParams.copy()#saves initial rcParams before overwriting them
+
         
         if ax is None:
             if self.rc_params is not None:
-                print('self rc params')
                 plt.rcParams.update(self.rc_params)#use rc params specified with object
             if rc_params is not None:
-                print('rc params')
                 plt.rcParams.update(rc_params)#unless overridden when calling the function
+
+            if figsize is None:
+                figsize = plt.rcParams['figure.figsize']
 
             fig, ax = plt.subplots()#if no axes provided, create some
             external_ax = False
@@ -786,6 +925,12 @@ class Timescan(Spectrum):
 
         self.determine_v_lims(**kwargs)
 
+        if 'v_min' in kwargs.keys():
+            self.v_min = kwargs['v_min']
+
+        if 'v_max' in kwargs.keys():
+            self.v_max = kwargs['v_max']
+
         ax.pcolormesh(x, t, Y, cmap = cmap, shading = 'auto', 
                       norm = mpl.colors.LogNorm(vmin = self.v_min, vmax = self.v_max))
 
@@ -813,10 +958,23 @@ class Timescan(Spectrum):
         ax.set_ylim(t.min(), t.max())
         ax.set_ylabel(y_label)
 
+        if title is not None:
+            ax.set_title(title)
+
         if external_ax == False:
             if self.raman_excitation is not None and x_label == 'Wavelength (nm)':
                 x_label = 'Raman Shift (cm$^{-1}$)'
                 
-            ax.set_xlabel(x_label)
-            plt.show()
+            ax.set_xlabel(x_label)            
+
+            if save_fig == True:
+                if img_name is None:
+                    img_name = 'timescan.png'
+
+                fig.savefig(img_name, bbox_inches = 'tight')
+
+            if show == True:
+                plt.show()
+            else:
+                plt.close('all')
             plt.rcParams.update(old_rc_params)#put rcParams back to normal when done

@@ -12,14 +12,13 @@ Bit slow and clunky at the moment but Rakesh says he wrote a smoother verstion; 
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-from nplab.analysis.general_spec_tools import sers_tools_david as std
 from nplab.analysis.general_spec_tools import spectrum_tools as spt
 from IPython.utils import io
 
-from nplab.analysis.general_spec_tools import all_rc_params
+from nplab.analysis.general_spec_tools import all_rc_params as arp
 
-dft_rc_params = all_rc_params.master_param_dict['DFT Raman']
-bbox_params = all_rc_params.bbox_params
+dft_rc_params = arp.master_param_dict['DFT Raman']
+bbox_params = arp.bbox_params
 
 def gaussian_from_area(x, area, centre, fwhm):
     '''
@@ -685,11 +684,12 @@ class Gaussian_Output:
             plt.rcParams.update(old_rc_params)
 
 class DFT_Raman_Collection:
-    def __init__(self, dft_dir = None, dft_names = None, polarisations = None, x_min = None, x_max = None, fwhm = 5, **kwargs):
+    def __init__(self, dft_dir = None, dft_names = None, polarisation = None, x_min = None, x_max = None, fwhm = 5, **kwargs):
         root_dir = os.getcwd()
         self.dft_dict = process_all_dft_raman(data_dir = dft_dir, filenames = dft_names, fwhm = fwhm,
                                               polarisation = polarisation, x_min = x_min, x_max = x_max, **kwargs)
         os.chdir(root_dir)
+        self.n_spectra = len(self.dft_dict.keys())
 
         self.x_min = x_min
         self.x_max = x_max
@@ -704,6 +704,9 @@ class DFT_Raman_Collection:
         self.x_range = np.array([self.x_min, self.x_max])
 
     def get_polar_dict(self, polarisations = {}):
+        if polarisations is None:
+            polarisations = ['iso']
+
         if len(polarisations) == 0:#extracts all gaussian jobs and all polarisations specified when initialising
             polar_dict = {gaussian_filename : list(gaussian_job.sers_activities_dict.keys())
                           for gaussian_filename, gaussian_job in self.dft_dict.items()}
@@ -718,7 +721,7 @@ class DFT_Raman_Collection:
         self.polar_dict = polar_dict
         self.n_spectra = len([polar for polar_list in polar_dict.values() for polar in polar_list])
 
-    def plot_dft(self, polarisations = {}, x_range = None, text_loc = None, text_pad = 0.2,
+    def plot_dft(self, polarisations = {}, x_range = None, text_loc = None, text_pad = 0.2, powder_spectrum = None,
                  ax = None, y_offset = 0, rc_params = dft_rc_params, fwhm = 5, **kwargs):
         '''
         Plots a selection of DFT Raman spectra on a given axes
@@ -759,7 +762,19 @@ class DFT_Raman_Collection:
         else:
             external_ax = True
 
+        if powder_spectrum is not None:
+            ax.plot(powder_spectrum.x, powder_spectrum.y_clean)
+            x_loc = x_range.min() + text_pad*(x_range.max() - x_range.min())/15
+            y_loc = 1 - text_pad
+            ax.text(x_loc, y_loc, 'Powder',
+                    transform = ax.transData, ha = 'left', va = 'top', bbox = bbox_params,
+                    fontsize = plt.rcParams['legend.fontsize']
+                )
+
+            y_offset += 1
+
         for n, (gaussian_filename, polarisations) in enumerate(self.polar_dict.items()):
+            
             gaussian_job = self.dft_dict[gaussian_filename]
 
             if fwhm != self.fwhm:
@@ -770,13 +785,13 @@ class DFT_Raman_Collection:
                     with io.capture_output(fwhm != self.fwhm):
                         gaussian_job.extract_sers_activities(polarisation, fwhm = fwhm)
 
-
                 x, y = gaussian_job.polarised_spectrum_dict[polarisation]
 
                 y_norm = y - y.min()
                 y_norm = y_norm/y_norm.max()
                 y_norm += y_offset
                 y_offset += 1
+                print(y_norm.min())
 
                 ax.plot(x, y_norm)
 

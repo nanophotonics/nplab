@@ -20,15 +20,15 @@ from importlib import reload
 
 from nplab.analysis import spc_to_h5 as sph
 
-from nplab.analysis.general_spec_tools import os_tools as ost
+from nplab.analysis.general_spec_tools import particle_track_analysis as pta
 from nplab.analysis.general_spec_tools import spectrum_tools as spt
 from nplab.analysis.general_spec_tools import dft_raman_tools as drt
 
-from nplab.analysis.general_spec_tools import all_rc_params
+from nplab.analysis.general_spec_tools import all_rc_params as arp
 
-agg_sers_rc_params = all_rc_params.master_param_dict['Agg SERS']
-dft_rc_params = all_rc_params.master_param_dict['DFT Raman']
-bbox_params = all_rc_params.bbox_params
+agg_sers_rc_params = arp.master_param_dict['Agg SERS']
+dft_rc_params = arp.master_param_dict['DFT Raman']
+bbox_params = arp.bbox_params
 
 other_plot_params = {'title_bbox' : 
                                 {'boxstyle' : 'square',
@@ -68,7 +68,7 @@ def inspect_data(data_dir = None, name_format = None, **kwargs):
     if name_format is None:
         name_format = os.path.split(os.getcwd())[-1]
 
-    h5_file = ost.find_h5_file(root_dir = data_dir, name_format = name_format, **kwargs)
+    h5_file = pta.find_h5_file(root_dir = data_dir, name_format = name_format, **kwargs)
 
     with h5py.File(h5_file, 'r') as F:
         print(list(F['All Raw'].keys()))
@@ -81,7 +81,7 @@ def tidy_h5(dset_names, new_dset_names = None, old_h5_name = None, new_h5_name =
 
     if old_h5_name is None:
         name_format = os.path.split(os.getcwd())[-1]
-        old_h5_name = ost.find_h5_file(exclude = 'Summary', name_format = name_format, **kwargs)
+        old_h5_name = pta.find_h5_file(exclude = 'Summary', name_format = name_format, **kwargs)
 
     if new_h5_name is None:
         new_h5_name = f'{old_h5_name.replace(".h5", "").replace(" Raman Data", "")} Summary.h5'
@@ -122,8 +122,13 @@ class Renishaw_Raman_Spectrum(spt.Spectrum):
         self.x_range = x_range
         self.norm_range = norm_range        
         self.concentration = concentration
-        self.y_raw = self.y
-        self.x_raw = self.x
+
+        if len(self.y.shape) == 2:
+            self.Y = self.y.copy()
+            self.y = np.sum(self.Y, axis = 0)
+
+        self.y_raw = self.y.copy()
+        self.x_raw = self.x.copy()
 
         for arg in args:
             if type(arg) == str:
@@ -239,10 +244,12 @@ class Concentration_Series:
             these can be provided as attributes in the h5 file, or explicitly specified
             if explicitly specified, concentration attribute will be created and/or overwritten for each dataset
 
+    !!! turn this class into more general Renishaw Series so it can be used for power series as well
+
     '''
 
-    def __init__(self, h5_file = None, dft_dir = None, dft_collection = None, concentrations = None, data_names = None,
-                 norm_range = None, x_range = None, baseline_plot = False, init_plot = False, **kwargs):
+    def __init__(self, h5_root = None, dft_dir = None, dft_collection = None, sample_names = None, concentrations = None, data_names = None,
+                 norm_range = None, x_range = None, powder_spectrum = None, baseline_plot = False, init_plot = False, **kwargs):
 
         self.raman_spectra = []
         self.x_range = x_range
@@ -261,42 +268,45 @@ class Concentration_Series:
 
         self.concentrations = concentrations
         self.real_concentrations = True
-        self.powder_spectrum = None
+        self.powder_spectrum = powder_spectrum
 
-        with h5py.File(h5_file, 'a') as F:
+        F = h5_root
+
+        if sample_names is None:
             sample_names = sorted(F.keys())
-            if self.concentrations is None:                
-                if 'Concentration' in F[sample_names[0]].attrs.keys():
-                    self.concentrations = [F[i].attrs['Concentration'] for i in sample_names]
-                else:
-                    self.concentrations = np.linspace(1, 10, len(F.keys()))#dummy concentrations to keep everything else happy
-                    self.real_concentrations = False
-                    print('Warning: No concentrations specified')
 
-            if 'Powder' in sample_names and len(self.concentrations) == len(sample_names) - 1:
-                self.concentrations = list(self.concentrations)
-                self.concentrations.append(np.average(self.concentrations))
-                self.concentrations = np.array(self.concentrations)
+        if self.concentrations is None:                
+            if 'Concentration' in F[sample_names[0]].attrs.keys():
+                self.concentrations = [F[i].attrs['Concentration'] for i in sample_names]
+            else:
+                self.concentrations = np.linspace(1, 10, len(F.keys()))#dummy concentrations to keep everything else happy
+                self.real_concentrations = False
+                print('Warning: No concentrations specified')
 
-            for sample_name, concentration in zip(sample_names, self.concentrations):
-                #print(sample_name)
+        if 'Powder' in sample_names and len(self.concentrations) == len(sample_names) - 1:
+            self.concentrations = list(self.concentrations)
+            self.concentrations.append(np.average(self.concentrations))
+            self.concentrations = np.array(self.concentrations)
 
-                if sample_name == 'Powder':
-                    norm_range = None
-                else:
-                    norm_range = self.norm_range
+        for sample_name, concentration in zip(sample_names, self.concentrations):
+            #print(sample_name)
 
-                spectrum = Renishaw_Raman_Spectrum(F[sample_name], x_range = x_range, norm_range = norm_range,
-                                                   concentration = concentration)
-                spectrum.clean_spectrum(plot = baseline_plot, **kwargs)
-                if init_plot == True:
-                    spectrum.plot_raman(clean = True)
+            if sample_name == 'Powder':
+                norm_range = None
+            else:
+                norm_range = self.norm_range
 
-                if sample_name == 'Powder':
-                    self.powder_spectrum = spectrum
+            spectrum = Renishaw_Raman_Spectrum(F[sample_name], x_range = x_range, norm_range = norm_range,
+                                               concentration = concentration)
+            spectrum.clean_spectrum(plot = baseline_plot, **kwargs)
+            if init_plot == True:
+                spectrum.plot_raman(clean = True)
 
-                else:
-                    self.raman_spectra.append(spectrum)
+            if sample_name == 'Powder':
+                self.powder_spectrum = spectrum
+
+            else:
+                self.raman_spectra.append(spectrum)
 
         self.concentrations = np.array(self.concentrations)
 
@@ -317,7 +327,7 @@ class Concentration_Series:
         self.dft_names = list(self.dft_collection.dft_dict.keys())
 
     def plot_conc_series(self, dft_spectra = {}, x_range = None, dft_text_loc = None, label_x_loc = 500, 
-                         expt_labels = False,
+                         expt_labels = False, title = None, cbar_label = 'Aggregant Concentration ($\mathrm{\mu}$M)',
                          text_pad = 0.08, y_squish = 1, rc_params = agg_sers_rc_params, bbox_params = bbox_params, 
                          threshold_conc = 0, powder_color = 'grey', **kwargs):
 
@@ -338,13 +348,14 @@ class Concentration_Series:
             x_range = self.x_range
 
         fig_height = n_expt_spectra + n_dft_spectra
+        fig_height *= 1.5
 
         fig = plt.figure(figsize = (14, fig_height))
         ax = fig.add_subplot(111)
 
         len_cols = 1000
 
-        print('Concentrations:', self.concentrations)
+        #print('Concentrations:', self.concentrations)
 
         conc_cont = np.logspace(np.log10(self.concentrations.min()), np.log10(self.concentrations.max()), len_cols)
         cmap = plt.get_cmap('jet_r', len_cols)
@@ -412,6 +423,10 @@ class Concentration_Series:
 
         ax.set_xlabel('Raman Shift (cm$^{-1}$)')
         ax.set_ylabel('Counts')
+
+        if title is not None:
+            ax.set_title(title)
+
         plt.rcParams['legend.title_fontsize'] = plt.rcParams['legend.fontsize']
 
         '''
@@ -429,7 +444,7 @@ class Concentration_Series:
             ax_cbar = fig.add_axes([cbar_left, ax_bottom, cbar_width, ax_height])
             cbar_norm = mpl.colors.LogNorm(vmin = conc_cont.min(), vmax = conc_cont.max())
             cbar = mpl.colorbar.ColorbarBase(ax_cbar, cmap = cmap, norm = cbar_norm, orientation = 'vertical')#, 
-            cbar.set_label('Aggregant Concentration ($\mathrm{\mu}$M)', rotation = 270, verticalalignment = 'bottom')
+            cbar.set_label(cbar_label, rotation = 270, verticalalignment = 'bottom')
 
         '''
         DFT Raman

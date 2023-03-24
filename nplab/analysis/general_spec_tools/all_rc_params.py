@@ -38,7 +38,7 @@ master_param_dict = {'Default' :
                 'font.sans-serif' : 'Arial Nova',
                 'font.sans-serif' : 'Arial Nova',
                 'mathtext.fontset' : 'custom',
-                'mathtext.rm' : 'DejaVu Sans',
+                'mathtext.rm' : 'Arial Nova',
                 'mathtext.it' : 'Arial Nova:italic',
                 'mathtext.bf' : 'Arial Nova:bold',
                 'axes.unicode_minus' : False,                

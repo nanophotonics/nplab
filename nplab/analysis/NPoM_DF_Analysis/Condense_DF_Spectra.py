@@ -566,16 +566,16 @@ def extractAllSpectra(rootDir, returnIndividual = True, pl = False, dodgyThresho
                                 dParticleFormat = dSetName
                                 
                     try:
-                        zScan = particleGroup[dParticleFormat]
-                    
-                        x = zScan.attrs['wavelengths']
-                        bg = zScan.attrs['background']
-                        ref = zScan.attrs['reference']
-
+                        zScan = particleGroup[dParticleFormat]                        
+    
                     except:
                         print('Z-Stack not found in %s' % (groupName))
-                        cancelled += 1
-                        continue
+                        cancelled += 1        
+                        continue 
+                    
+                    x = zScan.attrs['wavelengths']
+                    bg = zScan.attrs['background']
+                    ref = zScan.attrs['reference']                  
 
                     if referenced == False:
 
@@ -653,7 +653,7 @@ def extractAllSpectra(rootDir, returnIndividual = True, pl = False, dodgyThresho
                 dScan = gScan.create_dataset('spectra', data = spectra)
                 dScan.attrs['Collection spot alignment'] = alignment
                 dScan.attrs['Misaligned particle numbers'] = dodgyParticles
-                dScan.attrs['%% particles misaligned'] = percentDefocused       
+                dScan.attrs['%% particles misaligned'] = percentDefocused
 
                 dScan.attrs.update(attrs)
 

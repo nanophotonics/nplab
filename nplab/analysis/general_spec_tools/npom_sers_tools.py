@@ -21,9 +21,9 @@ from nplab.analysis import spc_to_h5 as spc
 
 from nplab.analysis.general_spec_tools import spectrum_tools as spt
 from nplab.analysis.general_spec_tools import dft_raman_tools as drt
-from nplab.analysis.general_spec_tools import all_rc_params
+from nplab.analysis.general_spec_tools import all_rc_params as arp
 
-timescan_params = all_rc_params.master_param_dict['NPoM SERS Timescan']
+timescan_params = arp.master_param_dict['NPoM SERS Timescan']
 
 def summarise_h5(data_dir, h5_files, summary_filename = 'SERS Summary.h5', scan_format = 'ParticleScannerScan_', 
                  scans_to_omit = [], particle_format = 'Particle_', sers_format = 'kinetic_SERS', z_scan_format = 'lab.z_scan',

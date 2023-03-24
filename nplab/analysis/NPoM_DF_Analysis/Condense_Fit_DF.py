@@ -47,7 +47,7 @@ def run(raiseExceptions = raiseExceptions, intensityRatios = intensityRatios,
 
     if statsOnly == True:
         outputFileName = mpf.findH5File(os.getcwd(), nameFormat = 'MultiPeakFitOutput', mostRecent = True)#finds the most recent file with given name format
-        mpf.doStats(outputFileName, stacks = False, pl = pl, npomTypes = npomTypes, intensityRatios = intensityRatios, 
+        mpf.doStats(outputFileName, stacks = False, pl = pl, npomTypes = npomTypes, intensityRatios = intensityRatios,
                     upperCutoff = upperCutoff, lowerCutoff = lowerCutoff)
 
     else:
