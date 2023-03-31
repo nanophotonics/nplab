@@ -14,10 +14,7 @@ import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
-
 from importlib import reload
-
-from nplab.analysis import spc_to_h5 as spc
 
 from nplab.analysis.general_spec_tools import spectrum_tools as spt
 from nplab.analysis.general_spec_tools import dft_raman_tools as drt
@@ -63,10 +60,11 @@ def summarise_h5(data_dir, h5_files, summary_filename = 'SERS Summary.h5', scan_
                                         key = lambda i: int(i.split('_')[-1]))
                 for particle_name in particle_names:
                     particle_path = f'{scan_name}/{particle_name}'
-                    if sers_format in F[particle_path].keys():
+                    if sers_format in str(F[particle_path].keys()):
                         all_particle_groups[h5_file].append(particle_path)
             
             print('  Done\n')
+            #print(all_particle_groups)
             
     n = 0
 
@@ -80,14 +78,15 @@ def summarise_h5(data_dir, h5_files, summary_filename = 'SERS Summary.h5', scan_
                 for n, particle_path in enumerate(all_particle_groups[h5_file], n + 1):
                     #print(n)
 
-                    spt.percent_progress(n, n_spectra, resolution = 5, indent = 1)
+                    #spt.percent_progress(n, n_spectra, resolution = 5, indent = 1)
 
                     g_particle_old = F[particle_path]
 
-                    sers_dsets = [i[1] for i in g_particle_old.items() if i[0].startswith(sers_format)]
+                    sers_dsets = [i[1] for i in g_particle_old.items() if sers_format in i[0]]
 
                     if len(sers_dsets) == 0:
                         print(g_particle_old.keys())
+                        print('0')
                         continue
 
                     sers_dset = sers_dsets[0]                
