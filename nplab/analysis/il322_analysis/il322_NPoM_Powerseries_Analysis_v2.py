@@ -56,7 +56,7 @@ ref_wn_633nm = [ 276.74390496,  396.21252815,  468.08976025, 679.43472478,  816.
  1067.96658448, 1179.79270908, 1271.98782961, 1467.40917881, 1570.24171155]
 
 ## Get calibrated wavenumbers
-wn_cal_633 = cal.run_spectral_calibration(bpt_ref_633nm, ref_wn = ref_wn_633nm, ref_threshold=0.07, plot=True)
+wn_cal_633 = cal.run_spectral_calibration(bpt_ref_633nm, ref_wn = ref_wn_633nm, ref_threshold=0.07, deg = 2, plot=True)
 
 
 #%% Get R_setup
