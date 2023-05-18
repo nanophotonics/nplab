@@ -31,7 +31,7 @@ plt.rc('lines', linewidth=3)
 
 #%% Find calibrated wavenumbers from ref & lit BPT spectra    
 
-def spectral_calibration(meas_x, meas_y, meas_wn=None, lit_x=None, lit_y=None, lit_wn=None, plot=True):
+def spectral_calibration(meas_x, meas_y, meas_wn=None, lit_x=None, lit_y=None, lit_wn=None, deg = 2, plot=True):
     
     '''
     Calibrates spectrum in wavenumbers of measured spectrum to literature peak positions
@@ -42,7 +42,7 @@ def spectral_calibration(meas_x, meas_y, meas_wn=None, lit_x=None, lit_y=None, l
         mean_wn: peak positions of measured spectrum
         lit_x: x-values of literature spectrum in wavenumber (optional: for plot)
         lit_y: y-values of literature spectrum (optional: for plot)
-        smooth_first: butter_lowpass_filt - need to fix bkg subtraction
+        deg: (int) order of polynomial fit between measured & lit peaks
         plot: (boolean) plot ployfit and literature v calibrated spectra
     
     Returns:
@@ -53,14 +53,13 @@ def spectral_calibration(meas_x, meas_y, meas_wn=None, lit_x=None, lit_y=None, l
     print('Calibrating spectrometer from reference')
     
     
-    # Cubic fit literature peak positions to measured peak positions
-    #a3, a2, a1, a0 = np.polyfit(meas_wn, lit_wn, deg=3)
-    a2, a1, a0 = np.polyfit(meas_wn, lit_wn, deg=2)
-    
+    # Fit literature peak positions to measured peak positions
+    a = np.polyfit(meas_wn, lit_wn, deg=deg)
     
     # Calculate the calibrated wavenumbers using the fitted coefficients
-    #wn_cal = a3 * meas_x**3 + a2 * meas_x**2 + a1 * meas_x + a0
-    wn_cal = a2 * meas_x**2 + a1 * meas_x + a0
+    wn_cal = 0
+    for i in range(0, len(a)):
+        wn_cal = wn_cal + a[i] * meas_x**(deg-i)
     '''
     
     a2, a1, a0 = np.polyfit(meas_wn, lit_wn, deg=2)
@@ -113,8 +112,10 @@ def spectral_calibration(meas_x, meas_y, meas_wn=None, lit_x=None, lit_y=None, l
     if plot == True:
         plt.figure(figsize=[10,6], dpi=1000) 
         plt.plot(meas_wn, lit_wn, '.')
-        #plt.plot(meas_wn, (a3*meas_wn**3 + a2*meas_wn**2 + a1*meas_wn + a0), '-')
-        plt.plot(meas_wn, (a2*meas_wn**2 + a1*meas_wn + a0), '-')
+        cal_peak = 0
+        for i in range(0, len(a)):
+            cal_peak = cal_peak + a[i] * meas_wn**(deg-i)
+        plt.plot(meas_wn, cal_peak, '-')
         plt.xlabel('Peak Positions (cm$^{-1}$) - Measured')
         plt.ylabel('Peak Positions (cm$^{-1}$) - Literature')
         #plt.tight_layout()
@@ -209,11 +210,15 @@ def white_scatter_calibration(wl, white_scatter, white_bkg, start_notch=None, en
     # Return R_setup
     print('   Done\n')
     return R_setup
-
+#%%
+def find_nearest(array, value):
+    array = np.asarray(array)
+    idx = (np.abs(array - value)).argmin()
+    return array[idx]
 
 #%%
 
-def run_spectral_calibration(ref_spectrum, ref_wn = [], lit_wn = [], ref_threshold = 0.08, baselined = False, smooth_first = True, plot = True):
+def run_spectral_calibration(ref_spectrum, ref_wn = [], lit_wn = [], ref_threshold = 0.08, deg = 2, baselined = False, smooth_first = True, plot = True):
 
     '''
     Run function to calibrate x-axis of spectrometer via reference spectrum
@@ -224,6 +229,7 @@ def run_spectral_calibration(ref_spectrum, ref_wn = [], lit_wn = [], ref_thresho
         ref_wn ([] list): list of ref spectrum peak positions (if empty, extracts from reference spectrum)
         lit_wn ([] list): list of literature spectrum peak positions (if empty, defaults to BPT spectrum)
         ref_threshold(0.08 float): peak fitting threshold for reference spectrum
+        deg: (int) order of polynomial fit between measured & lit peaks
         baselined (boolean)
         smooth_first (boolean)
         plot (boolean)
@@ -304,7 +310,8 @@ def run_spectral_calibration(ref_spectrum, ref_wn = [], lit_wn = [], ref_thresho
     else:
         ref_wn = np.array(ref_wn)
     
-    # Plot ref & lit spectra & peak positions
+    
+    # Plot ref & lit spectra with peak positions
     
     if plot == True:
         plt.plot(lit_spectrum.x, lit_spectrum.y_smooth/lit_spectrum.y_smooth.max(), color=(0,0,1,0.5), label = 'Literature')
@@ -312,9 +319,9 @@ def run_spectral_calibration(ref_spectrum, ref_wn = [], lit_wn = [], ref_thresho
         plt.legend(fontsize='x-small')
         plt.xlabel('Raman shifts (cm$^{-1}$)', fontsize='small')
         for peak in lit_wn:
-            plt.scatter(peak,lit_spectrum.y_smooth[np.where(lit_spectrum.x == peak)], color='blue')
-        #for peak in ref_wn:
-         #   plt.scatter(peak,(ref_spectrum.y_smooth[np.where(ref_spectrum.x == peak)]/ref_spectrum.y_smooth.max()) + 1, color='green')
+            plt.scatter(peak, lit_spectrum.y_smooth[np.where(lit_spectrum.x == peak)] / lit_spectrum.y_smooth.max(), color='blue')
+        for peak in ref_wn:
+            plt.scatter(peak, ref_spectrum.y_smooth[np.where(np.round(ref_spectrum.x,8) == peak)] / ref_spectrum.y_smooth.max() + 1, color = 'green')
         plt.title('Literature & Reference Spectra & Peak Positions', fontsize='medium')
         
         
@@ -326,7 +333,8 @@ def run_spectral_calibration(ref_spectrum, ref_wn = [], lit_wn = [], ref_thresho
              meas_wn = ref_wn, 
              lit_x = lit_spectrum.x, 
              lit_y = lit_spectrum.y_smooth, 
-             lit_wn = lit_wn, 
+             lit_wn = lit_wn,
+             deg = deg,
              plot=plot)
         
     return wn_cal
@@ -334,19 +342,24 @@ def run_spectral_calibration(ref_spectrum, ref_wn = [], lit_wn = [], ref_thresho
 #%% How to run spectral calibration - from your own script
 
 # ## Load h5 & spectrum
-# my_h5 = h5py.File(r'C:\Users\il322\Desktop\Offline Data\2023-03-31_M-TAPP-SME_80nm_NPoM_Track_DF_Powerseries.h5')
-# bpt_ref_633nm = my_h5['ref_meas']['BPT_ref_633nm']
+# my_h5 = h5py.File(r'C:\Users\il322\Desktop\Offline Data\2023-05-12.h5')
+# bpt_ref_633nm = my_h5['ref_meas']['BPT-NPoM_633nm_Grating4_690cnwln_1s']
 # bpt_ref_633nm = spt.Spectrum(bpt_ref_633nm)
 
 # ## Convert to wn
 # bpt_ref_633nm.x = spt.wl_to_wn(bpt_ref_633nm.x, 632.8)
+# truncate_range = [210, 2400]
 
 # ## Truncate out notch (use this truncation for all spectra!)
-# bpt_ref_633nm.truncate(450, bpt_ref_633nm.x.max())
+# bpt_ref_633nm.truncate(truncate_range[0], truncate_range[1])
+# bpt_ref_633nm.plot()
+
+# ## Have to adjust ref_wn because peak fitting is not yet robust
+# ref_wn_633nm = [ 276.74390496,  396.21252815,  468.08976025, 679.43472478,  816.85574808,  986.17656368,
+#  1067.96658448, 1179.79270908, 1271.98782961, 1467.40917881, 1570.24171155]
 
 # ## Get calibrated wavenumbers
-# wn_cal_633 = run_spectral_calibration(bpt_ref_633nm)
-
+# wn_cal_633 = cal.run_spectral_calibration(bpt_ref_633nm, ref_wn = ref_wn_633nm, ref_threshold=0.07, deg = 3, plot=True)
 
 #%% How to run spectral efficiency calibration - from your own script
 
@@ -376,5 +389,3 @@ def run_spectral_calibration(ref_spectrum, ref_wn = [], lit_wn = [], ref_thresho
 # plt.plot(bpt_ref_633nm.x, bpt_ref_633nm.y-notch_cts, color = (0.8,0.1,0.1,0.7), label = 'Raw spectrum')
 # plt.plot(bpt_ref_633nm.x, (bpt_ref_633nm.y-notch_cts)*R_setup, color = (0,0.6,0.2,0.5), label = 'Efficiency-corrected')
 # plt.legend(fontsize='x-small', borderpad = 0.2)
-
-
