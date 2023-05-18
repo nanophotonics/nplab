@@ -986,3 +986,7 @@ class Timescan(Spectrum):
             else:
                 plt.close('all')
             plt.rcParams.update(old_rc_params)#put rcParams back to normal when done
+            
+    def truncate(self, start_x, end_x, buffer=False):
+        self.x, self.Y = truncate_spectrum(self.x, self.Y, start_wl = start_x, end_wl = end_x, buffer=False)
+        self.y = np.average(self.Y, axis = 0)
