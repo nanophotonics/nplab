@@ -18,8 +18,6 @@ from matplotlib.ticker import MultipleLocator
 
 from importlib import reload
 
-from nplab.analysis import spc_to_h5 as sph
-
 from nplab.analysis.general_spec_tools import particle_track_analysis as pta
 from nplab.analysis.general_spec_tools import spectrum_tools as spt
 from nplab.analysis.general_spec_tools import dft_raman_tools as drt

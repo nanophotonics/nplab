@@ -28,7 +28,7 @@ from builtins import str
 from builtins import range
 from past.utils import old_div
 import matplotlib
-matplotlib.use('Qt4Agg')
+matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as pl
 import numpy as np
 import multiprocessing as mp
@@ -73,7 +73,7 @@ def Select_Time_Range(Min,Max):
 				except ValueError:
 					print('Invalid')
 
-		Input=eval(input('Continue with range '+str(Lower)+' to '+str(Upper)+'? (Y/N): '))
+		Input=input('Continue with range '+str(Lower)+' to '+str(Upper)+'? (Y/N): ')
 		if str(Input).upper()=='Y':
 			Continue=True
 

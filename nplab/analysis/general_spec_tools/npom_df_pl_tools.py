@@ -243,6 +243,7 @@ class NPoM_DF_Spectrum(spt.Spectrum):
         cm_min_wl_dict = {80: 580, 70 : 560, 60 : 540, 50 : 520, 40 : 500}
         self.centre_trough_wl = centre_trough_wl_dict[np_size]
         self.cm_min_wl = cm_min_wl_dict[np_size]
+        self.np_size = np_size
 
         if lower_cutoff is not None:
             self.cm_min_wl = lower_cutoff
@@ -303,7 +304,7 @@ class NPoM_DF_Spectrum(spt.Spectrum):
             plt.rcParams.update(old_rc_params)
             return fig, ax
 
-    def find_maxima(self, smooth_first = False, analyse_raw = False, **kwargs):
+    def find_maxima(self, smooth_first = False, analyse_raw = False, lower_threshold = -np.inf, upper_threshold = np.inf, **kwargs):
         '''
         Smoothes spectrum and finds maxima
         Finds maxima in raw data if specified not to
@@ -317,8 +318,8 @@ class NPoM_DF_Spectrum(spt.Spectrum):
             y_smooth = self.y_smooth
         elif (self.y_smooth is None and smooth_first == False) or analyse_raw == True:
             y_smooth = self.y
-
-        self.maxima = spt.detect_minima(-y_smooth)
+            
+        self.maxima = spt.detect_minima(-y_smooth, upper_threshold, lower_threshold)
         self.minima = spt.detect_minima(y_smooth)
 
     def test_if_npom(self, min_int_signal = 0.05, max_int_signal = 2.5, npom_threshold = 1.5, plot_is_npom = False, **kwargs):
@@ -354,7 +355,8 @@ class NPoM_DF_Spectrum(spt.Spectrum):
 
         '''Trial the fourth: do you have more than one maximum?'''
         #NPoM spectra usually have more than one distinct peak
-        if len(self.maxima) <= 1:
+        #Ignore this condition for NP size <= 60nm
+        if len(self.maxima) <= 1 and self.np_size > 60:
             self.not_npom_because = 'too few peaks'
             return
 
