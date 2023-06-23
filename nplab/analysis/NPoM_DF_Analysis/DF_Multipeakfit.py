@@ -307,7 +307,6 @@ def retrieveData(directory, summaryNameFormat = 'summary', first = 0, last = 0, 
         prepTime = prepEnd - prepStart
 
         print('\tAll cosmic rays removed in %.2f seconds\n' % (prepTime))
-
         print('Cleaning up NaN values...')
 
         prepStart = time.time()
@@ -1164,9 +1163,9 @@ def analyseNpomSpectrum(x, y, cutoff = 1500, fs = 60000, doublesThreshold = 2, c
     '''Testing if NPoM'''
 
     isNpom1, YuNoNpom = testIfNpom(xRaw, yRaw, startWl = startWl)
-    isNpom2, isDouble, xMax, yMax = testIfDouble(xRaw, yRaw, doublesThreshold = doublesThreshold, lowerLimit = cmLowLim, 
-                                     raiseExceptions = raiseExceptions, startWl = startWl, endWl = endWl,
-                                     plot = plot)
+    isNpom2, isDouble, xMax, yMax = testIfDouble(xRaw, yRaw, doublesThreshold = doublesThreshold, 
+                                                 lowerLimit = cmLowLim, raiseExceptions = raiseExceptions, 
+                                                 startWl = startWl, endWl = endWl, plot = plot)
 
     if isNpom1 == True and isNpom2 == True:
         isNpom = True
