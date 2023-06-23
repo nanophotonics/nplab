@@ -11,7 +11,7 @@ author: im354
 
 from nplab.utils.notified_property import NotifiedProperty
 from nplab.ui.ui_tools import QuickControlBox
-from nplab.instrument.stage.thorlabs_ello.ello_device import ElloDevice, bytes_to_binary, twos_complement_to_int, int_to_hex, int_to_twos_complement
+from nplab.instrument.stage.thorlabs_ello import ElloDevice, bytes_to_binary, twos_complement_to_int, int_to_hex, int_to_twos_complement
 import numpy as np
 
 class Ell20(ElloDevice):
@@ -110,24 +110,6 @@ class Ell20(ElloDevice):
             self._block_until_stopped()
         return self._decode_position_response(response)
     
-    def _decode_position_response(self, response):
-        '''
-        Method for decoding positional response from stage for responses from:
-            mode_absolute, mode_relative, move_home
-        '''
-        header = response[0:3]
-        if header == "{0}GS".format(self.device_index):
-            # still moving
-            status_code = int(response[3:5], base=16)
-            status = self.DEVICE_STATUS_CODES[status_code]
-            outp = {"header": header, "status": status}
-            return outp
-        elif header == "{0}PO".format(self.device_index):
-            hex_pulse_position = response[3:11]
-            position = self._hex_pulses_to_position(hex_pulse_position)
-            outp = {"header": header, "position": position}
-            return outp
-        
     def get_position(self, axis=None):
         '''
         Query stage for its current position, in degrees

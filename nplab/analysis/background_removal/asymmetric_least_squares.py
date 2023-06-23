@@ -1,11 +1,8 @@
-import os
 import numpy as np
 from scipy import sparse
 from scipy.sparse.linalg import spsolve
-from functools import wraps, partial
-from multiprocessing import Pool
-from concurrent.futures import ProcessPoolExecutor as Executor
-import nplab.analysis.utils
+from functools import wraps
+from nplab.analysis import Spectrum
 
 def baseline_als(y, lam, p, niter=10):
     """
@@ -25,29 +22,4 @@ def baseline_als(y, lam, p, niter=10):
 
 @wraps(baseline_als)
 def als(y, lam=10**3, p=0.01, niter=10):
-    return baseline_als(np.asarray(y), lam, p, niter=niter)
-
-
-@wraps(baseline_als)
-def als_with_notch(y, notch=(-200,200), **kwargs):
-    assert isinstance(y, nplab.analysis.utils.Spectrum), 'must have a split method'
-    
-    a = y.split(upper=notch[0])
-    b = y.split(*notch)
-    c = y.split(lower=notch[1])
-    a = a - als(a, **kwargs)
-    c = c - als(c, **kwargs)
-    return y.__class__(np.concatenate((a, b, c), axis=0), y.x)
-
-
-def als_mp(y_list, lam=10**3, p=0.01, niter=10):
-    # y_list = [(np.asarray(y), lam, p, niter) for y in y_list]
-    a = partial(baseline_als, lam=lam, p=p, niter=niter)
-    with Pool(os.cpu_count() - 1) as p:
-        results = p.map(a, y_list)
-    return results
-
-if __name__ == '__main__':
-    y_list = 100*np.random.rand(1000, 1600)
-    res = als_mp(y_list)
-    list(res)
+    return baseline_als(y, lam, p, niter=niter)

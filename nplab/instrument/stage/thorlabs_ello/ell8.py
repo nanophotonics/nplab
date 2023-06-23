@@ -5,7 +5,7 @@ author: im354
 import sys
 from nplab.utils.gui import *
 from nplab.ui.ui_tools import *
-from nplab.instrument.stage.thorlabs_ello.ello_device import ElloDevice, bytes_to_binary, twos_complement_to_int
+from nplab.instrument.stage.thorlabs_ello import ElloDevice, bytes_to_binary, twos_complement_to_int
 
 
 class Ell8(ElloDevice):
@@ -54,13 +54,14 @@ class Ell8(ElloDevice):
         if angle < 0:
             angle = 360+angle
         return super().move_absolute(angle, blocking=blocking)
-    def get_qt_ui(self):
-        return Thorlabs_ELL8K_UI(self)
 
 
 class Thorlabs_ELL8K_UI(QtWidgets.QWidget, UiTools):
 
     def __init__(self, stage, parent=None, debug=0):
+        if not isinstance(stage, Thorlabs_ELL8K):
+            raise ValueError(
+                "Object is not an instance of the Thorlabs_ELL8K Stage")
         super(Thorlabs_ELL8K_UI, self).__init__()
         
         self.stage = stage  # this is the actual rotation stage

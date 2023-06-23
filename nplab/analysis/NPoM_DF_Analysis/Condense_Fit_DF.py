@@ -31,7 +31,7 @@ npomTypes = ['All NPoMs', 'Ideal NPoMs']
 consolidateScans = False #bool; set this to true if you have multiple particle tracks in the file and want to combine them
 customScan = None #int; if your file contains multiple particle tracks from different samples, use this to specify the correct one
 extractFirst = True #bool; set to false if your summary file already exists, true to create another
-avgZScans = False #bool; if your DF spectra have weird, rising baselines, set this to True and try again
+avgZScans = False #bool; if your data ends up with a weird, rising baseline, set this to True and try again
 upperCutoff = 900 #int; upper wavelength limit (nm) for peak detection; fiddle with this if the code keeps finding "peaks" in the noisy longer-wavelength region
 lowerCutoff = 580 #int; lower wavelength limit (nm) for peak detection; fiddle with this if you have crap in the shorter-wavelength region
 startSpec = 0
@@ -47,7 +47,7 @@ def run(raiseExceptions = raiseExceptions, intensityRatios = intensityRatios,
 
     if statsOnly == True:
         outputFileName = mpf.findH5File(os.getcwd(), nameFormat = 'MultiPeakFitOutput', mostRecent = True)#finds the most recent file with given name format
-        mpf.doStats(outputFileName, stacks = False, pl = pl, npomTypes = npomTypes, intensityRatios = intensityRatios,
+        mpf.doStats(outputFileName, stacks = False, pl = pl, npomTypes = npomTypes, intensityRatios = intensityRatios, 
                     upperCutoff = upperCutoff, lowerCutoff = lowerCutoff)
 
     else:

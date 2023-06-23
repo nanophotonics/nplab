@@ -7,55 +7,54 @@ Various utility functions for GUI-related stuff.
 import os
 import sys
 import warnings
-from qtpy import QtCore, QtGui, QtWidgets, uic
-# import qtpy #removing this breaks line 42 in some cases
-# ui_toolkit = 'native'  # by default use pyqt4
-# if os.environ.get('QT_API') is None:
-#     os.environ['QT_API'] = 'pyqt'  # by default use pyqt4
-# qt_api = os.environ.get('QT_API')
+import qtpy #removing this breaks line 42 in some cases
+ui_toolkit = 'native'  # by default use pyqt4
+if os.environ.get('QT_API') is None:
+    os.environ['QT_API'] = 'pyqt'  # by default use pyqt4
+qt_api = os.environ.get('QT_API')
 
-# #print "api environment variable is (gui): "+os.environ['QT_API']
+#print "api environment variable is (gui): "+os.environ['QT_API']
 
-# # import sip
-# API_NAMES = ["QDate", "QDateTime", "QString", "QTextStream", "QTime", "QUrl", "QVariant"]
-# API_VERSION = 2
-# # for name in API_NAMES:
-# #     sip.setapi(name, API_VERSION)
-# if ui_toolkit == 'native' and os.environ['QT_API'] == 'pyside':
-#     try:
-#         from PySide import QtCore, QtGui
-#     except:
-#         warnings.warn("Warning: falling back to PyQt4", UserWarning)
-#         ui_toolkit = 'pyqt'
-#         from PyQt4 import QtCore, QtGui
-#         from PyQt4 import uic
-# elif ui_toolkit == 'pyface':
-#     from traits.etsconfig.api import ETSConfig
-#     ETSConfig.toolkit = 'qt4'
-#     from pyface.qt import QtCore, QtGui
-# elif ui_toolkit == 'native':
-#     try:
-#  #       from PyQt4 import QtCore, QtGui
-#  #       from PyQt4 import QtCore as qt
-#  #       from PyQt4 import QtGui as qtgui
-#   #      from PyQt4 import uic
-#       from qtpy import QtGui,QtCore,QtWidgets, uic
-#     except Exception as e:
-#         warnings.warn("Warning: failed to load qtpy, are you sure qtpy is installed?, falling back to pyside", UserWarning)
-#         print(e)
-#         from PySide import QtCore, QtGui
-# else:
-#     raise ImportError("Invalid ui_toolkit or QT_API")
-# #print QtCore, QtGui
+import sip
+API_NAMES = ["QDate", "QDateTime", "QString", "QTextStream", "QTime", "QUrl", "QVariant"]
+API_VERSION = 2
+for name in API_NAMES:
+    sip.setapi(name, API_VERSION)
+if ui_toolkit == 'native' and os.environ['QT_API'] == 'pyside':
+    try:
+        from PySide import QtCore, QtGui
+    except:
+        warnings.warn("Warning: falling back to PyQt4", UserWarning)
+        ui_toolkit = 'pyqt'
+        from PyQt4 import QtCore, QtGui
+        from PyQt4 import uic
+elif ui_toolkit == 'pyface':
+    from traits.etsconfig.api import ETSConfig
+    ETSConfig.toolkit = 'qt4'
+    from pyface.qt import QtCore, QtGui
+elif ui_toolkit == 'native':
+    try:
+ #       from PyQt4 import QtCore, QtGui
+ #       from PyQt4 import QtCore as qt
+ #       from PyQt4 import QtGui as qtgui
+  #      from PyQt4 import uic
+      from qtpy import QtGui,QtCore,QtWidgets, uic
+    except Exception as e:
+        warnings.warn("Warning: failed to load qtpy, are you sure qtpy is installed?, falling back to pyside", UserWarning)
+        print(e)
+        from PySide import QtCore, QtGui
+else:
+    raise ImportError("Invalid ui_toolkit or QT_API")
+#print QtCore, QtGui
 
-# # this is to rectify differences between pyside and pyqt4
-# try:
-#     assert QtCore.Signal
-#     assert QtCore.Slot
-# except AttributeError:
-#     # if Signal and Slot don't exist, we're probably using the old API, so work around.
-#     QtCore.Signal = QtCore.pyqtSignal
-#     QtCore.Slot = QtCore.pyqtSlot
+# this is to rectify differences between pyside and pyqt4
+try:
+    assert QtCore.Signal
+    assert QtCore.Slot
+except AttributeError:
+    # if Signal and Slot don't exist, we're probably using the old API, so work around.
+    QtCore.Signal = QtCore.pyqtSignal
+    QtCore.Slot = QtCore.pyqtSlot
 
 #QtGui.QApplication.setGraphicsSystem("raster")
 
@@ -114,8 +113,8 @@ def show_guis(instruments, block=True):
 if __name__ == '__main__':
     import matplotlib
     # We want matplotlib to use a QT backend
-    # matplotlib.use('Qt4Agg')
-    # from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
+    matplotlib.use('Qt4Agg')
+    from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
     from matplotlib.figure import Figure
     import numpy as np
 
