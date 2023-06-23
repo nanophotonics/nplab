@@ -35,25 +35,25 @@ class SpectrumAnalyzer(VisaInstrument):
         self.write('*rst')
         
     def get_center_freq(self):
-        return float(self.query('CF?')) #return span in Hz
+        return float(self.query('CF?'))/1e6 #return span in MHz
     
-    def set_center_freq(self,CF): # center frequency in Hz
-        self.write('CF '+str(CF)+' HZ')
-        return float(self.query('CF?')) #return span in Hz
+    def set_center_freq(self,CF): # center frequency in MHz
+        self.write('CF '+str(CF)+' MHZ')
+        return float(self.query('CF?'))/1e6 #return span in MHz
         
     def get_span(self):
-        return float(self.query('SP?')) #return span in Hz
+        return float(self.query('SP?'))/1e6 #return span in MHz
     
-    def set_span(self,SP): #span in Hz
-        self.write('SP '+str(SP)+' HZ')
-        return float(self.query('SP?')) #return span in Hz
+    def set_span(self,SP): #span in MHz
+        self.write('SP '+str(SP)+' MHZ')
+        return float(self.query('SP?'))/1e6 #return span in MHz
     
     def get_res(self): # get resolution bandwidth
-        return float(self.query('RB?')) # returns resolution in Hz
+        return float(self.query('RB?'))/1e3 # returns resolution in MHz
     
-    def set_res(self,res): # set resolution, res in Hz
-        self.write('RB '+str(res)+' HZ')
-        return float(self.query('RB?')) #return span in Hz
+    def set_res(self,res): # set resolution, res in kHz
+        self.write('RB '+str(res)+' KHZ')
+        return float(self.query('RB?'))/1e3 #return span in MHz
     
     def get_sweep_time(self):
         return float(self.query('ST?')) #return sweep time in sec
@@ -103,9 +103,9 @@ class SpectrumAnalyzer(VisaInstrument):
         data=np.fromstring(data,dtype=float,sep=',')
         return(data)
     
-    def get_freq_axis(self): # makes frequency axis in Hz
-        fa=float(self.query('FA?'))
-        fb=float(self.query('FB?'))
+    def get_freq_axis(self):
+        fa=float(self.query('FA?'))/1e6
+        fb=float(self.query('FB?'))/1e6
         return np.linspace(fa,fb,self.freq_points)
         
         
