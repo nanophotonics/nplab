@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>236</width>
+    <width>301</width>
     <height>159</height>
    </rect>
   </property>
@@ -18,7 +18,7 @@
     <rect>
      <x>20</x>
      <y>10</y>
-     <width>191</width>
+     <width>261</width>
      <height>131</height>
     </rect>
    </property>
@@ -30,7 +30,7 @@
      <rect>
       <x>10</x>
       <y>20</y>
-      <width>161</width>
+      <width>231</width>
       <height>98</height>
      </rect>
     </property>
@@ -72,6 +72,13 @@
          </property>
          <property name="checked">
           <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="grating_3_radioButton">
+         <property name="text">
+          <string>3</string>
          </property>
         </widget>
        </item>

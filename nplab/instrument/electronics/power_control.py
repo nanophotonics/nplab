@@ -41,7 +41,7 @@ class PowerControl(Instrument):
                  after_calibration_func=None,
                  calibration_points=25,
                  title='power control',
-                 move_range=(0, 1)):
+                 move_range=(0.1, 1)):
         super().__init__()
         self.pc = power_controller
         self.pometer = power_meter
@@ -115,7 +115,7 @@ class PowerControl(Instrument):
         
         for i, point in enumerate(self.points):
             self.param = point
-            time.sleep(.2)
+            time.sleep(.5)
             powers.append(self.pometer.power)
             update_progress(i)
 

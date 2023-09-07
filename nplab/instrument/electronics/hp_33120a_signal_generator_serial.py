@@ -32,7 +32,7 @@ class SignalGenerator(SerialInstrument):
         self.write('*rst')
 
 if __name__ == '__main__':
-    s = SignalGenerator("COM10")
+    s = SignalGenerator("COM1")
 #    print s.frequency
 #    s.frequency = 1e3
 #    print s.frequency

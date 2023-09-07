@@ -25,25 +25,21 @@ Calibration_Arrays.append([])
 #Calibration_Arrays[0].append([-1.63503325e+00, -1.94141892e+00, -2.02516092e+00, -2.17431238e+00, -1.87265593e+00, -2.60909451e+00])
 #Calibration_Arrays[0].append([1.44780946e+04, 1.75785703e+04, 1.85922568e+04, 2.17816013e+04, 1.10551705e+04, 3.03183653e+04])
 
-Calibration_Arrays[1].append([540.05615, 614.3063, 633.44275, 703.2413, 794.31805, 885.3867])
-Calibration_Arrays[1].append([7.119416e-06, 1.7002e-06, 1.7011041e-06, 1.5920945e-06, -4.0903983e-06, 1.2277135e-05])
-Calibration_Arrays[1].append([-1.8436913, -1.8155332, -1.8185873, -1.8278793, -1.7779323, -1.983125])
-Calibration_Arrays[1].append([7027.7876, 7947.521, 8205.945, 9151.439, 10238.555, 12075.545])
+Calibration_Arrays[1].append([546.,614.,633.,708.19,785.,880.])
+Calibration_Arrays[1].append([-5.65248674e-06, -3.01056645e-06, -1.99047684e-06, -2.24562594e-05, 2.02336235e-06,  1.15803962e-05])
+Calibration_Arrays[1].append([-1.75115459, -1.79100089, -1.79852965, -1.59951646, -1.85506506,-1.98678881])
+Calibration_Arrays[1].append([7601.12273137,  8563.71071556,  8849.60197977,  9361.94861663,11023.31118393, 12621.76193336])
+
+# Calibration_Arrays[1].append(list(h5py.File("Calibration_Grating_1.h5", 'r')["Calibration_List"][0]))
+# Calibration_Arrays[1].append(list(h5py.File("Calibration_Grating_1.h5", 'r')["Calibration_List"][1]))
+# Calibration_Arrays[1].append(list(h5py.File("Calibration_Grating_1.h5", 'r')["Calibration_List"][2]))
+# Calibration_Arrays[1].append(list(h5py.File("Calibration_Grating_1.h5", 'r')["Calibration_List"][3]))
 
 
-# Calibration_Arrays[2].append([540.056, 614.306, 633.443, 703.241, 837.761, 865.438])
-# Calibration_Arrays[2].append([7.02044e-06, 6.48843e-06, 8.10113e-06, 8.42173e-06, 8.37878e-06, -2.02813e-05])
-# Calibration_Arrays[2].append([-1.74032, -1.74138, -1.7393, -1.73926, -1.7405, -1.81753])
-# Calibration_Arrays[2].append([1869.23, 2097.25, 2155.35, 2369.81, 2784.87, 2917.82])
-
-
-#--by bd355
-Calibration_Arrays[2].append([540.056, 614.306, 633.443, 703.241, 837.761, 865.438])
-Calibration_Arrays[2].append([-6.9253952e-06, -6.4761766e-06, -7.1854643e-06, -8.4217318e-06, -7.6149108e-06, -7.3302917e-06])
-Calibration_Arrays[2].append([-1.7404145, -1.7414042, -1.7393, -1.7392614, -1.7421813, -1.7428424])
-Calibration_Arrays[2].append([1869.2498, 2097.2549, 2155.7705, 2369.8137, 2785.7876, 2822.447])
-#--
-
+Calibration_Arrays[2].append([546.,614.,633.,708.19,785.,880.])
+Calibration_Arrays[2].append([-3.93887893e-05,-6.91910954e-06,-3.18089126e-06,-6.25746333e-06, -1.60444375e-06, -1.57248823e-05])
+Calibration_Arrays[2].append([-1.67741919,-1.73940226,-1.74976480,-1.74174632, -1.75474092, -1.71174797])
+Calibration_Arrays[2].append([2.53324771e+03,2.76268959e+03,2.83115874e+03,3.06497573e+03, 3.30744597e+03, 3.56084766e+03])
 
 #Calibration_Arrays[2].append(list(h5py.File("Calibration_Grating_2.h5", 'r')["Calibration_List"][0]))
 #Calibration_Arrays[2].append(list(h5py.File("Calibration_Grating_2.h5", 'r')["Calibration_List"][1]))
@@ -68,7 +64,7 @@ class Trandor(Andor):#Andor
         self.triax.ccd_size = CCD_Size
         self.use_shifts = use_shifts
         self.laser = laser
-        # self.triax.Grating(1)
+        self.triax.Grating(1)
         
         print ('Current Grating:'+str(self.triax.Grating()))
         print ('Current Slit Width:'+str(self.triax.Slit())+'um')

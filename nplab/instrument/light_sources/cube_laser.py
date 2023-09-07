@@ -11,7 +11,7 @@ from nplab.instrument.serial_instrument import SerialInstrument
 from nplab.instrument.light_sources import LightSource
 import serial
 import sys
-from PyQt5 import QtGui
+from PyQt5 import QtGui, QtWidgets
 
 class CubeLaser(SerialInstrument, LightSource):
     def __init__(self, port=None):
@@ -47,7 +47,7 @@ class CubeLaser(SerialInstrument, LightSource):
             mode = 'pulsed must be 0 (CW) or 1 (Pulsed)'           
         print(mode)
 
-class CubeLaserUI(QtGui.QWidget):
+class CubeLaserUI(QtWidgets.QWidget):
     def __init__(self):
         QtGui.QWidget.__init__(self)
         self.setWindowTitle("Cube Laser")

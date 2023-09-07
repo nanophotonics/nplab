@@ -31,7 +31,7 @@ np.seterr('ignore')
 
 plotParDict = {'legend.fontsize': 18,
                 'legend.title_fontsize' : 20,
-                'figure.figsize': (12, 7),
+                'figure.figsize': (7, 7),
                 'figure.titlesize': 24,
                 'axes.labelsize': 24,
                 'axes.titlepad': 10,
@@ -279,7 +279,8 @@ class ExtinctionSpectrum:
             return
 
         initDimerFwhm = 2*(initDimerWl - xFit[dimerHalfMaxDex])
-        initDimerFwhmEv = abs(xFit[dimerHalfMaxDex] - xFit[2*dimerIndex - dimerHalfMaxDex])
+        initDimerFwhmEv = nmToEv(xFit[dimerIndex] - initDimerFwhm/2) - nmToEv(xFit[dimerIndex] + initDimerFwhm/2)
+        #initDimerFwhmEv = abs(xFit[dimerHalfMaxDex] - xFit[2*dimerIndex - dimerHalfMaxDex])
         
         dimerInit = lorentzian(xFit, initDimerHeight, initDimerWl, initDimerFwhm)
 
@@ -330,7 +331,8 @@ class ExtinctionSpectrum:
 
             initChainFwhm = 2*(initChainWl - xFit[chainHalfMaxDex])
             try:
-                initChainFwhmEv = abs(xFit[chainHalfMaxDex] - xFit[max(2*initChainIndex - chainHalfMaxDex, len(xFit) - 1)])
+                #initChainFwhmEv = abs(xFit[chainHalfMaxDex] - xFit[max(2*initChainIndex - chainHalfMaxDex, len(xFit) - 1)])
+                initChainFwhmEv = nmToEv(initChainWl - initChainFwhm/2) - nmToEv(initChainWl + initChainFwhm/2)
             except:
                 if self.debug == True:
                     print(chainHalfMaxDex, 2*initChainIndex - chainHalfMaxDex)
@@ -400,7 +402,7 @@ class ExtinctionSpectrum:
             self.dimerWl = None
 
             if plot == True:
-                print('Dimer Wl is None')
+                #print('Dimer Wl is None')
                 plt.plot(x, ySmooth)
                 plt.show()
 
@@ -408,7 +410,7 @@ class ExtinctionSpectrum:
 
         elif dimerWl < 600:
             self.dimerWl = None
-            print('Dimer Wl < 600')
+            #print('Dimer Wl < 600')
 
             #if plot == True:
             #    plt.plot(*mpf.truncateSpectrum(x, self.ySub, startWl = 550, finishWl = 900))                

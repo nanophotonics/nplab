@@ -39,7 +39,7 @@ class Stage(Instrument):
     simplify the emulation of various features.
     """
     axis_names = ('x', 'y', 'z')
-    def __init__(self,unit = 'm'):
+    def __init__(self, unit='m'):
         Instrument.__init__(self)
         self.unit = unit
 

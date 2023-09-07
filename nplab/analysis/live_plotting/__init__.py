@@ -22,9 +22,9 @@ pg.setConfigOption('foreground', 'k')
 #     if array_to_remove_from is None: array_to_remove_from = array_to_test
 #     return array_to_remove_from[np.isfinite(array_to_test)]
 
-app = QtGui.QApplication.instance()
+app = QtWidgets.QApplication.instance()
 if app is None:
-    app = QtGui.QApplication([])
+    app = QtWidgets.QApplication([])
     
 graphs = []
 class GraphWidget(pg.PlotWidget):
@@ -86,7 +86,7 @@ class GraphWidget(pg.PlotWidget):
         print('x, y(s):',self.x, self.ys, sep='\n')
 
 
-class GraphGroup(QtGui.QGroupBox):
+class GraphGroup(QtWidgets.QGroupBox):
     '''
     feed me GraphWidget objects and 
     I'll lay them out horizontally
@@ -159,8 +159,8 @@ class Parameter(QtWidgets.QWidget, FloatMathMixin):
         self.slider = slider
         self.units = f' ({units})' if units is not None else ''
         self.setLayout(QtWidgets.QFormLayout())
-        self.box =  QtGui.QSlider(QtCore.Qt.Horizontal) if slider else QtGui.QDoubleSpinBox()
-        self.label = QtGui.QLabel(self.name+self.units)
+        self.box =  QtWidgets.QSlider(QtCore.Qt.Horizontal) if slider else QtWidgets.QDoubleSpinBox()
+        self.label = QtWidgets.QLabel(self.name+self.units)
         self.layout().addWidget(self.label)
         self.box.setMinimum(Min)
         self.box.setMaximum(Max)
@@ -182,7 +182,7 @@ class Parameter(QtWidgets.QWidget, FloatMathMixin):
     def __str__(self):
         return f'{self.name}: {float(self)} {self.units}'
       
-class ParameterGroupBox(QtGui.QGroupBox):
+class ParameterGroupBox(QtWidgets.QGroupBox):
     '''
     feed me parameters and i'll add spinBoxes for them, and 
     emit a signal when they're changed to update the graphs. 
@@ -202,7 +202,7 @@ class ParameterGroupBox(QtGui.QGroupBox):
 class LivePlotWindow(QtWidgets.QMainWindow):
     '''Puts the graphing and parameter widgets together'''
     def __init__(self, style='Fusion'):
-        app = QtGui.QApplication.instance()
+        app = QtWidgets.QApplication.instance()
         if app is None:
             app = QtGui.QApplication([])
         app.setStyleSheet(qdarkstyle.load_stylesheet())
@@ -220,7 +220,7 @@ class LivePlotWindow(QtWidgets.QMainWindow):
         self.setWindowTitle('Live Plotting')
         # self.setWindowIcon(QtGui.QIcon('bessel.png'))
         self.setWindowIcon(QtGui.QIcon('maxwell.png'))
-        self.widget = QtGui.QWidget()
+        self.widget = QtWidgets.QWidget()
         self.widget.setLayout(layout)
         self.setCentralWidget(self.widget)
         self.parameter_widget.param_changed.connect(self.update_graphs)

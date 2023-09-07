@@ -148,11 +148,25 @@ class Triax(VisaInstrument):
         """
 
         Steps=self.Motor_Steps() #Check grating position
-
+        
         if self.Grating_Number<=len(self.Calibration_Arrays): #Check calibration exists
             if len(self.Calibration_Arrays)==0 or len(self.Calibration_Arrays[self.Grating_Number])==0:
                 return Pixel_Array
-
+        # if self.Grating_Number==1:
+        #     a1=135.36
+        #     b1=0.137 
+        #     a2=-0.08412
+        #     b2=1.7705E-06
+        #     a3=-6.8635E-07
+        #     b3=-3.0821E-12
+        #     c3=1.8172E-16
+        #     coef1=a1+b1*Steps
+        #     coef2=a2+b2*Steps
+        #     coef3=a3+b3*Steps+c3*Steps**2
+        #     Wavelengths=np.zeros(shape=1600)
+        #     for i in range(1600):
+        #         Wavelengths[i] = coef1+coef2*i+coef3*i**2
+        # else:
         Sample_Pixels=np.linspace(np.min(Pixel_Array),np.max(Pixel_Array),10) #Make some estimates to the nearest 0.1nm
         Sample_Wavelengths=[np.mean(self.Regions[self.Grating_Number])]
         while len(Sample_Wavelengths)<len(Sample_Pixels):
@@ -227,6 +241,8 @@ class Triax(VisaInstrument):
        
         return Output
 
+
+
     def Move_Steps(self, Steps):
         """
         Function to move the grating by a number of stepper motor Steps.
@@ -251,7 +267,8 @@ class Triax(VisaInstrument):
         Required_Step=self.Find_Required_Step(Wavelength,Centre_Pixel)
         Current_Step=self.Motor_Steps()
         self.Move_Steps(Required_Step-Current_Step)
-    
+ 
+ 
     def Get_Center_Wavelength(self):
         wls = self.Get_Wavelength_Array()
         return wls[len(wls)//2]

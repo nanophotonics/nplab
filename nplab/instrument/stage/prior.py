@@ -157,4 +157,5 @@ class ProScan(serial.SerialInstrument, stage.Stage):
         self.query('J')
 
 if __name__ == '__main__':
-    stage = ProScan('COM4')
+    stage = ProScan('COM9',hardware_version=2)
+            

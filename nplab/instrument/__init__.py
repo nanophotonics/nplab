@@ -34,7 +34,10 @@ class Instrument(ShowGUIMixin):
     """
     __instances = None
     metadata_property_names = () #"Tuple of names of properties that should be automatically saved as HDF5 metadata
-
+    def __new__(cls, *args, **kwargs):
+        print(f'creating {cls.__name__} instance')
+        return super().__new__(cls)
+    
     def __init__(self):
         """Create an instrument object."""
         super(Instrument, self).__init__()
@@ -116,7 +119,7 @@ class Instrument(ShowGUIMixin):
         will be saved in the current HDF5 file and optionally shown in the
         nplab console.
         """
-        nplab.utils.log.log(message, from_object=self,level = level)
+        nplab.utils.log.log(message, from_object=self, level=level)
 
     def get_metadata(self, 
                      property_names=[], 
@@ -181,7 +184,7 @@ class Instrument(ShowGUIMixin):
         if not hasattr(self, '_config_file'):
             try:
                 f = inspect.getfile(self.__class__) # fails in IPython
-            except ValueError:
+            except (TypeError, ValueError):
                 f = inspect.getfile(self.__class__.__init__) # assumes the inst has an init method
             d = os.path.dirname(f)
             self._config_file = nplab.datafile.DataFile(os.path.join(d, self.__class__.__name__+'_config.h5'), mode='a')
