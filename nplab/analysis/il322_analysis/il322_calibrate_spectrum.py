@@ -23,6 +23,10 @@ from nplab.analysis.general_spec_tools import npom_sers_tools as nst
 from nplab.analysis.general_spec_tools import agg_sers_tools as ast
 from nplab.analysis.general_spec_tools import npom_df_pl_tools as df
 from nplab.analysis.SERS_Fitting import Auto_Fit_Raman as afr
+<<<<<<< HEAD
+from nplab.analysis.il322_analysis import il322_SERS_tools as SERS
+=======
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
 
 
 plt.rc('font', size=18, family='sans-serif')
@@ -180,6 +184,10 @@ def white_scatter_calibration(wl, white_scatter, white_bkg, start_notch=None, en
     S_dkfd_spline = sp.interpolate.splev(wl, spline, der=0)
     S_dkfd_spline = np.array(S_dkfd_spline)
     
+<<<<<<< HEAD
+    
+=======
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
     ## Calculate R_setup
     R_setup = S_whitescatter/S_dkfd_spline
     R_setup = R_setup/R_setup.max()
@@ -199,7 +207,11 @@ def white_scatter_calibration(wl, white_scatter, white_bkg, start_notch=None, en
             plt.plot(wl, white_cal, label='Calibrated white scatter', color = 'grey')
         else:
             plt.plot(wl, (white_cal-white_cal.min())/white_cal.max(), label='Calibrated white scatter', color = 'grey')
+<<<<<<< HEAD
+        plt.plot(wl, (S_dkfd_spline-S_dkfd_spline.min())/(S_dkfd_spline.max() - S_dkfd_spline.min()),  '--', label='Literature lamp emission',color = 'black')
+=======
         plt.plot(wl, (S_dkfd_spline-S_dkfd_spline.min())/S_dkfd_spline.max(),  '--', label='Literature lamp emission',color = 'black')
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
         plt.xlabel('Wavelength (nm)')
         plt.ylabel('Normalized Intensity (a.u.)')
         plt.title('633nm - Spectral Efficiency Calibration - White Scatter')
@@ -218,7 +230,11 @@ def find_nearest(array, value):
 
 #%%
 
+<<<<<<< HEAD
+def run_spectral_calibration(ref_spectrum, ref_wn = [], lit_wn = [], ref_threshold = 0.08, deg = 2, baseline_first = True, smooth_first = True, plot = True):
+=======
 def run_spectral_calibration(ref_spectrum, ref_wn = [], lit_wn = [], ref_threshold = 0.08, deg = 2, baselined = False, smooth_first = True, plot = True):
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
 
     '''
     Run function to calibrate x-axis of spectrometer via reference spectrum
@@ -230,7 +246,11 @@ def run_spectral_calibration(ref_spectrum, ref_wn = [], lit_wn = [], ref_thresho
         lit_wn ([] list): list of literature spectrum peak positions (if empty, defaults to BPT spectrum)
         ref_threshold(0.08 float): peak fitting threshold for reference spectrum
         deg: (int) order of polynomial fit between measured & lit peaks
+<<<<<<< HEAD
+        baseline_first (boolean)
+=======
         baselined (boolean)
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
         smooth_first (boolean)
         plot (boolean)
     '''
@@ -273,14 +293,22 @@ def run_spectral_calibration(ref_spectrum, ref_wn = [], lit_wn = [], ref_thresho
     # Get reference peak positions
     
     ## Process reference spectrum
+<<<<<<< HEAD
+    if baseline_first == False:
+=======
     if baselined == True:
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
         ref_spectrum.y_baselined = ref_spectrum.y
     else:
         ref_spectrum.y_baselined = ref_spectrum.y -  spt.baseline_als(y=ref_spectrum.y,lam=1e1,p=1e-4,niter=1000)
     
+<<<<<<< HEAD
+    if smooth_first == True:  
+=======
     if smooth_first == False:
         ref_spectrum.y_smooth = ref_spectrum.y_baselined
     else:  
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
         ref_spectrum.y_smooth = spt.butter_lowpass_filt_filt(ref_spectrum.y_baselined,
                                                               cutoff=1000,
                                                               fs = 30000,
@@ -303,8 +331,12 @@ def run_spectral_calibration(ref_spectrum, ref_wn = [], lit_wn = [], ref_thresho
             ref_wn.append(wn)
         ref_wn.sort()
         ref_wn = np.array(ref_wn)
+<<<<<<< HEAD
+        print('Ref wavenumbers: ' + str(ref_wn))
+=======
             
         print(ref_wn)
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
     
     ## If peak positions provided, use those
     else:
@@ -321,15 +353,25 @@ def run_spectral_calibration(ref_spectrum, ref_wn = [], lit_wn = [], ref_thresho
         for peak in lit_wn:
             plt.scatter(peak, lit_spectrum.y_smooth[np.where(lit_spectrum.x == peak)] / lit_spectrum.y_smooth.max(), color='blue')
         for peak in ref_wn:
+<<<<<<< HEAD
+            plt.scatter(peak, ref_spectrum.y_smooth[(np.where(np.round(ref_spectrum.x, 8) == np.round(peak,8)))] / ref_spectrum.y_smooth.max() + 1, color = 'green')
+        plt.title('Literature & Reference Spectra & Peak Positions', fontsize='medium')
+        plt.show()
+=======
             plt.scatter(peak, ref_spectrum.y_smooth[np.where(np.round(ref_spectrum.x,8) == peak)] / ref_spectrum.y_smooth.max() + 1, color = 'green')
         plt.title('Literature & Reference Spectra & Peak Positions', fontsize='medium')
         
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
         
     # Cubic fit to get calibrated wavenumbers
     
     wn_cal = spectral_calibration(
              ref_spectrum.x, 
+<<<<<<< HEAD
+             ref_spectrum.y, 
+=======
              ref_spectrum.y_smooth, 
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
              meas_wn = ref_wn, 
              lit_x = lit_spectrum.x, 
              lit_y = lit_spectrum.y_smooth, 
@@ -389,3 +431,77 @@ def run_spectral_calibration(ref_spectrum, ref_wn = [], lit_wn = [], ref_thresho
 # plt.plot(bpt_ref_633nm.x, bpt_ref_633nm.y-notch_cts, color = (0.8,0.1,0.1,0.7), label = 'Raw spectrum')
 # plt.plot(bpt_ref_633nm.x, (bpt_ref_633nm.y-notch_cts)*R_setup, color = (0,0.6,0.2,0.5), label = 'Efficiency-corrected')
 # plt.legend(fontsize='x-small', borderpad = 0.2)
+<<<<<<< HEAD
+
+
+#%% Testing
+# my_h5 = h5py.File(r"C:\Users\il322\Desktop\Offline Data\2023-05-22_M-TAPP-SME_80nm_NPoM_Track_DF_633nmPowerseries.h5")
+# bpt_ref_633nm = my_h5['ref_meas']['BPT_NPoM_633nm_1s_690cnwln_Grating2']
+# bpt_ref_633nm = SERS.SERS_Spectrum(bpt_ref_633nm)
+
+# ## Convert to wn
+# bpt_ref_633nm.x = spt.wl_to_wn(bpt_ref_633nm.x, 632.8)
+
+# ## Truncate out notch (use this truncation for all spectra!)
+# #bpt_ref_633nm.truncate(truncate_range[0], truncate_range[1])
+
+# # ref_peaks = spt.approx_peak_gausses(bpt_ref_633nm.x,
+# #                                         bpt_ref_633nm.y_smooth,
+# #                                         plot=True,
+# #                                         threshold=0.1,
+# #                                         smooth_first=False,
+# #                                         height_frac = 0.05)
+
+# ## Have to adjust ref_wn because peak fitting is not yet robust
+# ref_wn_633nm = [ 189.96242575,  256.60661727,  304.85947153,  416.21397689,  518.96110313,
+#   635.5749669,  688.10709404,  760.32610816,  818.56620529,  951.50031667, 1021.03800555]
+
+# plt.plot(bpt_ref_633nm.x, bpt_ref_633nm.y)
+# bpt_ref_633nm.y_baselined = bpt_ref_633nm.y -  spt.baseline_als(y=bpt_ref_633nm.y,lam=1e1,p=1e-4,niter=1000)
+# bpt_ref_633nm.y_smooth = spt.butter_lowpass_filt_filt(bpt_ref_633nm.y_baselined,
+#                                                        cutoff=2000,
+#                                                        fs = 40000,
+#                                                        order=2)
+
+# plt.plot(bpt_ref_633nm.x, bpt_ref_633nm.y_smooth)
+# #plt.plot(bpt_ref_633nm.x, ref_spectrum.y_baselined)
+# plt.show()
+
+# ## Get calibrated wavenumbers
+# wn_cal_633 = run_spectral_calibration(bpt_ref_633nm, deg = 2, ref_threshold = 0.03, baseline_first = False, smooth_first = False)
+
+# Neon wavelengths taken from http://www.astrosurf.com/buil/us/spe2/calib2/neon1.gif
+#neon_wls = np.array([585.249, 588.189, 594.483, 597.553, 603, 607.434, 609.616, 614.306, 616.359, 621.728, 626.649, 630.479, 633.443, 638.299, 640.225, 650.653, 653.288, 659.895, 667.828, 671.704, 692.947, 703.241, 717.394, 724.517, 743.89])
+
+### Process literature spectrum
+# data_dir = r'C:\Users\il322\Desktop\Offline Data'
+# file_name = r'nanocavity_spectrum_BPT.csv'
+# os.chdir(data_dir)
+# lit_spectrum = np.loadtxt(file_name,skiprows=1,delimiter=',')
+# lit_spectrum = spt.Spectrum(x=lit_spectrum[:,1], y=lit_spectrum[:,0])
+# lit_spectrum.truncate(start_x=450, end_x = lit_spectrum.x.max())
+# lit_spectrum.y_baselined = lit_spectrum.y -  spt.baseline_als(y=lit_spectrum.y,lam=1e1,p=1e-4,niter=1000)
+# lit_spectrum.y_smooth = spt.butter_lowpass_filt_filt(lit_spectrum.y_baselined,
+#                                                       cutoff=1500,
+#                                                       fs = 40000,
+#                                                       order=1)
+# ### Find peaks
+# lit_peaks = spt.approx_peak_gausses(lit_spectrum.x,
+#                                         lit_spectrum.y_smooth,
+#                                         plot=False,
+#                                         threshold=0.045,
+#                                         smooth_first=False,
+#                                         height_frac = 0.05)
+
+# plt.plot(lit_spectrum.x, lit_spectrum.y_smooth/lit_spectrum.y_baselined.max())
+# lit_wn = []
+# for peak in lit_peaks:
+#     wn = peak[1]
+#     lit_wn.append(wn)
+# lit_wn.sort()
+# lit_wn = np.array(lit_wn)
+
+# for peak in lit_wn:
+#     plt.scatter(peak, lit_spectrum.y_smooth[np.where(lit_spectrum.x == peak)] / lit_spectrum.y_baselined.max())
+=======
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a

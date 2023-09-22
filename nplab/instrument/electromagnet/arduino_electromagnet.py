@@ -44,7 +44,15 @@ class Magnet(SerialInstrument):
         if self.correct_input(state):
             if state != self._state:
                 self._state = self.query(state)
-                
+    
+    def flush_buffer(self, *args, **kwargs):
+        out = super().query(*args, **kwargs)
+        self.log(out, 'info')
+        while self.readline() != '':
+            pass
+        print('finished flushing buffer' + str(self.readline()))
+        return out            
+    
     def North(self):
          self.set_state('N')
 

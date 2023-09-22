@@ -9,7 +9,9 @@ Created on Tue Jul 14 18:50:08 2015
 @author: wmd22
 """
 from time import sleep
-import numpy as np, nplab.instrument.visa_instrument as vi
+import numpy as np
+import nplab.instrument.visa_instrument as vi
+import pyvisa
 
 class Lockin_SR810(vi.VisaInstrument):
     """Software control for the Stanford Research Systems SR844 Lockin
@@ -39,8 +41,23 @@ class Lockin_SR810(vi.VisaInstrument):
         self.write('ICPL 0')
         self.ch_list = {}
         self.sens_list = {}
-        self.time_list = {}
+        self.time_list = {0:10e-6, # time constant given in sec
+                          1:30e-6,
+                          2:100e-6,
+                          3:300e-6, 
+                          4:1e-3,
+                          5:3e-3,
+                          6:0.01,
+                          7:0.03,
+                          8:0.1,
+                          9:0.300,
+                          10:1,
+                          11:3,
+                          12:10,
+                          13:30,
+                                     }
         self.filter_list = {}
+        print('lockin connected successfully')
         return
 
     def measure_variables(self, channels='1,2'):
@@ -142,7 +159,7 @@ class Lockin_SR810(vi.VisaInstrument):
 
     sensitivity = property(get_sens, set_sens)
 
-    def get_time_costant(self):
+    def get_time_constant(self):
         """ The time_constant property 
         
         Gettr:
@@ -183,10 +200,10 @@ class Lockin_SR810(vi.VisaInstrument):
         return (
          num, self.time_list[num])
 
-    def set_time_costant(self, i):
+    def set_time_constant(self, i):
         self.write('OFLT' + str(i))
 
-    time_constant = property(get_time_costant, set_time_costant)
+    time_constant = property(get_time_constant, set_time_constant)
 
     def set_time_constant_from_int(self, integrationtime):
         """Command to reverse read a dictionary and set the time_constant
@@ -338,5 +355,6 @@ class Lockin_SR810(vi.VisaInstrument):
     harmonic = property(get_harmonic, set_harmonic)
     
 if __name__ == '__main__':
-    testlockin = Lockin_SR844()
+    #testlockin = Lockin_SR844()
+    testlockin = Lockin_SR810(address='GPIB0::8::INSTR')
 # okay decompiling SR810.pyc

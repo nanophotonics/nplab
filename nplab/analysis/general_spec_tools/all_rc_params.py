@@ -1108,7 +1108,7 @@ master_param_dict = {'Default' :
                 'axes.titlesize': 24,
                 'axes.spines.right' : 'on',
                 'axes.spines.top' : 'on',
-                'axes.prop_cycle' : cycler('color', [plt.cm.Dark2(i) for i in np.linspace(0, 1., 8)]),
+                #'axes.prop_cycle' : cycler('color', [plt.cm.Dark2(i) for i in np.linspace(0, 1., 8)]),
                 #'axes.prop_cycle' : cycler('color', ['#1f77b4', '#ff7f0e', 'darkgreen', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf', 'xkcd:bright green', (0.9058823529411765, 0.1607843137254902, 0.5411764705882353, 1.0), (0.9019607843137255, 0.6705882352941176, 0.00784313725490196, 1.0), (0.6509803921568628, 0.4627450980392157, 0.11372549019607843, 1.0), 'k']),
                 'xtick.labelsize': 22,
                 'ytick.labelsize': 22,

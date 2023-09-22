@@ -837,6 +837,10 @@ class Spectrum:
         self.x += x_shift
         
     def truncate(self, start_x, end_x, buffer=False):
+        if start_x is None:
+            start_x = self.x.min()
+        if end_x is None:
+            end_x = self.x.max()
         self.x, self.y = truncate_spectrum(self.x, self.y, start_wl = start_x, end_wl = end_x, buffer=False)
 
 class Timescan(Spectrum):
@@ -877,7 +881,7 @@ class Timescan(Spectrum):
         else:
             v_min = max(mode - min_std*std, mode)
 
-        print(v_min, v_max)
+        #print(v_min, v_max)
         
         self.v_min = v_min
         self.v_max = v_max

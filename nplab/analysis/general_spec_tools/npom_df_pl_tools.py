@@ -209,7 +209,7 @@ class NPoM_DF_Z_Scan(spt.Timescan):
         self.determine_v_lims(**kwargs)
 
         ax.pcolormesh(x, z, Y, cmap = cmap, shading = 'auto', 
-                      norm = mpl.colors.LogNorm(vmin = self.v_min, vmax = self.v_max))
+                      norm = mpl.colors.LogNorm(vmin = self.v_min, vmax = self.v_max), rasterized = True)
 
         if x_lim is None:
             x_lim = self.x_lim
@@ -339,8 +339,8 @@ class NPoM_DF_Spectrum(spt.Spectrum):
 
         '''Trial the second: do you slant in the correct direction?'''
         #NPoM spectra generally have greater total signal at longer wavelengths due to coupled mode
-        first_half = self.y[:len(self.y)//3]
-        second_half = self.y[len(self.y)//3:]
+        first_half = self.y[:len(self.y)//2]
+        second_half = self.y[len(self.y)//2:]
         
         if np.sum(first_half) >= np.sum(second_half) * npom_threshold:
             self.not_npom_because = 'coupled mode region too weak'

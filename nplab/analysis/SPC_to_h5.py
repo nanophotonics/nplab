@@ -14,16 +14,10 @@ from builtins import range
 from past.utils import old_div
 from builtins import object
 import os
+import spc
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
-
-try:
-    import spc
-except Exception as e:
-    print('spc module not installed!')
-    print('spc is not available via pip; instead, clone from https://github.com/rohanisaac/spc and install')
-    raise e
 
 class Raman_Spectrum(object):
     #Object class containing spectral data and metadata for single Raman spectrum
@@ -186,6 +180,11 @@ def extractRamanSpc(path, bg_path = False, combine_statics = False, encoding = '
         spectra.append(Raman_Spectrum(filename, timestamp, metadata, laserWl, laserPower, absLaserPower, integrationTime, accumulations, nScans,
                                       wavenumbers, ramanIntensities, absRamanIntensities))
 
+        #except Exception as e:
+        #    print 'Something went wrong with %s:' % filename
+        #    print e
+        #    continue
+
     return spectra
 
 def populateH5(spectra, h5File, nameOnly = False):
@@ -198,13 +197,13 @@ def populateH5(spectra, h5File, nameOnly = False):
         for n, spectrum in enumerate(spectra):
             
             if len(spectra) < 10:
-                name = '%01d: %s' % (n, spectrum.filename)
+                name = 'Spectrum %01d: %s' % (n, spectrum.filename)
             elif len(spectra) < 100:
-                name = '%02d: %s' % (n, spectrum.filename)
+                name = 'Spectrum %02d: %s' % (n, spectrum.filename)
             elif len(spectra) < 1000:
-                name = '%03d: %s' % (n, spectrum.filename)
+                name = 'Spectrum %03d: %s' % (n, spectrum.filename)
             elif len(spectra) < 10000:
-                name = '%04d: %s' % (n, spectrum.filename)
+                name = 'Spectrum %04d: %s' % (n, spectrum.filename)
             
             if nameOnly == True:
                 name = spectrum.filename
@@ -316,7 +315,6 @@ def run(encoding = 'utf-8', nameOnly = False):
     dirName = '%s Raman Data' % rootDir.split('\\')[-1]
     h5FileName = createOutputFile(dirName)
     populateH5(spectra, h5FileName, nameOnly = nameOnly)
-    return h5FileName
 
 if __name__ == '__main__':
     run()
