@@ -13,6 +13,7 @@ from nplab.analysis import latest_scan, load_h5
 from nplab.analysis.particle_exclusion.utils import load_rejected, save_rejected
 from scipy import ndimage, signal
 from tqdm import tqdm
+import h5py
 
 
 def center_of_mass(grey_image, circle_position, radius):
@@ -32,8 +33,8 @@ class MonotonousImageExcluder():
 
     def __init__(self,
                  scan,
-                 image_name='CWL.thumb_image_0',
-                 exclusion_radius=13,  # pixels
+                 image_name='CWL.thumb_image_1',
+                 exclusion_radius=15,  # pixels
                  maxima_region_fraction=0.5,
                  sigma=2):
         self.scan = scan
@@ -101,6 +102,7 @@ class MonotonousImageExcluder():
 
 
 if __name__ == '__main__':
-    scan = latest_scan(load_h5())
+    h5 = h5py.File(r'C:\Users\il322\Desktop\Offline Data\2023-03-25_M-TAPP-SME_60nm_NPoM_Track_DF_Powerseries.h5')
+    scan = h5['ParticleScannerScan_2']
     mie = MonotonousImageExcluder(scan)
-    mie.run()
+    mie.run(plot=True)

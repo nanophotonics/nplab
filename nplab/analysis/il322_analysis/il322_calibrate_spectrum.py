@@ -23,7 +23,10 @@ from nplab.analysis.general_spec_tools import npom_sers_tools as nst
 from nplab.analysis.general_spec_tools import agg_sers_tools as ast
 from nplab.analysis.general_spec_tools import npom_df_pl_tools as df
 from nplab.analysis.SERS_Fitting import Auto_Fit_Raman as afr
+<<<<<<< HEAD
 from nplab.analysis.il322_analysis import il322_SERS_tools as SERS
+=======
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
 
 
 plt.rc('font', size=18, family='sans-serif')
@@ -181,7 +184,10 @@ def white_scatter_calibration(wl, white_scatter, white_bkg, start_notch=None, en
     S_dkfd_spline = sp.interpolate.splev(wl, spline, der=0)
     S_dkfd_spline = np.array(S_dkfd_spline)
     
+<<<<<<< HEAD
     
+=======
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
     ## Calculate R_setup
     R_setup = S_whitescatter/S_dkfd_spline
     R_setup = R_setup/R_setup.max()
@@ -201,7 +207,11 @@ def white_scatter_calibration(wl, white_scatter, white_bkg, start_notch=None, en
             plt.plot(wl, white_cal, label='Calibrated white scatter', color = 'grey')
         else:
             plt.plot(wl, (white_cal-white_cal.min())/white_cal.max(), label='Calibrated white scatter', color = 'grey')
+<<<<<<< HEAD
         plt.plot(wl, (S_dkfd_spline-S_dkfd_spline.min())/(S_dkfd_spline.max() - S_dkfd_spline.min()),  '--', label='Literature lamp emission',color = 'black')
+=======
+        plt.plot(wl, (S_dkfd_spline-S_dkfd_spline.min())/S_dkfd_spline.max(),  '--', label='Literature lamp emission',color = 'black')
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
         plt.xlabel('Wavelength (nm)')
         plt.ylabel('Normalized Intensity (a.u.)')
         plt.title('633nm - Spectral Efficiency Calibration - White Scatter')
@@ -220,7 +230,11 @@ def find_nearest(array, value):
 
 #%%
 
+<<<<<<< HEAD
 def run_spectral_calibration(ref_spectrum, ref_wn = [], lit_wn = [], ref_threshold = 0.08, deg = 2, baseline_first = True, smooth_first = True, plot = True):
+=======
+def run_spectral_calibration(ref_spectrum, ref_wn = [], lit_wn = [], ref_threshold = 0.08, deg = 2, baselined = False, smooth_first = True, plot = True):
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
 
     '''
     Run function to calibrate x-axis of spectrometer via reference spectrum
@@ -232,7 +246,11 @@ def run_spectral_calibration(ref_spectrum, ref_wn = [], lit_wn = [], ref_thresho
         lit_wn ([] list): list of literature spectrum peak positions (if empty, defaults to BPT spectrum)
         ref_threshold(0.08 float): peak fitting threshold for reference spectrum
         deg: (int) order of polynomial fit between measured & lit peaks
+<<<<<<< HEAD
         baseline_first (boolean)
+=======
+        baselined (boolean)
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
         smooth_first (boolean)
         plot (boolean)
     '''
@@ -275,12 +293,22 @@ def run_spectral_calibration(ref_spectrum, ref_wn = [], lit_wn = [], ref_thresho
     # Get reference peak positions
     
     ## Process reference spectrum
+<<<<<<< HEAD
     if baseline_first == False:
+=======
+    if baselined == True:
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
         ref_spectrum.y_baselined = ref_spectrum.y
     else:
         ref_spectrum.y_baselined = ref_spectrum.y -  spt.baseline_als(y=ref_spectrum.y,lam=1e1,p=1e-4,niter=1000)
     
+<<<<<<< HEAD
     if smooth_first == True:  
+=======
+    if smooth_first == False:
+        ref_spectrum.y_smooth = ref_spectrum.y_baselined
+    else:  
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
         ref_spectrum.y_smooth = spt.butter_lowpass_filt_filt(ref_spectrum.y_baselined,
                                                               cutoff=1000,
                                                               fs = 30000,
@@ -303,7 +331,12 @@ def run_spectral_calibration(ref_spectrum, ref_wn = [], lit_wn = [], ref_thresho
             ref_wn.append(wn)
         ref_wn.sort()
         ref_wn = np.array(ref_wn)
+<<<<<<< HEAD
         print('Ref wavenumbers: ' + str(ref_wn))
+=======
+            
+        print(ref_wn)
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
     
     ## If peak positions provided, use those
     else:
@@ -320,15 +353,25 @@ def run_spectral_calibration(ref_spectrum, ref_wn = [], lit_wn = [], ref_thresho
         for peak in lit_wn:
             plt.scatter(peak, lit_spectrum.y_smooth[np.where(lit_spectrum.x == peak)] / lit_spectrum.y_smooth.max(), color='blue')
         for peak in ref_wn:
+<<<<<<< HEAD
             plt.scatter(peak, ref_spectrum.y_smooth[(np.where(np.round(ref_spectrum.x, 8) == np.round(peak,8)))] / ref_spectrum.y_smooth.max() + 1, color = 'green')
         plt.title('Literature & Reference Spectra & Peak Positions', fontsize='medium')
         plt.show()
+=======
+            plt.scatter(peak, ref_spectrum.y_smooth[np.where(np.round(ref_spectrum.x,8) == peak)] / ref_spectrum.y_smooth.max() + 1, color = 'green')
+        plt.title('Literature & Reference Spectra & Peak Positions', fontsize='medium')
+        
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
         
     # Cubic fit to get calibrated wavenumbers
     
     wn_cal = spectral_calibration(
              ref_spectrum.x, 
+<<<<<<< HEAD
              ref_spectrum.y, 
+=======
+             ref_spectrum.y_smooth, 
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
              meas_wn = ref_wn, 
              lit_x = lit_spectrum.x, 
              lit_y = lit_spectrum.y_smooth, 
@@ -388,6 +431,7 @@ def run_spectral_calibration(ref_spectrum, ref_wn = [], lit_wn = [], ref_thresho
 # plt.plot(bpt_ref_633nm.x, bpt_ref_633nm.y-notch_cts, color = (0.8,0.1,0.1,0.7), label = 'Raw spectrum')
 # plt.plot(bpt_ref_633nm.x, (bpt_ref_633nm.y-notch_cts)*R_setup, color = (0,0.6,0.2,0.5), label = 'Efficiency-corrected')
 # plt.legend(fontsize='x-small', borderpad = 0.2)
+<<<<<<< HEAD
 
 
 #%% Testing
@@ -459,3 +503,5 @@ def run_spectral_calibration(ref_spectrum, ref_wn = [], lit_wn = [], ref_thresho
 
 # for peak in lit_wn:
 #     plt.scatter(peak, lit_spectrum.y_smooth[np.where(lit_spectrum.x == peak)] / lit_spectrum.y_baselined.max())
+=======
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a

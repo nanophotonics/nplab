@@ -11,7 +11,10 @@ Inherits spectral classes from spectrum_tools.py
 import h5py
 import os
 import math
+<<<<<<< HEAD
 from math import log10, floor
+=======
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -24,7 +27,11 @@ from nplab.analysis.general_spec_tools import npom_sers_tools as nst
 
 #%% E-Chem plotting functions - can be moved to their own script maybe
 
+<<<<<<< HEAD
 def plot_ca(ca_data, ax, t_min = None, t_max = None, t_offset = 0):
+=======
+def plot_ca(ca_data, ax, t_min = None, t_max = None):
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
 
     '''
     Plot chronoamperometry data
@@ -34,6 +41,7 @@ def plot_ca(ca_data, ax, t_min = None, t_max = None, t_offset = 0):
         ax: (mpl.ax) axis to be plotted on
         t_min: (float) Time minimum for plotting
         t_max: (float) Time maximum for plotting
+<<<<<<< HEAD
         t_offset: (float = None) Time offset
     '''
     
@@ -44,6 +52,11 @@ def plot_ca(ca_data, ax, t_min = None, t_max = None, t_offset = 0):
         t_offset = 0
     
     
+=======
+    '''
+    
+    
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
     # Extract current (uA) and time (s)
     
     current = ca_data[:,1]*10**3
@@ -52,13 +65,21 @@ def plot_ca(ca_data, ax, t_min = None, t_max = None, t_offset = 0):
     
     # Plot current v. time
     
+<<<<<<< HEAD
     ax.plot(current, time - t_offset)
+=======
+    ax.plot(current, time)
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
     ax.set_ylabel('Time (s)', fontsize='large')
     ax.set_xlabel('Current ($\mu$A)', fontsize='large')
     ax.set_ylim(t_min, t_max)
 
 
+<<<<<<< HEAD
 def plot_cv(cv_data, ax, t_min = None, t_max = None, t_offset = 0):
+=======
+def plot_cv(cv_data, ax, t_min = None, t_max = None):
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
     
     '''
     Plot Cyclic Voltammetry data
@@ -69,6 +90,7 @@ def plot_cv(cv_data, ax, t_min = None, t_max = None, t_offset = 0):
         ax: (mpl.ax) axis to be plotted on
         t_min: (float) Time minimum for plotting
         t_max: (float) Time maximum for plotting
+<<<<<<< HEAD
         t_offset: (float = None) Time offset
     '''
     
@@ -78,6 +100,11 @@ def plot_cv(cv_data, ax, t_min = None, t_max = None, t_offset = 0):
     if t_offset < 0:
         t_offset = 0
     
+=======
+    '''
+    
+    
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
     # Extract current (uA), voltage (V), time (s)
     
     current = cv_data[:,2]*10**6
@@ -150,12 +177,17 @@ class SERS_Spectrum(spt.Spectrum):
             
         if exposure is None:
             try:
+<<<<<<< HEAD
                 exposure = self.exposure
+=======
+                exposure = self.dset.attrs['Exposure']
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
             except:
                 print('Error: Exposure not found')
                 return
             
         self.y = (self.y - dark_counts) / (R_setup * laser_power * exposure)
+<<<<<<< HEAD
         
     
     def plot(self, ax = None, plot_norm = False, title = None):
@@ -183,6 +215,8 @@ class SERS_Spectrum(spt.Spectrum):
             ax.set_title(title)
             
         ax.plot(self.x, self.y)
+=======
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
 
     '''
     popt_gauss, pcov_gauss = scipy.optimize.curve_fit(spt.lorentzian, spectrum.x[460:500], spectrum.y[460:500], p0=[2.4e6, 1550, 20])
@@ -222,6 +256,7 @@ class SERS_Timescan(spt.Timescan):
         self.echem_mode = echem_mode.upper()
         self.echem_data = echem_data
         
+<<<<<<< HEAD
         try:
             self.exposure = np.round(self.dset.attrs['Exposure'], 4)
         except:
@@ -232,6 +267,12 @@ class SERS_Timescan(spt.Timescan):
         self.Y_raw = self.Y.copy()
     
 
+=======
+        self.t = self.t_raw * self.dset.attrs['Exposure']
+    
+
+
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
     def calibrate_intensity(self, R_setup = 1, dark_counts = 0, laser_power = None, exposure = None):
         
         '''
@@ -243,7 +284,10 @@ class SERS_Timescan(spt.Timescan):
             laser_power: (float) If not given, will try to take from dset.attrs
             exposure: (float) If not given, will try to take from dset.attrs
         '''
+<<<<<<< HEAD
         
+=======
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
         if laser_power is None:
             try:
                 laser_power = self.dset.attrs['laser_power']
@@ -253,11 +297,16 @@ class SERS_Timescan(spt.Timescan):
             
         if exposure is None:
             try:
+<<<<<<< HEAD
                 exposure = self.exposure
+=======
+                exposure = self.dset.attrs['Exposure']
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
             except:
                 print('Error: Exposure not found')
                 return
             
+<<<<<<< HEAD
         self.Y = (self.Y - dark_counts)
         if self.Y.min() < 0:
             self.Y -= self.Y.min()
@@ -267,6 +316,13 @@ class SERS_Timescan(spt.Timescan):
 
     
     def extract_nanocavity(self, timescan_y = None, plot = False):
+=======
+        self.Y = (self.Y - dark_counts) / (R_setup * laser_power * exposure)
+        self.y = np.average(self.Y, axis = 0)
+
+    
+    def extract_nanocavity(self, plot=False):
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
         
         '''
         Extracts a stable nanocavity spectrum from a timescan that contains flares or picocavities
@@ -274,15 +330,20 @@ class SERS_Timescan(spt.Timescan):
         The flat baseline value is the y-value (intensity) of the nanocavity at that x-value
         
         Parameters:
+<<<<<<< HEAD
             timescan: (nst.Timescan class = self) - best if already x & y-calibrated
             timescan_y: (nst.Timescan.Y attribute = None): choose which y (Y_smooth, Y_raw, etc) to use. Default uses self.Y
             use_raw: (boolean = False) extracts nanocavity from Y_raw if True
+=======
+            timescan: (nst.Timescan class) - best if already x & y-calibrated
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
             plot: (boolean) plots nanocavity spectrum
             
         Returns:
             nanocavity_spectrum: (SERS_Spectrum class) extracted nanocavity spectrum
         '''
         
+<<<<<<< HEAD
         
         # Choose which self.Y attribute to use
         
@@ -292,13 +353,19 @@ class SERS_Timescan(spt.Timescan):
             timescan_y = timescan_y.copy()
         
         
+=======
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
         # Get flat baseline value of each pixel (x-value) across each scan of time scan
         
         pixel_baseline = np.zeros(len(self.x))
         for pixel in range(0,len(self.x)):
+<<<<<<< HEAD
             
             pixel_baseline[pixel] = np.polyfit(self.t, timescan_y[:,pixel], 0)
         
+=======
+            pixel_baseline[pixel] = np.polyfit(self.t, self.Y[:,pixel], 0)
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
         self.nanocavity_spectrum = SERS_Spectrum(self.x, pixel_baseline)
         
         # Plot extracted nanocavity spectrum
@@ -319,6 +386,7 @@ class SERS_Timescan(spt.Timescan):
         if plot == True:
             self.integrated_spectrum.plot()
     
+<<<<<<< HEAD
     
     def normalise(self, norm_range = (0, 1), norm_individual = True,
                   t_min = None, t_max = None):
@@ -369,12 +437,20 @@ class SERS_Timescan(spt.Timescan):
         
             
     def plot_timescan(self, plot_type = 'cmap', plot_y = None, 
+=======
+            
+    def plot_timescan(self, plot_type = 'cmap', 
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
                       v_min = None, v_max = None,
                       x_min = None, x_max = None,
                       t_min = None, t_max = None, t_offset = 0,
                       cmap = 'inferno', avg_chunks = None, avg_color = 'white', 
                       stack_offset = None, stack_color = 'black', 
+<<<<<<< HEAD
                       plot_echem = False, title = None):
+=======
+                      plot_echem = False):
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
         
         '''
         Function for plotting a single timescan, either as a colormap or as a stack of single spectra
@@ -382,7 +458,10 @@ class SERS_Timescan(spt.Timescan):
         
         Parameters:
             plot_type: (string = 'cmap') Determines type of plot. 'cmap' for colormap or 'stack' for stack of single spectra
+<<<<<<< HEAD
             plot_norm: (boolean = False) Determine to plot self.Y or self.Y_norm. Need to run normalise() before plotting if True
+=======
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
             v_min: (float = None) Minimum value for colormap normalization
             v_max: (float = None) Maximum value for colormap normalization
             x_min: (float = None) x minimum for plotting
@@ -391,11 +470,16 @@ class SERS_Timescan(spt.Timescan):
             t_max: (float = None) Time maximum for plotting
             t_offset: (float = 0) Offset timescan in time axis so it matches echem data
             cmap: (string = 'inferno') Colormap for plotting
+<<<<<<< HEAD
             avg_chunks: (int = None) Number of averages to calculate for average spectra in colormap
+=======
+            avg_chunks: (int = None) Number of spectra to calculate for average spectra in colormap
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
             avg_color: (string = 'white') Color for avergae chunk plotting on colormap
             stack_offset: (float = None) y-offset value for stacked spectra
             stack_color: (string = 'black') Color for stacked spectra
             plot_echem: (boolean = False) Choose if plotting echem alongside timescan. Must have specified echem data in class initialization
+<<<<<<< HEAD
             title: (str = None) Title for plot. If None, tries to set automatically from sample & echem metadata
         '''
         
@@ -405,16 +489,30 @@ class SERS_Timescan(spt.Timescan):
             Y_plot = self.Y.copy()
         else:
             Y_plot = plot_y.copy()
+=======
+        '''
+        
+        
+        assert plot_type == 'cmap' or plot_type == 'stack', 'Error: invalid plot type. Please specify either "cmap" or "stack"'
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
         
         
         # Set v, x, and t limits
         
         if v_min is None:
+<<<<<<< HEAD
             v_min = Y_plot.min()
         
         if v_max is None:
             v_max = np.percentile(Y_plot, 99.5) # Take 95th percentile for v_max -> good for removing effect of cosmic rays on cmap
             
+=======
+            v_min = self.Y.min()
+        
+        if v_max is None:
+            v_max = np.percentile(self.Y, 95) # Take 95th percentile for v_max -> good for removing effect of cosmic rays on cmap
+            print(v_max)
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
         if x_min is None:
             x_min = self.x.min()
             
@@ -426,6 +524,7 @@ class SERS_Timescan(spt.Timescan):
             
         if t_max is None:
             t_max = self.t.max()
+<<<<<<< HEAD
            
             
         # Managing t_offset
@@ -443,6 +542,8 @@ class SERS_Timescan(spt.Timescan):
         Y_plot = Y_plot[t_min_idx : t_max_idx]
         t_plot = t_plot[t_min_idx : t_max_idx]
         print(t_min_idx)
+=======
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
         
         
         # Plot E-Chem
@@ -457,7 +558,11 @@ class SERS_Timescan(spt.Timescan):
                 ### Define figure with 2 subplots - ax2 for echem & ax1 for timescan
                 fig, (ax2, ax1) = plt.subplots(1, 2, figsize=[12,16], gridspec_kw={'width_ratios': [1, 3]}, sharey=False)
                 
+<<<<<<< HEAD
                 plot_ca(ca_data = self.echem_data, ax = ax2, t_min = t_min, t_max = t_max, t_offset = t_offset)
+=======
+                plot_ca(ca_data = self.echem_data, ax = ax2, t_min = t_min, t_max = t_max)
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
             
                 ### Set title
                 try:
@@ -471,12 +576,17 @@ class SERS_Timescan(spt.Timescan):
                 
                 ### Define figure with 2 subplots - ax2 for echem & ax1 for timescan
                 fig, (ax2, ax1) = plt.subplots(1, 2, figsize=[12,16], gridspec_kw={'width_ratios': [1, 3]}, sharey=False)
+<<<<<<< HEAD
                 plot_cv(cv_data = self.echem_data, ax = ax2, t_min = t_min, t_max = t_max, t_offset = t_offset)
+=======
+                plot_cv(cv_data = self.echem_data, ax = ax2, t_min = t_min, t_max = t_max)
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
                 
                 ### Set time axis label
                 ax1.set_ylabel(r'Time (s)', fontsize = 'large')
                 
                 ### Set title
+<<<<<<< HEAD
                 if title is None:
                     try:
                         fig.suptitle('SERS Timescan + Cyclic Voltammetry ' + str(self.dset.attrs['Vertex 1']) + 'V to ' + str(self.dset.attrs['Vertex 2']) + 'V\n' + self.dset.attrs['sample'] + '\n' + self.name, fontsize='x-large')
@@ -485,10 +595,19 @@ class SERS_Timescan(spt.Timescan):
                 else:
                     fig.suptitle(title, fontsize = 'x-large')
             
+=======
+                try:
+                    fig.suptitle('SERS Timescan + Cyclic Voltammetry ' + str(self.dset.attrs['Vertex 1']) + 'V to ' + str(self.dset.attrs['Vertex 2']) + 'V\n' + self.dset.attrs['sample'] + '\n' + self.name, fontsize='x-large')
+                except:
+                    fig.suptitle('SERS Timescan + Cyclic Voltammetry\n' + self.dset.attrs['sample'] + '\n' + self.name, fontsize='x-large')
+        
+      
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
         else:
             ## If not plotting e_chem, define figure with 1 subplots - ax1 for timescan, set axis label & title
             fig, (ax1) = plt.subplots(1, 1, figsize=[12,16])
             ax1.set_ylabel(r'Time (s)', fontsize = 'large')
+<<<<<<< HEAD
             if title is None:
                 try:
                     fig.suptitle('SERS Timescan\n' + self.dset.attrs['sample'] + '\n' + self.name, fontsize='x-large')
@@ -496,6 +615,10 @@ class SERS_Timescan(spt.Timescan):
                     pass
             else:
                 fig.suptitle(title, fontsize = 'x-large')
+=======
+            fig.suptitle('SERS Timescan\n' + self.dset.attrs['sample'] + '\n' + self.name, fontsize='x-large')
+        
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
         
         # Plot SERS timescan
         
@@ -505,13 +628,18 @@ class SERS_Timescan(spt.Timescan):
         ## Plot as colormap
         if plot_type == 'cmap':    
             cmap = plt.get_cmap(cmap)
+<<<<<<< HEAD
             pcm = ax1.pcolormesh(self.x, t_plot, Y_plot, vmin = v_min, vmax = v_max, cmap = cmap, rasterized = 'True')
+=======
+            pcm = ax1.pcolormesh(self.x, self.t + t_offset, self.Y, vmin = v_min, vmax = v_max, cmap = cmap)
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
             ax1.set_ylim(t_min, t_max)
             clb = fig.colorbar(pcm, ax=ax1)
             clb.set_label(label = 'SERS Intensity (cts/mW/s)', size = 'large', rotation = 270, labelpad=30)
             
             ### Plot average chunks
             if avg_chunks is not None:
+<<<<<<< HEAD
                 Y_arr = np.array_split(Y_plot, (avg_chunks)) # Split Y_plot into avg_chunks # of arrays
                 time_inc = len(t_plot) * self.exposure/(avg_chunks)
                 for n, Y_i in enumerate(Y_arr):
@@ -523,6 +651,16 @@ class SERS_Timescan(spt.Timescan):
                     ## Squish avg chunk if it goes above plot
                     if y_i.max() > t_max: 
                         y_i *= (t_max/y_i.max()) 
+=======
+                Y_arr = np.split(self.Y, len(self.Y)/avg_chunks) # Split self.Y into arrays of avg_chunk size
+                time_inc = len(self.t) * self.dset.attrs['Exposure']/(len(self.Y)/avg_chunks)
+                for n, Y_i in enumerate(Y_arr):
+                    y_i = np.sum(Y_i, axis = 0)
+                    y_i = y_i - y_i.min()
+                    y_i = y_i/y_i.max()
+                    y_i *= time_inc*0.95
+                    y_i += n*time_inc + t_offset    
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
                     ax1.plot(self.x, y_i, color = 'black', lw = 6) # Plot black border around avg spectrum
                     ax1.plot(self.x, y_i, color = avg_color, alpha = 0.85) # Plot avg spectrum
             
@@ -531,10 +669,17 @@ class SERS_Timescan(spt.Timescan):
             
             ### Set stack offset
             if stack_offset is None:
+<<<<<<< HEAD
                 stack_offset = np.percentile(Y_plot, 5)
 
             ### Loop through individual spectra in given time range
             for i, spectrum in enumerate(Y_plot[int(t_min/self.exposure) : int(t_max/self.exposure)]): # Converting t_min/t_max to indicies
+=======
+                stack_offset = np.percentile(self.Y, 5)
+
+            ### Loop through individual spectra in given time range
+            for i, spectrum in enumerate(self.Y[int(t_min/self.dset.attrs['Exposure']) : int(t_max/self.dset.attrs['Exposure'])]): # Converting t_min/t_max to indicies
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
                 spectrum = spectrum - spectrum[0] # Subtract so first spectrum starts at 0
                 spectrum = spectrum + (i*stack_offset) # Offset spectrum
                 ax1.plot(self.x, spectrum, color = 'black') # Plot individual spectrum
@@ -542,7 +687,11 @@ class SERS_Timescan(spt.Timescan):
             ### Adjust ticks & labels -> y-axis for time and intensity
             
             #### Intensity axis
+<<<<<<< HEAD
             y_ticks = np.arange(0, spectrum.max(), np.round(spectrum.max()/10, 1-int(floor(log10(abs(spectrum.max()))))))
+=======
+            y_ticks = np.arange(0, spectrum.max(), np.round(spectrum.max()/10, -5)) # Intensity ticks (10 evenly spaced from 0 to max of top spectrum)
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
             ax1.set_yticks(y_ticks, y_ticks)
             ax1.set_ylabel('SERS Intensity (cts/mW/s)', fontsize='large', rotation = 270, labelpad = 30)
             ax1.yaxis.set_label_position('right')               
@@ -556,8 +705,11 @@ class SERS_Timescan(spt.Timescan):
             ax1.set_ylim(y_ticks.min(), y_ticks.max())
             
         plt.tight_layout()
+<<<<<<< HEAD
         
         
+=======
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
 
 
 #%% SERS_Powerseries class
@@ -575,6 +727,7 @@ class SERS_Powerseries():
         super().__init__(*args, raman_excitation = raman_excitation, **kwargs)
 
         self.particle_name = particle_name
+<<<<<<< HEAD
         
 
     
@@ -589,3 +742,6 @@ class SERS_Powerseries():
 # timescan.echem_mode = 'CA'
 
 # timescan.plot_timescan(t_min = 0, t_max = 10, t_offset = -1,  v_min = 300, v_max = np.percentile(timescan.Y, 99) + 500, plot_echem = True, plot_type='stack', stack_offset = np.percentile(timescan.Y, 1), avg_chunks = 10)
+=======
+    
+>>>>>>> 627b0f8aa4612eeff59c98a862fafe6861336c1a
