@@ -258,7 +258,7 @@ class QuickControlBox(QtWidgets.QGroupBox, UiTools):
     
     def add_doublespinbox(self, name, vmin=-float("inf"), vmax=float("inf"), singlestep=1.,):
         """Add a floating-point spin box control."""
-        sb = QtWidgets.QDoubleSpinBox()
+        sb = QtWidgets.QDoubleSpinBox(decimals=6)
         self.controls[name] = sb
         sb.setObjectName(name + "_spinbox")
         sb.setMinimum(vmin)
