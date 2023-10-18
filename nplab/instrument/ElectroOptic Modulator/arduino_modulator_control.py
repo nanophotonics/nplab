@@ -38,8 +38,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from time import sleep
 from random import shuffle
-from yonatans_functions.curve_fitting import my_curve_fit
-from yonatans_functions.find_index import find_index
+from nplab.analysis.curve_fitting import my_curve_fit
+from nplab.analysis.find_index import find_index
 
 def fit_func(x, *params):
     F=np.zeros(x.shape)

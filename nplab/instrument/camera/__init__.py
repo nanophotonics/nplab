@@ -639,7 +639,7 @@ class CameraPreviewWidget(pg.GraphicsView):
         """Update the image displayed in the preview widget."""
         # NB compared to previous versions, pyqtgraph flips in y, hence the
         # funny slice on the next line.
-        self.update_data_signal.emit(newimage)
+        self.update_data_signal.emit(newimage) # ToDo: understand 
         
     def add_legacy_click_callback(self, function):
         """Add an old-style (coordinates in fractions-of-an-image) callback."""
