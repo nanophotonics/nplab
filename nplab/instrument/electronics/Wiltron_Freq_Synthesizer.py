@@ -74,12 +74,25 @@ class freq_source(vi.VisaInstrument):
         #scan between f1 and f2 with time T
         self.set_freq(mem_slot=2,target_freq=f2)
         self.set_freq(mem_slot=1,target_freq=f1)
-        self._write('SWT30SEC') #set scan time to 30sec
+        self._write('SWT'+str(T)+'SEC') #set scan time to 30sec
         self._write('SF1')# start scan
     
     def set_cw(self,mem_slot=1,freq=2.1):
         self.set_freq(mem_slot=mem_slot,target_freq=freq)
         self._write('CF1')
+        
+    def AM_on(self):
+        self._write('AM1')
+    
+    def AM_off(self):
+        self._write('AM0')
+        
+    def FM_on(self):
+        self._write('FM1')
+    
+    def FM_off(self):
+        self._write('FM0')
+        
         
     
 if __name__ == '__main__':
