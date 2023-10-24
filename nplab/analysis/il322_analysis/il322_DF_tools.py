@@ -72,6 +72,59 @@ class Z_Scan(df.NPoM_DF_Z_Scan):
 
         self.avg_scan = avg_scan
         
+    
+    def plot_z_scan(self, ax = None, y_label = None, rc_params = None, x_lim = None, 
+                    cmap = 'inferno', title = None, **kwargs):
+        '''
+        !!! needs docstring
+        '''
+
+        old_rc_params = plt.rcParams.copy()#saves initial rcParams before overwriting them
+
+        if ax is None:
+            if self.rc_params is not None:
+                plt.rcParams.update(self.rc_params)#use rc params specified with object
+            if rc_params is not None:
+                plt.rcParams.update(rc_params)#unless overridden when calling the function
+
+            fig, ax = plt.subplots()#if no axes provided, create some
+            external_ax = False
+
+        else:
+            external_ax = True
+
+        x = self.x
+        z = self.dz
+
+        y_label = 'Focal Height ($\mathrm{\mu}$m)'
+
+        if y_label == False:
+            y_label = ''        
+
+        Y = np.vstack(self.Y)
+
+        self.determine_v_lims(**kwargs)
+
+        ax.pcolormesh(x, z, Y, cmap = cmap, shading = 'auto', 
+                      norm = mpl.colors.LogNorm(vmin = self.v_min, vmax = self.v_max), rasterized = True)
+
+        if x_lim is None:
+            x_lim = self.x_lim
+
+        if x_lim is not None and x_lim is not False:
+            ax.set_xlim(x_lim)
+            
+        ax.set_ylim(z.min(), z.max())
+        ax.set_ylabel(y_label)
+
+        if title is not None:
+            ax.set_title(title)
+
+        if external_ax == False:
+            plt.show()
+            plt.rcParams.update(old_rc_params)#put rcParams back to normal when done
+
+        
    
         
 #%%     
@@ -112,7 +165,7 @@ class DF_Spectrum(df.NPoM_DF_Spectrum):
         '''
         Find critical wavelength from list of maxima (takes global maximum)
         '''
-        
+        crit_wln = 0
         global_max = 0
         for maximum in self.maxima:
             if self.y_smooth[maximum] > global_max:
@@ -125,7 +178,7 @@ class DF_Spectrum(df.NPoM_DF_Spectrum):
 
 #%%
 
-def df_screening(z_scan, df_spectrum, image = None, tinder = False, plot = False, title = None, save_file = None):
+def df_screening(z_scan, df_spectrum, image = None, tinder = False, plot = False, title = None, save_file = None, **kwargs):
     
     '''
     Function to screen NPoMs based on DF data
@@ -149,12 +202,11 @@ def df_screening(z_scan, df_spectrum, image = None, tinder = False, plot = False
     if plot == True:
         plt.rc('font', size=18, family='sans-serif')
         plt.rc('lines', linewidth=3)
-        
         plt.figure(figsize=[7,16])    
         ax1=plt.subplot(3,1,1)
         ax2=plt.subplot(3,1,2, sharex=ax1)
         ax3 = plt.subplot(3,1,3)
-        ax1.get_xaxis().set_visible(False)
+        #ax1.get_xaxis().set_visible(False)
         ax1.set_title('Z-Scan')
         ax2.set_title('Stacked Dark-field Spectrum')
         ax3.set_title('Image')
@@ -163,16 +215,16 @@ def df_screening(z_scan, df_spectrum, image = None, tinder = False, plot = False
         plt.tight_layout(pad = 1.2)
     
         ## Plot z-scan
-        z_scan.plot_z_scan(ax=ax1)
+        z_scan.plot_z_scan(ax=ax1, x_lim = (z_scan.x_lim))
     
         ## Plot df spectrum (raw & smoothed) w/ maxima & crit wln
-        df_spectrum.plot_df(ax=ax2)
-        for maximum in df_spectrum.maxima:
-            ax2.scatter(df_spectrum.x[maximum], df_spectrum.y[maximum], marker='x', s=250, color='darkgreen', zorder = 10)
-        ax2.scatter(df_spectrum.crit_wln, np.max(df_spectrum.y[df_spectrum.maxima]), marker = '*', s = 400, color = 'black', zorder = 20)
-        ax2.set_yticks(np.round(np.arange(df_spectrum.y.min(), df_spectrum.y.max(), 200), -2))
-        ax2.autoscale_view()
-        
+        df_spectrum.plot_df(ax=ax2, x_lim = z_scan.x_lim)
+        if len(df_spectrum.maxima) > 0:
+            for maximum in df_spectrum.maxima:
+                ax2.scatter(df_spectrum.x[maximum], df_spectrum.y_smooth[maximum], marker='x', s=250, color='black', zorder = 10)
+            ax2.scatter(df_spectrum.crit_wln, np.max(df_spectrum.y_smooth[df_spectrum.maxima]), marker = '*', s = 400, color = 'purple', zorder = 20)
+        ax2.set_yticks(np.round(np.linspace(0, df_spectrum.y.max(), 2), 3))       
+
         ## Plot CWL image
         if image is not None:
             ax3.imshow(image, zorder = 500)
@@ -184,17 +236,18 @@ def df_screening(z_scan, df_spectrum, image = None, tinder = False, plot = False
     if z_scan.aligned == False:
         df_spectrum.is_npom = False
         df_spectrum.not_npom_because = 'Centering failed'
-        if plot == True: ax2.text(s='Centering Failed', x=400, y=(df_spectrum.y.max() + df_spectrum.y.min())/2, fontsize = 40)
+        if plot == True: 
+            ax2.text(s='Centering Failed', x = z_scan.x_lim[0] + 50, y=(df_spectrum.y.max() + df_spectrum.y.min())/2, fontsize = 40)
     
     ## Test df spectrum via test_if_npom() 
     else:
         try:
             if df_spectrum.is_npom == False:
-                if plot == True: ax2.text(s='NPoM Test failed: ' + df_spectrum.not_npom_because, x=350, y=(df_spectrum.y.max() + df_spectrum.y.min())/2, fontsize = 20, zorder=20)
+                if plot == True: ax2.text(s='NPoM Test failed: ' + df_spectrum.not_npom_because, x = z_scan.x_lim[0] + 50, y=(df_spectrum.y.max() + df_spectrum.y.min())/2, fontsize = 20, zorder=20)
         except:
             df_spectrum.test_if_npom()
             if df_spectrum.is_npom == False:
-                if plot == True: ax2.text(s='NPoM Test failed: ' + df_spectrum.not_npom_because, x=350, y=(df_spectrum.y.max() + df_spectrum.y.min())/2, fontsize = 20, zorder=20)
+                if plot == True: ax2.text(s='NPoM Test failed: ' + df_spectrum.not_npom_because, x = z_scan.x_lim[0] + 50, y=(df_spectrum.y.max() + df_spectrum.y.min())/2, fontsize = 20, zorder=20)
     
     if plot == True and save_file == None:
         plt.show()
@@ -228,7 +281,8 @@ def plot_df_histogram(crit_wln_list,
                       df_avg_threshold = 1,
                       ax = None,
                       title = None,
-                      ax_df_label = None):
+                      ax_df_label = None,
+                      **kwargs):
 
     '''
     Function for plotting darkfield critical wavelength histogram with avg df spectra
@@ -319,7 +373,7 @@ def plot_df_histogram(crit_wln_list,
         ax.set_zorder(ax_df.get_zorder() + 1)
         ax.patch.set_visible(False)
         
-    ax.set_xlim(450, 900)
+    ax.set_xlim(bin_range)
     
     
     # Fit & plot normal distribution
@@ -398,3 +452,5 @@ def plot_df_histogram(crit_wln_list,
 #                   bin_range = (500,900), 
 #                   df_avg_threshold = 2,
 #                   title = 'Co-TAPP-SMe')
+
+
