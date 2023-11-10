@@ -987,7 +987,7 @@ for particle_scan in scan_list:
             
             ## Color = color of previous power in powerseries, add to avg_powerseries
             my_cmap = plt.get_cmap('inferno')
-            color = my_cmap(i/20)
+            color = my_cmap(i/21)
             offset = 0.03
             if i == 0:
                 spectrum.plot(ax = ax, plot_y = spectrum.y_norm, title = '633nm Powerseries - 500nW Spectra - 20x MLAgg', linewidth = 1, color = color, label = 0.0)
@@ -1004,7 +1004,7 @@ for particle_scan in scan_list:
             fig.suptitle(particle_name)
             powerseries[i] = spectrum
             ax.set_xlim(250, 1900)
-            ax.set_ylim(0, 2)
+            ax.set_ylim(0, 2.2)
             ax.set_ylabel('Normalized SERS Intensity (a.u.)')
             plt.tight_layout(pad = 0.8)
 
@@ -1032,7 +1032,7 @@ for i in range(0, len(avg_powerseries)):
     
     ## Color = color of previous power in powerseries
     my_cmap = plt.get_cmap('inferno')
-    color = my_cmap(i/20)
+    color = my_cmap(i/21)
     offset = 0.03
     if i == 0:
         ax.plot(x, avg_powerseries[i], linewidth = 1, color = color, label = 0.0)
@@ -1046,7 +1046,7 @@ for line in ax.get_legend().get_lines():
     line.set_linewidth(4.0)
 fig.suptitle('633nm Powerseries - 500nW Spectra - 20x MLAgg Average')
 ax.set_xlim(250, 1900)
-ax.set_ylim(0, 2)
+ax.set_ylim(0, 2.2)
 plt.tight_layout(pad = 0.8)
 
 plt.savefig(save_dir + 'MLAgg Avg' + '.svg', format = 'svg')
@@ -1121,7 +1121,7 @@ for particle_scan in scan_list:
             
             ## Color = color of previous power in powerseries, add to avg_powerseries
             my_cmap = plt.get_cmap('inferno')
-            color = my_cmap(i/20)
+            color = my_cmap(i/22)
             offset = 0.03
             if i == 0:
                 spectrum.plot(ax = ax, plot_y = spectrum.y_norm, title = '633nm Powerseries - 20x MLAgg', linewidth = 1, color = color, label = np.round(spectrum.laser_power * 1000,1))
@@ -1166,7 +1166,7 @@ for i in range(0, len(avg_powerseries)):
     
     ## Color = color of previous power in powerseries
     my_cmap = plt.get_cmap('inferno')
-    color = my_cmap(i/20)
+    color = my_cmap(i/22)
     offset = 0.03
     if i == 0:
         ax.plot(x, avg_powerseries[i], linewidth = 1, color = color, label = powerseries[i].laser_power * 1000)
