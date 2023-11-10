@@ -2,70 +2,8 @@
 """
 Created on Fri Nov  3 17:02:07 2023
 
-@author: smrs3
+@author: smrs3, il322
 """
-
-import numpy as np
-from nplab import datafile
-from nplab.instrument import Instrument
-import ctypes
-import glob
-import os.path
-import pandas as pd
-import time
-import pyvium as iv
-#from Timer import Timer
-
-
-
-class Ivium(Instrument):
-    
-    '''
-    Class handling Ivium Potentiostat
-    '''
-
-    def __init__(self):
-        
-        Instrument.__init__(self)
-        
-        # Locate & open Ivium DLL
-        self.dll = ctypes.CDLL("C:\IviumStat\Software Development Driver\Ivium_remdriver64.dll")
-        self.dll.IV_open(None)
-
-        # Check Ivium status
-        self.status = self.dll.IV_getdevicestatus(None)
-        assert self.status == 1, 'Check Ivium status'
-        print('Ivium connection OK')
-        
-        # Create h5 datafile if none
-        self.data_file = datafile.current()
-        
-        
-    
-        
-    def get_all_datapoints(self):
-        self.data = []
-        total_points = self.dll.IV_Ndatapoints(ctypes.c_int(10))
-        print(total_points)
-        for point_index in range(1,total_points+1):
-            t,V,I = self.dll.getdata(point_index)
-            self.data.append([t,V,I])
-
-if __name__ == "__main__":
-
-    ivium = Ivium()        
-
-
-    IV_method=ctypes.create_string_buffer(b"C:\Users\HERA\Documents\GitHub\nplab\nplab\instrument\potentiostat\E_step.imf")
-    ivium.dll.IV_readmethod(ctypes.byref(IV_method))
-    ivium.dll.IV_startmethod()
-    print(ivium.dll.IV_getdevicestatus(None))
-    ivium.get_all_datapoints()
-    
-    
-    
-#%% Using pyvium
-
 
 import numpy as np
 from nplab import datafile
@@ -77,7 +15,7 @@ import pandas as pd
 import time
 import pyvium
 from pyvium import Pyvium
-
+from pyvium.pyvium_verifiers import PyviumVerifiers
 
 class Ivium(Instrument, Pyvium):
     
@@ -86,9 +24,11 @@ class Ivium(Instrument, Pyvium):
     Uses pyvium library (pip install pyvium -> from pyvium import Pyvium as iv)
     '''
 
+
     def __init__(self):
         
         Instrument.__init__(self)
+        
         
         ## Open Ivium dll & connect device
         self.open_driver()
@@ -106,23 +46,32 @@ class Ivium(Instrument, Pyvium):
     # Re-define start_method() function to wait for Ivium to finish measurement
     @staticmethod
     def start_method(method_file_path = ''):
+        
         '''
         Starts a method procedure.
         If method_file_path is an empty string then the presently loaded procedure is started.
         If the full path to a previously saved method is provided
         then the procedure is loaded from the file and started.
         '''
-        pyvium.PyviumVerifiers.verify_driver_is_open()
-        pyvium.PyviumVerifiers.verify_iviumsoft_is_running()
-        pyvium.PyviumVerifiers.verify_device_is_connected_to_iviumsoft()
-        pyvium.PyviumVerifiers.verify_device_is_available()
+        
+        PyviumVerifiers.verify_driver_is_open()
+        PyviumVerifiers.verify_iviumsoft_is_running()
+        PyviumVerifiers.verify_device_is_connected_to_iviumsoft()
+        PyviumVerifiers.verify_device_is_available()
 
         result_code, _ = pyvium.Core.IV_startmethod(method_file_path)
 
         if result_code == 1:
             raise FileNotFoundError
     
-    
+    def save_data_h5():
+        '''
+        '''
+        
+        
+        
+        
+        
 
 if __name__ == "__main__":
 
