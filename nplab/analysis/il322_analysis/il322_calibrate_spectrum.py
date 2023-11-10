@@ -64,8 +64,11 @@ def white_scatter_calibration(wl, white_scatter, white_bkg, start_notch=None, en
     try:
         S_dkfd = np.loadtxt(r'C:\Users\il322\Desktop\Offline Data\S_dkdf.txt',delimiter=',')
     except:
-        S_dkfd = np.loadtxt(r"C:\Users\ishaa\OneDrive\Desktop\Offline Data\S_dkdf.txt",delimiter=',')
-    
+        try:
+            S_dkfd = np.loadtxt(r"C:\Users\ishaa\OneDrive\Desktop\Offline Data\S_dkdf.txt",delimiter=',')
+        except:
+            S_dkfd = np.loadtxt(r"C:\Users\HERA\Desktop\Offline Data\S_dkdf.txt",delimiter=',')
+            
     ## Interpolate literature lamp emission
     spline = sp.interpolate.splrep(S_dkfd[...,0],S_dkfd[...,1], s=0)
     
@@ -119,8 +122,12 @@ def process_default_lit_spectrum(plot = True, **kwargs):
         data_dir = r'C:\Users\il322\Desktop\Offline Data'
         os.chdir(data_dir)
     except:
-        data_dir = r'C:\Users\ishaa\OneDrive\Desktop\Offline Data'
-        os.chdir(data_dir)
+        try:
+            data_dir = r'C:\Users\ishaa\OneDrive\Desktop\Offline Data'
+            os.chdir(data_dir)
+        except:
+            data_dir = r'C:\Users\HERA\Desktop\Offline Data'
+            os.chdir(data_dir)
     lit_spectrum = np.loadtxt(file_name,skiprows=1,delimiter=',')
     lit_spectrum = SERS.SERS_Spectrum(x=lit_spectrum[:,1], y=lit_spectrum[:,0])
     
