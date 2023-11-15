@@ -61,8 +61,14 @@ def white_scatter_calibration(wl, white_scatter, white_bkg, start_notch=None, en
 
     
     # Load literature lamp emission
-    S_dkfd = np.loadtxt(r'C:\Users\il322\Desktop\Offline Data\S_dkdf.txt',delimiter=',')
-    
+    try:
+        S_dkfd = np.loadtxt(r'C:\Users\il322\Desktop\Offline Data\S_dkdf.txt',delimiter=',')
+    except:
+        try:
+            S_dkfd = np.loadtxt(r"C:\Users\ishaa\OneDrive\Desktop\Offline Data\S_dkdf.txt",delimiter=',')
+        except:
+            S_dkfd = np.loadtxt(r"C:\Users\HERA\Desktop\Offline Data\S_dkdf.txt",delimiter=',')
+            
     ## Interpolate literature lamp emission
     spline = sp.interpolate.splrep(S_dkfd[...,0],S_dkfd[...,1], s=0)
     
@@ -111,9 +117,17 @@ def process_default_lit_spectrum(plot = True, **kwargs):
     '''
     
     ## Get file & spectrum
-    data_dir = r'C:\Users\il322\Desktop\Offline Data'
     file_name = r'nanocavity_spectrum_BPT.csv'
-    os.chdir(data_dir)
+    try:
+        data_dir = r'C:\Users\il322\Desktop\Offline Data'
+        os.chdir(data_dir)
+    except:
+        try:
+            data_dir = r'C:\Users\ishaa\OneDrive\Desktop\Offline Data'
+            os.chdir(data_dir)
+        except:
+            data_dir = r'C:\Users\HERA\Desktop\Offline Data'
+            os.chdir(data_dir)
     lit_spectrum = np.loadtxt(file_name,skiprows=1,delimiter=',')
     lit_spectrum = SERS.SERS_Spectrum(x=lit_spectrum[:,1], y=lit_spectrum[:,0])
     
