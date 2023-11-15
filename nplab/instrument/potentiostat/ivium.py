@@ -17,6 +17,22 @@ import pyvium
 from pyvium import Pyvium
 from pyvium.pyvium_verifiers import PyviumVerifiers
 
+
+# Dictionary of parameters for Ivium methods
+method_dict = {
+    'CV' : ['Title', 'E start', 'Vertex 1', 'Vertex 2', 'E step', 'N scans', 'Scanrate', 'Current Range'],
+    'CA' : ['Title', 'Levels', 'Cycles', 'Interval time', 'Current Range']
+    }
+
+''' Notes about above method dictionary:
+    - No warnings given when parameter name or set value are invalid, Ivium will just use the previous value
+        - Can always double check parameters are correct when loading parameter in IviumSoft
+    - Can be expanded to include additional method types
+    - Can be expanded so drop-down parameters only allow you to pick valid options
+    - Only includes some parameters for CV and CA
+    - Only works with 'Standard' mode (not 'HiSpeed')
+'''
+
 class Ivium(Instrument, Pyvium):
     
     '''
@@ -45,28 +61,19 @@ class Ivium(Instrument, Pyvium):
         
     # Re-define start_method() function to wait for Ivium to finish measurement
     @staticmethod
-    def start_method(method_file_path = ''):
+    def run_method(method: str = 'CV', method_file_path: str = None):
         
         '''
-        Starts a method procedure.
-        If method_file_path is an empty string then the presently loaded procedure is started.
-        If the full path to a previously saved method is provided
-        then the procedure is loaded from the file and started.
+        Wrapper function for loading method, setting parameters, starting method, and saving data
         '''
         
-        PyviumVerifiers.verify_driver_is_open()
-        PyviumVerifiers.verify_iviumsoft_is_running()
-        PyviumVerifiers.verify_device_is_connected_to_iviumsoft()
-        PyviumVerifiers.verify_device_is_available()
-
-        result_code, _ = pyvium.Core.IV_startmethod(method_file_path)
-
-        if result_code == 1:
-            raise FileNotFoundError
+        
+        return
     
-    def save_data_h5():
-        '''
-        '''
+    
+    # def save_data_h5():
+    #     '''
+    #     '''
         
         
         
@@ -76,7 +83,8 @@ class Ivium(Instrument, Pyvium):
 if __name__ == "__main__":
 
     ivium = Ivium()        
-
+    ivium.load_method(r"C:\Users\HERA\Documents\GitHub\nplab\nplab\instrument\potentiostat\E_step.imf")
+    
 
     # IV_method=ctypes.create_string_buffer(b"C:\Users\HERA\Documents\GitHub\nplab\nplab\instrument\potentiostat\E_step.imf")
     # ivium.dll.IV_readmethod(ctypes.byref(IV_method))
