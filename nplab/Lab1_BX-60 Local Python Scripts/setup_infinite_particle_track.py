@@ -4,6 +4,7 @@ Created on Tue Nov 22 18:09:58 2022
 
 @author: HERA
 """
+#%% Init & imports
 
 import os
 global PLOT_AUTOFOCUS
@@ -13,7 +14,7 @@ from particle_track_mixin import InfiniteParticleTrackMixin
 import time
 import numpy as np
 import pyvisa as visa
-# from scipy.interpolate._fitpack2 import UnivariateSpline
+
 
 class PT_lab(Lab, InfiniteParticleTrackMixin):
     
@@ -22,6 +23,7 @@ class PT_lab(Lab, InfiniteParticleTrackMixin):
         self._init_tracking([]) #task_list=['lab.SERS','lab.tracking']
         self.datafile.show_gui(blocking=False)
 
+
 if __name__ == '__main__':
     os.chdir(r'C:\\Users\\HERA\\Documents\\GitHub\\nplab\\nplab\\Lab1_BX-60 Local Python Scripts')
     if not 'initialized' in dir():
@@ -29,6 +31,7 @@ if __name__ == '__main__':
         from nplab.utils.gui_generator import GuiGenerator
         from nplab.instrument.camera.camera_with_location import CameraWithLocation
         from nplab.instrument.electronics.thorlabs_pm100 import ThorlabsPowermeter
+        from nplab.instrument.electronics.power_meter import dummyPowerMeter
         from kandor import Kandor
         from nplab.instrument.shutter.thorlabs_sc10 import ThorLabsSC10
         from nplab import datafile
@@ -37,51 +40,54 @@ if __name__ == '__main__':
         from nplab.instrument.spectrometer.seabreeze import OceanOpticsSpectrometer
         from nplab.instrument.spectrometer.spectrometer_aligner import SpectrometerAligner
         from nplab.instrument.stage.thorlabs_ello.ell20 import Ell20, Ell20BiPositional
-#        from nplab.instrument.stage.Thorlabs_ELL18K import Thorlabs_ELL18K
         from nplab.instrument.stage.Thorlabs_ELL8K import Thorlabs_ELL8K
         from nplab.instrument.stage.rotators import Rotators
         from nplab.instrument.stage.thorlabs_ello.ell8 import Ell8
-       # from nplab.instrument.stage.thorlabs_ello.ell18 import Ell18
         from nplab.instrument.stage.thorlabs_ello.ell14 import Ell14
         from nplab.utils.array_with_attrs import ArrayWithAttrs
         import lamp_slider as df_shutter
-        #from nplab.instrument.electromagnet import arduino_electromagnet #Magnet
-        #from nplab.instrument.camera.thorlabs.kiralux import Kiralux
+        # from nplab.instrument.stage.Thorlabs_ELL18K import Thorlabs_ELL18K
+        # from nplab.instrument.stage.thorlabs_ello.ell18 import Ell18
+        # from nplab.instrument.electromagnet import arduino_electromagnet # Magnet
+        # from nplab.instrument.camera.thorlabs.kiralux import Kiralux
 
-        # %% connect to and define device names
+
+#%% Connect to and define device names
         
-        stage = ProScan("COM7")  # microscope stage
-        cam = LumeneraCamera(1)
+        stage = ProScan("COM7") # Microscope stage
+        cam = LumeneraCamera(1) # Infinity camera
         cwl = CameraWithLocation(cam, stage)
         cwl.settling_time = 0.2
-        lutter_633 = ThorLabsSC10('COM5')  # laser shutter - of 633 laser
-        lutter_785 = ThorLabsSC10('COM8')  # laser shutter - of 785 laser
-        df_mirror = Ell20BiPositional('COM10') # 2 pos slider w/ mirror
+        lutter_633 = ThorLabsSC10('COM5')  # 633nm shutter
+        lutter_785 = ThorLabsSC10('COM8')  # 785nm shutter
+        df_mirror = Ell20BiPositional('COM10') # 2 position slider w/ mirror for darkfield
         df_mirror.SLOTS = (0.1,0.8) # movement range of df_mirror as %
-        df_mirror.slot = 0
-        pol = Ell14('COM12')
-        powermeter = ThorlabsPowermeter(visa.ResourceManager().list_resources()[0])
-        filter_wheel = Thorlabs_ELL8K('COM11') # Can't import as Ell18 because it makes GUI weird?
-        # Andor camera with Kymera monochromator
-        kandor = Kandor()
-        kandor.ImageFlip = 0  # for right way wavelength display
+        df_mirror.slot = 0 
+        pol = Ell14('COM12') # Polarizer rotation mount
+        try:
+            powermeter = ThorlabsPowermeter(visa.ResourceManager().list_resources()[0]) # Powermeter
+        except:
+            powermeter = dummyPowerMeter() # Dummy powermeter
+            print('no powermeter plugged in, using a dummy to preserve the gui layout')
+        filter_wheel = Thorlabs_ELL8K('COM11') # ND filter wheel - Can't import as Ell18 because it makes GUI weird?
+        kandor = Kandor() # Andor Kymera spectrometer + Newton camera
         kymera = kandor.kymera
-        kandor.SetTemperature = -60
-        kandor.HSSpeed = 2 # Set spectrometer readout to 50KHz
-        #rotation_stage = RStage('COM11')  # Thorlabs rotating ND filter wheel
         wutter = df_shutter.LampSlider('COM4') # Linear motor to control microscope shutter for lamp
-        filter_slider = Ell20BiPositional('COM6')
-        filter_slider.SLOTS = (0.76, 0.0)
-        spec = OceanOpticsSpectrometer(0)  # ocean optics spectrometer
+        filter_slider = Ell20BiPositional('COM6') # 2 position slider w/ ND filter
+        filter_slider.SLOTS = (0.76, 0.0) # movement range of filter_slider as %
+        spec = OceanOpticsSpectrometer(0)  # OceanOptics spectrometer
         aligner = SpectrometerAligner(spec, stage)
-        #magnet=arduino_electromagnet.Magnet('COM4')
+        # magnet=arduino_electromagnet.Magnet('COM4')
 
 
-        #print('no powermeter plugged in, using a dummy to preserve the gui layout')
-        #from nplab.instrument.electronics.power_meter import dummyPowerMeter
-        #powermeter = dummyPowerMeter()
+#%% Get data file
+
         dgc = DataGroupCreator()
         data_file = datafile.current()
+
+
+#%% Add equipment to Lab and GUI
+        
         equipment_dict = {
             'stage': stage,
             'cam': cam,
@@ -91,7 +97,6 @@ if __name__ == '__main__':
             'filter_slider': filter_slider,
             'andor': kandor,
             'kymera': kandor.kymera,
-   #         'rotation_stage': rotation_stage,
             'powermeter': powermeter,
             'lutter_633': lutter_633,
             'lutter_785': lutter_785,
@@ -99,10 +104,12 @@ if __name__ == '__main__':
             'spec': spec,
             'aligner': aligner,
             'polariser': pol
-         #   'magnet': magnet
-        }
+            # 'magnet': magnet
+            # 'rotation_stage': rotation_stage,
+            }
 
         lab = PT_lab(equipment_dict)
+
 
         gui_equipment_dict = {'lab': lab,
                               'cam': cam,
@@ -113,20 +120,40 @@ if __name__ == '__main__':
                               'powermeter': powermeter,
                               'andor': kandor,
                               'kymera': kandor.kymera,
-                           #   #'rotation_stage': rotation_stage,
                               'power_control_633': lab.pc,
-                              #'power_control_785': lab.pc_785,
                               '_633': lutter_633,
                               '_785': lutter_785,
                               'white_shutter': wutter,
                               'data_group_creator': dgc,
                               'darkfield': spec,
                               'polariser': pol
-                     #         'magnet': magnet
+                              # 'rotation_stage': rotation_stage,
+                              # 'power_control_785': lab.pc_785,
+                              # 'magnet': magnet
                               }
-    #lab.wutter.open_shutter()
-    #time.sleep(1)
-    #lab.wutter.close_shutter()
+                
+        lab.generated_gui = GuiGenerator(gui_equipment_dict, 
+                                         terminal=False, 
+                                         dark=False,
+                                         dock_settings_path=os.path.dirname(
+                                             __file__)+r'\gui_config.npy', scripts_path=os.path.dirname(__file__)+r'\scripts')
+        
+        initialized = True
+        __file = __file__
+        def restart_gui():
+            '''
+            restarts the gui. If you redefine a class by running 
+            it in the console, it will use the updated version!
+            '''
+            if hasattr(lab, 'generated_gui'):
+                lab.generated_gui.close()       
+            lab.generated_gui = GuiGenerator(gui_equipment_dict, 
+                                dock_settings_path = os.path.dirname(__file)+r'\gui_config.npy',
+                                scripts_path = os.path.dirname(__file)+r'\scripts') 
+
+
+        print("Ayo let's get trackingggggg")
+
 
 #%% Ishaan's powerseries stuff
 
@@ -328,29 +355,7 @@ if __name__ == '__main__':
         
 #%%  
     
-    lab.generated_gui = GuiGenerator(gui_equipment_dict, 
-                                     terminal=False, 
-                                     dark=False,
-                                     dock_settings_path=os.path.dirname(
-                                         __file__)+r'\gui_config.npy', scripts_path=os.path.dirname(__file__)+r'\scripts'
-                                     )
-                                     
 
-    print("Ayo let's get trackingggggg")
-    
-    #gui.showMaximized()
-    initialized = True
-    __file = __file__
-    def restart_gui():
-        '''
-        restarts the gui. If you redefine a class by running 
-        it in the console, it will use the updated version!
-        '''
-        if hasattr(lab, 'generated_gui'):
-            lab.generated_gui.close()       
-        lab.generated_gui = GuiGenerator(gui_equipment_dict, 
-                            dock_settings_path = os.path.dirname(__file)+r'\gui_config.npy',
-                            scripts_path = os.path.dirname(__file)+r'\scripts') 
 
     
 
