@@ -47,7 +47,7 @@ if __name__ == '__main__':
         from nplab.utils.array_with_attrs import ArrayWithAttrs
         import lamp_slider as df_shutter
         # from nplab.instrument.stage.Thorlabs_ELL18K import Thorlabs_ELL18K
-        # from nplab.instrument.stage.thorlabs_ello.ell18 import Ell18
+        from nplab.instrument.stage.thorlabs_ello.ell18 import Ell18
         # from nplab.instrument.electromagnet import arduino_electromagnet # Magnet
         # from nplab.instrument.camera.thorlabs.kiralux import Kiralux
 
@@ -69,7 +69,7 @@ if __name__ == '__main__':
         except:
             powermeter = dummyPowerMeter() # Dummy powermeter
             print('no powermeter plugged in, using a dummy to preserve the gui layout')
-        filter_wheel = Thorlabs_ELL8K('COM11') # ND filter wheel - Can't import as Ell18 because it makes GUI weird?
+        filter_wheel = Ell18('COM11') # ND filter wheel - Need to fix GUI
         kandor = Kandor() # Andor Kymera spectrometer + Newton camera
         kymera = kandor.kymera
         wutter = df_shutter.LampSlider('COM4') # Linear motor to control microscope shutter for lamp
@@ -353,6 +353,37 @@ if __name__ == '__main__':
             pol.move_absolute(angle)
             lab.z_scan()
         
+        
+    def power_switch():
+              
+        # Start at lowest power & open shutter
+        wutter.close_shutter()
+        filter_slider.slot = 1
+        filter_wheel.move_absolute(252)
+        lutter_633.open_shutter()
+                
+        for i in range(0, 10):
+            
+            # 1uW spectrum
+            filter_slider.slot = 1
+            filter_wheel.move_absolute(252)
+            time.sleep(1)
+            kandor.set_andor_parameter('Exposure', 250)
+            SERS_with_name(name = 'SERS_633nm_1uW_%d', laser_wln = 633, sample = '2023-07-31_Co-TAPP-SMe_60nm_MLAgg_on_Glass_b', time_scale = 0.25, laser_power = 0.001)
+        
+            #500uW spectrum
+            filter_slider.slot = 0
+            filter_wheel.move_absolute(123)
+            time.sleep(1)
+            kandor.set_andor_parameter('Exposure', 0.38)
+            SERS_with_name(name = 'SERS_633nm_700uW_%d', laser_wln = 633, sample = '2023-07-31_Co-TAPP-SMe_60nm_MLAgg_on_Glass_b', time_scale = 0.25, laser_power = 0.700)
+      
+            
+        lutter_633.close_shutter()
+        wutter.open_shutter()
+
+        
+
 #%%  
     
 
