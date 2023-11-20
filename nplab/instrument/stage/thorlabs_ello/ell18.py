@@ -54,6 +54,8 @@ class Ell18(ElloDevice):
         if angle < 0:
             angle = 360+angle
         return super().move_absolute(angle, blocking=blocking)
+    def get_qt_ui(self):
+        return Thorlabs_ELL18K_UI(self)
 
 
 class Thorlabs_ELL18K_UI(QtWidgets.QWidget, UiTools):
