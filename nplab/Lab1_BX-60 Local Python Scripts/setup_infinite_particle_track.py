@@ -16,6 +16,7 @@ import numpy as np
 import pyvisa as visa
 
 
+
 class PT_lab(Lab, InfiniteParticleTrackMixin):
     
     def __init__(self, *args, **kwargs): 
@@ -213,7 +214,7 @@ if __name__ == '__main__':
         lab.cam.gain = original_gain
         lab.lutter_633.close_shutter()
     
-    OD_to_power_cal_dict = {0 : 'power control_1', 1 : 'power control_2'}
+    OD_to_power_cal_dict = {0 : 'power control_0', 1 : 'power control_1'}
     
     def SERS_with_name(name, laser_wln = 633, laser_power = None, sample = '', time_scale = 0):
         
@@ -240,7 +241,18 @@ if __name__ == '__main__':
             'time_scale (mW*s)': time_scale})
 
     
-    def powerseries(min_power, max_power, num_powers, loop = False, back_to_min = False, log = True, time_scale = 0, power_control_dict = {0 : 'power control_0'}, SERS_name = 'SERS_Powerseries_%d', sample = ''):
+    def powerseries(min_power, 
+                    max_power, 
+                    num_powers,
+                    loop = False,
+                    back_to_min = False, 
+                    log = True, 
+                    time_scale = 0,
+                    iterations = 1,
+                    power_control_dict = {0 : 'power control_0', 1 : 'power control_1'}, 
+                    SERS_name = 'SERS_Powerseries_%d', 
+                    sample = '', 
+                    test = False):
         
         '''
         Function to take SERS powerseries. Can use multiple power calibrations for
@@ -255,9 +267,11 @@ if __name__ == '__main__':
             back_to_min (boolean = False): if true, jumps back to min power after each power in series, then jumps back to next power
             log (boolean = True): if true goes in log steps between min and max powers. If false goes linear
             time_scale (float = 0): scaling factor for integration time (in mW*s). If 0, integration time is constant
+            iterations (int = 1): number of times to repeat full powerseries
             power_control_dict (dictionary = {0 : 'power control_0'}): Dictionary mapping {filter_slot position : power calibration name}
             SERS_name (str = SERS_powerseries_%d): Name to save SERS spectra
             sample (str = ''): Sample name
+            test (bool = False): if True, just tests powers can be achieved with given power calibration and doesn't run measurements
             
         Improvements/limitations:
             - only works for 633 right now
@@ -317,6 +331,11 @@ if __name__ == '__main__':
         print(slider_positions)
         
         
+        # End here if just testing
+        if test == True:
+            return
+        
+        
         # Start at lowest power & open shutter
         
         filter_slider.slot = int(slider_positions[powers.argmin()])
@@ -325,23 +344,30 @@ if __name__ == '__main__':
         time.sleep(1)
         lutter_633.open_shutter()
         
-        # Loop over each power and take measurement
         
-        for i, power in enumerate(powers):
+        # Loop over each iteration
+
+        N_iterations = 0
+        while N_iterations < iterations:
+
+            ## Loop over each power and take measurement
+            for i, power in enumerate(powers):
+                
+                ### Navigate to power
+                filter_slider.slot = int(slider_positions[i])
+                lab.pc.update_power_calibration(OD_to_power_cal_dict[filter_slider.get_slot()])
+                filter_wheel.move_absolute(lab.pc.power_to_param(power))
+                time.sleep(1)
+                
+                ### Time scaling with power
+                if time_scale > 0:
+                    exposure = (time_scale/power) - (kandor.AcquisitionTimings[1] - kandor.AcquisitionTimings[0])
+                    kandor.set_andor_parameter('Exposure', exposure)
+                
+                ### Take SERS
+                SERS_with_name(name = SERS_name, laser_wln = 633, sample = sample, time_scale = time_scale)
             
-            ## Navigate to power
-            filter_slider.slot = int(slider_positions[i])
-            lab.pc.update_power_calibration(OD_to_power_cal_dict[filter_slider.get_slot()])
-            filter_wheel.move_absolute(lab.pc.power_to_param(power))
-            time.sleep(1)
-            
-            ## Time scaling with power
-            if time_scale > 0:
-                exposure = (time_scale/power) - (kandor.AcquisitionTimings[1] - kandor.AcquisitionTimings[0])
-                kandor.set_andor_parameter('Exposure', exposure)
-            
-            ## Take SERS
-            SERS_with_name(name = SERS_name, laser_wln = 633, sample = sample, time_scale = time_scale)
+            N_iterations += 1
             
         lutter_633.close_shutter()
         wutter.open_shutter()    
