@@ -20,7 +20,7 @@ from pyvium.pyvium_verifiers import PyviumVerifiers
 
 # Dictionary of parameters for Ivium methods
 method_dict = {
-    'CV' : ['Title', 'E start', 'Vertex 1', 'Vertex 2', 'E step', 'N scans', 'Scanrate', 'Current Range'],
+    'CV' : {'Title' : 'CV', 'E start' : , 'Vertex 1', 'Vertex 2', 'E step', 'N scans', 'Scanrate', 'Current Range'},
     'CA' : ['Title', 'Levels', 'Cycles', 'Interval time', 'Current Range']
     }
 
@@ -59,32 +59,56 @@ class Ivium(Instrument, Pyvium):
         self.data_file = datafile.current()
         
         
-    # Re-define start_method() function to wait for Ivium to finish measurement
-    @staticmethod
-    def run_method(method: str = 'CV', method_file_path: str = None):
+    def run_cv(self, 
+               title = 0,
+               e_start = 0,
+               vertex_1 = 0,
+               vertex_2 = 0,
+               e_step = 0,
+               n_scans = 0,
+               scanrate = 0,
+               current_range = 0,
+               method_file_path = r"C:\Users\HERA\Documents\GitHub\nplab\nplab\instrument\potentiostat\CV_Standard.imf"):
         
-        '''
-        Wrapper function for loading method, setting parameters, starting method, and saving data
-        '''
+        
+        # Load CV method
+        
+        self.load_method(method_file_path)
         
         
-        return
+        # Set all parameters
+        
+        self.set_method_parameter('Title', str(title))
+        self.set_method_parameter(parameter_name, parameter_value)        
+        
+    # Set parameters
+
+
+    
+    # # Re-define start_method() function to wait for Ivium to finish measurement
+    # @staticmethod
+    # def run_method(method: str = 'CV', method_file_path: str = None):
+        
+    #     '''
+    #     Wrapper function for loading method, setting parameters, starting method, and saving data
+    #     '''
+        
+        
+    #     return
     
     
-    # def save_data_h5():
-    #     '''
-    #     '''
-        
-        
-        
+    # # def save_data_h5():
+    # #     '''
+    # #     '''
+
         
         
 
 if __name__ == "__main__":
 
     ivium = Ivium()        
-    ivium.load_method(r"C:\Users\HERA\Documents\GitHub\nplab\nplab\instrument\potentiostat\E_step.imf")
-    
+    #ivium.load_method(r"C:\Users\HERA\Documents\GitHub\nplab\nplab\instrument\potentiostat\E_step.imf")
+    #ivium.run_cv()
 
     # IV_method=ctypes.create_string_buffer(b"C:\Users\HERA\Documents\GitHub\nplab\nplab\instrument\potentiostat\E_step.imf")
     # ivium.dll.IV_readmethod(ctypes.byref(IV_method))
