@@ -238,7 +238,8 @@ if __name__ == '__main__':
             'slit_width': kandor.kymera.GetSlit(),
             'gain':kandor.PreAmpGains[kandor.NumPreAmp-1],
             'readout (MHz)':kandor.HSSpeed,
-            'time_scale (mW*s)': time_scale})
+            'time_scale (mW*s)': time_scale,
+            'objective': '20x_0.4NA'})
 
     
     def powerseries(min_power, 
