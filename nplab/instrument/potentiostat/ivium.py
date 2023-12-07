@@ -7,6 +7,7 @@ Created on Fri Nov  3 17:02:07 2023
 
 import numpy as np
 from nplab import datafile
+from nplab.utils.array_with_attrs import ArrayWithAttrs
 from nplab.instrument import Instrument
 import ctypes
 import glob
@@ -19,10 +20,12 @@ from pyvium.pyvium_verifiers import PyviumVerifiers
 
 
 # Dictionary of parameters for Ivium methods
-method_dict = {
-    'CV' : {'Title' : 'CV', 'E start' : , 'Vertex 1', 'Vertex 2', 'E step', 'N scans', 'Scanrate', 'Current Range'},
-    'CA' : ['Title', 'Levels', 'Cycles', 'Interval time', 'Current Range']
-    }
+# method_dict = {
+#     'CV' : {'Title' : 'CV', 'E start' : 'x', 'Vertex 1', 'Vertex 2', 'E step', 'N scans', 'Scanrate', 'Current Range'},
+#     'CA' : ['Title', 'Levels', 'Cycles', 'Interval time', 'Current Range']
+#     }
+
+
 
 ''' Notes about above method dictionary:
     - No warnings given when parameter name or set value are invalid, Ivium will just use the previous value
@@ -46,29 +49,72 @@ class Ivium(Instrument, Pyvium):
         Instrument.__init__(self)
         
         
-        ## Open Ivium dll & connect device
+        # Open Ivium dll & connect device
+        
         self.open_driver()
         self.connect_device()
 
-        ## Check Ivium status
+
+        # Check Ivium status
+        
         self.status = self.get_device_status()
         assert self.status[0] == 1, 'Check Ivium status'
         print('Ivium connected!')
+
         
-        ## Create h5 datafile if none
+        # Create h5 datafile if none
+        
         self.data_file = datafile.current()
         
         
     def run_cv(self, 
-               title = 0,
-               e_start = 0,
-               vertex_1 = 0,
-               vertex_2 = 0,
-               e_step = 0,
-               n_scans = 0,
-               scanrate = 0,
-               current_range = 0,
-               method_file_path = r"C:\Users\HERA\Documents\GitHub\nplab\nplab\instrument\potentiostat\CV_Standard.imf"):
+               title : str = 'CV',
+               mode : str = 'Standard',
+               e_start : float = 0,
+               vertex_1 : float = 1.0,
+               vertex_2 : float = -1.0,
+               e_step : float = 0.1,
+               n_scans : int = 1,
+               scanrate : float = 1,
+               current_range : str = '1nA',
+               method_file_path : str = r"C:\Users\HERA\Documents\GitHub\nplab\nplab\instrument\potentiostat\CV_Standard.imf"):
+        
+        
+        '''
+        Function for setting CV parameters, running CV, and returning data w/ metadata
+        
+        
+        Parameters:
+            
+            self (Ivium class)
+            mode (str = 'Standard') CV mode. Dropdown option: must be 'Standard' or 'HiSpeed'
+            title (str = 'CV')
+            e_start (float = 0): Starting potential in V
+            vertex_1 (float = 1.0): Vertex 1 potential in V
+            vertex_2 (float = -1.0): Vertex 2 potential in V
+            e_step (float = 0.1): Potential step size in V
+            n_scans (int = 1): Number of CV scans
+            scanrate (float = 0.01): CV scan rate in V/s
+            current_range (str = '1nA'): Current dynamic range. Dropdown option: must be in valid_current_range (see below)
+            method_file_path (str): Method file path. Must be CV .imf file
+            
+            
+        Notes/Improvements:
+            
+            Parameters must be set in function arguments:
+                Parameters set in IviumSoft will not be saved to .h5 metadata
+                No way to read updated parameters set in IviumSoft
+
+            Does not check that parameter inputs are valid:
+                If invalid, will run method on default parameters from method_file_path without warning!
+
+            Current system requires hard-coding of individual method parameters:
+                - Have to hard code any methods you want to set
+                - Have to hard code valid options for dropdown parameters
+
+            Further advanced CV method parameters can be added (AutoCR, PreRanging, etc.)
+                 
+        '''
         
         
         # Load CV method
@@ -76,33 +122,83 @@ class Ivium(Instrument, Pyvium):
         self.load_method(method_file_path)
         
         
+        # Assert dropdown parameters are valid
+        
+        ## Mode
+        if str(mode) != 'Standard' and str(mode) != 'HiSpeed':
+            raise ValueError('\nInvalid CV mode. CV mode must be "Standard" or "HiSpeed"')
+            return
+        
+        ## Current range
+        valid_current_range = ['1A', '100mA', '10mA', '1mA', '100uA', '10uA', '1uA', '100nA', '10nA', '1nA', '100pA']
+        if str(current_range) not in valid_current_range:
+            raise ValueError('\nInvalid current range. Current range must be:\n' + str(valid_current_range))
+            return
+        
+        
         # Set all parameters
         
         self.set_method_parameter('Title', str(title))
-        self.set_method_parameter(parameter_name, parameter_value)        
+        self.set_method_parameter('Mode', str(mode))
+        self.set_method_parameter('E start', str(e_start))      
+        self.set_method_parameter('Vertex 1', str(vertex_1))
+        self.set_method_parameter('Vertex 2', str(vertex_2))
+        self.set_method_parameter('E step', str(e_step))
+        self.set_method_parameter('N scans', str(n_scans)) 
+        self.set_method_parameter('Scanrate', str(scanrate))
+        self.set_method_parameter('Current range', str(current_range))
         
-    # Set parameters
 
+        # Run method
+        
+        ## Start method
+        start_time = time.time()
+        self.start_method()
+        
+        ## Wait for method to finish
+        while self.get_device_status()[0] == 2:
+            time.sleep(0.1)
+        stop_time = time.time()
+        print('Ivium method finished!')
+        
+        
+        # Return data
 
-    
-    # # Re-define start_method() function to wait for Ivium to finish measurement
-    # @staticmethod
-    # def run_method(method: str = 'CV', method_file_path: str = None):
+        ## Get data
+        total_points = self.get_available_data_points_number()
+        data_t = []
+        data_V = []
+        data_I = []
+        for point_index in range(1,total_points+1):
+            t,V,I = self.get_data_point(point_index)
+            data_t.append(t)
+            data_V.append(V)
+            data_I.append(I)
+        data_t = np.array(data_t)
+        data_V = np.array(data_V)
+        data_I = np.array(data_I)
+        data_tI = np.array([data_t, data_I])
         
-    #     '''
-    #     Wrapper function for loading method, setting parameters, starting method, and saving data
-    #     '''
+        ## Get attributes
+        data_attrs={'Potential (V)' : data_V,
+                    'Time (s)' : data_t,
+                    'Title' : str(title),
+                    'Mode' : str(mode),
+                    'E start (V)' : e_start,
+                    'Vertex 1 (V)' : vertex_1,
+                    'Verttex 2 (V)' : vertex_2,
+                    'E step (V)' : e_step,
+                    'N scans' : n_scans,
+                    'Scanrate (V/s)' : scanrate,
+                    'Current range' : str(current_range),
+                    'start_time' : start_time,
+                    'stop_time' : stop_time}
         
+        ## Return data
+        return ArrayWithAttrs(data_tI, data_attrs)
         
-    #     return
-    
-    
-    # # def save_data_h5():
-    # #     '''
-    # #     '''
 
-        
-        
+#%%        
 
 if __name__ == "__main__":
 
@@ -115,116 +211,3 @@ if __name__ == "__main__":
     # ivium.dll.IV_startmethod()
     # print(ivium.dll.IV_getdevicestatus(None))
     # ivium.get_all_datapoints()
-
- #%%
-##folder path where Ivium data files are saved.
-# Ivium data must also be saved as CSV files. make sure Options>Data handling options....>Always create data csv files..." is checked 
-folder_path = r'D:\Ivium'   
-
-
-file_type = r'\*csv'
-data_file = df.current()
-
-t = Timer()
-t.start()
-#%% START-UP potentiostat
-# '''REMINDER: make sure IviumSoft is running and potentiostat is connected on IviumSoft'''
-
-
-# #double check this is the path for the ivium driver
-# ivium_dll=ctypes.CDLL("C:\IviumStat\Software Development Driver\Ivium_remdriver64.dll")
-# #must run this to connect DLL to Ivium software
-# ivium_dll.IV_open(None)
-# IV_status=ivium_dll.IV_getdevicestatus(None)
-
-# if IV_status!=1:
-#     print("Check Ivium status")
-# else:
-#     print("Ivium connection ok")
-    
-#%% Potentiostat functions
-
-#loads method file for modification
-IV_method=ctypes.create_string_buffer(b'R:\smrs3\SERSbot\Ivium py code\E_step.imf')
-ivium_dll.IV_readmethod(ctypes.byref(IV_method))
-
-#defines function for running potential step programs on Ivium. Similar scripts can be adapted for other programs like CV or LSV
-def run_Estep(set_E=-0.8000, t_samples=15, int_t=1):
-    """
-    Runs potential step program on IviumSoft by loading a saved method file and modifying parameters as needed. 
-    set_E = potential in (V)
-    int_t = interval time for measuring current
-    t_samples = number of data points per interval time
-    total time = t_samples * int_t
-    """
-    #loads this method file every time just in case other programs/techniques are run separately on Ivium. 
-    IV_method=ctypes.create_string_buffer(b'R:\smrs3\SERSbot\Ivium py code\E_step.imf')
-    ivium_dll.IV_readmethod(ctypes.byref(IV_method))
-    
-    #sets potential
-    method_parameter=ctypes.create_string_buffer(b'E start')
-    method_value=ctypes.create_string_buffer(str.encode(str(set_E)))
-    ivium_dll.IV_setmethodparameter(ctypes.byref(method_parameter), ctypes.byref(method_value))
-
-    #sets N samples time
-    method_parameter=ctypes.create_string_buffer(b'N samples')
-    method_value=ctypes.create_string_buffer(str.encode(str(t_samples)))
-    ivium_dll.IV_setmethodparameter(ctypes.byref(method_parameter), ctypes.byref(method_value))
-
-    #sets interval time
-    method_parameter=ctypes.create_string_buffer(b'Interval time')
-    method_value=ctypes.create_string_buffer(str.encode(str(int_t)))
-    ivium_dll.IV_setmethodparameter(ctypes.byref(method_parameter), ctypes.byref(method_value))
-    
-    #runs modified program on IviumSoft
-    ivium_dll.IV_startmethod(ctypes.byref(ctypes.create_string_buffer(b'')))
-
-def save_Estep_data(filename, in_group=False):
-    '''
-    Work around for importing Ivium data. On IviumSoft, data must also be saved automatically as .CSV files. Function MUST be run AFTER Ivium is done running the desired method. 
-    This function works by looking for the latest file saved automatically in the Ivium data folder. 
-    must define folder path separetely:
-        folder_path = r'D:\Ivium'
-    This function specifically saves the current trace; time and set potential are saved as attributes
-    '''
-    
-   
-    files = glob.glob(folder_path + file_type)
-    max_file = max(files, key=os.path.getctime)
-
-    IV_data = pd.read_csv(max_file, names=["t", "I", "V"])
-    IV_data_t=IV_data['t'].values.tolist()
-    IV_data_I=IV_data['I'].values.tolist()
-    IV_data_V=IV_data['V'].values.tolist()
-
-    IV_data_tI=np.array([IV_data_t, IV_data_I])
-
-    IV_data_attrs={"potential": IV_data_V, 
-                    "time": IV_data_t,
-                    "filename": max_file
-                    }
-    if in_group==True:
-        group.create_dataset(name = filename,data = IV_data_I, attrs=IV_data_attrs)
-
-    else:
-        data_file.create_dataset(name = filename,data = IV_data_I, attrs=IV_data_attrs)
-
-#%% example scripts for running potential step
-
-filename='oxidation'
-
-run_E=1.5
-run_time=60
-
-run_Estep(set_E=run_E, t_samples=run_time, int_t=1)
-#delay waits for potential step to finish running on Ivium and for the data file to be saved as a CSV
-t.delay(run_time+2)
-
-
-save_Estep_data('IV_'+filename+'_'+str(run_E)+'_'+str(run_time), in_group=True)
-
-
-
-#%%
-#disconnect Ivium-python connection
-ivium_dll.IV_close(None)
