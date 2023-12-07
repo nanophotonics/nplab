@@ -34,7 +34,7 @@ plt.rc('lines', linewidth=3)
 
 #%% Spectral efficiency correction using white light
 
-def white_scatter_calibration(wl, white_scatter, white_bkg, start_notch=None, end_notch=None, plot=False):
+def white_scatter_calibration(wl, white_scatter, white_bkg, start_notch = None, end_notch = None, plot = False, bpt_ref = None):
 
     '''
     Calculates 1D array to correct for spectral efficiency from white scatter reference measurement,
@@ -75,6 +75,7 @@ def white_scatter_calibration(wl, white_scatter, white_bkg, start_notch=None, en
     ## Interpolate literature lamp emission in target wln range
     S_dkfd_spline = sp.interpolate.splev(wl, spline, der=0)
     S_dkfd_spline = np.array(S_dkfd_spline)
+
     
     ## Calculate R_setup
     R_setup = S_whitescatter/S_dkfd_spline
@@ -85,8 +86,11 @@ def white_scatter_calibration(wl, white_scatter, white_bkg, start_notch=None, en
         R_setup[start_notch:end_notch] = 1
     
     
-    # Plot literature lamp emission & corrected measured white scatter
+    # Plotting
+    
     if plot == True:
+    
+        ## Plot literature lamp emission & corrected measured white scatter
         plt.figure(figsize=[10,6], dpi=1000)
         white_cal = np.array(S_whitescatter/R_setup)
         if start_notch != None and end_notch != None:
@@ -94,17 +98,26 @@ def white_scatter_calibration(wl, white_scatter, white_bkg, start_notch=None, en
             white_cal = (white_cal - white_cal_no_notch.min())/(white_cal_no_notch.max()-white_cal_no_notch.min())
             plt.plot(wl, white_cal, label='Calibrated white scatter', color = 'grey')
         else:
-            plt.plot(wl, (white_cal-white_cal.min())/white_cal.max(), label='Calibrated white scatter', color = 'grey')
+            plt.plot(wl, (white_cal-white_cal.min())/(white_cal.max()-white_cal.min()), label='Calibrated white scatter', color = 'grey')
         plt.plot(wl, (S_dkfd_spline-S_dkfd_spline.min())/(S_dkfd_spline.max() - S_dkfd_spline.min()),  '--', label='Literature lamp emission',color = 'black')
         plt.xlabel('Wavelength (nm)')
         plt.ylabel('Normalized Intensity (a.u.)')
-        plt.title('633nm - Spectral Efficiency Calibration - White Scatter')
+        plt.title('Spectral Efficiency Calibration - White Scatter')
         plt.legend()
         plt.show()
 
+        ## Plot raw & efficiency-corrected BPT ref spectrum
+        if bpt_ref is not None:
+            plt.figure(figsize=[10,8], dpi=1000)
+            plt.plot(bpt_ref.x, bpt_ref.y, color = (0.8,0.1,0.1,0.7), label = 'Raw spectrum')
+            plt.plot(bpt_ref.x, (bpt_ref.y)/R_setup, color = (0,0.6,0.2,0.5), label = 'Efficiency-corrected')
+            plt.title('BPT Ref Efficiency Correction')
+            plt.legend(fontsize='x-small')
+            plt.show()
+
 
     # Return R_setup
-    print('   Done\n')
+    print('Done\n')
     return R_setup
 
 
@@ -165,7 +178,7 @@ def process_default_lit_spectrum(plot = True, **kwargs):
 def find_closest_matches(a, b):
     
     
-    print('Choosing closest ref peaks')
+    print('\nChoosing closest ref peaks')
     
     # Initialize an empty array to store the closest matches
     c = []
@@ -210,9 +223,6 @@ def find_ref_peaks(ref_spectrum, lit_spectrum = None, lit_wn = None, threshold =
     ref_peaks = find_peaks(ref_spectrum.y_smooth, height = ref_spectrum.y_smooth.max() * threshold, distance = distance, **kwargs)
     ref_wn = ref_spectrum.x[ref_peaks[0]]
     
-    print('\nReference Peaks (1/cm):')
-    print(ref_wn)
-
     
     # Plotting
     
@@ -247,6 +257,10 @@ def find_ref_peaks(ref_spectrum, lit_spectrum = None, lit_wn = None, threshold =
         plt.show()
         
         
+    print('\nReference Peaks (1/cm):')
+    print(ref_wn)
+        
+    
     return ref_wn        
         
     
@@ -272,19 +286,19 @@ def calibrate_spectrum(ref_spectrum, ref_wn, lit_spectrum = None, lit_wn = None,
     '''
     
     
-    print('Calibrating spectrometer from reference\n')
+    print('\nCalibrating spectrometer from reference\n')
     
     
     # Use default literature bpt spectrum if none other provided
     
     if lit_spectrum is None or lit_wn is None:
-        print('No literature spectrum provided, using default BPT nanocavity\n')
+        print('\nNo literature spectrum provided, using default BPT nanocavity')
         lit_spectrum, lit_wn = process_default_lit_spectrum(plot = plot, **kwargs)
     
     
     # Get closest ref peaks
-    
-    assert len(ref_wn) >= len(lit_wn), 'Error: Not enough reference peaks'
+
+    assert len(ref_wn) >= len(lit_wn), 'Not enough reference peaks'
     if len(ref_wn) > len(lit_wn):
         ref_wn = find_closest_matches(lit_wn, ref_wn)
     
@@ -363,24 +377,30 @@ def calibrate_spectrum(ref_spectrum, ref_wn, lit_spectrum = None, lit_wn = None,
 
 #%% How to run
 
+# my_h5 = h5py.File(r"C:\Users\ishaa\OneDrive\Desktop\Offline Data\2023-11-21_Lab8_MLAgg_785_830_Powerseries.h5")
+
+
 # # Spectral calibration
 
 # ## Get default literature BPT spectrum & peaks
 # lit_spectrum, lit_wn = process_default_lit_spectrum()
 
 # ## Load BPT ref spectrum
-# my_h5 = h5py.File(r"C:\Users\il322\Desktop\Offline Data\2023-09-18_Co-TAPP-SMe_80nm_NPoM_Track_DF_633nm_Powerseries.h5")
-# coarse_shift = 90 # coarse shift to ref spectrum
-# notch_range = [0+coarse_shift, 230+coarse_shift]
-# bpt_ref_633nm = my_h5['PT_lab']['BPT_633nm']
-# bpt_ref_633nm = SERS.SERS_Spectrum(bpt_ref_633nm)
+# bpt_ref = my_h5['WlLab']['BPT_785nm']
+# bpt_ref = SERS.SERS_Spectrum(bpt_ref)
+
+# ## Coarse adjustments to miscalibrated spectra
+# coarse_shift = -1450 # coarse shift to ref spectrum
+# coarse_stretch = 2 # coarse stretch to ref spectrum
+# notch_range = [(1420 + coarse_shift) * coarse_stretch, (1650 + coarse_shift) * coarse_stretch]
 
 # ## Convert to wn
-# bpt_ref_633nm.x = spt.wl_to_wn(bpt_ref_633nm.x, 632.8)
-# bpt_ref_633nm.x = bpt_ref_633nm.x + coarse_shift
+# bpt_ref.x = spt.wl_to_wn(bpt_ref.x, 785)
+# bpt_ref.x = bpt_ref.x + coarse_shift
+# bpt_ref.x = bpt_ref.x * coarse_stretch
 
 # ## No notch spectrum (use this truncation for all spectra!)
-# bpt_ref_no_notch = bpt_ref_633nm
+# bpt_ref_no_notch = bpt_ref
 # bpt_ref_no_notch.truncate(start_x = notch_range[1], end_x = None)
 
 # ## Baseline, smooth, and normalize no notch ref for peak finding
@@ -392,26 +412,28 @@ def calibrate_spectrum(ref_spectrum, ref_wn, lit_spectrum = None, lit_wn = None,
 # bpt_ref_no_notch.normalise(norm_y = bpt_ref_no_notch.y_smooth)
 
 # ## Find BPT ref peaks
-# ref_wn = find_ref_peaks(bpt_ref_no_notch, lit_spectrum = lit_spectrum, lit_wn = lit_wn, threshold = 0.05)
+# ref_wn = find_ref_peaks(bpt_ref_no_notch, lit_spectrum = lit_spectrum, lit_wn = lit_wn, threshold = 0.03, distance = 8)
 
 # ## Find calibrated wavenumbers
-# wn_cal = calibrate_spectrum(bpt_ref_no_notch, ref_wn, lit_spectrum = lit_spectrum, lit_wn = lit_wn, linewidth = 1)
-# bpt_ref_no_notch.x = wn_cal
+# wn_cal = calibrate_spectrum(bpt_ref_no_notch, ref_wn, lit_spectrum = lit_spectrum, lit_wn = lit_wn, linewidth = 1, deg = 2)
+# bpt_ref.x = wn_cal
 
-#%%
-# # White light efficiency calibration
 
-# ## Load white scatter with 
+# # Spectral efficiency white light calibration
 
-# white_ref = my_h5['PT_lab']['white_ref_x5']
+# white_ref = my_h5['WlLab']['white_scatt_785notch_x5_1']
 # white_ref = SERS.SERS_Spectrum(white_ref.attrs['wavelengths'], white_ref[2], title = 'White Scatterer')
 
 # ## Convert to wn
-# white_ref.x = spt.wl_to_wn(white_ref.x, 632.8)
+# white_ref.x = spt.wl_to_wn(white_ref.x, 785)
 # white_ref.x = white_ref.x + coarse_shift
+# white_ref.x = white_ref.x * coarse_stretch
 
 # ## Get white bkg (counts in notch region)
-# notch = SERS.SERS_Spectrum(white_ref.x[np.where(white_ref.x < (notch_range[1]-50))], white_ref.y[np.where(white_ref.x < (notch_range[1] - 50))], name = 'White Scatterer Notch') 
+# #notch = SERS.SERS_Spectrum(white_ref.x[np.where(white_ref.x < (notch_range[1]-50))], white_ref.y[np.where(white_ref.x < (notch_range[1] - 50))], name = 'White Scatterer Notch') 
+# notch = SERS.SERS_Spectrum(x = spt.truncate_spectrum(white_ref.x, white_ref.y, notch_range[0] + 200, notch_range[1] - 200)[0], 
+#                            y = spt.truncate_spectrum(white_ref.x,white_ref.y, notch_range[0] + 200, notch_range[1] - 200)[1], 
+#                            name = 'White Scatterer Notch')
 # notch_cts = notch.y.mean()
 # notch.plot()
 
@@ -420,25 +442,30 @@ def calibrate_spectrum(ref_spectrum, ref_wn, lit_spectrum = None, lit_wn = None,
 
 
 # ## Convert back to wl for efficiency calibration
-# white_ref.x = spt.wn_to_wl(white_ref.x, 632.8)
+# white_ref.x = spt.wn_to_wl(white_ref.x, 785)
+
 
 # # Calculate R_setup
-# R_setup_633nm = white_scatter_calibration(wl = white_ref.x,
-#                                               white_scatter = white_ref.y,
-#                                               white_bkg = notch_cts,
-#                                               plot = True,
-#                                               start_notch = notch_range[0]-40,
-#                                               end_notch = notch_range[1]-40)
 
-# ## Get dark counts
+# R_setup = white_scatter_calibration(wl = white_ref.x,
+#                                     white_scatter = white_ref.y,
+#                                     white_bkg = 0,
+#                                     plot = True,
+#                                     start_notch = None,
+#                                     end_notch = None,
+#                                     bpt_ref = bpt_ref)
+
+# ## Get dark counts - skip for now as using powerseries
 # # dark_cts = my_h5['PT_lab']['whire_ref_x5']
 # # dark_cts = SERS.SERS_Spectrum(wn_cal_633, dark_cts[5], title = 'Dark Counts')
 # # # dark_cts.plot()
 # # plt.show()
 
-# # Test R_setup with BPT reference
-''' Add this plotting part to function'''
-# plt.plot(bpt_ref_633nm.x, bpt_ref_633nm.y, color = (0.8,0.1,0.1,0.7), label = 'Raw spectrum')
-# plt.plot(bpt_ref_633nm.x, (bpt_ref_633nm.y)/R_setup_633nm, color = (0,0.6,0.2,0.5), label = 'Efficiency-corrected')
-# plt.legend(fontsize='x-small')
-# plt.show()
+# ''' 
+# Still issue with 'white background' of calculating R_setup
+# Right now, choosing white background ~400 (near notch counts) causes R_setup to be very low at long wavelengths (>900nm)
+# This causes very large background past 1560cm-1 BPT peak
+# Using a white_bkg of -100000 flattens it out...
+# '''    
+
+
