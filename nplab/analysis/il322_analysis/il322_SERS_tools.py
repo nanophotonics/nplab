@@ -247,8 +247,7 @@ class SERS_Timescan(spt.Timescan):
         try:
             self.exposure = np.round(self.dset.attrs['Exposure'], 4)
         except:
-            #exposure = input('Please specify exposure (s): ')
-            exposure = 1
+            exposure = input('Please specify exposure (s): ')
             self.exposure = float(exposure)
             
         self.t = np.round(self.t_raw * self.exposure, 4)    
