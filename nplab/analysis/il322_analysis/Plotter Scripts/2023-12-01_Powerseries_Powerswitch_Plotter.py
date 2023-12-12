@@ -389,7 +389,43 @@ save_dir = r'C:\Users\ishaa\OneDrive\Desktop\Offline Data\12-01-2023_MLAgg_633nm
 # plt.close(fig)
 
 
-#%% Plot powerseries each MLAgg spot across scan
+#%% Plot direct powerseries avg across MLAgg spots
+
+
+# Plotting
+
+fig, ax = plt.subplots(1,1,figsize=[12,9])
+ax.set_xlabel('Raman Shifts (cm$^{-1}$)')
+ax.set_ylabel('SERS Intensity (cts/mW/s)')
+x = spectrum.x        
+
+for i in range(0, len(avg_powerseries)):
+    
+    ## Color = color of previous power in powerseries
+    my_cmap = plt.get_cmap('inferno')
+    color = my_cmap(i/20)
+    if i == 0:
+        ax.plot(x, avg_powerseries[i], linewidth = 1, color = color, label = 0.0)
+    elif i % 2 != 0:
+        ax.plot(x, avg_powerseries[i], linewidth = 1, color = color, label = np.round(powerseries[i-1].laser_power * 1000,0))
+
+## Label & plot
+ax.legend(fontsize = 18, ncol = 5, loc = 'upper center')
+ax.get_legend().set_title('Laser power ($\mu$W)')
+for line in ax.get_legend().get_lines():
+    line.set_linewidth(4.0)
+fig.suptitle('633nm Powerseries - MLAgg Average')
+ax.set_xlim(400, 1900)
+ax.set_ylim(0, avg_powerseries.max() * 1.4)
+ax.set_ylabel('SERS Intensity (cts/mW/s)')
+plt.tight_layout(pad = 0.8)
+
+save_dir = r'C:\Users\ishaa\OneDrive\Desktop\_'
+# plt.savefig(save_dir + 'MLAgg Avg' + '.svg', format = 'svg')
+# plt.close(fig)
+
+
+#%% Plot direct powerseries each MLAgg spot across scan
 
 '''
 Just plotting  un-smoothed powerseries to find damage threshold

@@ -139,25 +139,38 @@ Using a white_bkg of -100000 flattens it out...
 '''    
 
 
-#%% Before & after PC plotting
 
 
-#%% Dark counts spectrum - MLAgg
 
-particle = my_h5['ref_meas']
+#%% 
 
 
-# Add all SERS spectra to powerseries list in order
+def process_text_file(file_path):
+    # Read the text file into a NumPy array
+    data = np.loadtxt(file_path, delimiter='\t')  # Adjust the delimiter as per your file format
 
-spectrum = particle['dark_counts_glass_x12']
-spectrum = SERS.SERS_Spectrum(x = spectrum.attrs['wavelengths'], y = spectrum[5], title = 'dark spectrum')
-spectrum.x = spt.wl_to_wn(spectrum.x, 632.8)
-spectrum.x = spectrum.x + coarse_shift
-spectrum.truncate(start_x = truncate_range[0], end_x = None)
-spectrum.x = wn_cal
-# spectrum.y = spt.remove_cosmic_rays(spectrum.y, threshold = 2, cutoff = 200)
-dark_spectrum = spectrum
-dark_spectrum.plot()
+    # Assuming the first column is x and the second column is y
+    x = data[:, 0]
+    y = data[:, 1]
+
+    return x, y
+
+
+# Iterate through all files in the folder
+for filename in os.listdir(folder_path):
+    if 'Co' in filename and filename.lower().endswith('.txt'):
+        file_path = os.path.join(folder_path, filename)
+        
+        # Process the file and get arrays x and y
+        x, y = process_text_file(file_path)
+
+        # Print or further process the data as needed
+        print(f"File: {filename}")
+        print(f"x: {x}")
+        print(f"y: {y}")
+        print()
+
+
 
 #%% Plot single before & after PC spectra
 
@@ -246,85 +259,3 @@ save_dir = r'C:\Users\ishaa\OneDrive\Desktop\Offline Data\_'
 #%% Plot single before & after PC spectra - zoomed
 
 
-fig, ax = plt.subplots(1,1,figsize=[12,9])
-ax.set_xlabel('Raman Shifts (cm$^{-1}$)')
-ax.set_ylabel('SERS Intensity (cts/mW/s)')
-
-
-
-particle_list = natsort.natsorted(list(my_h5.keys()))
-
-## Loop over particles in particle scan
-for particle in particle_list:
-    # print(particle)
-    if 'before' not in particle and 'after' not in particle:
-        particle_list.remove(particle)
-particle_list.remove('ref_meas')
-        
-        
-for particle in particle_list:
-
-    
-    if 'before' in particle:
-        color = 'black'
-        linetype = 'solid'
-        label = 'Before PC'
-        continue
-        
-    elif 'after_45min' in particle:
-        color = 'red'
-        linetype = 'solid'
-        label = 'After 45min PC'
-        
-    elif 'after_30min' in particle:
-        color = 'blue'
-        linetype = 'solid'
-        label = 'After 30min 1mM reconstitution'
-        
-    elif 'after_120min' in particle:
-        color = 'green'
-        linetype = 'solid'
-        label = 'After 120min 1mM reconstitution'
-        continue
-        
-    particle = my_h5[particle]
-                    
-    spectrum = particle['633nm_SERS_20uW_5s_x12']
-    wlns = spectrum.attrs['wavelengths']
-    spectrum = np.array(spectrum)
-    spectrum = spectrum.mean(axis = 0)
-    spectrum = SERS.SERS_Spectrum(x = wlns, y = spectrum)
-    spectrum.x = spt.wl_to_wn(spectrum.x, 632.8)
-    spectrum.x = spectrum.x + coarse_shift
-    spectrum.truncate(start_x = truncate_range[0], end_x = None)
-    spectrum.x = wn_cal
-    spectrum.calibrate_intensity(R_setup = R_setup,
-                                  dark_counts = dark_spectrum.y,
-                                  exposure = 5.091790199279785,
-                                  laser_power = 0.0188)
-    ax.plot(spectrum.x, spectrum.y, color = color, label = label)
-    ax.set_title('633nm SERS - Plasma Clean & Reconstitute')
-    
-## Labeling
-
-handles, labels = ax.get_legend_handles_labels()
-handle_list, label_list = [], []
-for handle, label in zip(handles, labels):
-    if label not in label_list:
-        handle_list.append(handle)
-        label_list.append(label)
-
-order = [0,1]
-plt.legend([handle_list[idx] for idx in order],[label_list[idx] for idx in order])
-
-
-
-fig.suptitle('Co-TAPP-SMe 60nm MLAgg')
-
-ax.set_xlim(400, 1900)
-plt.tight_layout(pad = 0.8)
-ax.set_ylim(0,34000)
-
-save_dir = r'C:\Users\ishaa\OneDrive\Desktop\Offline Data\_'
-# plt.savefig(save_dir + 'Before_After_PC_zoom' + '.svg', format = 'svg')
-# plt.close(fig)
