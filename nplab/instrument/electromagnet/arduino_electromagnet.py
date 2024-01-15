@@ -18,18 +18,25 @@ for example when commanded 'N' the reply would be 'N':
 
 from nplab.ui.ui_tools import QuickControlBox
 from nplab.instrument.serial_instrument import SerialInstrument
-
+import serial
+from time import sleep
 
 class Magnet(SerialInstrument):
     termination_character = '\n'
     legal_input='NSZs' # there are the allowed inputs: N sets North, S-South, Z-zero,s-query device for it's state
     port_settings = {'baudrate': 9600,
-                     'timeout': 0.05}
+                     'timeout': 0.05,
+                     'bytesize':serial.EIGHTBITS,
+                     'parity':serial.PARITY_NONE,
+                     'stopbits':serial.STOPBITS_ONE,
+                     'writeTimeout':0.05, 
+                     }
+
     def __init__(self, port=None): # initialize communication and set device to zero
         SerialInstrument.__init__(self, port)
         self._state = None
         self.set_state('Z')
-        
+        self.flush_input_buffer()
     
     def correct_input(self, letter): # check legal input
         if (len(letter)==1) and (letter in self.legal_input): 
@@ -38,33 +45,53 @@ class Magnet(SerialInstrument):
             return False
        
     def get_state(self, report_success=False): # query current state
-        return self.query('s')
+        s = self.query('s')
+        self.flush_input_buffer()
+        return s
 
     def set_state(self, state): # set state
         if self.correct_input(state):
             if state != self._state:
+                #self.write(state)
+                #self._state = self.get_state()
+                #self._state = self.ser.write(bytes(state, "ASCII"))
                 self._state = self.query(state)
+        #self.flush_input_buffer()
+        return self._state
+
     
-    def flush_buffer(self, *args, **kwargs):
-        out = super().query(*args, **kwargs)
-        self.log(out, 'info')
-        while self.readline() != '':
-            pass
-        print('finished flushing buffer' + str(self.readline()))
-        return out            
+    # def flush_buffer(self, *args, **kwargs):
+    #     while self.readline() != '':
+    #         pass
+    #     print('finished flushing buffer' + str(self.readline()))
+    #     return out
+                    
     
     def North(self):
-         self.set_state('N')
+         return self.set_state('N')
 
     def Zero(self):
-        self.set_state('Z')
+        return self.set_state('Z')
     
     def South(self):
-        self.set_state('S')
+        return self.set_state('S')
      
     def get_qt_ui(self):
         """Return a graphical interface for the lamp slider."""
         return MagnetUI(self)
+
+    def test(self,N=10,sleep_time=1):
+        for qq in range(N):
+            print(magnet.North())
+            print('north')
+            sleep(sleep_time)
+            print(magnet.Zero())
+            print('zero')
+            sleep(sleep_time)
+            print(magnet.South())
+            sleep(sleep_time)
+            print('south')
+        
 
 class MagnetUI(QuickControlBox):
     def __init__(self, Magnet):
@@ -77,7 +104,8 @@ class MagnetUI(QuickControlBox):
 
 #%%
 if __name__ == '__main__':
-    magnet = Magnet('COM3')
-    magnet._logger.setLevel('INFO')
+    magnet = Magnet('COM6')
+    #magnet._logger.setLevel('INFO')
     ui = magnet.show_gui(False)
     # ui.show()
+
