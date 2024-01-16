@@ -41,6 +41,7 @@ class Piezoconcept(SerialInstrument, Stage):
         self.cmd_axis = cmd_axis.upper()
         self.unit = unit  # This can be 'u' for micron or 'n' for nano
         self.distance_scale = 1 if unit == 'n' else 1_000.
+    
     def move(self, value, axis=None, relative=False):
         '''Move to an absolute positions between 0 and 100 um 
         

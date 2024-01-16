@@ -612,9 +612,9 @@ if __name__ == "__main__":
     # main()
     k = Kymera()
     k.GetNumberDevices()#success
-    k.show_gui(block = False)
-    self = k
-    k.SetNumberPixels(1600)
-    k.GetCalibration()
+    k.show_gui()
+    #self = k
+    #k.SetNumberPixels(1600)
+    #k.GetCalibration()
     
 
