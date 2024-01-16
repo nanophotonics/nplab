@@ -33,15 +33,12 @@ class Kymera(Instrument):
 
         self.dll = CDLL(r"C:\Program Files\Andor SDK\ATSpectrograph\64\atspectrograph.dll")
 
-            
-        # tekst = c_char()
         error = self.dll.ATSpectrographInitialize("")#(byref(tekst))
-            
         self.current_kymera = 0 #for more than one kymera this has to be varied, see KymeraGetNumberDevices
-        # self.Initialize()
+        self._logger.setLevel('WARNING')
         
     def verbose(self, error, function=''):
-        self.log( "[%s]: %s" %(function, error),level = 'info')
+        self.log( "[%s]: %s" %(function, error), level='info')
     
     #basic Kymera features    
     def Initialize(self):
@@ -432,8 +429,6 @@ class KymeraLegacy(Instrument):
     
     detector_offset = NotifiedProperty(GetDetectorOffset,SetDetectorOffset)
         
-
-    
     #Wavelength features
     def WavelengthIsPresent(self):
         ispresent = c_int()
@@ -468,8 +463,6 @@ class KymeraLegacy(Instrument):
         self.verbose(ERROR_CODE[error], sys._getframe().f_code.co_name)
         return wl_limits
     wavelength_limits = property(GetWavelengthLimits)
-        
-
     
     def GotoZeroOrder(self):
         error = self.dll.ShamrockGotoZeroOrder(self.current_shamrock)
@@ -589,8 +582,9 @@ class KymeraControlUI(QtWidgets.QWidget,UiTools):
         self.centre_wl_lineEdit.setText(str(self.kymera.center_wavelength))
         self.slit_lineEdit.setText(str(self.kymera.slit_width))
         # eval('self.grating_'+str(self.kymera.current_grating)+'_radioButton.setChecked(True)')
-        for radio_button in [1,2]:
+        for radio_button in [1, 2, 3]:
             eval('self.grating_'+str(radio_button)+'_radioButton.clicked.connect(self.set_grating_gui)')
+        getattr(self, f'grating_{self.kymera.current_grating}_radioButton').setChecked(True)
     def set_wl_gui(self):
         self.kymera.center_wavelength = float(self.centre_wl_lineEdit.text().strip())
     def set_slit_gui(self):
@@ -601,6 +595,8 @@ class KymeraControlUI(QtWidgets.QWidget,UiTools):
             self.kymera.current_grating = 1
         elif s is self.grating_2_radioButton:
             self.kymera.current_grating = 2
+        elif s is self.grating_3_radioButton:
+            self.kymera.current_grating = 3
         else:
             raise ValueError('radio buttons not connected!')
 

@@ -1,17 +1,29 @@
 __author__ = 'alansanders'
+import re 
 
 import numpy as np
 from pathlib import Path
 import h5py
 from scipy.ndimage import gaussian_filter
+from scipy.signal import savgol_filter
 from functools import cached_property
+
+
+
+H5_TEMPLATE = r'\S*(\d{4})-(\d{2})-(\d{2})\S*.h5' 
+# allow somestuff1_2021-01-05_someotherstuff.h5
 
 def load_h5(location='.'):
     '''return the latest h5 in a given directory. If location is left blank,
     loads the latest file in the current directory.'''
     path = Path(location)
-    return h5py.File(path / max(f for f in path.iterdir() if f.suffix == '.h5'), 'r')
-
+    candidates_dates = [(f, [int(m) for m in match.groups()]) for f in path.iterdir()\
+                        if (match := re.match(H5_TEMPLATE, f.name))]
+    if candidates_dates:
+        return h5py.File(path / max(candidates_dates, key=lambda cd: cd[1])[0], 'r') 
+    else:
+        raise ValueError('No suitable h5 file found')
+    
 def latest_scan(file):
     '''returns the last ParticleScannerScan in a file'''
     return file[max(file, key=lambda x: int(x.split('_')[-1])
@@ -37,6 +49,19 @@ class Spectrum(np.ndarray):
             return np.array(obj)
         self.wavelengths = getattr(
             obj, 'wavelengths', np.arange(obj.shape[-1]))
+     
+    def __reduce__(self):
+        # Get the parent's __reduce__ tuple
+        pickled_state = super().__reduce__()
+        # Create our own tuple to pass to __setstate__
+        new_state = pickled_state[2] + (self.wavelengths,)
+        # Return a tuple that replaces the parent's __setstate__ tuple with our own
+        return (pickled_state[0], pickled_state[1], new_state)
+
+    def __setstate__(self, state):
+        self.wavelengths = state[-1]  # Set the info attribute
+        # Call the parent's __setstate__ with the other tuple elements.
+        super().__setstate__(state[0:-1])
 
     @classmethod
     def from_h5(cls, dataset):
@@ -82,6 +107,9 @@ class Spectrum(np.ndarray):
     def smooth(self, sigma):
         '''smooth using scipy.ndimage.guassian_smooth'''
         return self.__class__(gaussian_filter(self, sigma), self.x)
+    
+    def savgol_smooth(self, *args, **kwargs):
+        return self.__class__(savgol_filter(self, *args, **kwargs), self.x)
     
     def remove_cosmic_ray(self,
                           thresh=5,
@@ -148,6 +176,19 @@ class RamanSpectrum(Spectrum):
                                    'wavelengths',
                                    np.arange(obj.shape[-1]))
         self._shifts = getattr(obj, '_shifts', None)
+    
+    def __reduce__(self):
+        # Get the parent's __reduce__ tuple
+        pickled_state = super().__reduce__()
+        # Create our own tuple to pass to __setstate__
+        new_state = pickled_state[2] + (self.wavelengths,)
+        # Return a tuple that replaces the parent's __setstate__ tuple with our own
+        return (pickled_state[0], pickled_state[1], new_state)
+
+    def __setstate__(self, state):
+        self.wavelengths = state[-1]  # Set the info attribute
+        # Call the parent's __setstate__ with the other tuple elements.
+        super().__setstate__(state[0:-1])
         
     @classmethod
     def from_h5(cls, dataset):
@@ -238,3 +279,4 @@ if __name__ ==  '__main__':
     rspec2 = RamanSpectrum(spec, wavelengths=wls)
     plt.plot(rspec2.shifts, rspec2, label='center of 700')
     plt.legend()
+    

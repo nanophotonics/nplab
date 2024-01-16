@@ -16,7 +16,10 @@ import os.path
 import datetime
 import re
 import sys
-from collections import Sequence
+try:
+    from collections import Sequence
+except ImportError:
+    from collections.abc import Sequence
 import nplab.utils.version
 import numpy as np
 from nplab.utils.show_gui_mixin import ShowGUIMixin

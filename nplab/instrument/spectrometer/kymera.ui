@@ -8,6 +8,8 @@
     <y>0</y>
     <width>260</width>
     <height>127</height>
+    <width>301</width>
+    <height>159</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -26,6 +28,8 @@
      <y>10</y>
      <width>230</width>
      <height>110</height>
+     <width>261</width>
+     <height>131</height>
     </rect>
    </property>
    <property name="sizePolicy">
@@ -42,8 +46,8 @@
      <rect>
       <x>10</x>
       <y>20</y>
-      <width>208</width>
-      <height>81</height>
+      <width>231</width>
+      <height>98</height>
      </rect>
     </property>
     <layout class="QFormLayout" name="formLayout">
@@ -96,6 +100,13 @@
          </property>
          <property name="checked">
           <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QRadioButton" name="grating_3_radioButton">
+         <property name="text">
+          <string>3</string>
          </property>
         </widget>
        </item>

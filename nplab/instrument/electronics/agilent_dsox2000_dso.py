@@ -7,7 +7,7 @@ from functools import partial
 import numpy as np
 from nplab.utils.gui import *
 from nplab.ui.ui_tools import *
-
+import matplotlib.pyplot as plt
 
 class AgilentDSOChannel(object):
     def __init__(self, dso, channel):
@@ -187,9 +187,9 @@ if __name__ == '__main__':
     dso.capture()
     t,v = dso.read_trace(1)
 
-    #import matplotlib.pyplot as plt
-    #plt.plot(1e3*t,v)
-    #plt.show()
+    
+    plt.plot(1e3*t,v)
+    plt.show()
 
     print(dso.check_trigger(force=True))
     dso.single_shot()

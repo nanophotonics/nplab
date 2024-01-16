@@ -113,7 +113,7 @@ class Property():
 
 class NotifiedProperty(Property):
     """A property that notifies when it's changed."""        
-    def __init__(self, fget=None, fset=None, fdel=None, doc=None, read_back=False,single_update = True):
+    def __init__(self, fget=None, fset=None, fdel=None, doc=None, read_back=False, single_update = True):
         """Return a property that notifies when it's changed.
         
         This subclasses the pure Python implementation of properties, adding

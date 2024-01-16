@@ -150,9 +150,9 @@ class ThorlabsELL6(Instrument):
         while pos < self._position:
             self.move_backward()
         
-
     def get_position(self):
         return self._position
+   
     position = NotifiedProperty(get_position, set_position)
 
     def query_device(self, query):
@@ -182,6 +182,8 @@ class ThorlabsELL6(Instrument):
     def move_backward(self):
         self.query_device('bw')
         self._position -= 1
+    
+
 
 
 class ThorlabsELL9(ThorlabsELL6):

@@ -118,7 +118,12 @@ class SerialInstrument(MessageBusInstrument):
     def flush_input_buffer(self):
         """Make sure there's nothing waiting to be read, and clear the buffer if there is."""
         with self.communications_lock:
-            if self.ser.inWaiting() > 0: self.ser.flushInput()
+            self.ser.reset_input_buffer()
+            # if self.ser.inWaiting() > 0: self.ser.flushInput()
+    def flush_output_buffer(self):
+        """Make sure there's nothing waiting to be written, and clear the buffer if there is."""
+        with self.communications_lock:
+            self.ser.reset_output_buffer()
 
     def readline(self, timeout=None):
         with self.communications_lock:

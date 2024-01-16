@@ -1,0 +1,39 @@
+THORLABS SCIENTIFIC IMAGING SDK
+
+LICENSE AGREEMENT
+
+BY DOWNLOADING, INSTALLING, COPYING OR USING THE THORLABS SCIENTIIFIC IMAGING SDK SOFTWARE PRODUCT, CUSTOMER AGREES TO THE TERMS AND CONDITIONS OF THIS LICENSE AGREEMENT.
+
+This license agreement ("License") is a legal agreement between Thorlabs, Inc. and each of its subsidiaries ("Thorlabs") and any person or entity acquiring or using Thorlabs Scientific Imaging SDK software ("Customer").  This License governs Customer's use of Thorlabs Scientific Imaging SDK ("TSI SDK"), and associated media and documentation, made available by Thorlabs for use with certain Thorlabs Scientific Imaging cameras ("Thorlabs Equipment").
+
+1.	License.  Thorlabs hereby grants Customer the following rights:
+
+a. Use. The non-exclusive, limited right and license (without right to sublicense) to use TSI SDK solely to develop and/or modify Customer's proprietary software applications ("Customer Software") that Customer uses internally in connection with the operation of the Thorlabs Equipment or licenses to third party purchasers of such of Customer's products that incorporate the Thorlabs Equipment.  Customer may modify or create derivative works from TSI SDK with your Customer Software and distribute it only as part of your Customer Software in object code form.  TSI SDK, as modified, shall be used solely as otherwise permitted hereunder and shall not be distributed, sublicensed, or used by Customer or any third party in competition with Thorlabs or with any product of Thorlabs.
+
+b. Storage.  The right to copy TSI SDK into the local memory or storage device of the Thorlabs Equipment or associated processor.
+
+c. Copying.  The right to make archival or back-up copies of TSI SDK  to be used only for back-up purposes.
+
+2.	Reservation of Rights.  This License is not intended to constitute a transfer by Thorlabs of its title to the TSI SDK, and Thorlabs retains all right, title and interests in and to the TSI SDK and all rights to patents, copyrights, trademarks, trade secrets, functionality, business methods and other intellectual property rights pertaining to the TSI SDK.  Thorlabs reserves all rights not expressly granted to Customer in this License.  No identifying marks, copyright or proprietary right notices may be deleted from any copy of the TSI SDK furnished to Customer.
+
+3.	Updated Software Product. This License applies to updates or supplements to the original TSI SDK provided by Thorlabs unless Thorlabs provides other terms along with the update or supplement. In case of a conflict between such terms, the other terms will prevail.
+
+4.	Transfer.   Customer may not rent, lease or lend TSI SDK or use TSI SDK for commercial timesharing or bureau use.  Customer may not sublicense, assign or transfer this License TSI SDK except as expressly provided in this License.
+
+5.	Limitation on Reverse Engineering.  Customer may not reverse engineer, decompile, or disassemble TSI SDK, except and only to the extent that the right to do so is mandated under applicable law; provided that this limitation does not apply to any Freeware included in TSI SDK.  Customer may not integrate or use TSI SDK in any manner with Freeware that could require disclosure, distribution or licensing of all or any part of TSI SDK in source code form for the purpose of making derivative works.
+
+6.	Indemnification.  Customer agrees to indemnify, hold harmless, and defend Thorlabs from and against any claims or lawsuits, including attorneys' fees, that arise or result from the use and distribution of Customer Software that contains or is based upon any portion of TSI  SDK, provided that Thorlabs gives Customer prompt written notice of any such claim, tenders to Customer the defense or settlement of such a claim at Customer's expense and cooperates with Customer, at Customer expense, in defending or settling such claim.
+
+7.	Termination.  This License is effective upon Customer's use of TSI SDK.  This License will terminate if Customer fails to comply with any term or condition of this License.
+
+8.	Limited Warranty.  TSI SDK, at the time furnished by Thorlabs, will conform to the system specifications furnished by Thorlabs with TSI SDK.  The Limited Warranty for the Thorlabs Equipment is set forth in the Thorlabs General Terms & Conditions of Sale found at www.thorlabs.com under the pull tab for “Services.”  Nothing herein should be construed as constituting an additional warranty with respect to the Thorlabs Equipment.
+
+9. 	DISCLAIMER OF ADDITIONAL WARRANTIES. TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, OTHER THAN THE LIMITED WARRANTY SET FORTH ABOVE, THORLABS PROVIDES TSI SDK  “AS IS” AND WITH ALL FAULTS, AND HEREBY DISCLAIMS ALL OTHER WARRANTIES, EXPRESS, IMPLIED, OR STATUTORY, INCLUDING, BUT NOT LIMITED TO, WARRANTIES OF TITLE AND NON-INFRINGEMENT, ANY IMPLIED WARRANTIES OR CONDITIONS OF MERCHANTABILITY, OF FITNESS FOR A PARTICULAR PURPOSE, AND OF LACK OF VIRUSES.  Some states/jurisdictions do not allow exclusion of implied warranties or limitations on the duration of implied warranties, so the above disclaimer may not apply to you in its entirety.
+
+10.	Limitation of Liability. The entire liability of Thorlabs by reason of supplying TSI SDK or under any provision of this License, and Customer's exclusive remedy for all of the foregoing, shall be limited to Thorlabs, at its option, providing the original Customer with a replacement copy of TSI SDK that conforms to the Limited Warranty above or  refunding to the original Customer the amount actually paid by Customer separately for TSI SDK.  TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL THORLABS BE LIABLE FOR ANY SPECIAL, INCIDENTAL, INDIRECT, PUNITIVE OR CONSEQUENTIAL DAMAGES WHATSOEVER (INCLUDING, BUT NOT LIMITED TO, DAMAGES FOR LOSS OF PROFITS OR CONFIDENTIAL OR OTHER INFORMATION, FOR BUSINESS INTERRUPTION, FOR PERSONAL INJURY, FOR LOSS OF PRIVACY ARISING OUT OF OR IN ANY WAY RELATED TO THE USE OF OR INABILITY TO USE TSI SDK , OR OTHERWISE IN CONNECTION WITH ANY PROVISION OF THIS LICENSE, EVEN IF THORLABS HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES AND EVEN IF THE REMEDY FAILS OF ITS ESSENTIAL PURPOSE.  Some states/jurisdictions do not allow the exclusion or limitation of incidental or consequential damages, so the above limitation or exclusion may not apply to Customer.
+
+11.	Compliance with Export Laws.   Customer agrees to comply with all laws and regulations of the United States and other countries ("Export Laws") to assure that TSI SDK is not (1) exported, directly or indirectly, in violation of Export Laws, or (2) used for any purpose prohibited by Export Laws, including, without limitation, nuclear, chemical, or biological weapons proliferation.
+
+12.	Applicable Law.  This License is governed by the laws of the State of New Jersey, U.S.A.
+
+13.	Entire Agreement. This License constitutes the entire agreement between Customer and Thorlabs relating to TSI SDK and supersedes all prior or contemporaneous oral or written communications, proposals and representations with respect to TSI SDK or any other subject matter covered by this License.

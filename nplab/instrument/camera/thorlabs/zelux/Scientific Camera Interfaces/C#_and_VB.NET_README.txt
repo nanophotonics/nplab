@@ -1,0 +1,43 @@
+C# and VB.NET README
+
+For C# and VB.NET support for all Thorlabs DCCxxx and DCUxxx cameras, please see the DCx Camera Support folder typically installed at C:\Program Files\Thorlabs\Scientific Imaging\DCx Camera Support.
+
+For C# and VB.NET support for all Thorlabs Scientific Cameras (340xxx, 1500xxx, 1501xxx, 4070xxx, 8050xxx, 8051xxx, CS2100-USB, CC215MU, CS135xxx, CS165xxx, CS235xxx, CS505xxx, CS895xxx), please follow these directions:
+
+1. Install ThorCam and the appropriate drivers. The installer can be found at Thorlabs.com on any of the camera pages. Click on the Software tab, then on the Software button.
+
+2. Copy the managed DLLs from
+
+ SDK\DotNet Toolkit\bin\Managed_32_lib\*.dll
+ or
+ SDK\DotNet Toolkit\bin\Managed_64_lib\*.dll 
+ 
+ to the a folder with your executable file (output folder).
+
+3. See the following guides found in the Documentation folder (usually C:\Program Files\Thorlabs\Scientific Imaging\Documentation\Scientific Camera Documents):
+
+ TSI_Camera_DotNET-LabVIEW-MATLAB_Programming_Guide.chm
+ 
+4. The following DLLs must be referenced by your .NET (C# or VB.Net) projects:
+
+ Thorlabs.TSI.Core.dll
+ Thorlabs.TSI.CoreInterfaces.dll
+ Thorlabs.TSI.ImageData.dll
+ Thorlabs.TSI.ImageDataInterfaces.dll
+ Thorlabs.TSI.TLCamera.dll
+ Thorlabs.TSI.TLCameraInterfaces.dll
+ thorlabs_tsi_camera_sdk1_cli.dll
+ 
+ Color cameras should also reference these additional DLLs:
+ 
+ Thorlabs.TSI.ColorInterfaces.dll
+ Thorlabs.TSI.ColorProcessor.dll
+ Thorlabs.TSI.Demosaicker.dll
+ 
+ Polarization cameras should also reference these additional DLLs:
+ Thorlabs.TSI.PolarizationInterfaces.dll
+ Thorlabs.TSI.PolarizationProcessor.dll
+ 
+ The remaining DLLs should be copied to the output folder, but not referenced--they will be loaded dynamically.
+ 
+5. Set the Project Platform for each of your .NET projects to be explicitly x64 or x86, not AnyCPU.

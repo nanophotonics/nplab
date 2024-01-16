@@ -20,7 +20,9 @@ from nplab.instrument.electronics.power_meter import PowerMeter
 from nplab.instrument.electronics.thorlabs_pm100 import ThorlabsPowermeter
 from nplab import datafile
 from nplab.datafile import sort_by_timestamp
-from nplab.utils.notified_property import NotifiedProperty, DumbNotifiedProperty
+from nplab.utils.notified_property import (NotifiedProperty, 
+                                           DumbNotifiedProperty,
+                                           register_for_property_changes)
 
 def isMonotonic(A):
 
@@ -177,6 +179,7 @@ class PowerControl(Instrument):
         self.param = self.power_to_param(value)
 
     def power_to_param(self, power):
+        
         params = self.power_calibration['parameters']
         powers = np.array(self.power_calibration['powers'])
         curve = interpolate.interp1d(powers, params, kind='cubic')
@@ -193,9 +196,12 @@ class PowerControl_UI(QtWidgets.QWidget, UiTools):
             __file__), 'power_control.ui'), self)
         self.PC = PC
         self.auto_connect_by_name(controlled_object=self.PC)
-        self.calibrate_power_gui_pushButton.clicked.connect(self.calibrate_power_gui)
+        self._power_doubleSpinBox.valueChanged.connect(self._power_changed)
         self.title_label.setText(self.PC.title)
     
+    def _power_changed(self, new):
+        self.PC.power = new
+        
     def calibrate_power_gui(self):
         run_function_modally(self.PC.calibrate_power, 
                              progress_maximum=len(self.PC.points))
