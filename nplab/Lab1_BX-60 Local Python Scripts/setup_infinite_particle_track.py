@@ -63,6 +63,7 @@ if __name__ == '__main__':
         lutter_785 = ThorLabsSC10('COM8')  # 785nm shutter
         df_mirror = Ell20BiPositional('COM10') # 2 position slider w/ mirror for darkfield
         df_mirror.SLOTS = (0.1,0.8) # movement range of df_mirror as %
+        df_mirror.move_home()
         df_mirror.slot = 0 
         pol = Ell14('COM12') # Polarizer rotation mount
         try:
@@ -76,6 +77,8 @@ if __name__ == '__main__':
         wutter = df_shutter.LampSlider('COM4') # Linear motor to control microscope shutter for lamp
         filter_slider = Ell20BiPositional('COM6') # 2 position slider w/ ND filter
         filter_slider.SLOTS = (0.76, 0.0) # movement range of filter_slider as %
+        filter_slider.move_home()
+        filter_slider.slot = 0
         spec = OceanOpticsSpectrometer(0)  # OceanOptics spectrometer
         aligner = SpectrometerAligner(spec, stage)
         # magnet=arduino_electromagnet.Magnet('COM4')
@@ -408,8 +411,34 @@ if __name__ == '__main__':
             
         lutter_633.close_shutter()
         wutter.open_shutter()
-
         
+        
+    def wait(wait_time):
+        time.sleep(wait_time)
+        
+#%%
+    
+    def scan_expt():
+        exposure = 1 - (kandor.AcquisitionTimings[1] - kandor.AcquisitionTimings[0])
+        kandor.set_andor_parameter('Exposure', exposure)
+    
+        scan_powers = np.logspace(np.log10(0.001), np.log10(1), 20)
+        scan_lengths = np.zeros(20)
+        
+        for i in range(0, len(scan_lengths)):
+            scan_lengths[i] = np.floor(np.log10(scan_powers[i]))
+            scan_lengths[i] = abs(scan_lengths[i]) * 1000
+            
+        
+        particle_number = int(lab.wizard.current_particle)
+        index = int(np.floor(particle_number/10))
+        this_power = scan_powers[index]
+        this_length = int(scan_lengths[index])
+        kandor.set_andor_parameter('NKin', this_length)
+        
+        power_name = 'SERS_1s_' + str(np.round(this_power * 1000, 1)) + 'uW_%d'
+    
+        powerseries(this_power, this_power, 1, SERS_name = power_name, sample = '2023-11-28_Co-TAPP-SMe_60nm_MLAgg_b')    
 
 #%%  
     
