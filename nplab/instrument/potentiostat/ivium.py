@@ -170,14 +170,16 @@ class Ivium(Instrument, Pyvium):
         data_V = []
         data_I = []
         for point_index in range(1,total_points+1):
-            t,V,I = self.get_data_point(point_index)
+            V_x,I,V = self.get_data_point(point_index)
+            t = point_index * (e_step/scanrate)
             data_t.append(t)
             data_V.append(V)
             data_I.append(I)
         data_t = np.array(data_t)
         data_V = np.array(data_V)
         data_I = np.array(data_I)
-        data_tI = np.array([data_t, data_I])
+        data_VI = np.array([data_V, data_I])
+        data_VIt = np.array([data_V, data_I, data_t])
         
         ## Get attributes
         data_attrs={'Potential (V)' : data_V,
@@ -195,7 +197,8 @@ class Ivium(Instrument, Pyvium):
                     'stop_time' : stop_time}
         
         ## Return data
-        return ArrayWithAttrs(data_tI, data_attrs)
+        self.data_file.create_dataset(name = title, data = data_VI, attrs = data_attrs)
+        return ArrayWithAttrs(data_VIt, data_attrs)
         
 
 #%%        
@@ -211,3 +214,4 @@ if __name__ == "__main__":
     # ivium.dll.IV_startmethod()
     # print(ivium.dll.IV_getdevicestatus(None))
     # ivium.get_all_datapoints()
+
