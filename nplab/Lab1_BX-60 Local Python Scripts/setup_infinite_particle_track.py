@@ -11,6 +11,7 @@ global PLOT_AUTOFOCUS
 PLOT_AUTOFOCUS = False
 from setup_gui import Lab
 from particle_track_mixin import InfiniteParticleTrackMixin
+import threading
 import time
 import numpy as np
 import pyvisa as visa
@@ -49,6 +50,7 @@ if __name__ == '__main__':
         import lamp_slider as df_shutter
         # from nplab.instrument.stage.Thorlabs_ELL18K import Thorlabs_ELL18K
         from nplab.instrument.stage.thorlabs_ello.ell18 import Ell18
+        from nplab.instrument.potentiostat.ivium import Ivium
         # from nplab.instrument.electromagnet import arduino_electromagnet # Magnet
         # from nplab.instrument.camera.thorlabs.kiralux import Kiralux
 
@@ -81,6 +83,7 @@ if __name__ == '__main__':
         filter_slider.slot = 0
         spec = OceanOpticsSpectrometer(0)  # OceanOptics spectrometer
         aligner = SpectrometerAligner(spec, stage)
+        ivium = Ivium()
         # magnet=arduino_electromagnet.Magnet('COM4')
 
 
@@ -107,7 +110,8 @@ if __name__ == '__main__':
             'wutter': wutter,  
             'spec': spec,
             'aligner': aligner,
-            'polariser': pol
+            'polariser': pol,
+            'ivium' : ivium
             # 'magnet': magnet
             # 'rotation_stage': rotation_stage,
             }
@@ -130,7 +134,8 @@ if __name__ == '__main__':
                               'white_shutter': wutter,
                               'data_group_creator': dgc,
                               'darkfield': spec,
-                              'polariser': pol
+                              'polariser': pol,
+                              'ivium' : ivium
                               # 'rotation_stage': rotation_stage,
                               # 'power_control_785': lab.pc_785,
                               # 'magnet': magnet
@@ -220,7 +225,7 @@ if __name__ == '__main__':
     OD_to_power_cal_dict = {0 : 'power control_0', 1 : 'power control_1'}
     
     def SERS_with_name(name, laser_wln = 633, laser_power = None, sample = '', time_scale = 0):
-        
+        print('SERS Start')
         if laser_power is None:
             if lab.pc.param > 350:
                 lab.pc.param = 350
@@ -243,7 +248,7 @@ if __name__ == '__main__':
             'readout (MHz)':kandor.HSSpeed,
             'time_scale (mW*s)': time_scale,
             'objective': '20x_0.4NA'})
-
+        print('SERS Finish')
     
     def powerseries(min_power, 
                     max_power, 
@@ -440,7 +445,12 @@ if __name__ == '__main__':
     
         powerseries(this_power, this_power, 1, SERS_name = power_name, sample = '2023-11-28_Co-TAPP-SMe_60nm_MLAgg_b')    
 
-#%%  
+#%%  Threaded CV + SERS
+
+# thread_cv = threading.Thread(target = ivium.run_cv, kwargs={'title': 'CV_test_%d'})
+# thread_SERS = threading.Thread(target = SERS_with_name, kwargs={'name': 'SERS_%d', 'laser_power': 0})
+# thread_cv.start()
+# thread_SERS.start()
     
 
 
