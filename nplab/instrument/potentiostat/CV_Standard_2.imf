@@ -1,55 +1,0 @@
-Version= 15
-Method=CyclicVoltammetry
-Technique=Standard
-Dconfig=8
-Mode=Standard
-Title=2
-Redefine filename=false
-E start=-0.8
-Vertex 1=1
-Vertex 2=-1
-E step=0.01
-N scans=4
-Scanrate=100
-Current Range=10uA
-AutoCR=true
-AutoCR.Max range=100A
-AutoCR.Min range=100nA
-AutoCR.Pre ranging=true
-Data Options=
-Data Options.AnalogInputTitle=Peripheral Port
-Data Options.AnalogInputYlabel=Analog input
-Data Options.AnalogInputTitle2=Peripheral Port
-Data Options.AnalogInputYlabel2=Analog input
-Data Options.AnalogInputData=0
-Data Options.A_Transform=none
-Data Options.A_Transform2=none
-Data Options.A_A=0
-Data Options.A_B=1
-Data Options.A_C=0
-Data Options.A_D=0
-Data Options.A_A2=0
-Data Options.A_B2=1
-Data Options.A_C2=0
-Data Options.A_D2=0
-Data Options.E_correction=0
-Data Options.Area=1
-Data Options.Cap0=1E-6
-Data Options.MaxScanpoints=200000
-Data Options.Equivalent Weight=27.9
-Data Options.Density=7.86
-Data Options.Ba=0.1
-Data Options.Bc=0.1
-Data Options.Permittivity=1
-Data Options.Temperature=298
-Data Options.NominalCharge=1
-Data Options.EISfreq=5000
-Data Options.EISamp=0.025
-Data Options.CompFactor=0.85
-Data Options.AnalogInputYUnit=V
-Data Options.AnalogInputYUnit2=V
-Data Options.EISNonLinCorr=false
-Report=
-Report.Remarks=
-Report.Process data=instrument  : V82730channel     : 0alias       : V82730software vs : 4.1127firmware vs : 2246 (2246)hw config   : Vertex+18-Bitstart time  : 15/11/2023 17:17:08end time    : 15/11/2023 17:17:09endcondition: Scan completedSpec Rev    : 11DbFileName  : DataServer_V82730_2023-11-15_17-17-08-833.idf.sqliteDbFileMeasId: 1Step        : 1.00000E-2Interval    : 1.00000E-4
-Mconfig=0
