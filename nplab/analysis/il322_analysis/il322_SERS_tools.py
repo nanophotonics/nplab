@@ -245,13 +245,6 @@ class SERS_Timescan(spt.Timescan):
         self.echem_mode = echem_mode.upper()
         self.echem_data = echem_data
         
-<<<<<<< Updated upstream
-        try:
-            self.exposure = np.round(self.dset.attrs['Exposure'], 4)
-        except:
-            exposure = input('Please specify exposure (s): ')
-            self.exposure = float(exposure)
-=======
         self.exposure = exposure  
         
         # try:
@@ -263,7 +256,7 @@ class SERS_Timescan(spt.Timescan):
         #     except:
         #         self.exposure = 1
         #         print('Could not find exposure - using 1s exposure!!!')
->>>>>>> Stashed changes
+
             
         self.t = np.round(self.t_raw * self.exposure, 4)    
         self.Y_raw = self.Y.copy()
