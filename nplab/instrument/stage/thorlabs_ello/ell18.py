@@ -8,7 +8,7 @@ from nplab.ui.ui_tools import *
 from nplab.instrument.stage.thorlabs_ello import ElloDevice, bytes_to_binary, twos_complement_to_int
 
 
-class Ell8(ElloDevice):
+class Ell18(ElloDevice):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.configuration = self.get_device_info()
@@ -54,22 +54,24 @@ class Ell8(ElloDevice):
         if angle < 0:
             angle = 360+angle
         return super().move_absolute(angle, blocking=blocking)
+    def get_qt_ui(self):
+        return Thorlabs_ELL18K_UI(self)
 
 
-class Thorlabs_ELL8K_UI(QtWidgets.QWidget, UiTools):
+class Thorlabs_ELL18K_UI(QtWidgets.QWidget, UiTools):
 
     def __init__(self, stage, parent=None, debug=0):
-        if not isinstance(stage, Thorlabs_ELL8K):
+        if not isinstance(stage, Ell18):
             raise ValueError(
-                "Object is not an instance of the Thorlabs_ELL8K Stage")
-        super(Thorlabs_ELL8K_UI, self).__init__()
+                "Object is not an instance of the Thorlabs_ELL18K Stage")
+        super(Thorlabs_ELL18K_UI, self).__init__()
         
         self.stage = stage  # this is the actual rotation stage
         self.parent = parent
         self.debug = debug
         path = os.path.dirname(__file__)
         uic.loadUi(os.path.join(os.path.dirname(
-            path), 'thorlabs_ell8k.ui'), self)
+            path), 'thorlabs_ell18k.ui'), self)
 
         self.move_relative_btn.clicked.connect(self.move_relative)
         self.move_absolute_btn.clicked.connect(self.move_absolute)
@@ -130,13 +132,17 @@ def test_ui():
     '''
     Run from main to test ui + stage
     '''
-    s = Thorlabs_ELL8K("COM1")
+    s = Ell18("COM11")
     app = get_qt_app()
-    ui = Thorlabs_ELL8K_UI(stage=s)
+    ui = Thorlabs_ELL18K_UI(stage=s)
     ui.show()
     sys.exit(app.exec_())
 
 
 if __name__ == "__main__":
 
-    stage = Thorlabs_ELL8K("COM8", debug=False)
+    stage = Ell18("COM11", debug=False)
+    app = get_qt_app()
+    ui = Thorlabs_ELL18K_UI(stage)
+    ui.show()
+    sys.exit(app.exec_())

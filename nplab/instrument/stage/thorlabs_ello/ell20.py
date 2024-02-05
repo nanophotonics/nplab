@@ -158,6 +158,7 @@ class Ell20BiPositional(Ell20):
         super().__init__(*args, **kwargs)
         # self.move_home()
         # self.slot = 0
+        self.PULSES_PER_REVOLUTION = self.PULSES_PER_MM
 
     def get_slot(self):
         frac = self.get_position() / self.TRAVEL

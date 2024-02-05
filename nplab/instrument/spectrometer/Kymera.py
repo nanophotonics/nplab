@@ -98,6 +98,7 @@ class Kymera(Instrument):
         self.verbose(ERROR_CODE[error], sys._getframe().f_code.co_name)
         return self.noGratings
     num_gratings = property(GetNumberGratings)
+    print(num_gratings)
 
     
     def GetGrating(self):
@@ -572,7 +573,7 @@ class KymeraLegacy(Instrument):
         return KymeraControlUI(self)    
 
 class KymeraControlUI(QtWidgets.QWidget,UiTools):
-    def __init__(self, kymera, ui_file =os.path.join(os.path.dirname(__file__),'kymera.ui'),  parent=None):
+    def __init__(self, kymera, ui_file =os.path.join(os.path.dirname(__file__),'kymera_4grating.ui'),  parent=None):
         assert isinstance(kymera, Kymera), "instrument must be a Triax"
         super(KymeraControlUI, self).__init__()
         uic.loadUi(ui_file, self)
@@ -581,8 +582,8 @@ class KymeraControlUI(QtWidgets.QWidget,UiTools):
         self.slit_lineEdit.returnPressed.connect(self.set_slit_gui)     
         self.centre_wl_lineEdit.setText(str(self.kymera.center_wavelength))
         self.slit_lineEdit.setText(str(self.kymera.slit_width))
-        # eval('self.grating_'+str(self.kymera.current_grating)+'_radioButton.setChecked(True)')
-        for radio_button in [1, 2, 3]:
+        #eval('self.grating_'+str(self.kymera.current_grating)+'_radioButton.setChecked(True)')
+        for radio_button in [1, 2, 3, 4]:
             eval('self.grating_'+str(radio_button)+'_radioButton.clicked.connect(self.set_grating_gui)')
         getattr(self, f'grating_{self.kymera.current_grating}_radioButton').setChecked(True)
     def set_wl_gui(self):
@@ -597,11 +598,12 @@ class KymeraControlUI(QtWidgets.QWidget,UiTools):
             self.kymera.current_grating = 2
         elif s is self.grating_3_radioButton:
             self.kymera.current_grating = 3
+        elif s is self.grating_4_radioButton:
+            self.kymera.current_grating = 4
         else:
             raise ValueError('radio buttons not connected!')
 
 def main():
-    
     app = get_qt_app()
     s = Kymera() 
     ui = KymeraControlUI(kymera=s)
@@ -612,9 +614,19 @@ if __name__ == "__main__":
     # main()
     k = Kymera()
     k.GetNumberDevices()#success
+
     k.show_gui()
     #self = k
     #k.SetNumberPixels(1600)
     #k.GetCalibration()
+
+    #if k.GetGrating() not in [1,2,3, 4]:
+    #    print('Kymera Grating not defined. Moving to Grating 1')
+    #    k.SetGrating(1)
+    #k.show_gui(block = False)
+    #self = k
+    #k.SetNumberPixels(1024)
+    #k.GetCalibration()
+
     
 
