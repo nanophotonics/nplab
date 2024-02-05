@@ -51,6 +51,7 @@ if __name__ == '__main__':
         # from nplab.instrument.stage.Thorlabs_ELL18K import Thorlabs_ELL18K
         from nplab.instrument.stage.thorlabs_ello.ell18 import Ell18
         from nplab.instrument.potentiostat.ivium import Ivium
+        from nplab.instrument.monochromator.bentham_DTMc300 import Bentham_DTMc300
         # from nplab.instrument.electromagnet import arduino_electromagnet # Magnet
         # from nplab.instrument.camera.thorlabs.kiralux import Kiralux
 
@@ -72,7 +73,7 @@ if __name__ == '__main__':
             powermeter = ThorlabsPowermeter(visa.ResourceManager().list_resources()[0]) # Powermeter
         except:
             powermeter = dummyPowerMeter() # Dummy powermeter
-            print('no powermeter plugged in, using a dummy to preserve the gui layout')
+            print('No powermeter plugged in, using a dummy to preserve the gui layout')
         filter_wheel = Ell18('COM11') # ND filter wheel - Need to fix GUI
         kandor = Kandor() # Andor Kymera spectrometer + Newton camera
         kymera = kandor.kymera
@@ -83,6 +84,7 @@ if __name__ == '__main__':
         filter_slider.slot = 0
         spec = OceanOpticsSpectrometer(0)  # OceanOptics spectrometer
         aligner = SpectrometerAligner(spec, stage)
+        bentham = Bentham_DTMc300()
         ivium = Ivium()
         # magnet=arduino_electromagnet.Magnet('COM4')
 
@@ -111,6 +113,7 @@ if __name__ == '__main__':
             'spec': spec,
             'aligner': aligner,
             'polariser': pol,
+            'bentham' : bentham,
             'ivium' : ivium
             # 'magnet': magnet
             # 'rotation_stage': rotation_stage,
@@ -135,7 +138,8 @@ if __name__ == '__main__':
                               'data_group_creator': dgc,
                               'darkfield': spec,
                               'polariser': pol,
-                              'ivium' : ivium
+                              'bentham' : bentham
+                               'ivium' : ivium
                               # 'rotation_stage': rotation_stage,
                               # 'power_control_785': lab.pc_785,
                               # 'magnet': magnet
