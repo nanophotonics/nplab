@@ -614,12 +614,19 @@ if __name__ == "__main__":
     # main()
     k = Kymera()
     k.GetNumberDevices()#success
-    if k.GetGrating() not in [1,2,3, 4]:
-        print('Kymera Grating not defined. Moving to Grating 1')
-        k.SetGrating(1)
-    k.show_gui(block = False)
-    self = k
-    k.SetNumberPixels(1024)
-    k.GetCalibration()
+
+    k.show_gui()
+    #self = k
+    #k.SetNumberPixels(1600)
+    #k.GetCalibration()
+
+    #if k.GetGrating() not in [1,2,3, 4]:
+    #    print('Kymera Grating not defined. Moving to Grating 1')
+    #    k.SetGrating(1)
+    #k.show_gui(block = False)
+    #self = k
+    #k.SetNumberPixels(1024)
+    #k.GetCalibration()
+
     
 
