@@ -138,7 +138,7 @@ if __name__ == '__main__':
                               'data_group_creator': dgc,
                               'darkfield': spec,
                               'polariser': pol,
-                              'bentham' : bentham
+                              'bentham' : bentham,
                                'ivium' : ivium
                               # 'rotation_stage': rotation_stage,
                               # 'power_control_785': lab.pc_785,
