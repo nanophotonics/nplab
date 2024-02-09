@@ -234,7 +234,8 @@ class SERS_Timescan(spt.Timescan):
     '''
     
     def __init__(self, *args, raman_excitation = None, name = '',
-                 spec_calibrated = False, intensity_calibrated = False, echem_mode = '', echem_data = None, **kwargs):
+                 spec_calibrated = False, intensity_calibrated = False, echem_mode = '', echem_data = None,
+                 exposure = 1, **kwargs):
 
         super().__init__(*args, raman_excitation = raman_excitation, **kwargs)
 
@@ -244,12 +245,7 @@ class SERS_Timescan(spt.Timescan):
         self.echem_mode = echem_mode.upper()
         self.echem_data = echem_data
         
-        try:
-            self.exposure = np.round(self.dset.attrs['Exposure'], 4)
-        except:
-            # exposure = input('Please specify exposure (s): ')
-            exposure = 1
-            self.exposure = float(exposure)
+        self.exposure = exposure  
             
         self.t = np.round(self.t_raw * self.exposure, 4)    
         self.Y_raw = self.Y.copy()
@@ -468,8 +464,8 @@ class SERS_Timescan(spt.Timescan):
 
         Y_plot = Y_plot[t_min_idx : t_max_idx]
         t_plot = t_plot[t_min_idx : t_max_idx]
-        print(t_min_idx)
         
+        print(t_plot)
         
         # Plot E-Chem
         
