@@ -597,10 +597,11 @@ for particle_scan in scan_list:
         
         ## Save plot
         save_dir = get_directory(particle_name)
-        plt.savefig(save_dir + particle_name + ' Powerswitch Timescan' + '.svg', format = 'svg')
+        plt.savefig(save_dir + particle_name + '633nm Timescan' + '.svg', format = 'svg')
         plt.close(fig)
         print('Timescan powerswitch')
       
+        
         
 #%%
         
