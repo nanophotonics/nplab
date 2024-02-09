@@ -324,7 +324,7 @@ class StageUI(QtWidgets.QWidget, UiTools):
             i = self.stage.axis_names.index(axis)
             try:
                 p = engineering_format(self.stage.position[i], base_unit=self.stage.unit, digits_of_precision=4)
-            except ValueError:
+            except:
                 p = '0 m'
             self.positions[i].setText(p)
 

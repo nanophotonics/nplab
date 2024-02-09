@@ -49,8 +49,8 @@ class PowerControl(Instrument):
         self.title = title
         self.before_calibration_func = before_calibration_func 
         self.after_calibration_func = after_calibration_func
-        assert isinstance(power_controller, (Aom, Stage)), \
-            ('power_controller must be AOM or Stage')
+        # assert isinstance(power_controller, (Aom, Stage)), \
+        #     ('power_controller must be AOM or Stage')
         assert isinstance(power_meter, PowerMeter), \
             ('Power meter have power_meter.PowerMeter base class')
         
@@ -94,13 +94,20 @@ class PowerControl(Instrument):
         else:  # isinstance(self.pc, Aom):
             return np.linspace(self.min_param, self.max_param, num=self.calibration_points, endpoint=True)
 
-    def calibrate_power(self, update_progress=lambda p: p):
+    def calibrate_power(self, fw_min = None, fw_max=None, num_points=None, update_progress=lambda p: p):
         '''
 
         '''
         if self.before_calibration_func is not None:
             state = self.before_calibration_func()
         attrs = {}
+        
+        if fw_min is not None:
+            self.min_param = fw_min
+        if fw_max is not None:
+            self.max_param = fw_max
+        if num_points is not None:
+            self.calibration_points = num_points
     
         if isinstance(self.pc, RStage):
             attrs['Angles'] = self.points
@@ -120,7 +127,7 @@ class PowerControl(Instrument):
             update_progress(i)
 
         group = self.create_data_group(self.title+'_%d')
-        group.create_dataset('powers', data=powers, attrs=attrs)
+        group.create_dataset(name='powers',data=powers, attrs=attrs)
         
         
         self.param = self.mid_param
@@ -142,6 +149,16 @@ class PowerControl(Instrument):
         if specific_calibration is not None:
             try:
                 power_calibration_group = search_in[specific_calibration]
+                pc = power_calibration_group['powers']
+                self.power_calibration = {'powers': pc[()],
+                                          'parameters': pc.attrs['parameters']}
+                if isMonotonic(self.power_calibration['powers']):
+                    self.update_config('parameters_'+self.title,
+                                       pc.attrs['parameters'])
+                    self.update_config('powers_'+self.title, pc[()])
+                else:
+                    print('power curve isn\'t monotonic, not saving to config file')
+                    
             except ValueError:
                 print('This calibration doesn\'t exist!')
                 return
@@ -184,6 +201,13 @@ class PowerControl(Instrument):
         powers = np.array(self.power_calibration['powers'])
         curve = interpolate.interp1d(powers, params, kind='cubic')
         return curve(power)
+    
+    def param_to_power(self, param):
+        
+        params = self.power_calibration['parameters']
+        powers = np.array(self.power_calibration['powers'])
+        curve = interpolate.interp1d(params, powers, kind='cubic')
+        return curve(param)
 
     def get_qt_ui(self):
         return PowerControl_UI(self)

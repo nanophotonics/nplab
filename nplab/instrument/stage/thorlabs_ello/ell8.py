@@ -67,9 +67,9 @@ class Thorlabs_ELL8K_UI(QtWidgets.QWidget, UiTools):
         self.stage = stage  # this is the actual rotation stage
         self.parent = parent
         self.debug = debug
-
+        path = os.path.dirname(__file__)
         uic.loadUi(os.path.join(os.path.dirname(
-            __file__), 'thorlabs_ell8k.ui'), self)
+            path), 'thorlabs_ell8k.ui'), self)
 
         self.move_relative_btn.clicked.connect(self.move_relative)
         self.move_absolute_btn.clicked.connect(self.move_absolute)

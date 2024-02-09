@@ -460,15 +460,20 @@ class AndorBase(object):
         self.set_andor_parameter('Exposure', 1)
         detector_shape = self.get_andor_parameter('DetectorShape')
         self.set_andor_parameter('Image', 1, 1, 1, detector_shape[0], 1, detector_shape[1])
+        self.set_andor_parameter('ImageFlip', 0, 0)
         self.set_andor_parameter('Shutter', 1, 0, 0, 0)
         self.set_andor_parameter('SetTemperature', -90)
         self.set_andor_parameter('CoolerMode', 0)
         self.set_andor_parameter('FanMode', 0)
-        try:
-            self.set_andor_parameter('OutAmp', 1)  # This means EMCCD off - this is the default mode
-        except AndorWarning:
-            self.set_andor_parameter('OutAmp', 0)
+        self.set_andor_parameter('OutAmp', 0)
+        self.set_andor_parameter('HSSpeed', 2)
+        # Uncomment below for EMCCD cameras
+        # try:
+        #     self.set_andor_parameter('OutAmp', 1)  # This means EMCCD off - this is the default mode
+        # except AndorWarning:
+        #     self.set_andor_parameter('OutAmp', 0)
         self.cooler = 1
+        
 
     @locked_action
     def capture(self):

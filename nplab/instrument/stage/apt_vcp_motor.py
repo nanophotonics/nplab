@@ -615,7 +615,7 @@ class FlipperUI(QuickControlBox):
 if __name__ == '__main__':
     print("pass")
     # microscope_stage = APT_VCP_motor(port='COM12', source=0x01, destination=0x21)
-    # r = DC_APT(port = 'COM13', destination = 0x01, stage_type = 'PRM' )
+    r = DC_APT(port = 'COM1', destination = 0x01, stage_type = 'MLS' )
     DEBUG = True
     f = MFF102('COM17', destination=0x01,)
     f.show_gui(False)

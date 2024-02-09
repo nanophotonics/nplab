@@ -1,0 +1,105 @@
+Version= 15
+Method=Transients
+Technique=ChronoAmperometry
+Dconfig=8
+Mode=Standard
+Title=ca
+Redefine filename=false
+Levels from profile=false
+Levels=25
+Levels.E[1]=0
+Levels.time[1]=0.4
+Levels.E[2]=0
+Levels.time[2]=0.4
+Levels.E[3]=0
+Levels.time[3]=0.4
+Levels.E[4]=0
+Levels.time[4]=0.4
+Levels.E[5]=0
+Levels.time[5]=0.4
+Levels.E[6]=0
+Levels.time[6]=0.4
+Levels.E[7]=0
+Levels.time[7]=0.4
+Levels.E[8]=0
+Levels.time[8]=0.4
+Levels.E[9]=0
+Levels.time[9]=0.4
+Levels.E[10]=0
+Levels.time[10]=0.4
+Levels.E[11]=0
+Levels.time[11]=0.4
+Levels.E[12]=0
+Levels.time[12]=0.4
+Levels.E[13]=0
+Levels.time[13]=0.4
+Levels.E[14]=0
+Levels.time[14]=0.4
+Levels.E[15]=0
+Levels.time[15]=0.4
+Levels.E[16]=0
+Levels.time[16]=0.4
+Levels.E[17]=0
+Levels.time[17]=1
+Levels.E[18]=1
+Levels.time[18]=1
+Levels.E[19]=0
+Levels.time[19]=0.4
+Levels.E[20]=0
+Levels.time[20]=0.4
+Levels.E[21]=0
+Levels.time[21]=0.4
+Levels.E[22]=0
+Levels.time[22]=0.4
+Levels.E[23]=0
+Levels.time[23]=0.4
+Levels.E[24]=0
+Levels.time[24]=0.4
+Levels.E[25]=0
+Levels.time[25]=0.4
+Cycles=5
+Cycles separate=false
+Interval time=0.4
+Current Range=1nA
+AutoCR=true
+AutoCR.Max range=100A
+AutoCR.Min range=1nA
+AutoCR.Pre ranging=true
+Data Options=
+Data Options.AnalogInputTitle=Peripheral Port
+Data Options.AnalogInputYlabel=Analog input
+Data Options.AnalogInputTitle2=Peripheral Port
+Data Options.AnalogInputYlabel2=Analog input
+Data Options.AnalogInputData=0
+Data Options.A_Transform=none
+Data Options.A_Transform2=none
+Data Options.A_A=0
+Data Options.A_B=1
+Data Options.A_C=0
+Data Options.A_D=0
+Data Options.A_A2=0
+Data Options.A_B2=1
+Data Options.A_C2=0
+Data Options.A_D2=0
+Data Options.E_correction=0
+Data Options.Area=1
+Data Options.Cap0=1E-6
+Data Options.MaxScanpoints=200000
+Data Options.Equivalent Weight=27.9
+Data Options.Density=7.86
+Data Options.Ba=0.1
+Data Options.Bc=0.1
+Data Options.Permittivity=1
+Data Options.Temperature=298
+Data Options.NominalCharge=1
+Data Options.EISfreq=5000
+Data Options.EISamp=0.025
+Data Options.CompFactor=0.85
+Data Options.AnalogInputYUnit=V
+Data Options.AnalogInputYUnit2=V
+Data Options.EISNonLinCorr=false
+Data reduction=false
+Report=
+Report.Remarks=
+Report.Process data=instrument  : V82730channel     : 0alias       : V82730software vs : 4.1127firmware vs : 2246 (2246)hw config   : Vertex+18-Bitstart time  : 01/02/2024 15:31:50end time    : 01/02/2024 15:32:10endcondition: Scan AbortedSpec Rev    : 11DbFileName  : DataServer_V82730_2024-02-01_15-31-50-581.idf.sqliteDbFileMeasId: 1Step        : 1.00000E-1Interval    : 4.00000E-1
+Mconfig=0
