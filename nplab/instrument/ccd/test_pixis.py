@@ -1,7 +1,7 @@
 from __future__ import print_function
 from __future__ import absolute_import
 
-from .pixis import Pixis256EQt
+from pixis import Pixis256EQt
 import pyqtgraph as pg
 from PyQt5 import QtGui
 import numpy as np 

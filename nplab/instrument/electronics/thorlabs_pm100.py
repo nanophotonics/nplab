@@ -9,7 +9,7 @@ from nplab.instrument.electronics.power_meter import PowerMeter
 from nplab.instrument.visa_instrument import VisaInstrument
 
 class ThorlabsPowermeter(PowerMeter, VisaInstrument):
-    def __init__(self, address = 'USB0::0x1313::0x807B::17121118::INSTR',
+    def __init__(self, address = 'USB0::0x1313::0x807B::201029132::INSTR',
                  settings = {
                               # 'timeout': 0.1,
                               'read_termination': '\n',

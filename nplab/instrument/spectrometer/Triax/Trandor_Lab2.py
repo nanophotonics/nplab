@@ -52,7 +52,7 @@ Calibration_Arrays[2].append([938.31, -4.38217497e-09, -1.12728352e-01,  1.28287
 Calibration_Arrays[2].append([979.72, 2.16188951e-07, -1.59901057e-01,  1.58551361e+04])
 Calibration_Arrays[2].append([992.11, 2.23593080e-07, -1.61622854e-01,  1.61153277e+04])
 
-
+print(Calibration_Arrays)
 Calibration_Arrays[2] = [Calibration_Arrays[2],-1]
 
 
@@ -107,7 +107,7 @@ def Quad_Interp(x_Points,y_Points,Input): #x are in order
 class Triax(VisaInstrument):
     metadata_property_names = ('wavelength', )
 
-    def __init__(self, Address, Calibration_Arrays=[],CCD_Horizontal_Resolution=2048):  
+    def __init__(self, Address, Calibration_Arrays=Calibration_Arrays,CCD_Horizontal_Resolution=2048):  
         """
         Initialisation function for the triax class. Address in the port address of the triax connection. Calibration_Arrays is a list of 3x3 numpy arrays
         containing the calibration coefficents for each grating in the spectrometer.
@@ -178,13 +178,14 @@ class Triax(VisaInstrument):
         self.write("H0\r")
         return int(self.read()[1:])
 
-
+    
     def Convert_Pixels_to_Wavelengths(self,Pixel_Array,Steps=None):
         if Steps is None:
             Steps=self.Motor_Steps()
 
         Extremes=[]
         Calibration_Data=self.Calibration_Data[self.Grating()]
+        print(Calibration_Data)
         Root=Calibration_Data[1]
         Calibration_Data=Calibration_Data[0]
 
@@ -217,7 +218,7 @@ class Triax(VisaInstrument):
         Output=Quad_Interp(np.array(Known_Pixels),np.array(Wavelengths),np.array(Pixel_Array))
         return np.array(Output)
         
-
+    
     def Find_Required_Step(self,Wavelength,Pixel,Require_Integer=True):
         Bounds=[]
         Calibration_Data=self.Calibration_Data[self.Grating()]
@@ -367,8 +368,11 @@ class Triax(VisaInstrument):
     def exitAxial(self):
         self.write("f0\r")
         self.write("d0\r")  # sets the entrance mirror to axial as well
+        
+        
 from nplab.utils.gui import QtGui, QtWidgets, uic 
 from nplab.ui.ui_tools import UiTools  
+
 class TriaxUI(QtWidgets.QWidget,UiTools):
     def __init__(self, triax, ui_file =os.path.join(os.path.dirname(__file__),'triax_ui.ui'),  parent=None):
         assert isinstance(triax, Triax), "instrument must be a Triax"
@@ -400,7 +404,7 @@ class TriaxUI(QtWidgets.QWidget,UiTools):
 #Make a deepcopy of the andor capture function, to add a white light shutter close command to if required later
 # Andor_Capture_Function=types.FunctionType(Andor.capture.__code__, Andor.capture.__globals__, 'Unimportant_Name',Andor.capture.__defaults__, Andor.capture.__closure__)
 
-class Trandor(Andor):#Andor
+class Trandor():#Andor
     ''' Wrapper class for the Triax and the andor
     ''' 
     # Calibration_Arrays = Calibration_Arrays
@@ -480,12 +484,12 @@ if __name__ == '__main__':
     import os 
 
     os.chdir(r'C:/Users/hera/Documents')       
-    # t = Triax('GPIB0::1::INSTR', Calibration_Arrays=Calibration_Arrays, CCD_Horizontal_Resolution=CCD_Size)
-    # t.show_gui()
+    t = Triax('GPIB0::1::INSTR', Calibration_Arrays=Calibration_Arrays, CCD_Horizontal_Resolution=CCD_Size)
+    #t.show_gui()
 
-    trandor = Trandor()
-    g = trandor.show_gui(blocking=False)
-    trandor.triax.show_gui(block=False)
+    #trandor = Trandor()
+    #g = trandor.show_gui(blocking=False)
+    #trandor.triax.show_gui(block=False)
    
 
   
