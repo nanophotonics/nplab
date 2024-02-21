@@ -243,6 +243,34 @@ class Kymera(Instrument):
         error = self.dll.ATSpectrographSlitReset(self.current_kymera)
         self.verbose(ERROR_CODE[error], sys._getframe().f_code.co_name)
 
+    #Output Flipper Mirror functions
+    def FlipperMirrorIsPresent(self):
+        flipper_present = c_int()
+        error = self.dll.ATSpectrographFlipperMirrorIsPresent(self.current_kymera, c_ulong(2), byref(flipper_present))
+        self.verbose(ERROR_CODE[error], sys._getframe().f_code.co_name)
+        return flipper_present.value
+    flipper_present = property(FlipperMirrorIsPresent)
+    
+    def FlipperMirrorReset(self):
+        error = self.dll.ATSpectrographFlipperMirrorReset(self.current_kymera, c_ulong(2))
+        self.verbose(ERROR_CODE[error], sys._getframe().f_code.co_name)
+        
+    def GetFlipperMirror(self):
+        flipper_position = c_int()
+        error = self.dll.ATSpectrographGetFlipperMirror(self.current_kymera, c_ulong(2), byref(flipper_position))
+        self.verbose(ERROR_CODE[error], sys._getframe().f_code.co_name)
+        return flipper_position.value + 1
+    
+    def SetFlipperMirror(self, out_port_nr):
+        '''
+        1 - direct port, usually into CCD
+        2 - side port, when flipper mirror is slotted in
+        '''
+        out_port_nr = int(out_port_nr - 1)
+        out_port = c_int(out_port_nr)
+        error = self.dll.ATSpectrographSetFlipperMirror(self.current_kymera, c_ulong(2), out_port)
+        self.verbose(ERROR_CODE[error], sys._getframe().f_code.co_name)
+    output_port = NotifiedProperty(GetFlipperMirror, SetFlipperMirror)
         
     #Calibration functions
     def SetPixelWidth(self,width):
@@ -615,7 +643,7 @@ if __name__ == "__main__":
     k = Kymera()
     k.GetNumberDevices()#success
 
-    k.show_gui()
+    #k.show_gui()
     #self = k
     #k.SetNumberPixels(1600)
     #k.GetCalibration()
