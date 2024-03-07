@@ -246,6 +246,54 @@ def find_particles(self,img=None, border_pixels=50):
     labels, nlabels = ndimage.measurements.label(img)
     return [np.array(p)+15 for p in ndimage.measurements.center_of_mass(img, labels, list(range(1,nlabels+1)))] #add 15 onto all the positions
 
+
+def Grid_points(g,
+                           bin_fac=4,
+                           bilat_size=3,
+                           bilat_height=40,
+                           threshold=20,
+                           min_size=2,
+                           max_size=6,
+                           morph_kernel_size=3,
+                           show_particles=False, 
+                           return_original_with_particles=False,
+                           return_centers=False,
+                           return_centers_and_radii=False):
+    # designed by Lillie for measuring points in a grid rather than chasing individual NPoMs
+    g = np.copy(g)
+    g_shape = np.shape(g)
+    # used to space points in the grid
+    spacing = 250
+    
+    x = [i for i in range(spacing, g_shape[0], spacing) for j in range(spacing, g_shape[1], spacing)]
+    y = [j for i in range(spacing, g_shape[0], spacing) for j in range(spacing, g_shape[1], spacing)]
+    centers = []
+    # grid of centers as tuples in form (x, y)
+    for k in range(len(x)):
+        centers.append((x[k], y[k]))
+    # same radius for all points because no filtering is being used
+    radii = list(10*np.ones_like(centers))
+    
+    if return_centers:
+       if centers:
+           return np.array(centers)[:,::-1] # in numpy indexing
+       return None
+    if return_centers_and_radii:
+       if centers:
+           return np.array(centers)[:,::-1], np.array(radii)
+       return None
+    elif return_original_with_particles:
+        print("Cannot return original with particles when using a grid")
+    elif show_particles:
+        print("cannot show particles when using a grid")
+
+
+
+
+
+
+
+
 #def STBOC_with_size_filter_switch(g, bin_fac= 4,bilat_size = 3, bilat_height = 40,
 #                           threshold =20,min_size = 2,max_size = 6,morph_kernel_size = 3):
 # #   if len(g.shape)==3:
