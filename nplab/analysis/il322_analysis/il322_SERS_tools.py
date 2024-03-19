@@ -246,17 +246,6 @@ class SERS_Timescan(spt.Timescan):
         self.echem_data = echem_data
         
         self.exposure = exposure  
-        
-        # try:
-        #     self.exposure = np.round(self.dset.attrs['cycle_time'], 4)
-        # except:
-        #     try:
-        #         self.exposure = np.round(self.dset.attrs['Exposure'], 4)
-        #         print('Could not find cycle time - using "Exposure" attribute!')
-        #     except:
-        #         self.exposure = 1
-        #         print('Could not find exposure - using 1s exposure!!!')
-
             
         self.t = np.round(self.t_raw * self.exposure, 4)    
         self.Y_raw = self.Y.copy()

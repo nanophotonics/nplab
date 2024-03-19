@@ -138,11 +138,11 @@ from nplab.ui.ui_tools import UiTools
 import os
 
 class Stepper_Ui(QtWidgets.QWidget, UiTools):
-    def __init__(self,stepper):
+    def __init__(self,stepper, ui_file = os.path.join(os.path.dirname(__file__),'stepper_GUI.ui')):
         super(Stepper_Ui, self).__init__()
       #  assert(stepper==Stepper) # checking if the object is a stepper
         self.stepper = stepper
-        ui_file = os.path.join(os.path.dirname(__file__),'stepper_GUI.ui') # GUI path . e.g. look into location of the current file and search for the given name
+         # GUI path . e.g. look into location of the current file and search for the given name
         uic.loadUi(ui_file, self) #loading the ui file 
         
         self.move_spinBox.setMaximum(int(self.stepper.max_steps))

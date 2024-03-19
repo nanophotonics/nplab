@@ -51,8 +51,8 @@ from lmfit.models import GaussianModel
 #%% Load h5
 
 
-my_h5_ref = h5py.File(r"C:\Users\ishaa\OneDrive\Desktop\Offline Data\2023-12-19_633nm_SERS_400Grating_Powerswitch_VariedDarkTime.h5")
-my_h5 = h5py.File(r"C:\Users\ishaa\OneDrive\Desktop\Offline Data\2024-01-05_633nm_SERS_Powerseries_LongKinetic.h5")
+my_h5_ref = h5py.File(r"C:\Users\il322\Desktop\Offline Data\2023-12-19_633nm_SERS_400Grating_Powerswitch_VariedDarkTime.h5")
+my_h5 = h5py.File(r"C:\Users\il322\Desktop\Offline Data\2024-01-05_633nm_SERS_Powerseries_LongKinetic.h5")
 
 
 #%%
@@ -152,7 +152,7 @@ Using a white_bkg of -100000 flattens it out...
 
 def get_directory(particle_name):
         
-    directory_path = r'C:\Users\ishaa\OneDrive\Desktop\Offline Data\2024-01-05 Analysis\_' + particle_name + '\\'
+    directory_path = r'C:\Users\il322\Desktop\Offline Data\2024-01-05 Analysis\_' + particle_name + '\\'
     
     if not os.path.exists(directory_path):
         os.makedirs(directory_path)
@@ -232,346 +232,80 @@ def timescan_chunk(timescan, chunk_size):
 #%% Testing background subtraction
 
 
-# particle = my_h5['ParticleScannerScan_0']['Particle_96']
+particle = my_h5['ParticleScannerScan_0']['Particle_96']
 
 
-# # Add all SERS spectra to powerseries list in order
+# Add all SERS spectra to powerseries list in order
 
-# keys = list(particle.keys())
-# keys = natsort.natsorted(keys)
-# powerseries = []
+keys = list(particle.keys())
+keys = natsort.natsorted(keys)
+powerseries = []
 
-# for key in keys:
-#     if 'SERS' in key:
-#         powerseries.append(particle[key])
+for key in keys:
+    if 'SERS' in key:
+        powerseries.append(particle[key])
 
-# fig, ax = plt.subplots(1,1,figsize=[12,9])
-# ax.set_xlabel('Raman Shifts (cm$^{-1}$)')
-# ax.set_ylabel('SERS Intensity (cts/mW/s)')
+fig, ax = plt.subplots(1,1,figsize=[12,9])
+ax.set_xlabel('Raman Shifts (cm$^{-1}$)')
+ax.set_ylabel('SERS Intensity (cts/mW/s)')
 
 
-# for i, spectrum in enumerate(powerseries):
+for i, spectrum in enumerate(powerseries):
     
 
     
-#     ## x-axis truncation, calibration
-#     spectrum = SERS.SERS_Spectrum(spectrum)
-#     spectrum.x = spt.wl_to_wn(spectrum.x, 632.8)
-#     spectrum.x = (spectrum.x + coarse_shift) * coarse_stretch
-#     spectrum.truncate(start_x = truncate_range[0], end_x = truncate_range[1])
-#     spectrum.x = wn_cal
-#     spectrum.calibrate_intensity(R_setup = R_setup,
-#                                   dark_counts = notch_cts,
-#                                   exposure = spectrum.cycle_time)
+    ## x-axis truncation, calibration
+    spectrum = SERS.SERS_Spectrum(spectrum)
+    spectrum.x = spt.wl_to_wn(spectrum.x, 632.8)
+    spectrum.x = (spectrum.x + coarse_shift) * coarse_stretch
+    spectrum.truncate(start_x = truncate_range[0], end_x = truncate_range[1])
+    spectrum.x = wn_cal
+    spectrum.calibrate_intensity(R_setup = R_setup,
+                                  dark_counts = notch_cts,
+                                  exposure = spectrum.cycle_time)
     
-#     ## Baseline
-#     spectrum.baseline = spt.baseline_als(spectrum.y[0], 1e3, 1e-2, niter = 10)
-#     spectrum.y_baselined = spectrum.y[0] - spectrum.baseline
+    ## Baseline
+    spectrum.baseline = spt.baseline_als(spectrum.y[0], 1e3, 1e-2, niter = 10)
+    spectrum.y_baselined = spectrum.y[0] - spectrum.baseline
     
-#     ## Plot raw, baseline, baseline subtracted
-#     spectrum.plot(ax = ax, plot_y = spectrum.y[0], title = '633nm Powerswitch', linewidth = 1, color = 'black', label = i, zorder = 30-i)
-#     spectrum.plot(ax = ax, plot_y = spectrum.y_baselined , title = '633nm Powerswitch', linewidth = 1, color = 'purple', label = i, zorder = 30-i)
-#     spectrum.plot(ax = ax, plot_y = spectrum.baseline, color = 'darkred', linewidth = 1)    
+    ## Plot raw, baseline, baseline subtracted
+    spectrum.plot(ax = ax, plot_y = spectrum.y[0], title = '633nm Powerswitch', linewidth = 1, color = 'black', label = i, zorder = 30-i)
+    spectrum.plot(ax = ax, plot_y = spectrum.y_baselined , title = '633nm Powerswitch', linewidth = 1, color = 'purple', label = i, zorder = 30-i)
+    spectrum.plot(ax = ax, plot_y = spectrum.baseline, color = 'darkred', linewidth = 1)    
     
-#     ## Labeling & plotting
-#     # ax.legend(fontsize = 18, ncol = 5, loc = 'upper center')
-#     # ax.get_legend().set_title('Scan No.')
-#     # for line in ax.get_legend().get_lines():
-#     #     line.set_linewidth(4.0)
-#     fig.suptitle('MLAgg')
-#     powerseries[i] = spectrum
+    ## Labeling & plotting
+    # ax.legend(fontsize = 18, ncol = 5, loc = 'upper center')
+    # ax.get_legend().set_title('Scan No.')
+    # for line in ax.get_legend().get_lines():
+    #     line.set_linewidth(4.0)
+    fig.suptitle('MLAgg')
+    powerseries[i] = spectrum
     
-#     # ax.set_xlim(1200, 1700)
-#     # ax.set_ylim(0, powerseries[].y_baselined.max() * 1.5)
-#     plt.tight_layout(pad = 0.8)
+    # ax.set_xlim(1200, 1700)
+    # ax.set_ylim(0, powerseries[].y_baselined.max() * 1.5)
+    plt.tight_layout(pad = 0.8)
 
 
-# #%% Testing peak fitting - triple Gaussian region
+#%% Testing peak fitting - triple Gaussian region
 
 
-# particle = my_h5['ParticleScannerScan_0']['Particle_80']
+particle = my_h5['ParticleScannerScan_0']['Particle_80']
 
-# keys = list(particle.keys())
-# keys = natsort.natsorted(keys)
-
-
-# # Get timescan
-# for key in keys:
-#     if 'SERS' in key:
-#         timescan = particle[key]
-        
-#         timescan = SERS.SERS_Timescan(timescan)
-#         laser_power = timescan.laser_power
-#         print(laser_power)
-        
-#         ## Add timescan chunks to improve S/N
-#         chunk_size = 1
-#         new_y = timescan_chunk(timescan, chunk_size)
-#         timescan = SERS.SERS_Timescan(x = timescan.x, y = new_y, exposure = timescan.cycle_time * chunk_size)
-#         timescan.laser_power = laser_power
-        
-#         ## Process timescan
-#         timescan.x = spt.wl_to_wn(timescan.x, 632.8)
-#         timescan.x = (timescan.x + coarse_shift) * coarse_stretch
-#         timescan.truncate(start_x = truncate_range[0], end_x = truncate_range[1])
-#         timescan.x = wn_cal
-#         timescan.calibrate_intensity(R_setup = R_setup,
-#                                       dark_counts = notch_cts,
-#                                       exposure = timescan.exposure,
-#                                       laser_power = timescan.laser_power)
-#         for i, spectrum in enumerate(timescan.Y[0:10]):
-#             spectrum_baseline = spt.baseline_als(spectrum, 1e3, 1e-2, niter = 10)
-#             spectrum_baselined = spectrum - spectrum_baseline
-#             timescan.Y[i] = spectrum_baselined
-            
-#         timescan.truncate(1350,1450)
+keys = list(particle.keys())
+keys = natsort.natsorted(keys)
 
 
-#         ## Triple Gaussian fit
-#         for i, spectrum in enumerate(timescan.Y[0:10]):
-            
-#             fig, ax = plt.subplots(1,1,figsize=[12,9])
-#             ax.set_xlabel('Raman Shifts (cm$^{-1}$)')
-#             ax.set_ylabel('SERS Intensity (cts/mW/s)')
-            
-#             x = timescan.x
-#             y = spectrum
-            
-#             max_amp = y.max()*5/0.3
-#             g2_amp = y[25]*5/0.28
-            
-#             # build a model as a sum of 3 Gaussians
-#             model = (GaussianModel(prefix='g1_') + GaussianModel(prefix='g2_') + 
-#                      GaussianModel(prefix='g3_'))
-            
-#             amplitude_tol = 0.05
-#             center_tol = 5
-#             sigma_tol = 3
-            
-#             g1_amplitude = max_amp * 1
-#             g1_center = 1422
-#             g1_sigma = 5
-            
-#             g2_amplitude = g2_amp
-#             g2_center = 1410
-#             g2_sigma = 5
-            
-#             g3_amplitude = max_amp * 0.2
-#             g3_center = 1385
-#             g3_sigma = 5
-            
-            
-#             # build Parameters with initial values
-#             params = model.make_params(g1_amplitude = g1_amplitude,
-#                                        g1_center = g1_center,
-#                                        g1_sigma = g1_sigma,
-#                                        g2_amplitude = g2_amplitude,
-#                                        g2_center = g2_center,
-#                                        g2_sigma = g2_sigma,
-#                                        g3_amplitude = g3_amplitude,
-#                                        g3_center = g3_center,
-#                                        g3_sigma = g3_sigma)
-                                      
-#             # optionally, set bound / constraints on Parameters:
-            
-#             params['g1_amplitude'].min = g1_amplitude - (amplitude_tol * g1_amplitude) 
-#             params['g1_amplitude'].max = g1_amplitude + (amplitude_tol * g1_amplitude) 
-            
-#             params['g2_amplitude'].min = g2_amplitude - (amplitude_tol/2 * g2_amp) 
-#             params['g2_amplitude'].max = g2_amplitude + (amplitude_tol/2 * g2_amp) 
-            
-#             # params['g3_amplitude'].min = g3_amplitude - (amplitude_tol * max_amp) 
-#             # params['g3_amplitude'].max = g3_amplitude + (amplitude_tol * max_amp) 
-                
-#             params['g1_center'].min = g1_center - center_tol
-#             params['g1_center'].max = g1_center + center_tol
-            
-#             params['g2_center'].min = g2_center - (center_tol*1)
-#             params['g2_center'].max = g2_center + (center_tol*1)
-            
-#             params['g3_center'].min = g3_center - (center_tol*5)
-#             params['g3_center'].max = g3_center + (center_tol*5)
-            
-#             params['g1_sigma'].min = g1_sigma - sigma_tol
-#             params['g1_sigma'].max = g1_sigma + sigma_tol
-            
-#             params['g2_sigma'].min = g2_sigma - sigma_tol
-#             params['g2_sigma'].max = g2_sigma + sigma_tol
-            
-#             params['g3_sigma'].min = g3_sigma - (sigma_tol*3)
-#             params['g3_sigma'].max = g3_sigma + (sigma_tol*3)
-            
-            
-#             # perform the actual fit
-#             result = model.fit(y, params, x=x)
-            
-#             # print fit statistics and values and uncertainties for variables
-#             # print(result.fit_report())
-            
-#             # evaluate the model components ('g1_', 'g2_', and 'g3_')
-#             comps = result.eval_components(result.params, x=x)
-            
-#             # plot the results
-#             ax.plot(x, y, label='data')
-#             ax.plot(x, result.best_fit, label='best fit')
-            
-#             ax.plot(x, comps['g1_'], label='gaussian1')
-#             ax.plot(x, comps['g2_'], label='gaussian2')
-#             ax.plot(x, comps['g3_'], label='gaussian3')
-#             ax.legend()
-            
-#             print(result.rsquared)
-        
-
-# #%% Testing peak fitting - single Gaussian region
-
-
-# particle = my_h5['ParticleScannerScan_0']['Particle_96']
-
-# keys = list(particle.keys())
-# keys = natsort.natsorted(keys)
-
-
-# # Get timescan
-# for key in keys:
-#     if 'SERS' in key:
-#         timescan = particle[key]
-        
-#         timescan = SERS.SERS_Timescan(timescan)
-#         laser_power = timescan.laser_power
-        
-#         ## Add timescan chunks to improve S/N
-#         chunk_size = 1
-#         new_y = timescan_chunk(timescan, chunk_size)
-#         timescan = SERS.SERS_Timescan(x = timescan.x, y = new_y, exposure = timescan.cycle_time * chunk_size)
-#         timescan.laser_power = laser_power
-        
-#         ## Process timescan
-#         timescan.x = spt.wl_to_wn(timescan.x, 632.8)
-#         timescan.x = (timescan.x + coarse_shift) * coarse_stretch
-#         timescan.truncate(start_x = truncate_range[0], end_x = truncate_range[1])
-#         timescan.x = wn_cal
-#         timescan.calibrate_intensity(R_setup = R_setup,
-#                                       dark_counts = notch_cts,
-#                                       exposure = timescan.exposure,
-#                                       laser_power = timescan.laser_power)
-
-#         for i, spectrum in enumerate(timescan.Y[0:3]):
-#             spectrum_baseline = spt.baseline_als(spectrum, 1e3, 1e-2, niter = 10)
-#             spectrum_baselined = spectrum - spectrum_baseline
-#             timescan.Y[i] = spectrum_baselined
-        
-#         timescan.truncate(1600,1650)
-        
-       
-#         for i, spectrum in enumerate(timescan.Y[0:3]):
-            
-#             ### perform the fit with optimized parameters
-#             x = timescan.x
-#             y = spectrum
-#             max_amp = y.max()*5/0.3
-#             model = (GaussianModel(prefix='g4_'))
-#             amplitude_tol = 0.1
-#             center_tol = 5
-#             sigma_tol = 5
-#             g4_amplitude = max_amp * 1
-#             g4_center = 1625
-#             g4_sigma = 5
-#             params = model.make_params(g4_amplitude = g4_amplitude,
-#                                        g4_center = g4_center,
-#                                        g4_sigma = g4_sigma)
-#             # params['g4_amplitude'].min = g4_amplitude - (amplitude_tol * g4_amplitude) 
-#             # params['g4_amplitude'].max = g4_amplitude + (amplitude_tol * g4_amplitude) 
-#             params['g4_center'].min = g4_center - center_tol
-#             params['g4_center'].max = g4_center + center_tol
-#             params['g4_sigma'].min = g4_sigma - sigma_tol
-#             params['g4_sigma'].max = g4_sigma + sigma_tol
-#             result = model.fit(y, params, x=x)
-           
-#             ### Plot single Gaussian fit 
-#             fig, ax = plt.subplots(1,1,figsize=[12,9])
-#             ax.set_xlabel('Raman Shifts (cm$^{-1}$)')
-#             ax.set_ylabel('SERS Intensity (cts/mW/s)')
-#             comps = result.eval_components(result.params, x=x)
-#             ax.plot(x, y, label='data')
-#             ax.plot(x, result.best_fit, label='best fit')
-#             ax.plot(x, comps['g4_'], label='gaussian1')
-#             ax.legend()
-#             fig.suptitle('633nm Powerswitch - Single Gaussian Fit')
-#            # #### Save plot
-#            # save_dir = get_directory(particle_name + r'\Peak Fit')
-#            # plt.savefig(save_dir + particle_name + '_' + str(i) + ' Single Gauss' + '.svg', format = 'svg')
-#            # plt.close(fig)
-           
-#            ### return g4 amplitude value
-#        #     if result.rsquared < 0.95:
-#        #         print('\nFIT ERROR: ' + particle_name + '\n')
-#        #         this_particle.peaks[i][3] = 0
-#        #     else:
-#        #         this_particle.peaks[i][3] = result.params['g4_amplitude'].value
-#        #     powerseries[i] = spectrum
-#        # print('Single Gaussian')
-
-#%% Plot timescan for each MLAgg spot across scan
-
-class Particle(): 
-    def __init__(self):
-        self.peaks = np.zeros((20,5)) 
-
-
-n_chunks = 30
-
-particle_list_final = []
-
-scan_list = ['ParticleScannerScan_0']
-
-
-# Loop over particles in particle scan
-laser_powers = []
-for particle_scan in scan_list:
-    particle_list = []
-    particle_list = natsort.natsorted(list(my_h5[particle_scan].keys()))
-    
-    ## Loop over particles in particle scan
-    for particle in particle_list:
-        if 'Particle' not in particle:
-            particle_list.remove(particle)
-    
-    # Loop over particles in particle scan
-    
-    for particle in particle_list:
-        particle_name = 'MLAgg_' + str(particle_scan) + '_' + particle
-        particle = my_h5[particle_scan][particle]
-        
-        if particle_name == 'MLAgg_ParticleScannerScan_0_Particle_97':
-            continue
-        
-        this_particle = Particle()
-        this_particle.particle_name = particle_name
-        print(particle_name)
-        
-        ## Get timescan
-        keys = list(particle.keys())
-        keys = natsort.natsorted(keys)
-        for key in keys:
-            if 'SERS' not in key:
-                continue
-            
+# Get timescan
+for key in keys:
+    if 'SERS' in key:
         timescan = particle[key]
         
         timescan = SERS.SERS_Timescan(timescan)
         laser_power = timescan.laser_power
-        if laser_power not in laser_powers:                
-            laser_powers.append(laser_power)
+        print(laser_power)
         
         ## Add timescan chunks to improve S/N
-        if laser_power < 0.002:
-            chunk_size = 30
-        elif laser_power < 0.009:
-            chunk_size = 20
-        else:
-            chunk_size = 5
-        this_particle.chunk_size = chunk_size
+        chunk_size = 1
         new_y = timescan_chunk(timescan, chunk_size)
         timescan = SERS.SERS_Timescan(x = timescan.x, y = new_y, exposure = timescan.cycle_time * chunk_size)
         timescan.laser_power = laser_power
@@ -585,22 +319,20 @@ for particle_scan in scan_list:
                                       dark_counts = notch_cts,
                                       exposure = timescan.exposure,
                                       laser_power = timescan.laser_power)
-        this_particle.laser_power = timescan.laser_power
-        for i, spectrum in enumerate(timescan.Y):
+        for i, spectrum in enumerate(timescan.Y[0:10]):
             spectrum_baseline = spt.baseline_als(spectrum, 1e3, 1e-2, niter = 10)
             spectrum_baselined = spectrum - spectrum_baseline
             timescan.Y[i] = spectrum_baselined
-        
-        this_particle.peaks = np.zeros([n_chunks,5])
-        timescan_x_raw = timescan.x
-        timescan_y_raw = timescan.Y
-   
-
-        # Triple Gaussian fit
-        
+            
         timescan.truncate(1350,1450)
-        
-        for i, spectrum in enumerate(timescan.Y[0:n_chunks]):
+
+
+        ## Triple Gaussian fit
+        for i, spectrum in enumerate(timescan.Y[0:10]):
+            
+            fig, ax = plt.subplots(1,1,figsize=[12,9])
+            ax.set_xlabel('Raman Shifts (cm$^{-1}$)')
+            ax.set_ylabel('SERS Intensity (cts/mW/s)')
             
             x = timescan.x
             y = spectrum
@@ -679,29 +411,60 @@ for particle_scan in scan_list:
             # evaluate the model components ('g1_', 'g2_', and 'g3_')
             comps = result.eval_components(result.params, x=x)
             
-            ### return g1-3 amplitude values
-            # if result.rsquared < 0.90:
-            #     print('\nFIT ERROR: ' + particle_name + '\n')
-            #     this_particle.peaks[i][0] = 0
-            #     this_particle.peaks[i][1] = 0
-            #     this_particle.peaks[i][2] = 0
-            #     this_particle.peaks[i][4] = 0
-            # else:
-            this_particle.peaks[i][0] = result.params['g1_amplitude'].value
-            this_particle.peaks[i][1] = result.params['g2_amplitude'].value
-            this_particle.peaks[i][2] = result.params['g3_amplitude'].value
-            this_particle.peaks[i][4] = this_particle.peaks[i][0]/this_particle.peaks[i][1] 
-        print('Triple Gaussian')
-           
+            # plot the results
+            ax.plot(x, y, label='data')
+            ax.plot(x, result.best_fit, label='best fit')
+            
+            ax.plot(x, comps['g1_'], label='gaussian1')
+            ax.plot(x, comps['g2_'], label='gaussian2')
+            ax.plot(x, comps['g3_'], label='gaussian3')
+            ax.legend()
+            
+            print(result.rsquared)
         
-        # Single Gaussian fit
+
+#%% Testing peak fitting - single Gaussian region
+
+
+particle = my_h5['ParticleScannerScan_0']['Particle_96']
+
+keys = list(particle.keys())
+keys = natsort.natsorted(keys)
+
+
+# Get timescan
+for key in keys:
+    if 'SERS' in key:
+        timescan = particle[key]
         
-        timescan.x = timescan_x_raw
-        timescan.Y = timescan_y_raw
+        timescan = SERS.SERS_Timescan(timescan)
+        laser_power = timescan.laser_power
+        
+        ## Add timescan chunks to improve S/N
+        chunk_size = 1
+        new_y = timescan_chunk(timescan, chunk_size)
+        timescan = SERS.SERS_Timescan(x = timescan.x, y = new_y, exposure = timescan.cycle_time * chunk_size)
+        timescan.laser_power = laser_power
+        
+        ## Process timescan
+        timescan.x = spt.wl_to_wn(timescan.x, 632.8)
+        timescan.x = (timescan.x + coarse_shift) * coarse_stretch
+        timescan.truncate(start_x = truncate_range[0], end_x = truncate_range[1])
+        timescan.x = wn_cal
+        timescan.calibrate_intensity(R_setup = R_setup,
+                                      dark_counts = notch_cts,
+                                      exposure = timescan.exposure,
+                                      laser_power = timescan.laser_power)
+
+        for i, spectrum in enumerate(timescan.Y[0:3]):
+            spectrum_baseline = spt.baseline_als(spectrum, 1e3, 1e-2, niter = 10)
+            spectrum_baselined = spectrum - spectrum_baseline
+            timescan.Y[i] = spectrum_baselined
+        
         timescan.truncate(1600,1650)
         
        
-        for i, spectrum in enumerate(timescan.Y[0:n_chunks]):
+        for i, spectrum in enumerate(timescan.Y[0:3]):
             
             ### perform the fit with optimized parameters
             x = timescan.x
@@ -724,286 +487,445 @@ for particle_scan in scan_list:
             params['g4_sigma'].min = g4_sigma - sigma_tol
             params['g4_sigma'].max = g4_sigma + sigma_tol
             result = model.fit(y, params, x=x)
-   
-            ### return g4 amplitude value
-            # if result.rsquared < 0.95:
-            #     print('\nFIT ERROR: ' + particle_name + '\n')
-            #     this_particle.peaks[i][3] = 0
-            # else:
-            this_particle.peaks[i][3] = result.params['g4_amplitude'].value
-        print('Single Gaussian')
+           
+            ### Plot single Gaussian fit 
+            fig, ax = plt.subplots(1,1,figsize=[12,9])
+            ax.set_xlabel('Raman Shifts (cm$^{-1}$)')
+            ax.set_ylabel('SERS Intensity (cts/mW/s)')
+            comps = result.eval_components(result.params, x=x)
+            ax.plot(x, y, label='data')
+            ax.plot(x, result.best_fit, label='best fit')
+            ax.plot(x, comps['g4_'], label='gaussian1')
+            ax.legend()
+            fig.suptitle('633nm Powerswitch - Single Gaussian Fit')
+           # #### Save plot
+           # save_dir = get_directory(particle_name + r'\Peak Fit')
+           # plt.savefig(save_dir + particle_name + '_' + str(i) + ' Single Gauss' + '.svg', format = 'svg')
+           # plt.close(fig)
+           
+           ### return g4 amplitude value
+       #     if result.rsquared < 0.95:
+       #         print('\nFIT ERROR: ' + particle_name + '\n')
+       #         this_particle.peaks[i][3] = 0
+       #     else:
+       #         this_particle.peaks[i][3] = result.params['g4_amplitude'].value
+       #     powerseries[i] = spectrum
+       # print('Single Gaussian')
+
+#%% Plot timescan for each MLAgg spot across scan
+
+
+scan_list = ['ParticleScannerScan_0']
+
+
+# Loop over particles in particle scan
+laser_powers = []
+for particle_scan in scan_list:
+    particle_list = []
+    particle_list = natsort.natsorted(list(my_h5[particle_scan].keys()))
+    
+    ## Loop over particles in particle scan
+    for particle in particle_list:
+        if 'Particle' not in particle:
+            particle_list.remove(particle)
+    
+    # Loop over particles in particle scan
+    
+    for particle in particle_list:
+        particle_name = 'MLAgg_' + str(particle_scan) + '_' + particle
+        particle = my_h5[particle_scan][particle]
         
-        timescan.x = timescan_x_raw
-        timescan.Y = timescan_y_raw
-        this_particle.timescan = timescan
-        particle_list_final.append(this_particle)
-     
+        if particle_name == 'MLAgg_ParticleScannerScan_0_Particle_97':
+            continue
+
+        ## Get timescan
+        keys = list(particle.keys())
+        keys = natsort.natsorted(keys)
+        for key in keys:
+            if 'SERS' in key:
+                timescan = particle[key]
+                
+                timescan = SERS.SERS_Timescan(timescan)
+                laser_power = timescan.laser_power
+                if laser_power not in laser_powers:                
+                    laser_powers.append(laser_power)
+                
+                ## Add timescan chunks to improve S/N
+                if laser_power < 0.002:
+                    chunk_size = 10
+                elif laser_power < 0.009:
+                    chunk_size = 5
+                else:
+                    chunk_size = 1
+                new_y = timescan_chunk(timescan, chunk_size)
+                timescan = SERS.SERS_Timescan(x = timescan.x, y = new_y, exposure = timescan.cycle_time * chunk_size)
+                timescan.laser_power = laser_power
+                
+                ## Process timescan
+                timescan.x = spt.wl_to_wn(timescan.x, 632.8)
+                timescan.x = (timescan.x + coarse_shift) * coarse_stretch
+                timescan.truncate(start_x = truncate_range[0], end_x = truncate_range[1])
+                timescan.x = wn_cal
+                timescan.calibrate_intensity(R_setup = R_setup,
+                                              dark_counts = notch_cts,
+                                              exposure = timescan.exposure,
+                                              laser_power = timescan.laser_power)
+                for i, spectrum in enumerate(timescan.Y):
+                    spectrum_baseline = spt.baseline_als(spectrum, 1e3, 1e-2, niter = 10)
+                    spectrum_baselined = spectrum - spectrum_baseline
+                    timescan.Y[i] = spectrum_baselined
         
-     
+        
         # Plot timescan
         
-        # fig, (ax) = plt.subplots(1, 1, figsize=[12,16])
-        # t_plot = np.linspace(0,len(timescan.Y)*timescan.exposure,len(timescan.Y))
-        # v_min = timescan.Y.min()
-        # v_max = np.percentile(timescan.Y, 99.9)
-        # cmap = plt.get_cmap('inferno')
-        # ax.set_yticklabels([])
-        # ax.set_xlabel('Raman Shifts (cm$^{-1}$)', fontsize = 'large')
-        # ax.set_xlim(460,1800)
-        # ax.set_ylabel('Time (s)', fontsize = 'large')
-        # ax.set_yticks(np.linspace(0,len(timescan.Y)*timescan.exposure,11))
-        # ax.set_yticklabels(np.linspace(0,len(timescan.Y)*timescan.exposure,11).astype('int'))
-        # ax.set_title('633nm Timescan - Laser Power: ' + str(laser_power*1000) + '$\mu$W\n' + str(particle_name), fontsize = 'x-large', pad = 10)
-        # pcm = ax.pcolormesh(timescan.x, t_plot, timescan.Y, vmin = v_min, vmax = v_max, cmap = cmap, rasterized = 'True')
-        # clb = fig.colorbar(pcm, ax=ax)
-        # clb.set_label(label = 'SERS Intensity', size = 'large', rotation = 270, labelpad=30)
-        # print(particle_name)
+        fig, (ax) = plt.subplots(1, 1, figsize=[12,16])
+        t_plot = np.linspace(0,len(timescan.Y)*timescan.exposure,len(timescan.Y))
+        v_min = timescan.Y.min()
+        v_max = np.percentile(timescan.Y, 99.9)
+        cmap = plt.get_cmap('inferno')
+        ax.set_yticklabels([])
+        ax.set_xlabel('Raman Shifts (cm$^{-1}$)', fontsize = 'large')
+        ax.set_xlim(460,1800)
+        ax.set_ylabel('Time (s)', fontsize = 'large')
+        ax.set_yticks(np.linspace(0,len(timescan.Y)*timescan.exposure,11))
+        ax.set_yticklabels(np.linspace(0,len(timescan.Y)*timescan.exposure,11).astype('int'))
+        ax.set_title('633nm Timescan - Laser Power: ' + str(laser_power*1000) + '$\mu$W\n' + str(particle_name), fontsize = 'x-large', pad = 10)
+        pcm = ax.pcolormesh(timescan.x, t_plot, timescan.Y, vmin = v_min, vmax = v_max, cmap = cmap, rasterized = 'True')
+        clb = fig.colorbar(pcm, ax=ax)
+        clb.set_label(label = 'SERS Intensity', size = 'large', rotation = 270, labelpad=30)
+        print(particle_name)
         
-        # ## Save plot
-        # save_dir = get_directory(particle_name)
-        # plt.savefig(save_dir + particle_name + ' Powerswitch Timescan' + '.svg', format = 'svg')
-        # plt.close(fig)
-        # print('Timescan powerswitch')
+        ## Save plot
+        save_dir = get_directory(particle_name)
+        plt.savefig(save_dir + particle_name + '633nm Timescan' + '.svg', format = 'svg')
+        plt.close(fig)
+        print('Timescan powerswitch')
       
-  
-
-
-#%% Calculate & plot average over MLAgg spots for each laser power
-
-# for power in laser_powers[0:1]:
-
-#     for particle in particle_list_final:
         
-#         if particle.laser_power != power:
-#             continue
-#         else:
-#             avg_timescan = np.zeros(particle.timescan.Y.shape)
-#             print(avg_timescan.shape)
-#             break
-            
-    
-#     particle_name = 'MLAgg_Avg_' + str(power*1000)
-
-#     for particle in particle_list_final:
         
-#         if particle.laser_power != power:
-#             continue
-        
-#         else:
-#             t_plot = np.linspace(0,len(particle.timescan.Y)*particle.timescan.exposure,len(particle.timescan.Y))
-#             yticks = np.linspace(0,len(particle.timescan.Y)*particle.timescan.exposure,11)
-#             yticklabels = np.linspace(0,len(particle.timescan.Y)*particle.timescan.exposure,11).astype('int')
-            
-#         for i, spectrum in enumerate(particle.timescan.Y):
-#             avg_timescan[i] += spectrum
-            
-#         counter += 1
-        
-#     avg_timescan = avg_timescan/counter
-    
-#     fig, (ax) = plt.subplots(1, 1, figsize=[12,16])
-    
-#     v_min = timescan.Y.min()
-#     v_max = np.percentile(timescan.Y, 99.9)
-#     cmap = plt.get_cmap('inferno')
-#     # ax.set_yticklabels([])
-#     ax.set_xlabel('Raman Shifts (cm$^{-1}$)', fontsize = 'large')
-#     ax.set_xlim(460,1800)
-#     ax.set_ylabel('Time (s)', fontsize = 'large')
-#     ax.set_yticks(yticks)
-#     ax.set_yticklabels(yticklabels)
-#     ax.set_title('633nm Timescan - Laser Power: ' + str(power*1000) + '$\mu$W\n' + str(particle_name), fontsize = 'x-large', pad = 10)
-#     pcm = ax.pcolormesh(timescan.x, t_plot, timescan.Y, vmin = v_min, vmax = v_max, cmap = cmap, rasterized = 'True')
-#     clb = fig.colorbar(pcm, ax=ax)
-#     clb.set_label(label = 'SERS Intensity', size = 'large', rotation = 270, labelpad=30)
-#     print(particle_name)
-    
-#     ## Save plot
-#     # save_dir = get_directory(particle_name)
-#     # plt.savefig(save_dir + particle_name + ' Timescan' + '.svg', format = 'svg')
-#     # plt.close(fig)
-#     print('Timescan powerswitch')
-    
-  
-#%% Plot peak amplitude data for each spot
-
-for i, particle in enumerate(particle_list_final):
-    
-    print(particle.particle_name)
-    
-    if 0 in particle.peaks:
-        print('Skipping particle with poor fit')
-        continue
-    
-    fig, ax = plt.subplots(1,1,figsize=[12,9])
-    ax.set_xlabel('Time (s)', size = 'large')
-    ax.set_ylabel('Peak Intensity', size = 'large')
-    ax2 = ax.twinx() 
-    ax2.set_ylabel('Peak Ratio 1425/1405', size = 'large', rotation = 270, labelpad = 30)
-    # ax.set_xticks(np.linspace(0,18,10))
-    scan = np.linspace(0,n_chunks*timescan.exposure,n_chunks)
-    ax.plot(scan, particle.peaks[:,0], marker = 'o', markersize = 6, color = 'black', linewidth = 1, label = '1425 cm$^{-1}$', zorder = 2)          
-    ax.plot(scan, particle.peaks[:,1], marker = 'o', markersize = 6, color = 'red', linewidth = 1, label = '1405 cm$^{-1}$')
-    ax.plot(scan, particle.peaks[:,3], marker = 'o', markersize = 6, color = 'blue', linewidth = 1, label = '1610 cm$^{-1}$')   
-    ax.plot(scan, particle.peaks[:,0], marker = 'o', markersize = 6, color = 'purple', linewidth = 1, label = '1425/1405', zorder = 1)
-    ax2.plot(scan, particle.peaks[:,0]/particle.peaks[:,1], marker = 'o', markersize = 6, color = 'purple', linewidth = 1, label = '1425/1405')   
-    ax.legend()
-    # fig.suptitle('633nm Timescan - Peak Amplitude', fontsize = 'large')
-    fig.suptitle('633nm Timescan - Laser Power: ' + str(power*1000) + '$\mu$W\n' + str(particle_name), fontsize = 'x-large')
-    ax.set_title(particle.particle_name)
-    ymin = ax2.get_ylim()[0]
-    ymax = ax2.get_ylim()[1]
-    ax2.set_ylim(ymin, ymax)
-    ## Save plot
-    # save_dir = get_directory(particle.particle_name)
-    # plt.savefig(save_dir + particle.particle_name + 'Peak Amplitude' + '.svg', format = 'svg')
-    # plt.close(fig)
-   
 #%%
-   
-def monoExp(x, m, t, b):
-    return m * np.exp(-t * x) + b
+        
+# Calculate & plot average over MLAgg spots for each dark_time
+
+for j in range(0, len(avg_powerseries)):
     
-#%% Calculate avg peak data for each laser power
-avg_recovery = []
-sem_recovery = []
-
-decay1 = np.zeros([len(laser_powers),2])
-decay2 = np.zeros([len(laser_powers),2])
-
-for i, power in enumerate(laser_powers):
-
-    
-    particle_name = 'MLAgg_Avg_' + str(power*1000)
+    avg_powerseries[j] = avg_powerseries[j]/avg_counter[j]
+    powerseries = avg_powerseries[j]
+    dark_time = j*900
+    particle_name = 'MLAgg_Avg_' + str(dark_time)
     print(particle_name)
-    all_peaks = []
-    avg_peaks = []
-    sem_peaks = []
-    counter = 0
-
-    for particle in particle_list_final:
         
-        if particle.laser_power != power:
-            continue
-        else:
-            scan = np.linspace(0,n_chunks*particle.timescan.exposure,n_chunks)     
-        if 0 in particle.peaks:
-            print('Skipping particle with poor fit')
-            continue
-            
-        all_peaks.append(particle.peaks)
-        avg_peaks = np.mean(all_peaks, axis = 0)
-        sem_peaks = np.std(all_peaks, axis = 0)
-        sem_peaks = sem_peaks/(len(all_peaks)**0.5)
-        counter += 1
-
-
     
+    # # Plot powerswitch as stacked spectra
     
+    # fig, ax = plt.subplots(1,1,figsize=[12,9])
+    # ax.set_xlabel('Raman Shifts (cm$^{-1}$)')
+    # ax.set_ylabel('SERS Intensity')
+    # for i, spectrum in enumerate(powerseries):
+    #     spectrum = SERS.SERS_Spectrum(x = wn_cal, y = spectrum)
+    #     my_cmap = plt.get_cmap('inferno')
+    #     color = my_cmap(i/20)
+    #     if i % 2 == 0:
+    #         spectrum.plot(ax = ax, plot_y = spectrum.y, title = '', linewidth = 1, color = color, label = i, zorder = 30-i, linestyle = '-')
+    #     else:
+    #         spectrum.plot(ax = ax, plot_y = spectrum.y, title = '633nm Powerswitch - 1$\mu$W/100$\mu$W - Dark Time ' + str(dark_time) + 's', linewidth = 1, color = color, label = i, zorder = 30-i, linestyle = '--')
+    # ax.plot(0,0, linestyle = '-', color = 'black', label = '1$\mu$W')
+    # ax.plot(0,0, linestyle = '--', color = 'black', label = '100$\mu$W')
+    # ax.legend(fontsize = 16, ncol = 7, loc = 'upper center')
+    # ax.get_legend().set_title('Scan No.')
+    # for line in ax.get_legend().get_lines():
+    #     line.set_linewidth(3.0)
+    # fig.suptitle(particle_name)
+    # ax.set_xlim(460, 1800)
+    # ax.set_ylim(0, avg_powerseries[j].max() * 1.4)
+    # plt.tight_layout(pad = 0.8)
     
-    # Peak amplitude v. powerswitch
-    fig, ax = plt.subplots(1,1,figsize=[12,9])
-    ax.set_xlabel('Time (s)', size = 'large')
-    ax.set_ylabel('Peak Intensity', size = 'large')
-    ax2 = ax.twinx() 
-    ax2.set_ylabel('Peak Ratio 1425/1405', size = 'large', rotation = 270, labelpad = 30)
-    # ax.set_xticks(np.linspace(0,18,10))
-    
-    ax.errorbar(scan, avg_peaks[:,0], yerr = sem_peaks[:,0], marker = 'o', markersize = 9, color = 'black', linewidth = 1, label = '1425 cm$^{-1}$', zorder = 2, markerfacecolor = 'none', markeredgewidth = 2, capsize = 5)          
-    # ax.errorbar(scan, avg_peaks[:,1], yerr = sem_peaks[:,1], marker = 'o', markersize = 9, color = 'red', linewidth = 1, label = '1405 cm$^{-1}$', markerfacecolor = 'none', markeredgewidth = 2, capsize = 5)
-    # ax.errorbar(scan, avg_peaks[:,3], yerr = sem_peaks[:,3], marker = 'o', markersize = 9, color = 'blue', linewidth = 1, label = '1610 cm$^{-1}$', markerfacecolor = 'none', markeredgewidth = 2, capsize = 5)   
-    ax.errorbar(scan, avg_peaks[:,0], yerr = sem_peaks[:,0], marker = 'o', markersize = 9, color = 'purple', linewidth = 1, label = '1425/1405', zorder = 1, markerfacecolor = 'none', markeredgewidth = 2, capsize = 5)
-    ax2.errorbar(scan, avg_peaks[:,4], yerr = sem_peaks[:,4], marker = 'o', markersize = 9, color = 'purple', linewidth = 1, label = '1425/1405', markerfacecolor = 'none', markeredgewidth = 2, capsize = 5)   
-    
-    # fig.suptitle('633nm Powerswitch - Peak Amplitude', fontsize = 'large')
-    ax.set_title('633nm Timescan - Laser Power: ' + str(power*1000) + '$\mu$W\n' + str(particle_name), fontsize = 'large')
-    ymin = ax2.get_ylim()[0]
-    ymax = ax2.get_ylim()[1]
-    ax2.set_ylim(ymin, ymax)
-    
-    
-    # Decay fit with Peak amplitude v. powerswitch - low powers only
-    
-    ## perform the fit
-    xs = scan
-    ys = avg_peaks[:,0]
-    p0 = (ys[0], 0.01, ys[len(ys)-1]) # start with values near those we expect
-    params, cv = scipy.optimize.curve_fit(monoExp, xs, ys, p0)
-    m, t, b = params
-    sampleRate = 100 # Hz
-    tauSec = (1 / t) / sampleRate
-    
-    ## determine quality of the fit
-    squaredDiffs = np.square(ys - monoExp(xs, m, t, b))
-    squaredDiffsFromMean = np.square(ys - np.mean(ys))
-    rSquared = 1 - np.sum(squaredDiffs) / np.sum(squaredDiffsFromMean)
-    print(f"R² = {rSquared}")
-    
-    ## plot the results
-    # ax.plot(xs, ys, '.', label="data", color  = 'red')
-    ax.plot(xs, monoExp(xs, m, t, b), '--', color = 'red', label = f'1425 decay, Tau = {tauSec} s', zorder = 2)
-    
-    
-    ## perform the fit
-    xs = scan
-    ys = avg_peaks[:,4]
-    p0 = (ys[0], 0.01, ys[len(ys)-1]) # start with values near those we expect
-    params, cv = scipy.optimize.curve_fit(monoExp, xs, ys, p0)
-    m2, t2, b2 = params
-    sampleRate = 100 # Hz
-    tauSec = (1 / t2) / sampleRate
-    
-    ## determine quality of the fit
-    squaredDiffs = np.square(ys - monoExp(xs, m2, t2, b2))
-    squaredDiffsFromMean = np.square(ys - np.mean(ys))
-    rSquared = 1 - np.sum(squaredDiffs) / np.sum(squaredDiffsFromMean)
-    print(f"R² = {rSquared}")
-    
-    ax2.plot(xs, monoExp(xs, m2, t2, b2), '--', color = 'blue', label = f'ratio decay, Tau = {tauSec} s')
-    ax.plot(xs, monoExp(xs, m, t, b), '--', color = 'blue', label = f'ratio decay, Tau = {tauSec} s', zorder = 1)
-    ax.legend()
-    
-    
-    ## inspect the parameters
-    print(f"Y = {m} * e^(-{t} * x) + {b}")
-    print(f"Tau = {tauSec} s")
-    # Save plot
+    # ## Save plot
     # save_dir = get_directory(particle_name)
-    # plt.savefig(save_dir + particle_name + 'Peak Amplitude' + '.svg', format = 'svg')
+    # plt.savefig(save_dir + particle_name + ' Powerswitch Stack' + '.svg', format = 'svg')
     # plt.close(fig)
+    # print('Stacked powerswitch')
     
-    decay1[i,0] = 1/t
-    decay2[i,0] = 1/t2
-
-
-    decay2[i,1] = b2
     
-#%%
+    # # Plot powerswitch as timescan
+    
+    # powerseries_y = powerseries
+    # for i, spectrum in enumerate(powerseries):
+    #     powerseries_y[i] = spectrum
+    # powerseries_y = np.array(powerseries_y)
+    # powerseries_y = np.insert(powerseries_y, 10, np.zeros(937), axis = 0)
+    # powerseries = SERS.SERS_Timescan(x = wn_cal, y = powerseries_y, exposure = 1)
+    # fig, (ax) = plt.subplots(1, 1, figsize=[12,16])
+    # t_plot = np.linspace(0,20,21)
+    # v_min = powerseries_y.min()
+    # v_max = np.percentile(powerseries_y, 99.9)
+    # cmap = plt.get_cmap('inferno')
+    # ax.set_yticklabels([])
+    # ax.set_xlabel('Raman Shifts (cm$^{-1}$)', fontsize = 'large')
+    # ax.set_xlim(460,1800)
+    # ax.text(x=750,y=9.8,s='Dark recovery time: ' + str(dark_time) + 's', color = 'white', size='x-large')
+    # ax.set_title('633nm Powerswitch - Dark Time: ' + str(dark_time) + 's\n' + str(particle_name), fontsize = 'x-large', pad = 10)
+    # pcm = ax.pcolormesh(powerseries.x, t_plot, powerseries_y, vmin = v_min, vmax = v_max, cmap = cmap, rasterized = 'True')
+    # clb = fig.colorbar(pcm, ax=ax)
+    # clb.set_label(label = 'SERS Intensity', size = 'large', rotation = 270, labelpad=30)
+    
+    # ## Save plot
+    # save_dir = get_directory(particle_name)
+    # plt.savefig(save_dir + particle_name + ' Powerswitch Timescan' + '.svg', format = 'svg')
+    # plt.close(fig)
+    # print('Timescan powerswitch')
+    
+    
 
-fig, ax = plt.subplots(1,1,figsize=[12,9])
-ax.set_xlabel('Time (s)', size = 'large')
-ax.set_title('Decay Time v. Laser Power', size = 'large')
-ax.set_xlabel('Laser Power (mW)')
-ax.set_ylabel('Decay Time (s)')
-# ax2.set_ylabel('Peak Ratio 1425/1405', size = 'large', rotation = 270, labelpad = 30)
-
-ax.plot(laser_powers,  decay1[:,0], label = '1425 peak', color = 'black')
-ax.plot(laser_powers,  decay2[:,0], label = 'ratio', color = 'purple')
-ax.legend()
+#%% Fit target peaks in powerswitch scans of all MLAgg spots
 
 
-fig, ax = plt.subplots(1,1,figsize=[12,9])
-ax.set_xlabel('Time (s)', size = 'large')
-ax.set_title('Eq Peak Ratio v. Laser Power', size = 'large')
-ax.set_xlabel('Laser Power (mW)')
-ax.set_ylabel('Equilibrium Peak Ratio')
-# ax2.set_ylabel('Peak Ratio 1425/1405', size = 'large', rotation = 270, labelpad = 30)
+class Particle(): 
+    def __init__(self):
+        self.peaks = np.zeros((20,5)) 
 
-# ax.plot(laser_powers,  decay1[:,0], label = '1425 peak')
-ax.plot(laser_powers,  decay2[:,1], label = 'ratio', color = 'purple')
-ax.legend()    
+
+
+particle_list_final = []
+
+scan_list = ['ParticleScannerScan_0', 'ParticleScannerScan_4']
+
+
+# Loop over particles in particle scan
+
+for particle_scan in scan_list:
+    particle_list = []
+    particle_list = natsort.natsorted(list(my_h5[particle_scan].keys()))
+    
+    ## Loop over particles in particle scan
+    for particle in particle_list:
+        if 'Particle' not in particle:
+            particle_list.remove(particle)
+
+    
+    # Loop over particles in particle scan
+    
+    for particle in particle_list:
+        particle_name = 'MLAgg_' + str(particle_scan) + '_' + particle
+        particle = my_h5[particle_scan][particle]
+        
+        if particle_name == 'MLAgg_ParticleScannerScan_0_Particle_66':
+            continue
+
+        ## Add all SERS spectra to powerseries list in order
+        dark_time = 0
+        keys = list(particle.keys())
+        keys = sorted(keys, key=lambda x: particle[x].attrs['creation_timestamp'], reverse=False)           
+        powerseries = []
+        for key in keys:
+            if 'SERS' in key:
+                powerseries.append(particle[key])
+            if 'dark' in key:
+                dark_time = float(np.array(particle[key]))
+        print(particle_name)
+        
+        this_particle = Particle()
+        this_particle.dark_time = dark_time
+        this_particle.particle_name = particle_name
+        
+        
+        # Fit target peaks
+        
+        '''
+        g1 = 1425 1/cm peak (triplet tall)
+        g2 = 1405 1/cm peak (triplet middle)
+        g3 = 1380 1/cm peak (triplet short)
+        g4 = 1610 1/cm peak (lone peak)
+        '''
+        
+        # Triple Guassian fit
+        for i, spectrum in enumerate(powerseries):
+        
+            ### x-axis truncation, calibration
+            spectrum = SERS.SERS_Spectrum(spectrum)
+            spectrum.x = spt.wl_to_wn(spectrum.x, 632.8)
+            spectrum.x = (spectrum.x + coarse_shift) * coarse_stretch
+            spectrum.truncate(start_x = truncate_range[0], end_x = truncate_range[1])
+            spectrum.x = wn_cal
+            spectrum.calibrate_intensity(R_setup = R_setup,
+                                          dark_counts = notch_cts,
+                                          exposure = spectrum.cycle_time)
+            spectrum.truncate(1350,1450)
+            spectrum.y_baselined = spectrum.y - spt.baseline_als(spectrum.y, 1e4, 1e-3, niter = 10)
+            
+            ### perform the fit with optimized parameters
+            x = spectrum.x
+            y = spectrum.y_baselined
+            
+            max_amp = spectrum.y_baselined.max()*5/0.3
+            g2_amp = spectrum.y_baselined[25]*5/0.28
+            
+            # build a model as a sum of 3 Gaussians
+            model = (GaussianModel(prefix='g1_') + GaussianModel(prefix='g2_') + 
+                     GaussianModel(prefix='g3_'))
+            
+            amplitude_tol = 0.05
+            center_tol = 5
+            sigma_tol = 3
+            
+            g1_amplitude = max_amp * 1
+            g1_center = 1422
+            g1_sigma = 5
+            
+            g2_amplitude = g2_amp
+            g2_center = 1410
+            g2_sigma = 5
+            
+            g3_amplitude = max_amp * 0.2
+            g3_center = 1385
+            g3_sigma = 5
+            
+            
+            # build Parameters with initial values
+            params = model.make_params(g1_amplitude = g1_amplitude,
+                                       g1_center = g1_center,
+                                       g1_sigma = g1_sigma,
+                                       g2_amplitude = g2_amplitude,
+                                       g2_center = g2_center,
+                                       g2_sigma = g2_sigma,
+                                       g3_amplitude = g3_amplitude,
+                                       g3_center = g3_center,
+                                       g3_sigma = g3_sigma)
+                                      
+            # optionally, set bound / constraints on Parameters:
+            
+            params['g1_amplitude'].min = g1_amplitude - (amplitude_tol * g1_amplitude) 
+            params['g1_amplitude'].max = g1_amplitude + (amplitude_tol * g1_amplitude) 
+            
+            params['g2_amplitude'].min = g2_amplitude - (amplitude_tol/2 * g2_amp) 
+            params['g2_amplitude'].max = g2_amplitude + (amplitude_tol/2 * g2_amp) 
+            
+            # params['g3_amplitude'].min = g3_amplitude - (amplitude_tol * max_amp) 
+            # params['g3_amplitude'].max = g3_amplitude + (amplitude_tol * max_amp) 
                 
-    
+            params['g1_center'].min = g1_center - center_tol
+            params['g1_center'].max = g1_center + center_tol
+            
+            params['g2_center'].min = g2_center - (center_tol*1)
+            params['g2_center'].max = g2_center + (center_tol*1)
+            
+            params['g3_center'].min = g3_center - (center_tol*5)
+            params['g3_center'].max = g3_center + (center_tol*5)
+            
+            params['g1_sigma'].min = g1_sigma - sigma_tol
+            params['g1_sigma'].max = g1_sigma + sigma_tol
+            
+            params['g2_sigma'].min = g2_sigma - sigma_tol
+            params['g2_sigma'].max = g2_sigma + sigma_tol
+            
+            params['g3_sigma'].min = g3_sigma - (sigma_tol*3)
+            params['g3_sigma'].max = g3_sigma + (sigma_tol*3)
+            
+            
+            # perform the actual fit
+            result = model.fit(y, params, x=x)
+            
+            # ### Plot triple Gaussian fit 
+            # fig, ax = plt.subplots(1,1,figsize=[12,9])
+            # ax.set_xlabel('Raman Shifts (cm$^{-1}$)')
+            # ax.set_ylabel('SERS Intensity (cts/mW/s)')
+            # comps = result.eval_components(result.params, x=x)
+            # ax.plot(x, y, label='data')
+            # ax.plot(x, result.best_fit, label='best fit')
+            # ax.plot(x, comps['g1_'], label='gaussian1')
+            # ax.plot(x, comps['g2_'], label='gaussian2')
+            # ax.plot(x, comps['g3_'], label='gaussian3')
+            # ax.legend()
+            # ax.set_title(particle_name + ' - Scan No: ' + str(i))
+            # fig.suptitle('633nm Powerswitch - Triple Gaussian Fit')
+            # #### Save plot
+            # save_dir = get_directory(particle_name + r'\Peak Fit')
+            # plt.savefig(save_dir + particle_name + '_' + str(i) + ' Triple Gauss' + '.svg', format = 'svg')
+            # plt.close(fig)
+            
+            ### return g1-3 amplitude values
+            if result.rsquared < 0.90:
+                print('\nFIT ERROR: ' + particle_name + '\n')
+                this_particle.peaks[i][0] = 0
+                this_particle.peaks[i][1] = 0
+                this_particle.peaks[i][2] = 0
+                this_particle.peaks[i][4] = 0
+            else:
+                this_particle.peaks[i][0] = result.params['g1_amplitude'].value
+                this_particle.peaks[i][1] = result.params['g2_amplitude'].value
+                this_particle.peaks[i][2] = result.params['g3_amplitude'].value
+                this_particle.peaks[i][4] = this_particle.peaks[i][0]/this_particle.peaks[i][1] 
+            powerseries[i] = spectrum
+        print('Triple Gaussian')
+        
+        ## Single Guassian fit
+        powerseries = []
+        for key in keys:
+            if 'SERS' in key:
+                powerseries.append(particle[key])
+        for i, spectrum in enumerate(powerseries):
+        
+            ### x-axis truncation, calibration
+            spectrum = SERS.SERS_Spectrum(spectrum)
+            spectrum.x = spt.wl_to_wn(spectrum.x, 632.8)
+            spectrum.x = (spectrum.x + coarse_shift) * coarse_stretch
+            spectrum.truncate(start_x = truncate_range[0], end_x = truncate_range[1])
+            spectrum.x = wn_cal
+            spectrum.calibrate_intensity(R_setup = R_setup,
+                                          dark_counts = notch_cts,
+                                          exposure = spectrum.cycle_time)
+            spectrum.truncate(1600,1650)
+            spectrum.y_baselined = spectrum.y - spt.baseline_als(spectrum.y, 1e4, 1e-3, niter = 10)
+            
+            ### perform the fit with optimized parameters
+            x = spectrum.x
+            y = spectrum.y_baselined
+            max_amp = spectrum.y_baselined.max()*5/0.3
+            model = (GaussianModel(prefix='g4_'))
+            amplitude_tol = 0.1
+            center_tol = 5
+            sigma_tol = 5
+            g4_amplitude = max_amp * 1
+            g4_center = 1625
+            g4_sigma = 5
+            params = model.make_params(g4_amplitude = g4_amplitude,
+                                       g4_center = g4_center,
+                                       g4_sigma = g4_sigma)
+            # params['g4_amplitude'].min = g4_amplitude - (amplitude_tol * g4_amplitude) 
+            # params['g4_amplitude'].max = g4_amplitude + (amplitude_tol * g4_amplitude) 
+            params['g4_center'].min = g4_center - center_tol
+            params['g4_center'].max = g4_center + center_tol
+            params['g4_sigma'].min = g4_sigma - sigma_tol
+            params['g4_sigma'].max = g4_sigma + sigma_tol
+            result = model.fit(y, params, x=x)
+            
+            ### Plot single Gaussian fit 
+            # fig, ax = plt.subplots(1,1,figsize=[12,9])
+            # ax.set_xlabel('Raman Shifts (cm$^{-1}$)')
+            # ax.set_ylabel('SERS Intensity (cts/mW/s)')
+            # comps = result.eval_components(result.params, x=x)
+            # ax.plot(x, y, label='data')
+            # ax.plot(x, result.best_fit, label='best fit')
+            # ax.plot(x, comps['g4_'], label='gaussian1')
+            # ax.legend()
+            # ax.set_title(particle_name + ' - Scan No: ' + str(i))
+            # fig.suptitle('633nm Powerswitch - Sing;e Gaussian Fit')
+            # #### Save plot
+            # save_dir = get_directory(particle_name + r'\Peak Fit')
+            # plt.savefig(save_dir + particle_name + '_' + str(i) + ' Single Gauss' + '.svg', format = 'svg')
+            # plt.close(fig)
+            
+            ### return g4 amplitude value
+            if result.rsquared < 0.95:
+                print('\nFIT ERROR: ' + particle_name + '\n')
+                this_particle.peaks[i][3] = 0
+            else:
+                this_particle.peaks[i][3] = result.params['g4_amplitude'].value
+            powerseries[i] = spectrum
+        print('Single Gaussian')
+        
+        particle_list_final.append(this_particle)
+
 #%% Loop over saved MLAgg peak spot data - plot peak amplitudes v. powerswitch        
       
     
@@ -1015,7 +937,26 @@ ax.legend()
 4 = 1425/1405 ratio
 '''
 
+# Calculate average peak stats
 
+# ## [dark_times, scan nos, peaks]
+# avg_peaks = np.zeros([11, 1, 20, 5])
+# avg_counter = 0
+
+# for i, particle in enumerate(particle_list_final):
+    
+#     print(particle.particle_name)
+    
+#     if 0 in particle.peaks:
+#         print('Skipping particle with poor fit')
+#         continue
+    
+#     index = int(particle.dark_time/900)
+    
+#     print(avg_peaks[index].shape)
+    
+#     x = np.vstack([avg_peaks[index,i], particle.peaks])
+    
     
 avg_peaks = np.zeros([11,20,5])
 avg_counter = np.zeros(11)
@@ -1193,7 +1134,7 @@ plt.close(fig)
     
     
      
-#%%  
+    
     
  # Decay fit with Peak amplitude v. powerswitch - low powers only
  
