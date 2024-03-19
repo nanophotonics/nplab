@@ -355,8 +355,11 @@ class NPoM_DF_Spectrum(spt.Spectrum):
 
         '''Trial the fourth: do you have more than one maximum?'''
         #NPoM spectra usually have more than one distinct peak
-        #Ignore this condition for NP size <= 60nm
-        if len(self.maxima) <= 1 and self.np_size > 60:
+        #Only require one peak for NP size <= 60nm
+        if len(self.maxima) < 2 and self.np_size > 60:
+            self.not_npom_because = 'too few peaks'
+            return
+        elif len(self.maxima) < 1:
             self.not_npom_because = 'too few peaks'
             return
 

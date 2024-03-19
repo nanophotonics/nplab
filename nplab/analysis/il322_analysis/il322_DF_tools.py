@@ -160,18 +160,21 @@ class DF_Spectrum(df.NPoM_DF_Spectrum):
         self.find_maxima(**kwargs)
         
         
-    def find_critical_wln(self):
+    def find_critical_wln(self, xlim = None):
         
         '''
         Find critical wavelength from list of maxima (takes global maximum)
         '''
+        if xlim is None:
+            xlim = (self.x.min, self.x.max)
         crit_wln = 0
         global_max = 0
         for maximum in self.maxima:
-            if self.y_smooth[maximum] > global_max:
-                global_max = self.y_smooth[maximum]
-                crit_wln = self.x[maximum]
-                self.crit_maximum = maximum
+            if self.x[maximum] >= xlim[0] and self.x[maximum] <= xlim[1]:
+                if self.y_smooth[maximum] > global_max:
+                    global_max = self.y_smooth[maximum]
+                    crit_wln = self.x[maximum]
+                    self.crit_maximum = maximum
                 
         self.crit_wln = crit_wln
                 
