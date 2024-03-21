@@ -209,7 +209,7 @@ class NPoM_DF_Z_Scan(spt.Timescan):
         self.determine_v_lims(**kwargs)
 
         ax.pcolormesh(x, z, Y, cmap = cmap, shading = 'auto', 
-                      norm = mpl.colors.LogNorm(vmin = self.v_min, vmax = self.v_max), rasterized = True)
+                      norm = mpl.colors.LogNorm(vmin = self.v_min, vmax = self.v_max))
 
         if x_lim is None:
             x_lim = self.x_lim
