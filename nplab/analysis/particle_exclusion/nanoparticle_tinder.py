@@ -22,7 +22,6 @@ import h5py
 import numpy as np
 from tqdm import tqdm
 from nplab.analysis.particle_exclusion.utils import load_rejected, save_rejected
-import h5py
 
 
 
@@ -43,7 +42,7 @@ def reject(group, plot_function, cutoff=5000):
                                        key=lambda k: int(k.split('_')[-1]))}
     
     for name, particle in tqdm(scan.items()):
-        if int(name.split('_')[-1]) > int(cutoff): 
+        if int(name.split('_')[-1]) > cutoff: 
             rejected.add(name)
         elif (len(particle) != group_len):
             rejected.add(name)
@@ -65,18 +64,16 @@ if __name__ == '__main__':
     start = time.time()
     rejected = load_rejected()
     
-    def plot_function(particle, name):
-        print('\n')
-        print(particle)
+    def plot_function(particle):
         fig, ax = plt.subplots(1, 3, figsize=(30, 10)) #3 subplots, feel free to use more
-        z = particle['lab.z_scan_1']
-        ax[0].pcolormesh(z)
-        #r = particle['H2-TAPP-SMe-60nm_NPoM_633nm_1sx20scans_Powerseries_16']
-        #ax[1].pcolormesh(r)
-        img = particle['CWL.thumb_image_1']
+        z = particle['z_scan']
+        ax[0].plot(z)
+        r = particle['SERS']
+        ax[1].pcolormesh(r)
+        img = particle['image']
         ax[2].imshow(img)
        
-    my_h5 = h5py.File(r'C:\Users\il322\Desktop\Offline Data\2023-03-25_M-TAPP-SME_60nm_NPoM_Track_DF_Powerseries.h5')    
-    with my_h5 as File:   
-        rejected = reject(File['ParticleScannerScan_2'], plot_function)    
+        
+    with 'Your_File_here' as File:   
+        rejected = reject(File['ParticleScannerScan_0'], plot_function, rejected)    
         save_rejected(rejected)
