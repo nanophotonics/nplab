@@ -19,7 +19,7 @@ def save_rejected(rejected, path=None, overwrite=False):
 
 def load_rejected(path=Path()):
     '''returns the contents of rejected.txt if it exists, or an empty set'''
-    if (file := path / 'rejected.txt').exists():
+    if (file := path + '/rejected.txt').exists():
         with open(path / file) as f:
             rejected = set(l.strip() for l in f.readlines())
     else:

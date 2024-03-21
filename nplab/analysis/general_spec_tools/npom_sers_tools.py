@@ -19,6 +19,7 @@ from importlib import reload
 
 from nplab.analysis import spc_to_h5 as spc
 
+
 from nplab.analysis.general_spec_tools import spectrum_tools as spt
 from nplab.analysis.general_spec_tools import dft_raman_tools as drt
 from nplab.analysis.general_spec_tools import all_rc_params as arp
@@ -67,6 +68,7 @@ def summarise_h5(data_dir, h5_files, summary_filename = 'SERS Summary.h5', scan_
                         all_particle_groups[h5_file].append(particle_path)
             
             print('  Done\n')
+
             
     n = 0
 

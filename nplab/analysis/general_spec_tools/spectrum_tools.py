@@ -777,6 +777,7 @@ class Spectrum:
 
         self.x, self.y = truncate_spectrum(self.x, self.y, *self.x_lim)
 
+
     def bg_and_ref(self, background = None, reference = None):
         if background is None:
             if 'background' in self.__dict__.keys():
@@ -794,14 +795,13 @@ class Spectrum:
             #in case spectrum is 2D
             self.Y = (self.Y - background)/(reference - background)
 
-    
     def normalise(self, norm_range=[0,1]):
         norm_diff = norm_range[1] - norm_range[0]
         self.y_norm = self.y - self.y.min()
         self.y_norm = (self.y_norm/self.y_norm.max()) * norm_diff
         self.y_norm = self.y_norm + norm_range[0]
 
-    
+
     def plot(self, ax = None, y_ticks = True, y_label = 'Intensity', x_label = 'Wavelength (nm)', 
              rc_params = None, title = False, **kwargs):
 
@@ -839,7 +839,6 @@ class Spectrum:
         self.x *= x_scale
         self.x += x_shift
 
-    
     def truncate(self, start_x, end_x, buffer=False):
         if start_x is None:
             start_x = self.x.min()
@@ -886,10 +885,13 @@ class Timescan(Spectrum):
         else:
             v_min = max(mode - min_std*std, mode)
 
+
         print(v_min, v_max)
+
         
         self.v_min = v_min
         self.v_max = v_max
+
 
     def plot_timescan(self, ax = None, y_label = None, rc_params = timescan_params, x_lim = None, title = None,
                       x_scale = 1, x_shift = 0, x_label = 'Wavelength (nm)', figsize = None, save_fig = False, 
@@ -924,6 +926,7 @@ class Timescan(Spectrum):
         t = self.t_raw
 
         if y_label == False:
+
             y_label = ''
 
         if 'exposure' in self.__dict__.keys():
@@ -1000,3 +1003,4 @@ class Timescan(Spectrum):
         def truncate(self, start_x, end_x, buffer=False):
             self.x, self.Y = truncate_spectrum(self.x, self.Y, start_wl = start_x, end_wl = end_x, buffer=False)
             self.y = np.average(self.Y, axis = 0)
+
