@@ -60,5 +60,8 @@ class ELL6UI(QuickControlBox):
 
 if __name__ == '__main__':
     # f = ThorlabsELL6('COM9')
-    f = ThorlabsELL6('COM6')
+    # f = Ell6('COM14')
+    from nplab.instrument.stage.thorlabs_ello import BusDistributor
+    bus = BusDistributor('COM14')
+    f = Ell6(bus, 1)
     f.show_gui(False)

@@ -117,7 +117,7 @@ class ParticleTrackMixin:
         self.show_camera()
         time.sleep(0.5)
         here = self.stage.position
-        self.df_mirror.set_slot(1)
+        # self.df_mirror.set_slot(1)
         time.sleep(0.5)
 
         self.spec.read_spectrum() #reads spectrum trice to clear cached junk before taking measurement
@@ -129,7 +129,7 @@ class ParticleTrackMixin:
 
         time.sleep(0.5)#
         self.stage.move(here)
-        self.df_mirror.set_slot(0)
+        # self.df_mirror.set_slot(0)
         return ArrayWithAttrs(spectra, attrs=self.spec.metadata)
 
     def time_scan(self, takes=240, settling_time = 1):

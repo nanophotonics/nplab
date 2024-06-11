@@ -9,8 +9,8 @@ from nplab.instrument.stage.thorlabs_ello import ElloDevice, bytes_to_binary, tw
 
 
 class Ell18(ElloDevice):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, serial_device, device_index=0, debug=0):
+        super().__init__(serial_device, device_index=device_index, debug=debug)
         self.configuration = self.get_device_info()
         self.TRAVEL = self.configuration["travel"]
         self.PULSES_PER_REVOLUTION = self.configuration["pulses"]
@@ -140,9 +140,14 @@ def test_ui():
 
 
 if __name__ == "__main__":
+    from nplab.instrument.stage.thorlabs_ello import BusDistributor
+    from nplab.instrument.stage.thorlabs_ello.ell20 import Ell20, Ell20BiPositional
 
-    stage = Ell18("COM11", debug=False)
+    bus = BusDistributor('COM11')
+    stage2 = Ell18(bus, device_index = 0)
+    stage3 = Ell18(bus, device_index = 2)
+    # stage = Ell18('COM11', debug=False)
     app = get_qt_app()
-    ui = Thorlabs_ELL18K_UI(stage)
+    ui = Thorlabs_ELL18K_UI(stage2)
     ui.show()
     sys.exit(app.exec_())
