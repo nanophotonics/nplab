@@ -417,10 +417,10 @@ def consoliData(rootDir):
                     dTileNew = gTiles.create_dataset(tileName, data = dTileOld)
                     dTileNew.attrs.update(dTileOld.attrs)
 
-                dReconTilesOld = ipf[scanName]['reconstructed_tiles']
-                dReconTilesnew = consolidatedScan.create_dataset('reconstructed_tiles_%s' % scanN,
-                                                              data = dReconTilesOld)
-                dReconTilesnew.attrs.update(dReconTilesOld.attrs)
+                #dReconTilesOld = ipf[scanName]['reconstructed_tiles']
+                #dReconTilesnew = consolidatedScan.create_dataset('reconstructed_tiles_%s' % scanN,
+                 #                                             data = dReconTilesOld)
+                #dReconTilesnew.attrs.update(dReconTilesOld.attrs)
 
                 existingParticles = sorted([i for i in consolidatedScan.keys() if i.startswith(gParticleFormat)],
                                                 key = lambda i: int(i.split('_')[-1]))
@@ -570,7 +570,9 @@ def extractAllSpectra(rootDir, returnIndividual = True, pl = False, dodgyThresho
                         x = zScan.attrs['wavelengths']
                         bg = zScan.attrs['background']
                         ref = zScan.attrs['reference']
-
+                        ref -= bg
+                        ref = np.where(ref != 0, ref, 1)
+                        
                     except:
                         print('Z-Stack not found in %s' % (groupName))
                         cancelled += 1
