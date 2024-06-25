@@ -130,8 +130,8 @@ def putter_wait_toggle_echem(wait_time = 1):
 thread_lsv = threading.Thread(target = ivium.run_lsv, kwargs = {'title': 'LSV_test_%d',
                                                                 'scanrate' : 0.05})
 
-thread_ca = threading.Thread(target = ivium.run_ca, kwargs = {'title': 'dark_CA_0V_%d',
-                                                              'levels_v' : [0, 0],
+thread_ca = threading.Thread(target = ivium.run_ca, kwargs = {'title': 'dark_CA_0.2V_%d',
+                                                              'levels_v' : [0.2, 0.2],
                                                               'levels_t' : [180, 0],
                                                               'cycles' : 1,
                                                               'interval_time' : 0.1})
@@ -139,5 +139,5 @@ thread_ca = threading.Thread(target = ivium.run_ca, kwargs = {'title': 'dark_CA_
 thread_putter = threading.Thread(target = putter_wait_toggle, kwargs = {'wait_time' : 10}) 
 
 
-# thread_ca.start()
+thread_ca.start()
 # thread_putter.start()
