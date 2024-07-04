@@ -19,7 +19,7 @@ import ctypes
 # asVoidPtr.argtypes = [ctypes.py_object]
 
 try:
-    from . import lucam
+    from nplab.instrument.camera import lucam
 except WindowsError:
     explanation="""
 WARNING: could not open the lucam driver.
@@ -120,7 +120,7 @@ class LumeneraCamera(Camera):
         super(LumeneraCamera, self).close()
         self.cam.CameraClose()
         
-    def raw_snapshot(self, suppress_errors=False, reset_on_error=True, retrieve_metadata=True,crop_fraction = None):
+    def raw_snapshot(self, suppress_errors=False, reset_on_error=True, retrieve_metadata=False,crop_fraction = None):
         """Take a snapshot and return it.  Bypass filters etc.
         
         @param: video_priority: If this is set to True, don't interrupt video
@@ -146,8 +146,13 @@ class LumeneraCamera(Camera):
                     settings.timeout = self.cam.GetProperty('exposure')[0] + 500
                     frame = self.cam.TakeSnapshot(snapshot=settings)
                     assert frame is not None, "Failed to capture a frame"
-                    frame_pointer = frame.ctypes.data_as(
-                                        ctypes.POINTER(ctypes.c_byte))
+                    
+                    ## Ctype coding is different for python 3.12. Check here and use appropriate based on version running
+                    if sys.version_info.minor >= 12:
+                        frame_pointer = frame.ctypes.data_as(ctypes.POINTER(ctypes.c_ubyte))
+                    else:
+                        frame_pointer = frame.ctypes.data_as(ctypes.POINTER(ctypes.c_byte))
+
                     image = self.convert_frame(frame_pointer,np.product(frame.shape))
                     if crop_fraction is not None:
                         x_size = int(image.shape[0]*crop_fraction)//2

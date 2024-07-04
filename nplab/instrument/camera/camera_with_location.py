@@ -31,6 +31,7 @@ from scipy import ndimage
 from scipy.signal import argrelextrema
 from nplab.ui.ui_tools import QuickControlBox, UiTools
 from nplab.utils.notified_property import DumbNotifiedProperty
+from scipy.interpolate import UnivariateSpline
 import time
 
 
@@ -47,6 +48,25 @@ def af_merit_squared_laplacian(image):
         image = np.mean(image, axis=2, dtype=image.dtype)
     assert len(image.shape) == 2, "The image is the wrong shape - must be 2D or 3D"
     return np.sum(cv2.Laplacian(image, ddepth=cv2.CV_32F) ** 2)
+
+def laser_merit(im):
+    '''way of determining how focused a laser beam is'''
+
+    im = np.sum(im, axis=2)  # convert to grey
+    x_len, y_len = np.shape(im)
+    # take a line ten pixels wide
+    xindices = np.arange(x_len//2 - 5, x_len//2 + 5)
+    x_slice = np.mean(np.take(im, xindices, axis=0),
+                      axis=0)  # average across those 10
+    spl = UnivariateSpline(list(range(len(x_slice))),
+                            x_slice - x_slice.max()/3)  # fit a spline,
+    roots = spl.roots()  # get the FWHM
+    
+    try:
+        merit = 1/(max(roots)-min(roots))
+    except:
+        merit = 0
+    return merit
 
 
 class CameraWithLocation(Instrument):
@@ -451,6 +471,55 @@ class CameraWithLocation(Instrument):
         """Create a QWidget to control the CameraWithLocation"""
         return CameraWithLocationControlUI(self)
 
+class CWLWithLaser(CameraWithLocation):
+    '''Combination of CWL with shutters and laser power control to implement laser autofocus'''
+    def __init__(self, camera=None, stage=None, lutter=None, wutter=None, power_control=None):
+        CameraWithLocation.__init__(self, camera, stage)
+        if lutter is None:
+            raise Exception("No laser shutter supplied to CWL with laser")
+        if wutter is None:
+            raise Exception("No white light shutter supplied to CWL with laser")
+        if power_control is None:
+            raise Exception("No power controller supplied to CWL with laser")
+        self.lutter = lutter
+        self.wutter = wutter
+        self.pc = power_control
+        
+    def laser_autofocus(self, exp=30, gain=20, pos=20, 
+                         roughsize=1, roughsteps=20,
+                         finesize=0.2, finesteps=7,
+                         power=0.005): #TODO: rewrite this to be more controllable
+        init_z = self.stage.position[-1]
+        initial_exp = self.camera.exposure
+        initial_gain = self.camera.gain
+        self.camera.exposure = exp
+        self.camera.gain = gain
+        par0 = self.pc.param
+        af_params0 = (self.af_step_size, self.af_steps) # get current autofocus params
+        try:
+            self.pc.power = power
+        except: print("No power calibration present, using current power")
+        self.stage.move(pos, relative=True, axis="x")
+        self.wutter.close_shutter()
+        self.lutter.open_shutter()  
+        time.sleep(0.2)
+        self.af_step_size = roughsize
+        self.af_steps = roughsteps
+        self.autofocus(merit_function=laser_merit) # rough autofocus
+        time.sleep(0.2)
+        self.af_step_size = finesize
+        self.af_steps = finesteps
+        self.autofocus(merit_function=laser_merit) # fine autofocus
+        self.lutter.close_shutter()
+        self.wutter.open_shutter()
+        self.stage.move(-pos, relative=True, axis="x")
+        self.pc.set_param(par0)
+        self.af_step_size, self.af_steps = af_params0 # go back to initial autofocus params
+        self.camera.exposure = initial_exp
+        self.camera.gain = initial_gain
+        time.sleep(0.2)
+        return init_z - self.stage.position[-1]
+
 class CameraWithLocationControlUI(QtWidgets.QWidget):
     """The control box for a CameraWithLocation"""
     calibration_distance = DumbNotifiedProperty(0)
@@ -544,6 +613,7 @@ class AcquireGridOfImages(ExperimentWithProgressBar):
                     # TODO: make autofocus update drift or something...
                     if autofocus_args is not None:
                         self.cwl.autofocus(**autofocus_args)
+                        # self.cwl.laser_autofocus()
                     self.cwl.settle()  # wait for the camera to be ready/stage to settle
                     dest.create_dataset("tile_%d",data=self.cwl.color_image())
                     dest.file.flush()
