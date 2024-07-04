@@ -196,12 +196,13 @@ class Ivium(Instrument, Pyvium):
         data_t = []
         data_V = []
         data_I = []
-        for point_index in range(1,total_points+1):
-            V_x,I,V = self.get_data_point(point_index)
-            t = point_index * (e_step/scanrate)
-            data_t.append(t)
-            data_V.append(V)
-            data_I.append(I)
+        for scan_index in range(1, n_scans+1):
+            for point_index in range(1,total_points+1):
+                V_x,I,V = self.get_data_point_from_scan(point_index, scan_index)
+                t = point_index * (e_step/scanrate)
+                data_t.append(t)
+                data_V.append(V)
+                data_I.append(I)
         data_t = np.array(data_t)
         data_V = np.array(data_V)
         data_I = np.array(data_I)
@@ -491,7 +492,6 @@ class Ivium(Instrument, Pyvium):
         data_V = []
         data_I = []
         for point_index in range(1,total_points+1):
-            print(self.get_data_point(point_index))
             t,I,V = self.get_data_point(point_index)
             data_t.append(t)
             data_V.append(V)

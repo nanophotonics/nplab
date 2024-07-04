@@ -50,55 +50,55 @@ if __name__ == '__main__':
     #%% Get data file
     
         dgc = DataGroupCreator()
-        data_file = datafile.current()      
-        # GuiGenerator({'data_group_creator': dgc})
+        data_file = datafile.current()   
+        GuiGenerator({'data_group_creator': dgc})
     
     
-    #%% Add equipment to Lab and GUI
+    # #%% Add equipment to Lab and GUI
         
-        equipment_dict = {
-            # 'powermeter': powermeter,   
-            'putter': putter,  
-            # 'spec': spec,
-            # 'bentham' : bentham,
-            # 'ivium' : ivium
-            }
+    #     equipment_dict = {
+    #         # 'powermeter': powermeter,   
+    #         'putter': putter,  
+    #         # 'spec': spec,
+    #         # 'bentham' : bentham,
+    #         # 'ivium' : ivium
+    #         }
     
-    #         lab = PT_lab(equipment_dict)
+    # #         lab = PT_lab(equipment_dict)
     
-        gui_equipment_dict = {#'powermeter': powermeter,
-                                'plasma_shutter': putter,
-                              'data_group_creator': dgc,
-                              # 'darkfield': spec,
-                              # 'bentham' : bentham,
-                                # 'ivium' : ivium
-                              # 'rotation_stage': rotation_stage,
-                              # 'power_control_785': lab.pc_785,
-                              }
+    #     gui_equipment_dict = {#'powermeter': powermeter,
+    #                             'plasma_shutter': putter,
+    #                            'data_group_creator': dgc,
+    #                           # 'darkfield': spec,
+    #                           # 'bentham' : bentham,
+    #                             # 'ivium' : ivium
+    #                           # 'rotation_stage': rotation_stage,
+    #                           # 'power_control_785': lab.pc_785,
+    #                           }
         
-        GuiGenerator(gui_equipment_dict)#, terminal = False, dark = False)
+    #     GuiGenerator(gui_equipment_dict)#, terminal = False, dark = False)
             
-#         lab.generated_gui = GuiGenerator(gui_equipment_dict, 
-#                                          terminal=False, 
-#                                          dark=False,
-#                                          dock_settings_path=os.path.dirname(
-#                                              __file__)+r'\gui_config.npy', scripts_path=os.path.dirname(__file__)+r'\scripts')
+    #     # generated_gui = GuiGenerator(gui_equipment_dict, 
+    #     #                                   terminal=False, 
+    #     #                                   dark=False,
+    #     #                                   dock_settings_path=os.path.dirname(
+    #     #                                       __file__)+r'\gui_config.npy', scripts_path=os.path.dirname(__file__)+r'\scripts')
     
-        # initialized = True
-        # __file = __file__
-        # def restart_gui():
-        #     '''
-        #     restarts the gui. If you redefine a class by running 
-        #     it in the console, it will use the updated version!
-        #     '''
-        #     if hasattr(lab, 'generated_gui'):
-        #         lab.generated_gui.close()       
-        #     lab.generated_gui = GuiGenerator(gui_equipment_dict, 
-        #                         dock_settings_path = os.path.dirname(__file)+r'\gui_config.npy',
-        #                         scripts_path = os.path.dirname(__file)+r'\scripts') 
+    #     # initialized = True
+    #     # __file = __file__
+    #     # def restart_gui():
+    #     #     '''
+    #     #     restarts the gui. If you redefine a class by running 
+    #     #     it in the console, it will use the updated version!
+    #     #     '''
+    #     #     if hasattr(lab, 'generated_gui'):
+    #     #         lab.generated_gui.close()       
+    #     #     lab.generated_gui = GuiGenerator(gui_equipment_dict, 
+    #     #                         dock_settings_path = os.path.dirname(__file)+r'\gui_config.npy',
+    #     #                         scripts_path = os.path.dirname(__file)+r'\scripts') 
 
 
-        print("Ayo let's get photocurrenting")
+    #     print("Ayo let's get photocurrenting")
         
         
 #%%
@@ -127,17 +127,20 @@ def putter_wait_toggle_echem(wait_time = 1):
 # lsv_data = ivium.run_lsv() # Here specify the method/parameters you want to use from python (if you change parameters in Ivium soft, data will not be saved correctly)
 
 
-thread_lsv = threading.Thread(target = ivium.run_lsv, kwargs = {'title': 'LSV_test_%d',
+thread_lsv = threading.Thread(target = ivium.run_lsv, kwargs = {'title': 'Co-TAPP-SMe_LSV_dark_%d',
                                                                 'scanrate' : 0.05})
 
-thread_ca = threading.Thread(target = ivium.run_ca, kwargs = {'title': 'dark_CA_0.2V_%d',
-                                                              'levels_v' : [0.2, 0.2],
+thread_ca = threading.Thread(target = ivium.run_ca, kwargs = {'title': 'Co-TAPP-SMe_toggle_10s_CA_0.3V_%d',
+                                                              'levels_v' : [0.3, 0.3],
                                                               'levels_t' : [180, 0],
                                                               'cycles' : 1,
                                                               'interval_time' : 0.1})
 
-thread_putter = threading.Thread(target = putter_wait_toggle, kwargs = {'wait_time' : 10}) 
 
+thread_putter = threading.Thread(target = putter_wait_toggle, kwargs = {'wait_time' : 10})  
+
+# ivium.run_cv(title = 'Co-TAPP-SMe_CV_dark_%d', e_start = 0.0, vertex_1 = 0.4, vertex_2 = -0.4, e_step = 0.002, scanrate = 0.025, n_scans = 2)
+# ivium.run_lsv(title = 'Co-TAPP-SMe_LSV_light_%d', e_start = -0.4, e_end = 0.4, e_step = 0.002, scanrate = 0.025)
 
 thread_ca.start()
-# thread_putter.start()
+thread_putter.start()
