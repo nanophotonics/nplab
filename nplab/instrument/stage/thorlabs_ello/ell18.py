@@ -142,11 +142,7 @@ def test_ui():
 if __name__ == "__main__":
     from nplab.instrument.stage.thorlabs_ello import BusDistributor
     from nplab.instrument.stage.thorlabs_ello.ell20 import Ell20, Ell20BiPositional
-
-    bus = BusDistributor('COM11')
-    stage2 = Ell18(bus, device_index = 0)
-    stage3 = Ell18(bus, device_index = 2)
-    # stage = Ell18('COM11', debug=False)
+    stage = Ell18("COM14", debug=False)
     app = get_qt_app()
     ui = Thorlabs_ELL18K_UI(stage2)
     ui.show()
