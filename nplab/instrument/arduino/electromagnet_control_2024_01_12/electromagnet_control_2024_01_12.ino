@@ -11,7 +11,7 @@ int relay_2 = 5;
 int relay_3 = 6; //broken and not used in this specific device
 int relay_4 = 7;
 // status variable:
-String state="Z";
+char state='Z';
 
 void setup() {
   // start COM connection and arduino pin assignment:
@@ -32,33 +32,42 @@ void loop() {
     switch (msg) {
     case 'N': //north
       digitalWrite(relay_1, LOW);
+      delay(10);
       digitalWrite(relay_2, LOW);
+      delay(10);
       digitalWrite(relay_4, LOW);
+      delay(10);
       digitalWrite(relay_1, HIGH);
-      state="N";
-      Serial.println(state+"\n");
+      state='N';
+      //Serial.println(state); // removed to not fill the buffer
       break;
     case 'S': //south
       digitalWrite(relay_1, LOW);
+      delay(10);
       digitalWrite(relay_2, HIGH);
+      delay(10);
       digitalWrite(relay_4, HIGH);
+      delay(10);
       digitalWrite(relay_1, HIGH);    
-      state="S";
-      Serial.println(state+"\n");
+      state='S';
+      //Serial.println(state);
       break;
     case 'Z': //zero
+      delay(10);
       digitalWrite(relay_1, LOW);
+      delay(10);
       digitalWrite(relay_2, LOW);
+      delay(10);
       digitalWrite(relay_4, LOW);
-      state="Z";
-      Serial.println(state+"\n");
+      state='Z';
+      //Serial.println(state);
       break;
     case 's':    // status check    
-      Serial.println(state+"\n");
+      Serial.println(state);
       break;
-    default: //bad command - works like status check
-      Serial.println(state+"\n");
-      break;
+    //default: //bad command - works like status check
+      //Serial.println(state);
+      //break;
     }
     
   }

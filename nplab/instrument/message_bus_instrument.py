@@ -8,7 +8,7 @@ This base class
 @author: Richard Bowman
 """
 
-from past.builtins import basestring
+# from past.builtins import basestring
 from builtins import str
 from builtins import zip
 from builtins import map

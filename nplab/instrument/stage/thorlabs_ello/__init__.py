@@ -27,7 +27,9 @@ def twos_complement_to_int(binary, debug=0):
     Compute 2s complement of binary number representation
     '''
     if debug > 0: print(binary)
+    
     N = len(binary)
+    
     a_N = int(binary[0])
     return float(-a_N*2**(N-1) + int(binary[1:], base=2))
 
@@ -132,7 +134,7 @@ class ElloDevice(Stage):
         "OutOfBounds": "Reserved"
     }
 
-    def __init__(self, serial_device, device_index=0, debug=0):
+    def __init__(self, serial_device, device_index = 0, debug=0):
         '''can be passed either a BusDistributor instance, or  "COM5"  '''
         if type(serial_device) is str:
             self.serial_device = BusDistributor(serial_device)
@@ -312,6 +314,8 @@ class ElloDevice(Stage):
         '''
 
         response = self.query_device("in")
+        
+        print("RESPONSE: ", response)
     
         # decode the response
         header = response[0:3]

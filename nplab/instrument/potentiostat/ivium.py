@@ -9,12 +9,7 @@ import numpy as np
 from nplab import datafile as df
 from nplab.utils.array_with_attrs import ArrayWithAttrs
 from nplab.instrument import Instrument
-import ctypes
-import glob
-import os.path
-import pandas as pd
 import time
-import pyvium
 from pyvium import Pyvium
 from pyvium.pyvium_verifiers import PyviumVerifiers
 
@@ -31,6 +26,8 @@ class Ivium(Instrument, Pyvium):
     Notes/Improvements:
         
         Create GUI & GUI class
+        
+        CA: default method file only supports 2 levels, how to add more without chanign method?
         
         run_method functions:
             
@@ -99,10 +96,14 @@ class Ivium(Instrument, Pyvium):
                e_start : float = 0,
                vertex_1 : float = 1.0,
                vertex_2 : float = -1.0,
-               e_step : float = 0.1,
+               e_step : float = 0.01,
                n_scans : int = 1,
-               scanrate : float = 1,
-               current_range : str = '1nA',
+               scanrate : float = 0.1,
+               current_range : str = '10mA',
+               auto_cr : bool = True,
+               auto_cr_max : str = '1A',
+               auto_cr_min : str = '1nA',
+               pre_ranging : bool = True,
                method_file_path : str = r"C:\Users\HERA\Documents\GitHub\nplab\nplab\instrument\potentiostat\CV_Standard.imf",
                save : bool = True):
         
@@ -119,10 +120,14 @@ class Ivium(Instrument, Pyvium):
             e_start (float = 0): Starting potential in V
             vertex_1 (float = 1.0): Vertex 1 potential in V
             vertex_2 (float = -1.0): Vertex 2 potential in V
-            e_step (float = 0.1): Potential step size in V
+            e_step (float = 0.01): Potential step size in V
             n_scans (int = 1): Number of CV scans
-            scanrate (float = 0.01): CV scan rate in V/s
-            current_range (str = '1nA'): Current dynamic range. Dropdown option: must be in valid_current_range (see below)
+            scanrate (float = 0.1): CV scan rate in V/s
+            current_range (str = '10mA'): Current dynamic range. Dropdown option: must be in valid_current_range (see below)
+            auto_cr (bool = True): Enable/disable auto current ranging during measurement. If False, current signal may saturate
+                auto_cr_max (str = '1A'): Max current dynamic range for autoranging. Dropdown option: must be in valid_current_range (see below)
+                auto_cr_min (str = '1nA'): Min current dynamic range for autoranging. Dropdown option: must be in valid_current_range (see below)
+                pre_ranging (bool = True): Enable/disable pre-determination of current dynamic range, if using auto ranging.   
             method_file_path (str): Method file path. Must be CV .imf file
             save (bool = True): If true, saves data automatically to h5 file    
         '''
@@ -145,6 +150,12 @@ class Ivium(Instrument, Pyvium):
         if str(current_range) not in valid_current_range:
             raise ValueError('\nInvalid current range. Current range must be:\n' + str(valid_current_range))
             return
+        if str(auto_cr_max) not in valid_current_range:
+            raise ValueError('\nInvalid auto current range limit. Current range must be:\n' + str(valid_current_range))
+            return
+        if str(auto_cr_min) not in valid_current_range:
+            raise ValueError('\nInvalid auto current range limit. Current range must be:\n' + str(valid_current_range))
+            return
         
         
         # Set all parameters
@@ -158,8 +169,13 @@ class Ivium(Instrument, Pyvium):
         self.set_method_parameter('N scans', str(n_scans)) 
         self.set_method_parameter('Scanrate', str(scanrate))
         self.set_method_parameter('Current range', str(current_range))
-        
-
+        self.set_method_parameter('AutoCR', str(auto_cr).lower())
+        if auto_cr:
+            self.set_method_parameter('AutoCR.Max range', str(auto_cr_max))
+            self.set_method_parameter('AutoCR.Min range', str(auto_cr_min))
+            self.set_method_parameter('AutoCR.Pre ranging', str(pre_ranging).lower())
+            
+            
         # Run method
         
         ## Start method
@@ -204,6 +220,10 @@ class Ivium(Instrument, Pyvium):
                     'N scans' : n_scans,
                     'Scanrate (V/s)' : scanrate,
                     'Current range' : str(current_range),
+                    'AutoCR' : str(auto_cr),
+                    'AutoCR Max Range' : str(auto_cr_max),
+                    'AutoCR Min Range' : str(auto_cr_min),
+                    'AutoCR Pre Ranging' : str(pre_ranging),
                     'start_time' : start_time,
                     'stop_time' : stop_time}
         
@@ -212,15 +232,154 @@ class Ivium(Instrument, Pyvium):
             self.save(name = title, data = ArrayWithAttrs(data_VI, data_attrs))
         return ArrayWithAttrs(data_VI, data_attrs)
         
+    
+    def run_lsv(self, 
+               title : str = 'LSV_%d',
+               mode : str = 'Standard',
+               e_start : float = 0,
+               e_end : float = 1.0,
+               e_step : float = 0.01,
+               scanrate : float = 0.1,
+               current_range : str = '10mA',
+               auto_cr : bool = True,
+               auto_cr_max : str = '1A',
+               auto_cr_min : str = '1nA',
+               pre_ranging : bool = True,
+               method_file_path : str = r"C:\Users\HERA\Documents\GitHub\nplab\nplab\instrument\potentiostat\LSV_Standard.imf",
+               save : bool = True):
         
+        
+        '''
+        Function for setting LSV parameters, running LSV, and returning data w/ attributes
+        
+        
+        Parameters:
+            
+            self (Ivium class)
+            title (str = 'LSV_%d')
+            mode (str = 'Standard') LSV mode. Dropdown option: must be 'Standard' or 'HiSpeed'
+            e_start (float = 0): Starting potential in V
+            e_end (float = 1.0): Ending potential in V
+            e_step (float = 0.01): Potential step size in V
+            scanrate (float = 0.1): LSV scan rate in V/s
+            current_range (str = '10mA'): Current dynamic range. Dropdown option: must be in valid_current_range (see below)
+            auto_cr (bool = True): Enable/disable auto current ranging during measurement. If False, current signal may saturate
+                auto_cr_max (str = '1A'): Max current dynamic range for autoranging. Dropdown option: must be in valid_current_range (see below)
+                auto_cr_min (str = '1nA'): Min current dynamic range for autoranging. Dropdown option: must be in valid_current_range (see below)
+                pre_ranging (bool = True): Enable/disable pre-determination of current dynamic range, if using auto ranging.   
+            method_file_path (str): Method file path. Must be LSV .imf file
+            save (bool = True): If true, saves data automatically to h5 file    
+        '''
+        
+        
+        # Load LSV method
+        
+        self.load_method(method_file_path)
+        
+        
+        # Assert dropdown parameters are valid
+        
+        ## Mode
+        if str(mode) != 'Standard' and str(mode) != 'HiSpeed':
+            raise ValueError('\nInvalid LSV mode. LSV mode must be "Standard" or "HiSpeed"')
+            return
+        
+        ## Current range
+        valid_current_range = ['1A', '100mA', '10mA', '1mA', '100uA', '10uA', '1uA', '100nA', '10nA', '1nA', '100pA']
+        if str(current_range) not in valid_current_range:
+            raise ValueError('\nInvalid current range. Current range must be:\n' + str(valid_current_range))
+            return
+        if str(auto_cr_max) not in valid_current_range:
+            raise ValueError('\nInvalid auto current range limit. Current range must be:\n' + str(valid_current_range))
+            return
+        if str(auto_cr_min) not in valid_current_range:
+            raise ValueError('\nInvalid auto current range limit. Current range must be:\n' + str(valid_current_range))
+            return
+        
+        
+        # Set all parameters
+        
+        self.set_method_parameter('Title', str(title))
+        self.set_method_parameter('Mode', str(mode))
+        self.set_method_parameter('E start', str(e_start))      
+        self.set_method_parameter('E end', str(e_end))      
+        self.set_method_parameter('E step', str(e_step))
+        self.set_method_parameter('Scanrate', str(scanrate))
+        self.set_method_parameter('Current range', str(current_range))
+        self.set_method_parameter('AutoCR', str(auto_cr).lower())
+        if auto_cr:
+            self.set_method_parameter('AutoCR.Max range', str(auto_cr_max))
+            self.set_method_parameter('AutoCR.Min range', str(auto_cr_min))
+            self.set_method_parameter('AutoCR.Pre ranging', str(pre_ranging).lower())        
+
+
+        # Run method
+        
+        ## Start method
+        start_time = time.time()
+        self.start_method()
+        
+        ## Wait for method to finish
+        while self.get_device_status()[0] == 2:
+            time.sleep(0.1)
+        stop_time = time.time()
+        print('Ivium method finished!')
+        
+        
+        # Return data
+
+        ## Get data
+        total_points = self.get_available_data_points_number()
+        data_t = []
+        data_V = []
+        data_I = []
+        for scan_index in range(1, n_scans+1):
+            for point_index in range(1,total_points+1):
+                V_x,I,V = self.get_data_point_from_scan(point_index, scan_index)
+                t = point_index * (e_step/scanrate)
+                data_t.append(t)
+                data_V.append(V)
+                data_I.append(I)
+        data_t = np.array(data_t)
+        data_V = np.array(data_V)
+        data_I = np.array(data_I)
+        data_VI = np.array([data_V, data_I])
+        
+        ## Get attributes
+        data_attrs={'Potential (V)' : data_V,
+                    'Time (s)' : data_t,
+                    'Title' : str(title),
+                    'Mode' : str(mode),
+                    'E start (V)' : e_start,
+                    'E end (V)' : e_end,
+                    'E step (V)' : e_step,
+                    'Scanrate (V/s)' : scanrate,
+                    'Current range' : str(current_range),
+                    'AutoCR' : str(auto_cr),
+                    'AutoCR Max Range' : str(auto_cr_max),
+                    'AutoCR Min Range' : str(auto_cr_min),
+                    'AutoCR Pre Ranging' : str(pre_ranging),
+                    'start_time' : start_time,
+                    'stop_time' : stop_time}
+        
+        ## Return/save data
+        if save == True:
+            self.save(name = title, data = ArrayWithAttrs(data_VI, data_attrs))
+        return ArrayWithAttrs(data_VI, data_attrs)
+        
+    
     def run_ca(self, 
                title : str = 'CA_%d',
                mode : str = 'Standard',
-               levels_v : list = [0, 0.5, 1.0],
-               levels_t : list = [1, 1, 1],
+               levels_v : list = [0, 1.0],
+               levels_t : list = [1, 1],
                cycles : int = 5,
                interval_time : float = 0.1,
-               current_range : str = '1nA',
+               current_range : str = '10mA',
+               auto_cr : bool = True,
+               auto_cr_max : str = '1A',
+               auto_cr_min : str = '1nA',
+               pre_ranging : bool = True,
                method_file_path : str = r"C:\Users\HERA\Documents\GitHub\nplab\nplab\instrument\potentiostat\CA_Standard.imf",
                save : bool = True):
         
@@ -228,18 +387,23 @@ class Ivium(Instrument, Pyvium):
         '''
         Function for setting ChronoAmperometry parameters, running CA, and returning/saving data w/ metadata
         
+        Note: Using more than 2 levels requires creating a new .imf file with the desired number of levels as method_file_path
         
         Parameters:
             
             self (Ivium class)
             title (str = 'CA_%d')
             mode (str = 'Standard') CA mode. Dropdown option: must be 'Standard' or 'HiSpeed'
-            levels_v (list = [0, 0.5, 1.0]): CA level potentials in V
-            levels_t (list = [1, 1, 1]): CA level times in s
+            levels_v (list = [0, 1.0]): CA level potentials in V
+            levels_t (list = [1, 1]): CA level times in s
             cycles (int = 5): Number of CA cycles
             interval_time (float = 0.1): CA data point step size in s
-            current_range (str = '1nA'): Current dynamic range. Dropdown option: must be in valid_current_range (see below)
-            method_file_path (str): Method file path. Must be CA .imf file     
+            current_range (str = '10mA'): Current dynamic range. Dropdown option: must be in valid_current_range (see below)
+            auto_cr (bool = True): Enable/disable auto current ranging during measurement. If False, current signal may saturate
+                auto_cr_max (str = '1A'): Max current dynamic range for autoranging. Dropdown option: must be in valid_current_range (see below)
+                auto_cr_min (str = '1nA'): Min current dynamic range for autoranging. Dropdown option: must be in valid_current_range (see below)
+                pre_ranging (bool = True): Enable/disable pre-determination of current dynamic range, if using auto ranging.   
+            method_file_path (str): Method file path. Must be CA .imf file. Default file is for 2 levels.     
             save (bool = True):             
         '''
         
@@ -260,6 +424,12 @@ class Ivium(Instrument, Pyvium):
         valid_current_range = ['1A', '100mA', '10mA', '1mA', '100uA', '10uA', '1uA', '100nA', '10nA', '1nA', '100pA']
         if str(current_range) not in valid_current_range:
             raise ValueError('\nInvalid current range. Current range must be:\n' + str(valid_current_range))
+            return
+        if str(auto_cr_max) not in valid_current_range:
+            raise ValueError('\nInvalid auto current range limit. Current range must be:\n' + str(valid_current_range))
+            return
+        if str(auto_cr_min) not in valid_current_range:
+            raise ValueError('\nInvalid auto current range limit. Current range must be:\n' + str(valid_current_range))
             return
        
         
@@ -285,8 +455,8 @@ class Ivium(Instrument, Pyvium):
         for i in range(0, len(levels_v)):
             level_i = i + 1
             self.set_method_parameter(f'Levels.E[{level_i}]', str(levels_v[i]))
-            self.set_method_parameter(f'Levels.time[{level_i}]', str(levels_t[i]))           
-      
+            self.set_method_parameter(f'Levels.time[{level_i}]', str(levels_t[i]))
+            
                    
         # Set all parameters
         
@@ -295,7 +465,12 @@ class Ivium(Instrument, Pyvium):
         self.set_method_parameter('Cycles', str(cycles))
         self.set_method_parameter('Interval time', str(interval_time))
         self.set_method_parameter('Current range', str(current_range))
-        
+        self.set_method_parameter('AutoCR', str(auto_cr).lower())
+        if auto_cr:
+            self.set_method_parameter('AutoCR.Max range', str(auto_cr_max))
+            self.set_method_parameter('AutoCR.Min range', str(auto_cr_min))
+            self.set_method_parameter('AutoCR.Pre ranging', str(pre_ranging).lower())        
+
 
         # Run method
         
@@ -318,7 +493,6 @@ class Ivium(Instrument, Pyvium):
         data_V = []
         data_I = []
         for point_index in range(1,total_points+1):
-            print(self.get_data_point(point_index))
             t,I,V = self.get_data_point(point_index)
             data_t.append(t)
             data_V.append(V)
@@ -339,6 +513,10 @@ class Ivium(Instrument, Pyvium):
                     'Cycles' : cycles,
                     'Interval time (s)' : interval_time,
                     'Current range' : str(current_range),
+                    'AutoCR' : str(auto_cr),
+                    'AutoCR Max Range' : str(auto_cr_max),
+                    'AutoCR Min Range' : str(auto_cr_min),
+                    'AutoCR Pre Ranging' : str(pre_ranging),
                     'start_time' : start_time,
                     'stop_time' : stop_time}
         
@@ -351,7 +529,14 @@ class Ivium(Instrument, Pyvium):
 
 if __name__ == "__main__":
 
-    ivium = Ivium()        
+    ivium = Ivium()
+    
+    from nplab.ui.data_group_creator import DataGroupCreator
+    from nplab import datafile
+    from nplab.utils.gui_generator import GuiGenerator
+    dgc = DataGroupCreator()
+    data_file = datafile.current()      
+    GuiGenerator({'data_group_creator': dgc})
     
     
 #%% How to run from other scripts (e.g., as part of particle track)
