@@ -10,8 +10,12 @@ Created on Thu May 23 11:31:20 2024
 import os
 import threading
 import time
+import tqdm
 import numpy as np
 import pyvisa as visa
+import nkt_tools
+from nkt_tools.varia import Varia
+from nkt_tools.extreme import Extreme
 
 
 if __name__ == '__main__':
@@ -23,7 +27,7 @@ if __name__ == '__main__':
         from nplab.instrument.electronics.power_meter import dummyPowerMeter
         from nplab.instrument.shutter.thorlabs_sc10 import ThorLabsSC10
         from nplab import datafile
-        # from nplab.instrument.spectrometer.seabreeze import OceanOpticsSpectrometer
+        from nplab.instrument.spectrometer.seabreeze import OceanOpticsSpectrometer
         # from nplab.instrument.stage.thorlabs_ello.ell20 import Ell20, Ell20BiPositional
         # from nplab.instrument.stage.Thorlabs_ELL8K import Thorlabs_ELL8K
         # from nplab.instrument.stage.thorlabs_ello.ell8 import Ell8
@@ -36,24 +40,59 @@ if __name__ == '__main__':
         
     
         putter = ThorLabsSC10('COM4')  # Plasma shutter
-        # try:
-        #     powermeter = ThorlabsPowermeter(visa.ResourceManager().list_resources()[0]) # Powermeter
-        # except:
-        #     powermeter = dummyPowerMeter() # Dummy powermeter
-        #     print('No powermeter plugged in, using a dummy to preserve the gui layout')
+        try:
+            powermeter = ThorlabsPowermeter(visa.ResourceManager().list_resources()[0]) # Powermeter
+        except:
+            powermeter = dummyPowerMeter() # Dummy powermeter
+            print('no powermeter plugged in, using a dummy to preserve the gui layout')
         # # filter_wheel = Ell18('COM11') # ND filter wheel - Need to fix GUI
-        # # spec = OceanOpticsSpectrometer(0)  # OceanOptics spectrometer
+        spec = OceanOpticsSpectrometer(0)  # OceanOptics spectrometer
         # bentham = Bentham_DTMc300()
         ivium = Ivium()
+        varia = Varia()
     
-    
-    #%% Get data file
     
         dgc = DataGroupCreator()
-        data_file = datafile.current()   
-        GuiGenerator({'data_group_creator': dgc})
+        data_file = datafile.current()
+        
+        equipment_dict = {
+            'powermeter': powermeter,
+            'spec': spec
+            }
+        
+        gui_equipment_dict = {
+            'powermeter': powermeter,
+            'dgc': dgc,
+            'spec': spec
+            }
+        
+        gui = GuiGenerator(gui_equipment_dict)
+    
+#%% Functions for Varia
+
+def get_bandwidth(varia = varia):
+    
+    bandwidth = varia.long_setpoint - varia.short_setpoint
+    return bandwidth
+    
+def centre_setpoint(varia = varia):
+
+    centre = (varia.long_setpoint + varia.short_setpoint)/2   
+    return centre
+
+def set_wavelength(wavelength, bandwidth = 10, varia = varia):
+    
+    putter.close_shutter()
+    
+    varia.short_setpoint = wavelength - (bandwidth/2)
+    varia.long_setpoint = wavelength + (bandwidth/2)
+    
+    time.sleep(5)
     
     
+#%%
+
+   
     # #%% Add equipment to Lab and GUI
         
     #     equipment_dict = {
@@ -130,17 +169,81 @@ def putter_wait_toggle_echem(wait_time = 1):
 thread_lsv = threading.Thread(target = ivium.run_lsv, kwargs = {'title': 'Co-TAPP-SMe_LSV_dark_%d',
                                                                 'scanrate' : 0.05})
 
-thread_ca = threading.Thread(target = ivium.run_ca, kwargs = {'title': 'Co-TAPP-SMe_toggle_10s_CA_0.3V_%d',
-                                                              'levels_v' : [0.3, 0.3],
+thread_ca = threading.Thread(target = ivium.run_ca, kwargs = {'title': 'Co-TAPP-SMe_500nm_toggle_30s_CA_-0.4V_%d',
+                                                              'levels_v' : [-0.4, -0.4],
                                                               'levels_t' : [180, 0],
                                                               'cycles' : 1,
                                                               'interval_time' : 0.1})
 
 
-thread_putter = threading.Thread(target = putter_wait_toggle, kwargs = {'wait_time' : 10})  
+thread_putter = threading.Thread(target = putter_wait_toggle, kwargs = {'wait_time' : 30})  
 
 # ivium.run_cv(title = 'Co-TAPP-SMe_CV_dark_%d', e_start = 0.0, vertex_1 = 0.4, vertex_2 = -0.4, e_step = 0.002, scanrate = 0.025, n_scans = 2)
 # ivium.run_lsv(title = 'Co-TAPP-SMe_LSV_light_%d', e_start = -0.4, e_end = 0.4, e_step = 0.002, scanrate = 0.025)
 
-thread_ca.start()
-thread_putter.start()
+# thread_ca.start()
+# thread_putter.start()
+
+
+#%% Power calibration over wavelength range
+
+group = data_file['power_calibration_50nmFWHM_0']
+
+def power_test(start_wavelength = 400, end_wavelength = 850, step = 50, bandwidth = 50, group = group):
+    
+    wavelengths = np.arange(start_wavelength, end_wavelength + step, step)
+    
+    for wavelength in tqdm.tqdm(wavelengths, leave = True):
+        
+        set_wavelength(wavelength, bandwidth)
+        powermeter.wavelength = wavelength
+        # time.sleep(5)
+        putter.open_shutter()
+        power = powermeter.read_average(10)
+        
+        assert centre_setpoint() == wavelength, 'Error: wavelength incorrect \n' + 'set wavelength: ' + str(wavelength) +'\nactual wavelength: ' + str(centre_setpoint())
+        assert get_bandwidth() == bandwidth, 'Error: bandwidth incorrect \n' + 'set bandwidth: ' + str(bandwidth) +'\nactual bandwidth: ' + str(get_bandwidth())        
+        
+        attrs = {'short_setpoint' : varia.short_setpoint,
+                 'long_setpoint': varia.long_setpoint,
+                 'bandwidth': get_bandwidth(),
+                 'wavelength': centre_setpoint(),
+                 'powermeter_wavelength': powermeter.wavelength}
+        
+        group.create_dataset(name = str(wavelength) + 'nm' +'_%d',
+                             data = power, 
+                             attrs = attrs)
+        
+
+#%% Automated CA toggle sweep through wavelengths and potentials
+
+bandwidths = [50, 100]
+potentials = np.arange(-0.4, 0.4 + 0.2, 0.2)
+wavelengths = np.arange(450, 850 + 50, 50)
+
+# for bandwidth in bandwidths:
+    
+#     for potential in potentials:
+        
+#         levels_v = [potential, potential]
+    
+        
+    
+#         for wavelength in wavelengths:
+            
+#             set_wavelength(wavelength = wavelength, bandwidth = bandwidth)
+            
+#             title = 'Bare_ITO_' + str(int(wavelength)) + 'nm_' + str(bandwidth) + 'nmFWHM_toggle_30s_CA_' + str(potential) + 'V_%d' 
+            
+#             thread_ca = threading.Thread(target = ivium.run_ca, kwargs = {'title': title,
+#                                                                           'levels_v' : levels_v,
+#                                                                           'levels_t' : [180, 0],
+#                                                                           'cycles' : 1,
+#                                                                           'interval_time' : 0.1})
+        
+        
+#             thread_putter = threading.Thread(target = putter_wait_toggle, kwargs = {'wait_time' : 30})  
+            
+#             thread_ca.start()
+#             thread_putter.start()
+#             time.sleep(240)
