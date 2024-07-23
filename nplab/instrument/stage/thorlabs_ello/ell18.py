@@ -141,7 +141,7 @@ def test_ui():
 
 if __name__ == "__main__":
 
-    stage = Ell18("COM11", debug=False)
+    stage = Ell18("COM14", debug=False)
     app = get_qt_app()
     ui = Thorlabs_ELL18K_UI(stage)
     ui.show()

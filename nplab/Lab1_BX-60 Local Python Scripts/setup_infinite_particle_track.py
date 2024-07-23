@@ -59,14 +59,15 @@ if __name__ == '__main__':
 
         # from nplab.instrument.electromagnet import arduino_electromagnet # Magnet
         # from nplab.instrument.camera.thorlabs.kiralux import Kiralux
-       
+      
+
 #%% Connect to and define device names
         
         stage = ProScan("COM7") # Microscope stage
         cam = LumeneraCamera(1) # Infinity camera
         cwl = CameraWithLocation(cam, stage)
         cwl.settling_time = 0.2
-        # lutter_633 = ThorLabsSC10('COM5')  # 633nm shutter
+        lutter_633 = ThorLabsSC10('COM16')  # 633nm shutter
         lutter_785 = ThorLabsSC10('COM8')  # 785nm shutter
         df_mirror = Ell20BiPositional('COM10') # 2 position slider w/ mirror for darkfield
         df_mirror.SLOTS = (0.1,0.8) # movement range of df_mirror as %
@@ -79,7 +80,7 @@ if __name__ == '__main__':
             powermeter = dummyPowerMeter() # Dummy powermeter
             print('no powermeter plugged in, using a dummy to preserve the gui layout')
 
-        filter_wheel = Ell18('COM11') # ND filter wheel - Need to fix GUI
+        # filter_wheel = Ell18('COM11') # ND filter wheel - Need to fix GUI
         kandor = Kandor() # Andor Kymera spectrometer + Newton camera
         kymera = kandor.kymera
         kandor.PreAmpGain = 2 # Set Gain to 4x
@@ -91,6 +92,19 @@ if __name__ == '__main__':
         # bentham = Bentham_DTMc300()
         # ivium = Ivium()
         # magnet=arduino_electromagnet.Magnet('COM4')
+        power_bus = BusDistributor('COM14')
+        filter_wheel_785 = Thorlabs_ELL8K(power_bus, 'A')
+        filter_wheel_633 = Thorlabs_ELL8K(power_bus, 'D')
+        filter_slider_785 = Ell6(power_bus, 'B')
+        filter_slider_633 = Ell6(power_bus, 'C')  
+        filter_slider_785.position = 0
+        filter_slider_633.position = 1
+        # Thorlabs Bus devices can be re-mapped in ELLO software
+        # filter_slider 785 = B
+        # filter_slider 633 = C
+        # filter_wheel 785 = A
+        # filter_wheel 633 = D
+        
 
 
 #%% Get data file
@@ -107,11 +121,11 @@ if __name__ == '__main__':
             'cwl': cwl,
             'df_mirror': df_mirror,
             'filter_wheel': filter_wheel,
-            # 'filter_slider': filter_slider,
+            'filter_slider': filter_slider,
             'andor': kandor,
             'kymera': kandor.kymera,
             'powermeter': powermeter,
-            # 'lutter_633': lutter_633,
+            'lutter_633': lutter_633,
             'lutter_785': lutter_785,
             'wutter': wutter,  
             'spec': spec,
@@ -130,13 +144,13 @@ if __name__ == '__main__':
                               'cam': cam,
                               'CWL': cwl,
                               'df_mirror': df_mirror,
-                                'filter_wheel': filter_wheel,
-                              # 'filter_slider': filter_slider,
+                               'filter_wheel': filter_wheel,
+                               'filter_slider': filter_slider,
                               'powermeter': powermeter,
                               'andor': kandor,
                               'kymera': kandor.kymera,
                               'power_control_633': lab.pc,
-                              # '_633': lutter_633,
+                               '_633': lutter_633,
                               '_785': lutter_785,
                               'white_shutter': wutter,
                               'data_group_creator': dgc,
@@ -632,6 +646,5 @@ def map_df(step_size = 7.5, rows = 200):
             
         stage.move_rel([0, -rows * step_size, 0])
     
-# map_df()
 
    

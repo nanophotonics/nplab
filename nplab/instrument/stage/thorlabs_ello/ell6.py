@@ -15,7 +15,7 @@ class Ell6(ElloDevice):
 
     def __init__(self, serial_device, device_index=0, debug=0):
         '''can be passed either a BusDistributor instance, or  "COM5"  '''
-        super().__init__(serial_device, device_index=0, debug=0)
+        super().__init__(serial_device, device_index, debug=0)
         self.home()
 
     def home(self):
@@ -60,5 +60,5 @@ class ELL6UI(QuickControlBox):
 
 if __name__ == '__main__':
     # f = ThorlabsELL6('COM9')
-    f = ThorlabsELL6('COM6')
+    f = Ell6('COM11')
     f.show_gui(False)
