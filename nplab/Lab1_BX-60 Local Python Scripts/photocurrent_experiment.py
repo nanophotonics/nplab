@@ -39,14 +39,14 @@ if __name__ == '__main__':
         # from nplab.instrument.monochromator.bentham_DTMc300 import Bentham_DTMc300
         
     
-        putter = ThorLabsSC10('COM4')  # Plasma shutter
+        putter = ThorLabsSC10('COM8')  # Plasma shutter
         try:
             powermeter = ThorlabsPowermeter(visa.ResourceManager().list_resources()[0]) # Powermeter
         except:
             powermeter = dummyPowerMeter() # Dummy powermeter
             print('no powermeter plugged in, using a dummy to preserve the gui layout')
         # # filter_wheel = Ell18('COM11') # ND filter wheel - Need to fix GUI
-        spec = OceanOpticsSpectrometer(0)  # OceanOptics spectrometer
+        # spec = OceanOpticsSpectrometer(0)  # OceanOptics spectrometer
         # bentham = Bentham_DTMc300()
         ivium = Ivium()
         varia = Varia()
@@ -57,13 +57,15 @@ if __name__ == '__main__':
         
         equipment_dict = {
             'powermeter': powermeter,
-            'spec': spec
+            'putter': putter,
+            # 'spec': spec
             }
         
         gui_equipment_dict = {
             'powermeter': powermeter,
             'dgc': dgc,
-            'spec': spec
+            'putter' : putter,
+            # 'spec': spec
             }
         
         gui = GuiGenerator(gui_equipment_dict)
@@ -187,9 +189,11 @@ thread_putter = threading.Thread(target = putter_wait_toggle, kwargs = {'wait_ti
 
 #%% Power calibration over wavelength range
 
-group = data_file['power_calibration_50nmFWHM_0']
 
-def power_test(start_wavelength = 400, end_wavelength = 850, step = 50, bandwidth = 50, group = group):
+def power_calibration(start_wavelength = 400, end_wavelength = 850, step = 50, bandwidth = 50, group = None):
+    
+    if group is None:
+        group = data_file.create_group('power_calibration_%d')
     
     wavelengths = np.arange(start_wavelength, end_wavelength + step, step)
     
@@ -197,7 +201,6 @@ def power_test(start_wavelength = 400, end_wavelength = 850, step = 50, bandwidt
         
         set_wavelength(wavelength, bandwidth)
         powermeter.wavelength = wavelength
-        # time.sleep(5)
         putter.open_shutter()
         power = powermeter.read_average(10)
         
@@ -214,36 +217,40 @@ def power_test(start_wavelength = 400, end_wavelength = 850, step = 50, bandwidt
                              data = power, 
                              attrs = attrs)
         
+    putter.close_shutter()
+        
 
 #%% Automated CA toggle sweep through wavelengths and potentials
 
-bandwidths = [50, 100]
-potentials = np.arange(-0.4, 0.4 + 0.2, 0.2)
+bandwidths = [50]
+potentials = [-0.4, -0.2, 0.0, 0.2, 0.4]
 wavelengths = np.arange(450, 850 + 50, 50)
 
-# for bandwidth in bandwidths:
+for bandwidth in bandwidths:
     
-#     for potential in potentials:
+    for potential in potentials:
         
-#         levels_v = [potential, potential]
+        levels_v = [potential, potential]
     
         
     
-#         for wavelength in wavelengths:
+        for wavelength in wavelengths:
             
-#             set_wavelength(wavelength = wavelength, bandwidth = bandwidth)
+            set_wavelength(wavelength = wavelength, bandwidth = bandwidth)
             
-#             title = 'Bare_ITO_' + str(int(wavelength)) + 'nm_' + str(bandwidth) + 'nmFWHM_toggle_30s_CA_' + str(potential) + 'V_%d' 
+            title = 'BPDT_60nm_MLAgg_' + str(int(wavelength)) + 'nm_' + str(bandwidth) + 'nmFWHM_toggle_50s_CA_' + str(potential) + 'V_%d' 
             
-#             thread_ca = threading.Thread(target = ivium.run_ca, kwargs = {'title': title,
-#                                                                           'levels_v' : levels_v,
-#                                                                           'levels_t' : [180, 0],
-#                                                                           'cycles' : 1,
-#                                                                           'interval_time' : 0.1})
+            thread_ca = threading.Thread(target = ivium.run_ca, kwargs = {'title': title,
+                                                                          'levels_v' : levels_v,
+                                                                          'levels_t' : [500, 0],
+                                                                          'cycles' : 1,
+                                                                          'interval_time' : 0.1})
         
         
-#             thread_putter = threading.Thread(target = putter_wait_toggle, kwargs = {'wait_time' : 30})  
+            thread_putter = threading.Thread(target = putter_wait_toggle, kwargs = {'wait_time' : 50})  
             
-#             thread_ca.start()
-#             thread_putter.start()
-#             time.sleep(240)
+            thread_ca.start()
+            thread_putter.start()
+            thread_ca.join()
+            thread_putter.join()
+            putter.close_shutter()
