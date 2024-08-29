@@ -59,7 +59,7 @@ class Ell8(ElloDevice):
 class Thorlabs_ELL8K_UI(QtWidgets.QWidget, UiTools):
 
     def __init__(self, stage, parent=None, debug=0):
-        if not isinstance(stage, Thorlabs_ELL8K):
+        if not isinstance(stage, Ell8):
             raise ValueError(
                 "Object is not an instance of the Thorlabs_ELL8K Stage")
         super(Thorlabs_ELL8K_UI, self).__init__()
@@ -126,17 +126,18 @@ def test_stage(s):
     print("350==", s.get_position())
 
 
-def test_ui():
+def test_ui(stage):
     '''
     Run from main to test ui + stage
     '''
-    s = Thorlabs_ELL8K("COM1")
+    # s = Ell8("COM13")
     app = get_qt_app()
-    ui = Thorlabs_ELL8K_UI(stage=s)
+    ui = Thorlabs_ELL8K_UI(stage=stage)
     ui.show()
     sys.exit(app.exec_())
 
 
 if __name__ == "__main__":
 
-    stage = Thorlabs_ELL8K("COM8", debug=False)
+    stage = Ell8("COM13", debug=False)
+    test_ui(stage)
