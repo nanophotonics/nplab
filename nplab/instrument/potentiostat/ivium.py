@@ -525,6 +525,70 @@ class Ivium(Instrument, Pyvium):
             self.save(name = title, data = ArrayWithAttrs(data_tI, data_attrs))
         return ArrayWithAttrs(data_tI, data_attrs)        
 
+
+    def ocp_trace(self, 
+               title : str = 'OCP_%d',
+               length : float = 10,
+               interval : float = 0.1,
+               save : bool = True):
+        
+        
+        '''
+        Function for measuring open cell potential and current over a period of time
+                
+        Parameters:
+            
+            self (Ivium class)
+            title (str = 'CA_%d')
+            length (float = 10): Total time of measurement in s
+            interval_time (float = 0.1): Time between data points in s
+            save (bool = True):
+                
+        Returns:
+            [ ArrayWithAttrs[times, potentials], ArrayWithAttrs[times, currents] ]
+        '''
+        
+        
+        ## Set up for data collection
+        num_points = int(np.ceil(length/interval))
+        times = []
+        potentials = []
+        currents = []
+        
+        ## Loop, measure, and wait for interval
+        start_time = time.time()
+        aim_stop_time = start_time + length
+        while time.time() < aim_stop_time:
+            times.append(time.time() - start_time)
+            potentials.append(self.get_potential())
+            currents.append(self.get_current())
+            time.sleep(interval - .051) ## -0.51s for loop run time adjustment (not the most accurate, which is why we save the real times!)
+        stop_time = time.time()
+        print('Ivium method finished!')
+        
+        
+        # Return data
+        
+        ## Get data
+        times = np.array(times)
+        potentials = np.array(potentials)
+        currents = np.array(currents)
+        data_tv = np.array([times, potentials])
+        data_ti = np.array([times, currents])
+        
+        ##Get attributes
+        data_attrs={'Title' : str(title),
+                    'Interval time (s)' : interval,
+                    'start_time' : start_time,
+                    'stop_time' : stop_time}
+        
+        ## Return/save data
+        if save == True:
+            self.save(name = 'potentials_' + title, data = ArrayWithAttrs(data_tv, data_attrs))
+            self.save(name = 'currents_' + title, data = ArrayWithAttrs(data_ti, data_attrs))
+        return [ArrayWithAttrs(data_tv, data_attrs), ArrayWithAttrs(data_ti, data_attrs)]  
+                                                                                                                                                                                
+                   
 #%% Main    
 
 if __name__ == "__main__":
