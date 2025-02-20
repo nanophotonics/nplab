@@ -17,6 +17,7 @@ import time
 import numpy as np
 import pyvisa as visa
 from scipy import interpolate
+import sys
 
 
 
@@ -75,7 +76,7 @@ if __name__ == '__main__':
         df_mirror.move_home()
         df_mirror.slot = 0 
         pol = Ell14('COM12') # Polarizer rotation mount
-        try:
+        try:           
             powermeter = ThorlabsPowermeter(visa.ResourceManager().list_resources()[0]) # Powermeter
         except:
             powermeter = dummyPowerMeter() # Dummy powermeter
@@ -124,7 +125,7 @@ if __name__ == '__main__':
             'cam': cam,
             'cwl': cwl,
             'df_mirror': df_mirror,
-            'filter_wheel': filter_wheel,
+            'filter_wheel': filter_wheel,   
             'filter_slider': filter_slider,
             'andor': kandor,
             'kymera': kandor.kymera,
@@ -158,7 +159,7 @@ if __name__ == '__main__':
                               '_785': lutter_785,
                               'white_shutter': wutter,
                               'data_group_creator': dgc,
-                               'darkfield': spec,
+                                'darkfield': spec,
                               'polariser': pol,
                               # 'bentham' : bentham,
                                 # 'ivium' : ivium
@@ -212,6 +213,7 @@ if __name__ == '__main__':
             - Error message and continue if fail?
         '''
         
+        df_initial_slot = df_mirror.get_slot()
         df_mirror.slot = 0
         
         ## Get original camera & stage settings
@@ -259,7 +261,7 @@ if __name__ == '__main__':
         lab.cam.gain = original_gain
 
         
-        # df_mirror.slot = 1
+        df_mirror.slot = df_initial_slot
     
     OD_to_power_cal_dict = {0 : 'power control_0', 1 : 'power control_1'}
     
@@ -267,7 +269,7 @@ if __name__ == '__main__':
     lab.pc.min_param = 85
     lab.pc.max_param = 350
     
-    def SERS_with_name(name, laser_wln = 633, laser_power = None, sample = '', time_scale = 0):
+    def SERS_with_name(name, laser_wln = 633, laser_power = None, sample = '', time_scale = 0, group = lab.get_group()):
         print('SERS Start')
         if laser_power is None:
             if lab.pc.param > 350:
@@ -278,7 +280,7 @@ if __name__ == '__main__':
         start_time = time.time()
         data = kandor.raw_image()
         stop_time = time.time()
-        lab.get_group().create_dataset(name,data=data, attrs={
+        group.create_dataset(name,data=data, attrs={
             'filter_wheel':filter_wheel.get_position(), 
             'laser_wavelength': laser_wln, 
             'laser_power':laser_power, 
@@ -316,7 +318,8 @@ if __name__ == '__main__':
                     power_control_dict = {0 : 'power control_0', 1 : 'power control_1'}, 
                     SERS_name = 'SERS_Powerseries_%d', 
                     sample = '', 
-                    test = False):
+                    test = False,
+                    group = lab.get_group()):
         
         '''
         Function to take SERS powerseries. Can use multiple power calibrations for
@@ -449,7 +452,7 @@ if __name__ == '__main__':
                     kandor.set_andor_parameter('Exposure', exposure)
                 
                 ### Take SERS
-                SERS_with_name(name = SERS_name, laser_wln = wavelength, laser_power = power, sample = sample, time_scale = time_scale)
+                SERS_with_name(name = SERS_name, laser_wln = wavelength, laser_power = power, sample = sample, time_scale = time_scale, group = group)
             
             N_iterations += 1
             
@@ -464,8 +467,39 @@ if __name__ == '__main__':
             lab.z_scan()
             
         
-    def df_slot(position):
+    def df_slot(position, error_counter = 0):
+        
+        assert position in [0, 1], print('Invalid df_mirror position')
         df_mirror.slot = position
+        position_dict = {0 : 6, 1 : 48}
+        
+               
+        if np.round(df_mirror.get_position(), 0) != position_dict[position]:
+            
+            print('DF mirror did not move correctly, toggling 3x to get it to move')
+            
+            df_mirror.slot = 0
+            time.sleep(0.5)
+            df_mirror.slot = 1
+            time.sleep(0.5)
+            df_mirror.slot = 0
+            time.sleep(0.5)
+            df_mirror.slot = 1
+            time.sleep(0.5)
+            df_mirror.slot = 0
+            time.sleep(0.5)
+            df_mirror.slot = 1
+            time.sleep(0.5)
+            
+            error_counter += 1
+            
+            if error_counter >= 5:
+                print('DF mirror failed to move... ')
+                # sys.exit()
+                return
+            
+            df_slot(position, error_counter = error_counter)
+            
         
         
     def power_switch():
@@ -619,7 +653,7 @@ def SERS_with_name_shutter(name, laser_wln = 633, laser_power = None, sample = '
         'gain':kandor.PreAmpGains[kandor.NumPreAmp-1],
         'readout (MHz)':kandor.HSSpeed,
         'time_scale (mW*s)': time_scale,
-        'objective': '20x_0.4NA',
+        'objective': '100x_0.9NA',
         'start_time' : start_time,
         'stop_time' : stop_time})
     lutter_633.close_shutter()
@@ -678,64 +712,155 @@ class ReturnableThread(Thread):
 
 
 #%% CV + SERS
-    
-thread_cv = ReturnableThread(target = ivium.run_cv, kwargs = {'title': 'CV_Co-TAPP-SMe_%d',
-                                                              'e_start' : 0.15,
-                                                              'vertex_1' : 0.4,
-                                                              'vertex_2' : -0.9,
-                                                              'n_scans' : 2,
-                                                              'scanrate' : 2,
-                                                              'e_step' : 0.05})
 
-thread_sers = ReturnableThread(target = SERS_with_name_shutter, kwargs = {'name': 'Co-TAPP-SMe_633nm_SERS_CV_%d',
-                                                             'sample' : '2024-07-22-c_Co-TAPP-SMe_60nm_MLAgg_on_ITO'})
+def cv_sers(e_start = 0.0,
+            vertex_1 = 0.4,
+            vertex_2 = -0.4,
+            n_scans = 1,
+            scanrate = 0.1,
+            e_step = 0.001,
+            exposure = 1,
+            CV_name = 'CV_%d',
+            SERS_name = 'SERS_CV_%d',
+            sample = '',
+            group = lab.get_group()):
     
-# thread_cv.start()
-# thread_sers.start()
-# thread_cv.join()
-# thread_sers.join()
-# x = thread_cv.result
-# lab.get_group().create_dataset(name = x.attrs['Title'], data = x, attrs = x.attrs)
+    ''' Measure CV + Kinetic SERS simultaneously - automatically set SERS kinetic length'''
+    
+    # Calculate and set exposure & number of kinetic scans for SERS
+    
+    ## Set SERS exposure
+    kandor.AcquisitionMode = 3
+    exposure = exposure - (kandor.AcquisitionTimings[1] - kandor.AcquisitionTimings[0])
+    kandor.set_andor_parameter('Exposure', exposure)
+    
+    ## Calculate total time of CV scan - may be off by ~0.5s of actual total scan time
+    total_time = ((np.abs(vertex_1 - e_start) + np.abs(vertex_2 - vertex_1) + np.abs(e_start - vertex_2)) * n_scans)/scanrate
+    
+    ## Set number of kinetic scans to take (round up)
+    kandor.set_andor_parameter('NKin', int(np.ceil((total_time/kandor.AcquisitionTimings[1]))))
+    
+    thread_cv = ReturnableThread(target = ivium.run_cv, kwargs = {'title': CV_name,
+                                                                  'e_start' : e_start,
+                                                                  'vertex_1' : vertex_1,
+                                                                  'vertex_2' : vertex_2,
+                                                                  'n_scans' : n_scans,
+                                                                  'scanrate' : scanrate,
+                                                                  'e_step' : e_step,
+                                                                  'save' : False})
+    
+    thread_sers = ReturnableThread(target = SERS_with_name_shutter, kwargs = {'name': SERS_name,
+                                                                  'sample' : sample,
+                                                                  'group' : group})
+    
+    thread_cv.start()
+    thread_sers.start()
+    thread_cv.join()
+    thread_sers.join()
+    cv = thread_cv.result
+    group.create_dataset(name = cv.attrs['Title'], data = cv, attrs = cv.attrs)
+
+
+#%% CA + SERS two level
+
+def ca_sers(levels_v = [0.0, 0.1],
+            levels_t = [60, 60],
+            cycles = 1,
+            interval_time = 0.1,
+            exposure = 1,
+            CA_name = 'CA_%d',
+            SERS_name = 'SERS_CA_%d',
+            sample = '',
+            group = lab.get_group()):
+    
+    ''' Measure CV + Kinetic SERS simultaneously - automatically set SERS kinetic length'''
+    
+    # Can only run two-level on default CA method file, assert two level
+    assert(len(levels_v) == 2), 'Must be two-level CA'
+    
+    # Calculate and set exposure & number of kinetic scans for SERS
+    
+    ## Set SERS exposure
+    kandor.AcquisitionMode = 3
+    exposure = exposure - (kandor.AcquisitionTimings[1] - kandor.AcquisitionTimings[0])
+    kandor.set_andor_parameter('Exposure', exposure)
+    
+    ## Calculate total time of CA scan - may be off by ~0.5s of actual total scan time
+    total_time = np.sum(levels_t) * cycles
+    
+    ## Set number of kinetic scans to take (round up)
+    kandor.set_andor_parameter('NKin', int(np.ceil((total_time/kandor.AcquisitionTimings[1]))))
+    
+    
+    ## Define threads
+    thread_ca = ReturnableThread(target = ivium.run_ca, kwargs = {'title': CA_name,
+                                                                  'levels_v' : levels_v,
+                                                                  'levels_t' : levels_t,
+                                                                  'cycles' : cycles,
+                                                                  'interval_time' : interval_time,
+                                                                  'save' : False})
+    
+    thread_sers = ReturnableThread(target = SERS_with_name_shutter, kwargs = {'name': SERS_name,
+                                                                  'sample' : sample,
+                                                                  'group' : group})
+    
+    thread_ca.start()
+    thread_sers.start()
+    thread_ca.join()
+    thread_sers.join()
+    ca = thread_ca.result
+    group.create_dataset(name = ca.attrs['Title'], data = ca, attrs = ca.attrs)
+
+
 
 #%% 10-level CA & SERS
 
 
-def ca_switch_sers_track():
+def ca_switch_sers_track(potentials = [-0.1, -0.2, -0.3, -0.4, -0.5, -0.6, -0.7, -0.8, -0.9],
+                         times = [60, 60],
+                         cycles = 5,
+                         exposure = 1,
+                         group = lab.get_group()):
+
+    ''' 2-level CA Switch back and forth between 0.0V and series of potentials while monitoring with kinetic SERS
+        Chooses potential based off particle number in track
+        Needs testing
+    '''
 
     kandor.AcquisitionMode = 3
-    exposure = 1 - (kandor.AcquisitionTimings[1] - kandor.AcquisitionTimings[0])
+    exposure = exposure - (kandor.AcquisitionTimings[1] - kandor.AcquisitionTimings[0])
     kandor.set_andor_parameter('Exposure', exposure)
     
     ## Get CA potential based off particle number in scan
-    potentials = [-0.1, -0.2, -0.3, -0.4, -0.5, -0.6, -0.7, -0.8, -0.9]
     particle_number = int(lab.wizard.current_particle)
     index = int(np.floor(particle_number/3))
     this_potential = potentials[index]
     levels_v = [0.0, this_potential]
-    levels_t = [60, 60]
+    levels_t = times
     
     ## Define threads
     thread_ca = ReturnableThread(target = ivium.run_ca, kwargs = {'title': 'Co-TAPP-SMe_CA_Switch_x5_%d',
                                                                   'levels_v' : levels_v,
                                                                   'levels_t' : levels_t,
-                                                                  'cycles' : 5,
+                                                                  'cycles' : cycles,
                                                                   'interval_time' : 0.1,
                                                                   'save' : False})
     
     
-    # kandor.set_andor_parameter('NKin', (5 * np.sum(levels_t))/kandor.AcquisitionTimings[1])
+    kandor.set_andor_parameter('NKin', int((5 * np.sum(levels_t))/kandor.AcquisitionTimings[1]))
     
     thread_sers = ReturnableThread(target = SERS_with_name_shutter, kwargs = {'name': 'Co-TAPP-SMe_633nm_SERS_CA_%d',
-                                                                 'sample' : '2024-07-22-b_Co-TAPP-SMe_60nm_MLAgg_on_ITO'})
+                                                                 'sample' : '2024-07-22-b_Co-TAPP-SMe_60nm_MLAgg_on_ITO',
+                                                                 'group' : group})
     
     thread_ca.start()
     thread_sers.start()
     thread_ca.join()
     thread_sers.join()
     ca_data = thread_ca.result
-    lab.get_group().create_dataset(name = ca_data.attrs['Title'], data = ca_data, attrs = ca_data.attrs)
+    group.create_dataset(name = ca_data.attrs['Title'], data = ca_data, attrs = ca_data.attrs)
 
-    time.sleep(10)
+    # time.sleep(10)
 
 
 
@@ -842,93 +967,25 @@ def ca_powerswitch_track():
         
         
 #%%
-import gc
-# parent_group = lab.create_data_group('MLAgg_map_%d')
-
-def map_functions(parent_group, i, j, step_size, rows):
-    
-    group = parent_group.create_group('grid_' + str(i)+ '_' + str(j))
-    
-    try:
-        print('autofocus')
-        lab.cwl.autofocus()
-    except:
-        print('autofocus failed')            
-
-    try:
-        print('thumb image')
-        img = cwl.thumb_image()    
-        group.create_dataset(data = img, name = 'thumb_image_' + str(i) + '_' + str(j) + '_%d')
-        time.sleep(0.2)
-    except:
-        print('thumb image failed')
-        
-    try:
-        img = cwl.color_image()    
-        group.create_dataset(data = img, name = 'wide_image_' + str(i) + '_' + str(j) + '_%d')
-        time.sleep(0.2)
-    except:
-        print('wide image failed')
-    
-    df_mirror.slot = 1
-    spectrum = lab.spec.read_spectrum() 
-    data = ArrayWithAttrs(spectrum, attrs = lab.spec.metadata)
-    group.create_dataset(data = data, name = 'spec_' + str(i) + '_' + str(j) + '_%d', attrs = {'step_size' : step_size, 'rows' : rows, 'row' : j, 'column' : i})
-    
-    df_mirror.slot = 0
-    SERS_with_name_shutter(name = 'SERS_633nm_1s_10uW_x10', sample = '2024-08-20_BPDT_60nm_MLAgg_on_FTO_a', group = group)
-            
-
-def run_mapping_thread(parent_group, step_size = 7.5, rows = 200):
-    
-    wutter.open_shutter()
-    
-    
-    for i in range(0, rows):
-        print('\n' + str(time.ctime()))
-        print('\nStarting column  ' + str(i))
-        stage.move_rel([step_size, 0, 0])
-        
-        for j in range(0, rows):
-
-            stage.move_rel([0, step_size, 0])
-            
-            thread_map = threading.Thread(target = map_functions, kwargs = {'parent_group' : parent_group,
-                                                                           'i' : i,
-                                                                           'j' : j,
-                                                                           'step_size' : step_size,
-                                                                           'rows' : rows})
-            thread_map.start()
-            thread_map.join()
-        
-            
-        stage.move_rel([0, -rows * step_size, 0])
-    
-
-# thread_run_map = threading.Thread(target = run_mapping_thread, kwargs = {'parent_group' : lab.create_data_group('BPDT_MLAgg_map_%d'),
-#                                                                'step_size' : 100,
-#                                                                'rows' : 20})
-# thread_run_map.start()
-# thread_run_map.join()
 
 def map_df(parent_group, step_size = 7.5, rows = 200):
     
     wutter.open_shutter()
-    df_mirror.slot = 1
+    # df_mirror.slot = 1
     
     for i in range(0, rows):
         print('\n' + str(time.ctime()))
         print('\nStarting column  ' + str(i))
         
         for j in range(0, rows):
-
-            stage.move_rel([0, step_size, 0])
             
             group = parent_group.create_group('grid_' + str(i)+ '_' + str(j))
             
+            # if j == 0 or j == 9 or j == 19:
             try:
                 print('autofocus')
                 lab.cwl.autofocus()
+                # laser_autofocus(step_size = 0.1, steps = 30)
             except:
                 print('autofocus failed')            
 
@@ -947,19 +1004,125 @@ def map_df(parent_group, step_size = 7.5, rows = 200):
             except:
                 print('wide image failed')
             
-            # df_mirror.slot = 1
+            ## DF
+            df_mirror.slot = 1
+            time.sleep(1)
+            lab.spec.read_spectrum()
+            lab.spec.read_spectrum()
             spectrum = lab.spec.read_spectrum() 
             data = ArrayWithAttrs(spectrum, attrs = lab.spec.metadata)
             group.create_dataset(data = data, name = 'spec_' + str(i) + '_' + str(j) + '_%d', attrs = {'step_size' : step_size, 'rows' : rows, 'row' : j, 'column' : i})
+            df_mirror.slot = 0
+            time.sleep(1)
             
-            # df_mirror.slot = 0
-            # SERS_with_name_shutter(name = 'SERS_633nm_1s_10uW_x10', sample = '2024-08-20_BPDT_60nm_MLAgg_on_FTO_a', group = group)
-                 
+            ## SERS
+            SERS_with_name_shutter(name = 'SERS_633nm_10s_10uW_x10', sample = '2024-01-30_CotS_Strath57nm_MLAgg_on_ITO_a', group = group)
+            # powerseries(0.001, 0.5, 10, back_to_min = False, time_scale = 0.1, test = False, SERS_name = 'SERS_Powerseries_%d', sample = '2024-12-12_CB5_MLAgg_PC45min_TiO_on_ITO_b', group = group)
+            
+            ## DF
+            df_mirror.slot = 1
+            time.sleep(1)
+            lab.spec.read_spectrum()
+            lab.spec.read_spectrum()
+            spectrum = lab.spec.read_spectrum() 
+            data = ArrayWithAttrs(spectrum, attrs = lab.spec.metadata)
+            group.create_dataset(data = data, name = 'spec_' + str(i) + '_' + str(j) + '_%d', attrs = {'step_size' : step_size, 'rows' : rows, 'row' : j, 'column' : i})
+            df_mirror.slot = 0
+            time.sleep(1)
+            
+            stage.move_rel([0, step_size, 0])
+            
         stage.move_rel([0, -rows * step_size, 0])
         stage.move_rel([step_size, 0, 0])
+        laser_autofocus(step_size = 0.5, steps = 30)
+
+
+exposure = 10 - (kandor.AcquisitionTimings[1] - kandor.AcquisitionTimings[0])
+kandor.set_andor_parameter('Exposure', exposure)
+filter_wheel.move_absolute(154)
+filter_slider.position = 1
         
-# thread_run_map = threading.Thread(target = map_df, kwargs = {'parent_group' : lab.create_data_group('BPDT_MLAgg_map_%d'),
-#                                                                 'step_size' : 100,
+# thread_run_map = threading.Thread(target = map_df, kwargs = {'parent_group' : data_file.create_group('2024-01-30_CotS_Strath57nm_MLAgg_on_ITO_%d'),
+#                                                                 'step_size' : 350,
 #                                                                 'rows' : 20})
 # thread_run_map.start()
 
+
+#%%
+
+# ## 633nm at 200 uW
+# filter_slider_633.position = 0
+# filter_wheel_633.move_absolute(173.4)
+
+# ## 785nm at 800 uW
+# filter_slider_785.position = 0
+# filter_wheel_785.move_absolute(218.5)
+
+# ## 785nm at 1.2 mW
+# filter_slider_785.position = 0
+# filter_wheel_785.move_absolute(178)
+
+# ## exposure = 30ms
+# kandor.HSSpeed = 0
+# exposure = .03 - (kandor.AcquisitionTimings[1] - kandor.AcquisitionTimings[0])
+# kandor.set_andor_parameter('Exposure', exposure)
+
+# Dual SERS and shutter function
+
+def dual_SERS_with_name_shutter(name, laser_power_633 = .2, laser_power_785 = 0.8, sample = '2024-09-23_BPT_80m_NPoM', time_scale = 0, group = lab.get_group()):
+    print('SERS Start')
+    # if laser_power is None:
+    #     if lab.pc.param > 350:
+    #         lab.pc.param = 350
+    #     lab.pc.update_power_calibration(OD_to_power_cal_dict[filter_slider.get_position()])
+    #     laser_power = round(float(lab.pc.param_to_power(round(lab.pc.param,2))),4)
+    df_mirror.slot = 0
+    wutter.close_shutter()
+    lutter_633.open_shutter()
+    lutter_785.open_shutter()
+    start_time = time.time()
+    data = kandor.raw_image()
+    stop_time = time.time()
+    # group.create_dataset(name,data=data, attrs={
+    #     'filter_wheel_633':filter_wheel_633.get_position(), 
+    #     'laser_power_633':laser_power_633, 
+    #     'filter_slider_633':filter_slider_633.get_position(),
+    #     'filter_wheel_785':filter_wheel_785.get_position(), 
+    #     'laser_power_785':laser_power_785, 
+    #     'filter_slider_785':filter_slider_785.get_position(),
+    #     'grating' : kandor.kymera.GetGrating(),
+    #     'centre_wavelength':kandor.kymera.GetWavelength(),
+    #     'sample': sample,
+    #     'cycle_time': kandor.AcquisitionTimings[1],
+    #     'slit_width': kandor.kymera.GetSlit(),
+    #     'gain':kandor.PreAmpGains[kandor.NumPreAmp-1],
+    #     'readout (MHz)':kandor.HSSpeed,
+    #     'time_scale (mW*s)': time_scale,
+    #     'objective': '100x_0.9NA',
+    #     'start_time' : start_time,
+    #     'stop_time' : stop_time})
+    attrs = {
+        'filter_wheel_633':filter_wheel_633.get_position(), 
+        'laser_power_633':laser_power_633, 
+        'filter_slider_633':filter_slider_633.get_position(),
+        'filter_wheel_785':filter_wheel_785.get_position(), 
+        'laser_power_785':laser_power_785, 
+        'filter_slider_785':filter_slider_785.get_position(),
+        'grating' : kandor.kymera.GetGrating(),
+        'centre_wavelength':kandor.kymera.GetWavelength(),
+        'sample': sample,
+        'cycle_time': kandor.AcquisitionTimings[1],
+        'slit_width': kandor.kymera.GetSlit(),
+        'gain':kandor.PreAmpGains[kandor.NumPreAmp-1],
+        'readout (MHz)':kandor.HSSpeed,
+        'time_scale (mW*s)': time_scale,
+        'objective': '100x_0.9NA',
+        'start_time' : start_time,
+        'stop_time' : stop_time}
+    lutter_633.close_shutter()
+    lutter_785.close_shutter()
+    wutter.open_shutter()
+    df_mirror.slot = 1
+    print('SERS Finish')
+    
+    return ArrayWithAttrs(data, attrs=attrs)
