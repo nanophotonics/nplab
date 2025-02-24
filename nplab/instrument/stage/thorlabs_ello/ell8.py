@@ -139,4 +139,4 @@ def test_ui():
 
 if __name__ == "__main__":
 
-    stage = Thorlabs_ELL8K("COM8", debug=False)
+    stage = Ell8("COM11", debug=False)
