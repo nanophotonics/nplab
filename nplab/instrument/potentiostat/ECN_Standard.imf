@@ -1,0 +1,54 @@
+Version= 15
+Method=Transients
+Technique=Electrochemical Noise
+Dconfig=0
+Title=OCP_%d
+Redefine filename=false
+Interval time=0.1
+Run time=10
+Current Range=10mA
+Potential range=1mV
+Remove DC initial=false
+Signal averaging=false
+AutoCR=true
+AutoCR.Max range=1A
+AutoCR.Min range=1nA
+AutoCR.Pre ranging=true
+Data Options=
+Data Options.AnalogInputTitle=Peripheral Port
+Data Options.AnalogInputYlabel=Analog input
+Data Options.AnalogInputTitle2=Peripheral Port
+Data Options.AnalogInputYlabel2=Analog input
+Data Options.AnalogInputData=0
+Data Options.A_Transform=none
+Data Options.A_Transform2=none
+Data Options.A_A=0
+Data Options.A_B=1
+Data Options.A_C=0
+Data Options.A_D=0
+Data Options.A_A2=0
+Data Options.A_B2=1
+Data Options.A_C2=0
+Data Options.A_D2=0
+Data Options.E_correction=0
+Data Options.Area=1
+Data Options.Cap0=1E-6
+Data Options.MaxScanpoints=200000
+Data Options.Equivalent Weight=27.9
+Data Options.Density=7.86
+Data Options.Ba=0.1
+Data Options.Bc=0.1
+Data Options.Permittivity=1
+Data Options.Temperature=298
+Data Options.NominalCharge=1
+Data Options.EISfreq=5000
+Data Options.EISamp=0.025
+Data Options.CompFactor=0.85
+Data Options.AnalogInputYUnit=V
+Data Options.AnalogInputYUnit2=V
+Data Options.EISNonLinCorr=false
+Data reduction=false
+Report=
+Report.Remarks=
+Report.Process data=instrument  : V82730channel     : 0alias       : V82730software vs : 4.1148firmware vs : 2261 (2261)hw config   : Vertex+18-Bitstart time  : 09/09/2024 15:26:44end time    : 09/09/2024 15:26:47endcondition: Scan AbortedSpec Rev    : 11DbFileName  : DataServer_V82730_2024-09-09_15-26-44-436.idf.sqliteDbFileMeasId: 1Step        : 2.50000E-4Interval    : 1.00000E-1
+Mconfig=0

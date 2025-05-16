@@ -151,4 +151,4 @@ if __name__ == "__main__":
     # power_bus = BusDistributor('COM14')
     # stage = Ell8(power_bus, 'B')
     test_ui(stage)
-    
+

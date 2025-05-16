@@ -1,0 +1,75 @@
+Version= 15
+Method=Transients
+Technique=ChronoAmperometry
+Dconfig=0
+Mode=Standard
+Title=Co-TAPP-SMe_CA_0.1V_%d
+Redefine filename=false
+Levels from profile=false
+Levels=10
+Levels.E[1]=0
+Levels.time[1]=150
+Levels.E[2]=-0.1
+Levels.time[2]=150
+Levels.E[3]=-0.2
+Levels.time[3]=150
+Levels.E[4]=-0.3
+Levels.time[4]=150
+Levels.E[5]=-0.4
+Levels.time[5]=150
+Levels.E[6]=-0.5
+Levels.time[6]=150
+Levels.E[7]=-0.6
+Levels.time[7]=150
+Levels.E[8]=-0.7
+Levels.time[8]=150
+Levels.E[9]=-0.8
+Levels.time[9]=150
+Levels.E[10]=-0.9
+Levels.time[10]=150
+Cycles=1
+Cycles separate=false
+Interval time=0.1
+Current Range=10mA
+AutoCR=true
+AutoCR.Max range=1A
+AutoCR.Min range=1nA
+AutoCR.Pre ranging=true
+Data Options=
+Data Options.AnalogInputTitle=Peripheral Port
+Data Options.AnalogInputYlabel=Analog input
+Data Options.AnalogInputTitle2=Peripheral Port
+Data Options.AnalogInputYlabel2=Analog input
+Data Options.AnalogInputData=0
+Data Options.A_Transform=none
+Data Options.A_Transform2=none
+Data Options.A_A=0
+Data Options.A_B=1
+Data Options.A_C=0
+Data Options.A_D=0
+Data Options.A_A2=0
+Data Options.A_B2=1
+Data Options.A_C2=0
+Data Options.A_D2=0
+Data Options.E_correction=0
+Data Options.Area=1
+Data Options.Cap0=1E-6
+Data Options.MaxScanpoints=200000
+Data Options.Equivalent Weight=27.9
+Data Options.Density=7.86
+Data Options.Ba=0.1
+Data Options.Bc=0.1
+Data Options.Permittivity=1
+Data Options.Temperature=298
+Data Options.NominalCharge=1
+Data Options.EISfreq=5000
+Data Options.EISamp=0.025
+Data Options.CompFactor=0.85
+Data Options.AnalogInputYUnit=V
+Data Options.AnalogInputYUnit2=V
+Data Options.EISNonLinCorr=false
+Data reduction=false
+Report=
+Report.Remarks=
+Report.Process data=instrument  : V82730channel     : 0alias       : V82730software vs : 4.1127firmware vs : 2246 (2246)hw config   : Vertex+18-Bitstart time  : 25/07/2024 16:56:28end time    : 25/07/2024 16:56:33endcondition: Scan completedSpec Rev    : 11DbFileName  : DataServer_V82730_2024-07-25_16-56-28-553.idf.sqliteDbFileMeasId: 1Step        : 0.00000E+0Interval    : 1.00000E-1
+Mconfig=0
