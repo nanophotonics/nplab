@@ -333,13 +333,12 @@ class Ivium(Instrument, Pyvium):
         data_t = []
         data_V = []
         data_I = []
-        for scan_index in range(1, n_scans+1):
-            for point_index in range(1,total_points+1):
-                V_x,I,V = self.get_data_point_from_scan(point_index, scan_index)
-                t = point_index * (e_step/scanrate)
-                data_t.append(t)
-                data_V.append(V)
-                data_I.append(I)
+        for point_index in range(1,total_points+1):
+            V_x,I,V = self.get_data_point(point_index)
+            t = point_index * (e_step/scanrate)
+            data_t.append(t)
+            data_V.append(V)
+            data_I.append(I)
         data_t = np.array(data_t)
         data_V = np.array(data_V)
         data_I = np.array(data_I)
@@ -503,8 +502,9 @@ class Ivium(Instrument, Pyvium):
         data_tI = np.array([data_t, data_I])
         
         ## Get attributes
-        data_attrs={'Potential (V)' : data_V,
-                    'Time (s)' : data_t,
+        data_attrs={
+                    # 'Potential (V)' : data_V,
+                    # 'Time (s)' : data_t,
                     'Title' : str(title),
                     'Mode' : str(mode),
                     'N_levels' : len(levels_v),
@@ -524,7 +524,137 @@ class Ivium(Instrument, Pyvium):
         if save == True:
             self.save(name = title, data = ArrayWithAttrs(data_tI, data_attrs))
         return ArrayWithAttrs(data_tI, data_attrs)        
+    
+    
+    def run_ocp_trace(self, 
+               title : str = 'OCP_%d',
+               interval_time : float = 0.1,
+               run_time : float = 10,
+               current_range : str = '10mA',
+               auto_cr : bool = True,
+               auto_cr_max : str = '1A',
+               auto_cr_min : str = '1nA',
+               pre_ranging : bool = True,
+               potential_range : str = '4V',
+               method_file_path : str = r"C:\Users\HERA\Documents\GitHub\nplab\nplab\instrument\potentiostat\ECN_Standard.imf",
+               save : bool = True):
+        
+        
+        '''
+        Function for measuring OCP (current and potential), aka Electrochemical Noise method
+        
+        
+        Parameters:
+            
+            self (Ivium class)
+            title (str = 'CA_%d')
+            interval_time (float = 0.1): Data point step size in s
+            run_time (float = 10): Total scan time in s
+            current_range (str = '10mA'): Current dynamic range. Dropdown option: must be in valid_current_range (see below)
+                auto_cr_max (str = '1A'): Max current dynamic range for autoranging. Dropdown option: must be in valid_current_range (see below)
+                auto_cr_min (str = '1nA'): Min current dynamic range for autoranging. Dropdown option: must be in valid_current_range (see below)
+                pre_ranging (bool = True): Enable/disable pre-determination of current dynamic range, if using auto ranging.  
+            potential_range (str = '4V'): Potential dynamic range. Dropdown option: must be in valid_potential_range (see below)
+            method_file_path (str): Method file path. Must be CA .imf file. Default file is for 2 levels.     
+            save (bool = True):             
+        '''
+        
+        
+        # Load electrochemical noise method
+        
+        self.load_method(method_file_path)
+        
+        
+        # Assert dropdown parameters are valid
+        
+        
+        ## Current range
+        valid_current_range = ['1A', '100mA', '10mA', '1mA', '100uA', '10uA', '1uA', '100nA', '10nA', '1nA', '100pA']
+        if str(current_range) not in valid_current_range:
+            raise ValueError('\nInvalid current range. Current range must be:\n' + str(valid_current_range))
+            return
+        if str(auto_cr_max) not in valid_current_range:
+            raise ValueError('\nInvalid auto current range limit. Current range must be:\n' + str(valid_current_range))
+            return
+        if str(auto_cr_min) not in valid_current_range:
+            raise ValueError('\nInvalid auto current range limit. Current range must be:\n' + str(valid_current_range))
+            return
+       
+        ## Potential range
+        ## Current range
+        valid_potential_range = ['10V', '4V', '1V', '400mV', '100mV', '40mV', '10mV', '1mV']
+        if str(potential_range) not in valid_potential_range:
+            raise ValueError('\nInvalid potential range. Potential range must be:\n' + str(valid_potential_range))
+            return
 
+                   
+        # Set all parameters
+        
+        self.set_method_parameter('Title', str(title))
+        self.set_method_parameter('Interval time', str(interval_time))
+        self.set_method_parameter('Run time', str(run_time))
+        self.set_method_parameter('Potential range', str(potential_range))
+        self.set_method_parameter('Current range', str(current_range))
+        self.set_method_parameter('AutoCR', str(auto_cr).lower())
+        if auto_cr:
+            self.set_method_parameter('AutoCR.Max range', str(auto_cr_max))
+            self.set_method_parameter('AutoCR.Min range', str(auto_cr_min))
+            self.set_method_parameter('AutoCR.Pre ranging', str(pre_ranging).lower())        
+
+
+        # Run method
+        
+        ## Start method
+        start_time = time.time()
+        self.start_method()
+        
+        ## Wait for method to finish
+        while self.get_device_status()[0] == 2:
+            time.sleep(0.1)
+        stop_time = time.time()
+        print('Ivium method finished!')
+        
+        
+        # Return data
+
+        ## Get data
+        total_points = self.get_available_data_points_number()
+        data_t = []
+        data_V = []
+        data_I = []
+        for point_index in range(1,total_points+1):
+            t,I,V = self.get_data_point(point_index)
+            data_t.append(t)
+            data_V.append(V)
+            data_I.append(I)
+        data_t = np.array(data_t)
+        data_V = np.array(data_V)
+        data_I = np.array(data_I)
+        data_tI = np.array([data_t, data_I])
+        data_tV = np.array([data_t, data_V])
+        
+        ## Get attributes
+        data_attrs={
+                    # 'Potential (V)' : data_V,
+                    # 'Time (s)' : data_t,
+                    'Title' : str(title),
+                    'Interval time (s)' : interval_time,
+                    'Potential range' : str(potential_range),
+                    'Current range' : str(current_range),
+                    'AutoCR' : str(auto_cr),
+                    'AutoCR Max Range' : str(auto_cr_max),
+                    'AutoCR Min Range' : str(auto_cr_min),
+                    'AutoCR Pre Ranging' : str(pre_ranging),
+                    'start_time' : start_time,
+                    'stop_time' : stop_time}
+        
+        ## Return/save data
+        if save == True:
+            self.save(name = title + '_currents', data = ArrayWithAttrs(data_tI, data_attrs))
+            self.save(name = title + '_voltages', data = ArrayWithAttrs(data_tV, data_attrs))
+        return ArrayWithAttrs(data_tI, data_attrs)        
+                                                                                                                                                                                
+                   
 #%% Main    
 
 if __name__ == "__main__":
