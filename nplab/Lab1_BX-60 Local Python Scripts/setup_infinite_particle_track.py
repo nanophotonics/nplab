@@ -72,41 +72,37 @@ if __name__ == '__main__':
         lutter_633 = ThorLabsSC10('COM4')  # 633nm shutter
         lutter_785 = ThorLabsSC10('COM8')  # 785nm shutter
         df_mirror = Ell20BiPositional('COM10') # 2 position slider w/ mirror for darkfield
-        df_mirror.SLOTS = (0.1,0.8) # movement range of df_mirror as %
+        df_mirror.SLOTS = (0.9,0.1) # movement range of df_mirror as %
         df_mirror.move_home()
         df_mirror.slot = 0 
-        pol = Ell14('COM12') # Polarizer rotation mount
+        # pol = Ell14('COM12') # Polarizer rotation mount
         try:           
             powermeter = ThorlabsPowermeter(visa.ResourceManager().list_resources()[0]) # Powermeter
         except:
             powermeter = dummyPowerMeter() # Dummy powermeter
             print('no powermeter plugged in, using a dummy to preserve the gui layout')
 
-        # filter_wheel = Ell18('COM11') # ND filter wheel - Need to fix GUI
         kandor = Kandor() # Andor Kymera spectrometer + Newton camera
         kymera = kandor.kymera
         kandor.PreAmpGain = 2 # Set Gain to 4x
         wutter = Uniblitz('COM5') 
-        # filter_slider = Ell6('COM14') # 2 position slider w/ ND filter
-        # filter_slider.position = 0
         spec = OceanOpticsSpectrometer(0)  # OceanOptics spectrometer
         aligner = SpectrometerAligner(spec, stage)
         # bentham = Bentham_DTMc300()
         # ivium = Ivium()
         # magnet=arduino_electromagnet.Magnet('COM4')
         power_bus = BusDistributor('COM14')
-        filter_wheel_785 = Ell8(power_bus, 'A')
-        # filter_wheel_633 = Thorlabs_ELL8K(power_bus, 'D')
-        filter_wheel_633 = Ell8('COM13')
-        filter_slider_785 = Ell6(power_bus, 'B')
-        filter_slider_633 = Ell6(power_bus, 'C')  
+        filter_wheel_785 = Ell8(power_bus, 'B')
+        filter_wheel_633 = Ell8(power_bus, 'C')
+        filter_slider_785 = Ell6(power_bus, 'A')
+        filter_slider_633 = Ell6(power_bus, 'D')  
         filter_slider_785.position = 1
         filter_slider_633.position = 1
         # Thorlabs Bus devices can be re-mapped in ELLO software
-        # filter_slider 785 = B
-        # filter_slider 633 = C
-        # filter_wheel 785 = A
-        # filter_wheel 633 = D
+        # filter_slider 785 = A
+        # filter_slider 633 = D
+        # filter_wheel 785 = B
+        # filter_wheel 633 = C
         
 
 
@@ -127,6 +123,8 @@ if __name__ == '__main__':
             'df_mirror': df_mirror,
             'filter_wheel': filter_wheel,   
             'filter_slider': filter_slider,
+            'filter_wheel_785': filter_wheel_785,   
+            'filter_slider_785': filter_slider_785,
             'andor': kandor,
             'kymera': kandor.kymera,
             'powermeter': powermeter,
@@ -135,7 +133,7 @@ if __name__ == '__main__':
             'wutter': wutter,  
             'spec': spec,
             'aligner': aligner,
-            'polariser': pol,
+            # 'polariser': pol,
             # 'bentham' : bentham,
             # 'ivium' : ivium
             # 'magnet': magnet
@@ -149,25 +147,27 @@ if __name__ == '__main__':
                               'cam': cam,
                               'CWL': cwl,
                               'df_mirror': df_mirror,
-                               'filter_wheel': filter_wheel,
-                               'filter_slider': filter_slider,
+                              'filter_wheel_633': filter_wheel,
+                              'filter_slider_633': filter_slider,
+                              'filter_wheel_785': filter_wheel_785,
+                              'filter_slider_785': filter_slider_785,
                               'powermeter': powermeter,
                               'andor': kandor,
                               'kymera': kandor.kymera,
                               'power_control_633': lab.pc,
-                               '_633': lutter_633,
+                              '_633': lutter_633,
                               '_785': lutter_785,
                               'white_shutter': wutter,
                               'data_group_creator': dgc,
-                                'darkfield': spec,
-                              'polariser': pol,
+                              'darkfield': spec,
+                              # 'polariser': pol,
                               # 'bentham' : bentham,
-                                # 'ivium' : ivium
+                              # 'ivium' : ivium
                               # 'rotation_stage': rotation_stage,
                               # 'power_control_785': lab.pc_785,
                               # 'magnet': magnet
                               }
-                
+        __file__ = r"C:\Users\HERA\Documents\GitHub\nplab\nplab\Lab1_BX-60 Local Python Scripts\gui_config.npy"         
         lab.generated_gui = GuiGenerator(gui_equipment_dict, 
                                          terminal=False, 
                                          dark=False,
@@ -1047,6 +1047,110 @@ filter_slider.position = 1
 #                                                                 'rows' : 20})
 # thread_run_map.start()
 
+
+#%% Stability test
+
+
+def take_data(data_name, group):
+    
+    wutter.close_shutter()
+    lutter_633.close_shutter()
+    lutter_785.close_shutter()
+    
+    ## 633 spot
+    lab.cam.exposure = 4
+    lab.cam.gain = 2
+    filter_wheel_633.move_absolute(350)
+    filter_slider_633.position = 1
+    lutter_633.open_shutter()
+    img = cwl.color_image()    
+    group.create_dataset(data = img, name = str(data_name) + '_633_spot_%d')
+    lutter_633.close_shutter()
+    
+    ## 785 spot
+    # lab.cam.exposure = 4
+    # lab.cam.gain = 2
+    filter_wheel_785.move_absolute(350)
+    filter_slider_785.position = 1
+    lutter_785.open_shutter()
+    img = cwl.color_image()    
+    group.create_dataset(data = img, name = str(data_name) + '_785_spot_%d')
+    lutter_785.close_shutter()
+    
+    ## DF spot
+    # lab.cam.exposure = 4
+    # lab.cam.gain = 2
+    df_mirror.slot = 1
+    img = cwl.color_image()    
+    group.create_dataset(data = img, name = str(data_name) + '_df_spot_%d')
+    df_mirror.slot = 0
+    
+    ## Si image
+    lab.cam.exposure = 500
+    lab.cam.gain = 24
+    wutter.open_shutter()
+    img = cwl.color_image()    
+    group.create_dataset(data = img, name = str(data_name) + '_Si_image_%d')
+    wutter.close_shutter()
+    
+    # 633 Si Raman
+    filter_wheel_633.move_absolute(90)
+    filter_slider_633.position = 0
+    SERS_with_name_shutter(name = str(data_name) + '_Si_633nm_Raman_%d', group = group)
+    
+    
+#%%
+
+def stability_test_full():
+
+    stability_group = lab.get_group().create_group('stability_test_%d')
+
+    # Initial
+    take_data(data_name = 'initial', group = stability_group)
+    
+    
+    # 633 lutter x 100
+    for i in range(0,100):
+        lutter_633.open_shutter()
+        time.sleep(1)
+        lutter_633.close_shutter()
+        time.sleep(1)
+    take_data(data_name = 'after_100x_633_lutter', group = stability_group)
+    
+    # 785 lutter x 100
+    for i in range(0,100):
+        lutter_785.open_shutter()
+        time.sleep(1)
+        lutter_785.close_shutter()
+        time.sleep(1)
+    take_data(data_name = 'after_100x_785_lutter', group = stability_group)
+    
+    # wutter x 100
+    for i in range(0,100):
+        wutter.open_shutter()
+        time.sleep(1)
+        wutter.close_shutter()
+        time.sleep(1)
+    take_data(data_name = 'after_100x_wutter', group = stability_group)
+    
+    # df_slider x 100
+    for i in range(0,100):
+        df_mirror.slot = 1
+        time.sleep(1)
+        df_mirror.slot = 0
+        time.sleep(1)
+    take_data(data_name = 'after_100x_df_slider', group = stability_group)
+    
+    # Every ten mins x 200 times (33 hours)
+    this_time = 0
+    for i in range(0,200):
+        take_data(data_name = 'after_' + str(this_time) + 'min', group = stability_group)
+        time.sleep(600)
+        this_time += 10
+        
+# thread_stability = threading.Thread(target = stability_test_full)
+# thread_stability.start()
+    
 
 #%%
 

@@ -36,6 +36,7 @@ class Ell8(ElloDevice):
             return degrees_position
         else:
             raise ValueError("Incompatible Header received:{}".format(header))
+            
     def move_absolute(self, angle, blocking=True):
         """Move to absolute position relative to home setting
 
@@ -55,6 +56,12 @@ class Ell8(ElloDevice):
             angle = 360+angle
         return super().move_absolute(angle, blocking=blocking)
 
+    def get_qt_ui(self):
+        '''
+        Get UI for stage
+        '''
+
+        return Thorlabs_ELL8K_UI(self)
 
 class Thorlabs_ELL8K_UI(QtWidgets.QWidget, UiTools):
 
@@ -140,4 +147,8 @@ def test_ui(stage):
 if __name__ == "__main__":
 
     stage = Ell8("COM13", debug=False)
+    # from nplab.instrument.stage.thorlabs_ello import BusDistributor
+    # power_bus = BusDistributor('COM14')
+    # stage = Ell8(power_bus, 'B')
     test_ui(stage)
+    
