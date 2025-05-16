@@ -54,7 +54,7 @@ if __name__ == '__main__':
 #%% Connect to and define device names
         
         stage = Ell8("COM11") # rotation stage
-        putter = ThorLabsSC10('COM7')  # Plasma shutter
+        putter = ThorLabsSC10('COM12')  # Plasma shutter
         try:
             powermeter = ThorlabsPowermeter(visa.ResourceManager().list_resources()[0]) # Powermeter
         except:
@@ -327,29 +327,29 @@ def pec_lsv_toggle(toggle_time = 10,
 
 #%%
 
-group = data_file.create_group('Zn-TAPP-SMe_57nm_MLAgg_%d')
-ivium.data_file = group
+# group = data_file.create_group('Zn-TAPP-SMe_57nm_MLAgg_%d')
+# ivium.data_file = group
 
 
 #%%
 
 # power_calibration(start_wavelength = 400, end_wavelength = 850, step = 25, bandwidth = 15, group = group.create_group('transmission_spectrum_%d'))
 
-reverse_wavelengths = np.arange(450, 850 + 25, 25)[::-1]
+# reverse_wavelengths = np.arange(450, 850 + 25, 25)[::-1]
 
 # pec_ocp_toggle(wavelengths = reverse_wavelengths, toggle_time = 100, scan_time = 1000, delay_time = 500)  
  
 
-pec_ca_toggle(wavelengths = reverse_wavelengths, toggle_time = 100, scan_time = 1000, delay_time = 100, 
-              potentials = [0.0, -0.1, -0.2, -0.3, -0.4, -0.5, -0.6, -0.7, -0.8, -0.9], dark_ca_start = True, dark_ca_scan_time = 500, name = 'PEC_CA')     
+# pec_ca_toggle(wavelengths = reverse_wavelengths, toggle_time = 100, scan_time = 1000, delay_time = 100, 
+              # potentials = [0.0, -0.1, -0.2, -0.3, -0.4, -0.5, -0.6, -0.7, -0.8, -0.9], dark_ca_start = True, dark_ca_scan_time = 500, name = 'PEC_CA')     
 
 # pec_lsv_toggle(wavelengths = reverse_wavelengths)
 # ivium.run_lsv(title = 'LSV_dark_%d', e_start = -0.4, e_end = 0.4, e_step = 0.002, scanrate = 0.025)
 # ivium.run_lsv(title = 'LSV_dark_%d', e_start = -0.4, e_end = 0.4, e_step = 0.002, scanrate = 0.025)
-ivium.run_cv(title = 'CV_dark_25mVs_%d', e_start = 0.0, vertex_1 = 0.8, vertex_2 = -1, e_step = 0.002, scanrate = 0.025, n_scans = 2)
-ivium.run_cv(title = 'CV_dark_50mVs_%d', e_start = 0.0, vertex_1 = 0.8, vertex_2 = -1, e_step = 0.002, scanrate = 0.050, n_scans = 2)
-ivium.run_cv(title = 'CV_dark_100mVs_%d', e_start = 0.0, vertex_1 = 0.8, vertex_2 = -1, e_step = 0.002, scanrate = 0.100, n_scans = 2)
-ivium.run_cv(title = 'CV_dark_200mVs_%d', e_start = 0.0, vertex_1 = 0.8, vertex_2 = -1, e_step = 0.002, scanrate = 0.200, n_scans = 2)
+# ivium.run_cv(title = 'CV_dark_25mVs_%d', e_start = 0.0, vertex_1 = 0.8, vertex_2 = -1, e_step = 0.002, scanrate = 0.025, n_scans = 2)
+# ivium.run_cv(title = 'CV_dark_50mVs_%d', e_start = 0.0, vertex_1 = 0.8, vertex_2 = -1, e_step = 0.002, scanrate = 0.050, n_scans = 2)
+# ivium.run_cv(title = 'CV_dark_100mVs_%d', e_start = 0.0, vertex_1 = 0.8, vertex_2 = -1, e_step = 0.002, scanrate = 0.100, n_scans = 2)
+# ivium.run_cv(title = 'CV_dark_200mVs_%d', e_start = 0.0, vertex_1 = 0.8, vertex_2 = -1, e_step = 0.002, scanrate = 0.200, n_scans = 2)
 
 
 #%% Angle- dependent measurements
@@ -375,7 +375,7 @@ ivium.run_cv(title = 'CV_dark_200mVs_%d', e_start = 0.0, vertex_1 = 0.8, vertex_
 #     pec_ca_toggle(name = 'PEC_CA_' + str(angle) + 'deg') 
 
     
-#%% For mocie!
+#%% For movie!
 
 # wavelengths = [475, 510, 570, 640]
 
