@@ -19,17 +19,13 @@ import time
 import tqdm
 import numpy as np
 import pyvisa as visa
-import nkt_tools
-from nkt_tools.varia import Varia
-from nkt_tools.extreme import Extreme
 
 
-# class EC_lab(Lab):
+class EC_lab(Lab):
     
-#     def __init__(self, *args, **kwargs): 
-#         super().__init__(*args, **kwargs)
-#         self._init_tracking([]) #task_list=['lab.SERS','lab.tracking']
-#         self.datafile.show_gui(blocking=False)
+    def __init__(self, *args, **kwargs): 
+        super().__init__(*args, **kwargs)
+        self.datafile.show_gui(blocking=False)
 
 
 
@@ -52,6 +48,11 @@ if __name__ == '__main__':
         # from nplab.instrument.stage.thorlabs_ello.ell18 import Ell18
         from nplab.instrument.potentiostat.ivium import Ivium
         # from nplab.instrument.monochromator.bentham_DTMc300 import Bentham_DTMc300
+        from nplab.instrument.stage.thorlabs_ello.ell6 import Ell6
+        from nplab.instrument.stage.thorlabs_ello import BusDistributor
+        from nplab.instrument.monochromator.varia import Varia
+        from nplab.instrument.shutter.BX51_uniblitz import Uniblitz
+
         
 
 #%% Connect to and define device names
@@ -63,11 +64,23 @@ if __name__ == '__main__':
         except:
             powermeter = dummyPowerMeter() # Dummy powermeter
             print('no powermeter plugged in, using a dummy to preserve the gui layout')
-        # # filter_wheel = Ell18('COM11') # ND filter wheel - Need to fix GUI
+        
         # spec = OceanOpticsSpectrometer(0)  # OceanOptics spectrometer
         # bentham = Bentham_DTMc300()
         ivium = Ivium()
-        varia = Varia()
+        varia = Varia(shutter = putter)
+        
+        wutter = Uniblitz('COM5') 
+        lutter_633 = ThorLabsSC10('COM4')  # 633nm shutter
+        lutter_785 = ThorLabsSC10('COM8')  # 785nm shutter
+        power_bus = BusDistributor('COM14')
+        filter_wheel_785 = Ell8(power_bus, 'B')
+        filter_wheel_633 = Ell8(power_bus, 'C')
+        filter_slider_785 = Ell6(power_bus, 'A')
+        filter_slider_633 = Ell6(power_bus, 'D')  
+        filter_slider_785.position = 1
+        filter_slider_633.position = 1
+
     
     
 #%% Get data file
@@ -78,49 +91,89 @@ if __name__ == '__main__':
 
 #%% Add equipment to Lab and GUI
         
+        filter_wheel = filter_wheel_633
+        filter_slider = filter_slider_633
+
         equipment_dict = {
+            # 'stage': stage,
+            # 'cam': cam,
+            # 'cwl': cwl,
+            # 'df_mirror': df_mirror,
+            'filter_wheel': filter_wheel,   
+            'filter_slider': filter_slider,
+            'filter_wheel_785': filter_wheel_785,   
+            'filter_slider_785': filter_slider_785,
+            # 'andor': kandor,
+            # 'kymera': kandor.kymera,
             'powermeter': powermeter,
-            'putter': putter,
-            # 'stage':stage,
-            # 'spec': spec
-            }
-        
-        # lab = EC_lab(equipment_dict)
-        
-        gui_equipment_dict = {
-            # 'lab': lab,
-            'powermeter': powermeter,
-            'dgc': dgc,
+            'lutter_633': lutter_633,
+            'lutter_785': lutter_785,
+            'wutter': wutter,  
+            # 'spec': spec,
+            # 'aligner': aligner,
+            # 'polariser': pol,
+            # 'bentham' : bentham,
+            'ivium' : ivium,
+            'varia' : varia,
             'putter' : putter,
-            # 'stage' : stage,
-            # 'spec': spec
+            # 'magnet': magnet
+            # 'rotation_stage': rotation_stage,
             }
+
+        lab = EC_lab(equipment_dict)
+
+
+        gui_equipment_dict = {
+                              # 'lab': lab,
+                              # 'cam': cam,
+                              # 'CWL': cwl,
+                              # 'df_mirror': df_mirror,
+                              'filter_wheel_633': filter_wheel,
+                              'filter_slider_633': filter_slider,
+                              'filter_wheel_785': filter_wheel_785,
+                              'filter_slider_785': filter_slider_785,
+                              'powermeter': powermeter,
+                              # 'andor': kandor,
+                              # 'kymera': kandor.kymera,
+                              'power_control_633': lab.pc,
+                              '_633': lutter_633,
+                              '_785': lutter_785,
+                               'white_shutter': wutter,
+                              'data_group_creator': dgc,
+                              # 'darkfield': spec,
+                              # 'polariser': pol,
+                              # 'bentham' : bentham,
+                              # 'ivium' : ivium,
+                              'varia' : varia,
+                              'putter' : putter,
+                              # 'rotation_stage': rotation_stage,
+                              # 'power_control_785': lab.pc_785,
+                              # 'magnet': magnet
+                              }
         
-        # lab.generated_gui = GuiGenerator(gui_equipment_dict)
-        gui = GuiGenerator(gui_equipment_dict)
+        __file__ = r"C:\Users\HERA\Documents\GitHub\nplab\nplab\Lab1_BX-60 Local Python Scripts\gui_config_photocurrent.npy"         
+        lab.generated_gui = GuiGenerator(gui_equipment_dict, 
+                                         terminal=False, 
+                                         dark=False,
+                                         dock_settings_path=os.path.dirname(
+                                             __file__)+r'\gui_config_photocurrent.npy', scripts_path=os.path.dirname(__file__)+r'\scripts')
+        
+        initialized = True
+        __file = __file__
+        def restart_gui():
+            '''
+            restarts the gui. If you redefine a class by running 
+            it in the console, it will use the updated version!
+            '''
+            if hasattr(lab, 'generated_gui'):
+                lab.generated_gui.close()       
+            lab.generated_gui = GuiGenerator(gui_equipment_dict, 
+                                dock_settings_path = os.path.dirname(__file)+r'\gui_config_phoocurrent.npy',
+                                scripts_path = os.path.dirname(__file)+r'\scripts') 
 
 
-#%% Functions for Varia
+        print("Ayo let's get photocurrentinggggg")
 
-def get_bandwidth(varia = varia):
-    
-    bandwidth = varia.long_setpoint - varia.short_setpoint
-    return bandwidth
-    
-def centre_setpoint(varia = varia):
-
-    centre = (varia.long_setpoint + varia.short_setpoint)/2   
-    return centre
-
-def set_wavelength(wavelength, bandwidth = 10, varia = varia):
-    
-    putter.close_shutter()
-    
-    varia.short_setpoint = wavelength - (bandwidth/2)
-    varia.long_setpoint = wavelength + (bandwidth/2)
-    
-    time.sleep(5)
-    
 
 #%% Power calibration over wavelength range
 
@@ -134,18 +187,15 @@ def power_calibration(start_wavelength = 400, end_wavelength = 850, step = 25, b
     
     for wavelength in tqdm.tqdm(wavelengths, leave = True):
         
-        set_wavelength(wavelength, bandwidth)
+        varia.set_wavelength(wavelength, bandwidth)
         powermeter.wavelength = wavelength
         putter.open_shutter()
         power = powermeter.read_average(10)
         
-        assert centre_setpoint() == wavelength, 'Error: wavelength incorrect \n' + 'set wavelength: ' + str(wavelength) +'\nactual wavelength: ' + str(centre_setpoint())
-        assert get_bandwidth() == bandwidth, 'Error: bandwidth incorrect \n' + 'set bandwidth: ' + str(bandwidth) +'\nactual bandwidth: ' + str(get_bandwidth())        
-        
         attrs = {'short_setpoint' : varia.short_setpoint,
                  'long_setpoint': varia.long_setpoint,
-                 'bandwidth': get_bandwidth(),
-                 'wavelength': centre_setpoint(),
+                 'bandwidth': varia.get_bandwidth(),
+                 'wavelength': varia.get_wavelength(),
                  'powermeter_wavelength': powermeter.wavelength}
         
         group.create_dataset(name = str(wavelength) + 'nm' +'_%d',
@@ -184,6 +234,55 @@ def putter_wait_toggle(toggle_time = 1):
     
     if ivium.get_device_status()[0] == 2:
         putter_wait_toggle(toggle_time = toggle_time)
+        
+    putter.close_shutter()
+
+def lutter_785_wait_toggle(toggle_time = 1):
+    
+    time.sleep(toggle_time)
+    lutter_785.toggle()
+    
+    if ivium.get_device_status()[0] == 2:
+        lutter_785_wait_toggle(toggle_time = toggle_time)
+        
+    lutter_785.close_shutter()
+
+
+def lutter_633_wait_toggle(toggle_time = 1):
+    
+    time.sleep(toggle_time)
+    lutter_633.toggle()
+    
+    if ivium.get_device_status()[0] == 2:
+        lutter_633_wait_toggle(toggle_time = toggle_time)
+        
+    lutter_633.close_shutter()
+    
+
+def putter_785_dual_toggle(toggle_time = 10, offset_785 = 5):
+    
+    time.sleep(toggle_time)
+    putter.toggle()
+    time.sleep(offset_785)
+    lutter_785.toggle()
+    
+    if ivium.get_device_status()[0] == 2:
+        putter_785_dual_toggle(toggle_time, offset_785)
+        
+    putter.close_shutter()
+    lutter_785.close_shutter()
+    
+    
+def shutter_toggle(shutter, on_time = 1, off_time = 1):
+        
+    shutter.close_shutter()
+    time.sleep(off_time)
+    shutter.open_shutter()
+    time.sleep(on_time)
+    shutter.close_shutter()
+    
+    if ivium.get_device_status()[0] == 2:
+        shutter_toggle(shutter, on_time, off_time)
         
     putter.close_shutter()
     
@@ -250,7 +349,7 @@ def pec_ca_toggle(toggle_time = 50,
                              interval_time = 0.1)
         
             for wavelength in wavelengths:  
-                set_wavelength(wavelength = wavelength, bandwidth = bandwidth)
+                varia.set_wavelength(wavelength = wavelength, bandwidth = bandwidth)
                 title = name + '_' + str(int(wavelength)) + 'nm_' + str(bandwidth) + 'nmFWHM_toggle_' + str(toggle_time) + 's_delay_' + str(delay_time) + 's_CA_' + str(potential) + 'V_%d'                
                 thread_ca = threading.Thread(target = ivium.run_ca, kwargs = {'title': title,
                                                                               'levels_v' : levels_v,
@@ -280,7 +379,7 @@ def pec_ocp_toggle(toggle_time = 50,
     for bandwidth in bandwidths:
         
         for wavelength in wavelengths:  
-            set_wavelength(wavelength = wavelength, bandwidth = bandwidth)
+            varia.set_wavelength(wavelength = wavelength, bandwidth = bandwidth)
             title = name + '_' + str(int(wavelength)) + 'nm_' + str(bandwidth) + 'nmFWHM_toggle_' + str(toggle_time) + 's_delay' + str(delay_time) + 's_OCP_%d'                
             thread_ocp = threading.Thread(target = ivium.run_ocp_trace, kwargs = {'title': title,
                                                                           'run_time' : scan_time + delay_time,
@@ -311,7 +410,7 @@ def pec_lsv_toggle(toggle_time = 10,
         
         
         for wavelength in wavelengths:  
-            set_wavelength(wavelength = wavelength, bandwidth = bandwidth)
+            varia.set_wavelength(wavelength = wavelength, bandwidth = bandwidth)
             title = name + '_' + str(int(wavelength)) + 'nm_' + str(bandwidth) + 'nmFWHM_toggle_' + str(toggle_time) + 's_LSV_%d'                
             thread_lsv = threading.Thread(target = ivium.run_lsv, kwargs = {'title': title,
                                                                             'e_start': e_start,
@@ -328,17 +427,107 @@ def pec_lsv_toggle(toggle_time = 10,
             putter.close_shutter()
 
 
+# Automated PEC VARIA+785 laser dual toggle at OCP through bandwidths, and wavelengths
+
+def pec_ocp_785_dual_toggle(toggle_time = 50,
+                  offset_785 = 50,
+                  scan_time = 500,
+                  delay_time = 0,
+                  bandwidths = [15],
+                  wavelengths = np.arange(450, 850 + 25, 25),
+                  name = 'PEC_OCP_785_dual'):
+
+    ''' Toggles NKT as regular, turns on 785 halfway after NKT goes on, turns off both at same time''' 
+    
+    for bandwidth in bandwidths:
+        
+        for wavelength in wavelengths:  
+            varia.set_wavelength(wavelength = wavelength, bandwidth = bandwidth)
+            title = name + '_' + str(int(wavelength)) + 'nm_' + str(bandwidth) + 'nmFWHM_toggle_' + str(toggle_time) + 's_delay' + str(delay_time) + 's_OCP_%d'                
+            thread_ocp = threading.Thread(target = ivium.run_ocp_trace, kwargs = {'title': title,
+                                                                          'run_time' : scan_time + delay_time,
+                                                                          'interval_time' : 0.1})
+                    
+            thread_putter = threading.Thread(target = putter_wait_toggle, kwargs = {'toggle_time' : toggle_time})  
+            
+            thread_785_shutter = threading.Thread(target = shutter_toggle, kwargs = {'shutter' : lutter_785,
+                                                                                     'on_time' : toggle_time * 0.5,
+                                                                                     'off_time' : toggle_time * 1.5})
+            
+            thread_ocp.start()
+            time.sleep(delay_time)
+            thread_putter.start()
+            thread_785_shutter.start()
+            thread_ocp.join()
+            thread_putter.join()
+            thread_785_shutter.join()
+            putter.close_shutter()
+            lutter_785.close_shutter()
+            
+            
+def pec_ocp_785_toggle(toggle_time = 50,
+                  scan_time = 500,
+                  delay_time = 0,
+                  name = 'PEC_OCP_785nm_laser'):
+
+    '''OCP + 785 laser toggle''' 
+    
+   
+    title = name + '__toggle_' + str(toggle_time) + 's_delay' + str(delay_time) + 's_OCP_%d'                
+    thread_ocp = threading.Thread(target = ivium.run_ocp_trace, kwargs = {'title': title,
+                                                                  'run_time' : scan_time + delay_time,
+                                                                  'interval_time' : 0.1})
+             
+    
+    thread_785_shutter = threading.Thread(target = lutter_785_wait_toggle, kwargs = {'toggle_time' : toggle_time})
+    
+    thread_ocp.start()
+    time.sleep(delay_time)
+    thread_785_shutter.start()
+    thread_ocp.join()
+    thread_785_shutter.join()
+    lutter_785.close_shutter()
+    
+    
+def pec_ocp_633_toggle(toggle_time = 50,
+                  scan_time = 500,
+                  delay_time = 0,
+                  name = 'PEC_OCP_633nm_laser'):
+
+    '''OCP + 633nm laser toggle''' 
+    
+   
+    title = name + '__toggle_' + str(toggle_time) + 's_delay' + str(delay_time) + 's_OCP_%d'                
+    thread_ocp = threading.Thread(target = ivium.run_ocp_trace, kwargs = {'title': title,
+                                                                  'run_time' : scan_time + delay_time,
+                                                                  'interval_time' : 0.1})
+             
+    
+    thread_633_shutter = threading.Thread(target = lutter_633_wait_toggle, kwargs = {'toggle_time' : toggle_time})
+    
+    thread_ocp.start()
+    time.sleep(delay_time)
+    thread_633_shutter.start()
+    thread_ocp.join()
+    thread_633_shutter.join()
+    lutter_633.close_shutter()
+        
+
+
 #%%
 
-# group = data_file.create_group('Zn-TAPP-SMe_57nm_MLAgg_%d')
-# ivium.data_file = group
+group = data_file.create_group('CB5_57nm_MLAgg_%d')
+ivium.data_file = group
 
 
 #%%
 
-# power_calibration(start_wavelength = 400, end_wavelength = 850, step = 25, bandwidth = 15, group = group.create_group('transmission_spectrum_%d'))
+# power_calibration(start_wavelength = 400, end_wavelength = 850, step = 25, bandwidth = 15, group = group.create_group('power_calibration_%d'))
 
-# reverse_wavelengths = np.arange(450, 850 + 25, 25)[::-1]
+reverse_wavelengths = np.arange(450, 850 + 25, 25)[::-1]
+filter_slider_785.position = 0
+filter_slider_633.position = 0
+
 
 # pec_ocp_toggle(wavelengths = reverse_wavelengths, toggle_time = 100, scan_time = 1000, delay_time = 500)  
  
@@ -353,6 +542,12 @@ def pec_lsv_toggle(toggle_time = 10,
 # ivium.run_cv(title = 'CV_dark_50mVs_%d', e_start = 0.0, vertex_1 = 0.8, vertex_2 = -1, e_step = 0.002, scanrate = 0.050, n_scans = 2)
 # ivium.run_cv(title = 'CV_dark_100mVs_%d', e_start = 0.0, vertex_1 = 0.8, vertex_2 = -1, e_step = 0.002, scanrate = 0.100, n_scans = 2)
 # ivium.run_cv(title = 'CV_dark_200mVs_%d', e_start = 0.0, vertex_1 = 0.8, vertex_2 = -1, e_step = 0.002, scanrate = 0.200, n_scans = 2)
+
+
+# pec_ocp_785_toggle(toggle_time = 100, scan_time = 1000, delay_time = 500)
+# pec_ocp_633_toggle(toggle_time = 100, scan_time = 1000, delay_time = 500)
+# pec_ocp_785_dual_toggle(wavelengths = reverse_wavelengths, toggle_time = 100, scan_time = 1000, delay_time = 500)  
+
 
 
 #%% Angle- dependent measurements

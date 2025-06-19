@@ -14,6 +14,7 @@ from particle_track_mixin import InfiniteParticleTrackMixin
 import threading
 from threading import Thread
 import time
+import tqdm
 import numpy as np
 import pyvisa as visa
 from scipy import interpolate
@@ -58,7 +59,7 @@ if __name__ == '__main__':
         from nplab.instrument.potentiostat.ivium import Ivium
         from nplab.instrument.monochromator.bentham_DTMc300 import Bentham_DTMc300
         from nplab.instrument.stage.thorlabs_ello import BusDistributor
-
+        from nplab.instrument.monochromator.varia import Varia
         # from nplab.instrument.electromagnet import arduino_electromagnet # Magnet
         # from nplab.instrument.camera.thorlabs.kiralux import Kiralux
       
@@ -89,7 +90,6 @@ if __name__ == '__main__':
         spec = OceanOpticsSpectrometer(0)  # OceanOptics spectrometer
         aligner = SpectrometerAligner(spec, stage)
         # bentham = Bentham_DTMc300()
-        # ivium = Ivium()
         # magnet=arduino_electromagnet.Magnet('COM4')
         power_bus = BusDistributor('COM14')
         filter_wheel_785 = Ell8(power_bus, 'B')
@@ -103,8 +103,11 @@ if __name__ == '__main__':
         # filter_slider 633 = D
         # filter_wheel 785 = B
         # filter_wheel 633 = C
-        
 
+        putter = ThorLabsSC10('COM11')  # Plasma shutter
+        ivium = Ivium()
+        varia = Varia(shutter = putter)        
+        
 
 #%% Get data file
 
@@ -113,8 +116,9 @@ if __name__ == '__main__':
 
 #%% Add equipment to Lab and GUI
         
-        filter_wheel = filter_wheel_633
-        filter_slider = filter_slider_633
+        filter_wheel = filter_wheel_785
+        filter_slider = filter_slider_785
+
 
         equipment_dict = {
             'stage': stage,
@@ -135,15 +139,18 @@ if __name__ == '__main__':
             'aligner': aligner,
             # 'polariser': pol,
             # 'bentham' : bentham,
-            # 'ivium' : ivium
+            'ivium' : ivium,
+            'varia' : varia,
+            'putter' : putter,
             # 'magnet': magnet
             # 'rotation_stage': rotation_stage,
             }
 
         lab = PT_lab(equipment_dict)
+        lab.filter_wheel = filter_wheel_785
+        lab.filter_slider = filter_slider_785
 
-
-        gui_equipment_dict = {'lab': lab,
+        gui_equipment_dict = {#'lab': lab,
                               'cam': cam,
                               'CWL': cwl,
                               'df_mirror': df_mirror,
@@ -163,10 +170,13 @@ if __name__ == '__main__':
                               # 'polariser': pol,
                               # 'bentham' : bentham,
                               # 'ivium' : ivium
+                              'varia' : varia,
+                              'putter' : putter,
                               # 'rotation_stage': rotation_stage,
                               # 'power_control_785': lab.pc_785,
                               # 'magnet': magnet
                               }
+        
         __file__ = r"C:\Users\HERA\Documents\GitHub\nplab\nplab\Lab1_BX-60 Local Python Scripts\gui_config.npy"         
         lab.generated_gui = GuiGenerator(gui_equipment_dict, 
                                          terminal=False, 
@@ -659,6 +669,41 @@ def SERS_with_name_shutter(name, laser_wln = 633, laser_power = None, sample = '
     lutter_633.close_shutter()
     wutter.open_shutter()
     print('SERS Finish')
+    
+    
+def SERS_with_name_shutter_785(name, laser_wln = 785, laser_power = None, sample = '', time_scale = 0, group = lab.get_group()):
+    print('SERS Start')
+    if laser_power is None:
+        if lab.pc.param > 350:
+            lab.pc.param = 350
+        lab.pc.update_power_calibration(OD_to_power_cal_dict[filter_slider.get_position()])
+        laser_power = round(float(lab.pc.param_to_power(round(lab.pc.param,2))),4)
+    df_mirror.slot = 0
+    wutter.close_shutter()
+    lutter_785.open_shutter()
+    start_time = time.time()
+    data = kandor.raw_image()
+    stop_time = time.time()
+    group.create_dataset(name,data=data, attrs={
+        'filter_wheel':filter_wheel.get_position(), 
+        'laser_wavelength': laser_wln, 
+        'laser_power':laser_power, 
+        'filter_slider':filter_slider.get_position(),
+        'grating' : kandor.kymera.GetGrating(),
+        'centre_wavelength':kandor.kymera.GetWavelength(),
+        'sample': sample,
+        'power (mW)': laser_power,
+        'cycle_time': kandor.AcquisitionTimings[1],
+        'slit_width': kandor.kymera.GetSlit(),
+        'gain':kandor.PreAmpGains[kandor.NumPreAmp-1],
+        'readout (MHz)':kandor.HSSpeed,
+        'time_scale (mW*s)': time_scale,
+        'objective': '20x_0.4NA',
+        'start_time' : start_time,
+        'stop_time' : stop_time})
+    lutter_785.close_shutter()
+    wutter.open_shutter()
+    print('SERS Finish')
 
 
 #%% Threading
@@ -711,261 +756,7 @@ class ReturnableThread(Thread):
     # lab.get_group().create_dataset(name = cv_data.attrs['Title'], data = cv_data, attrs = cv_data.attrs)
 
 
-#%% CV + SERS
 
-def cv_sers(e_start = 0.0,
-            vertex_1 = 0.4,
-            vertex_2 = -0.4,
-            n_scans = 1,
-            scanrate = 0.1,
-            e_step = 0.001,
-            exposure = 1,
-            CV_name = 'CV_%d',
-            SERS_name = 'SERS_CV_%d',
-            sample = '',
-            group = lab.get_group()):
-    
-    ''' Measure CV + Kinetic SERS simultaneously - automatically set SERS kinetic length'''
-    
-    # Calculate and set exposure & number of kinetic scans for SERS
-    
-    ## Set SERS exposure
-    kandor.AcquisitionMode = 3
-    exposure = exposure - (kandor.AcquisitionTimings[1] - kandor.AcquisitionTimings[0])
-    kandor.set_andor_parameter('Exposure', exposure)
-    
-    ## Calculate total time of CV scan - may be off by ~0.5s of actual total scan time
-    total_time = ((np.abs(vertex_1 - e_start) + np.abs(vertex_2 - vertex_1) + np.abs(e_start - vertex_2)) * n_scans)/scanrate
-    
-    ## Set number of kinetic scans to take (round up)
-    kandor.set_andor_parameter('NKin', int(np.ceil((total_time/kandor.AcquisitionTimings[1]))))
-    
-    thread_cv = ReturnableThread(target = ivium.run_cv, kwargs = {'title': CV_name,
-                                                                  'e_start' : e_start,
-                                                                  'vertex_1' : vertex_1,
-                                                                  'vertex_2' : vertex_2,
-                                                                  'n_scans' : n_scans,
-                                                                  'scanrate' : scanrate,
-                                                                  'e_step' : e_step,
-                                                                  'save' : False})
-    
-    thread_sers = ReturnableThread(target = SERS_with_name_shutter, kwargs = {'name': SERS_name,
-                                                                  'sample' : sample,
-                                                                  'group' : group})
-    
-    thread_cv.start()
-    thread_sers.start()
-    thread_cv.join()
-    thread_sers.join()
-    cv = thread_cv.result
-    group.create_dataset(name = cv.attrs['Title'], data = cv, attrs = cv.attrs)
-
-
-#%% CA + SERS two level
-
-def ca_sers(levels_v = [0.0, 0.1],
-            levels_t = [60, 60],
-            cycles = 1,
-            interval_time = 0.1,
-            exposure = 1,
-            CA_name = 'CA_%d',
-            SERS_name = 'SERS_CA_%d',
-            sample = '',
-            group = lab.get_group()):
-    
-    ''' Measure CV + Kinetic SERS simultaneously - automatically set SERS kinetic length'''
-    
-    # Can only run two-level on default CA method file, assert two level
-    assert(len(levels_v) == 2), 'Must be two-level CA'
-    
-    # Calculate and set exposure & number of kinetic scans for SERS
-    
-    ## Set SERS exposure
-    kandor.AcquisitionMode = 3
-    exposure = exposure - (kandor.AcquisitionTimings[1] - kandor.AcquisitionTimings[0])
-    kandor.set_andor_parameter('Exposure', exposure)
-    
-    ## Calculate total time of CA scan - may be off by ~0.5s of actual total scan time
-    total_time = np.sum(levels_t) * cycles
-    
-    ## Set number of kinetic scans to take (round up)
-    kandor.set_andor_parameter('NKin', int(np.ceil((total_time/kandor.AcquisitionTimings[1]))))
-    
-    
-    ## Define threads
-    thread_ca = ReturnableThread(target = ivium.run_ca, kwargs = {'title': CA_name,
-                                                                  'levels_v' : levels_v,
-                                                                  'levels_t' : levels_t,
-                                                                  'cycles' : cycles,
-                                                                  'interval_time' : interval_time,
-                                                                  'save' : False})
-    
-    thread_sers = ReturnableThread(target = SERS_with_name_shutter, kwargs = {'name': SERS_name,
-                                                                  'sample' : sample,
-                                                                  'group' : group})
-    
-    thread_ca.start()
-    thread_sers.start()
-    thread_ca.join()
-    thread_sers.join()
-    ca = thread_ca.result
-    group.create_dataset(name = ca.attrs['Title'], data = ca, attrs = ca.attrs)
-
-
-
-#%% 10-level CA & SERS
-
-
-def ca_switch_sers_track(potentials = [-0.1, -0.2, -0.3, -0.4, -0.5, -0.6, -0.7, -0.8, -0.9],
-                         times = [60, 60],
-                         cycles = 5,
-                         exposure = 1,
-                         group = lab.get_group()):
-
-    ''' 2-level CA Switch back and forth between 0.0V and series of potentials while monitoring with kinetic SERS
-        Chooses potential based off particle number in track
-        Needs testing
-    '''
-
-    kandor.AcquisitionMode = 3
-    exposure = exposure - (kandor.AcquisitionTimings[1] - kandor.AcquisitionTimings[0])
-    kandor.set_andor_parameter('Exposure', exposure)
-    
-    ## Get CA potential based off particle number in scan
-    particle_number = int(lab.wizard.current_particle)
-    index = int(np.floor(particle_number/3))
-    this_potential = potentials[index]
-    levels_v = [0.0, this_potential]
-    levels_t = times
-    
-    ## Define threads
-    thread_ca = ReturnableThread(target = ivium.run_ca, kwargs = {'title': 'Co-TAPP-SMe_CA_Switch_x5_%d',
-                                                                  'levels_v' : levels_v,
-                                                                  'levels_t' : levels_t,
-                                                                  'cycles' : cycles,
-                                                                  'interval_time' : 0.1,
-                                                                  'save' : False})
-    
-    
-    kandor.set_andor_parameter('NKin', int((5 * np.sum(levels_t))/kandor.AcquisitionTimings[1]))
-    
-    thread_sers = ReturnableThread(target = SERS_with_name_shutter, kwargs = {'name': 'Co-TAPP-SMe_633nm_SERS_CA_%d',
-                                                                 'sample' : '2024-07-22-b_Co-TAPP-SMe_60nm_MLAgg_on_ITO',
-                                                                 'group' : group})
-    
-    thread_ca.start()
-    thread_sers.start()
-    thread_ca.join()
-    thread_sers.join()
-    ca_data = thread_ca.result
-    group.create_dataset(name = ca_data.attrs['Title'], data = ca_data, attrs = ca_data.attrs)
-
-    # time.sleep(10)
-
-
-
-
-#%% custom 9-level CA & SERS
-
-
-# def ca_sers_track():
-
-#     exposure = 1 - (kandor.AcquisitionTimings[1] - kandor.AcquisitionTimings[0])
-#     kandor.set_andor_parameter('Exposure', exposure)
-    
-#     thread_sers = threading.Thread(target = SERS_with_name_shutter, kwargs = {'name': 'Co-TAPP-SMe_633nm_SERS_CA_Sweep_%d',
-#                                                                  'sample' : '2024-07-22-a_Co-TAPP-SMe_60nm_MLAgg_on_ITO'})
-    
-#     levels_v = [-0.8, -0.7, -0.6, -0.5, -0.4, -0.3, -0.2, -0.1, 0.0]
-#     levels_t = [150, 150, 150, 150, 150, 150, 150, 150, 150]
-#     kandor.set_andor_parameter('NKin', np.sum(levels_t))
-    
-#     thread_ca = threading.Thread(target = ivium.run_ca, kwargs = {'title': 'Co-TAPP-SMe_CA_Sweep_0Vto-0.8V_%d',
-#                                                                   'levels_v' : levels_v,
-#                                                                   'levels_t' : levels_t,
-#                                                                   'cycles' : 1,
-#                                                                   'interval_time' : 0.1,
-#                                                                   'method_file_path' : r"C:\Users\HERA\Documents\GitHub\nplab\nplab\instrument\potentiostat\CA_nine_level.imf"})
-    
-#     thread_ca.start()
-#     thread_sers.start()
-
-#     time.sleep(np.sum(levels_t) + 30)
-
-
-#%% SERS Powerswitch + OCP & Current measurement
-
-def ocp_powerswitch_track():
-    
-        ## Get length of SERS for OCP
-        dark_times = np.geomspace(1, 1001, num = 10) - 1
-        num_particles = 5
-        particle_number = int(lab.wizard.current_particle)
-        index = int(np.floor(particle_number/num_particles))
-        dark_time = dark_times[index]
-
-        length = dark_time + 1012 + 30 
-    
-        ## Define threads
-        thread_ocp = ReturnableThread(target = ivium.ocp_trace, kwargs = {'title': 'OCP_trace_Co-TAPP-SMe_MLAgg_%d',
-                                                                      'length' : length,
-                                                                      'interval' : 0.1,
-                                                                      'save' : False})
-
-        thread_sers = threading.Thread(target = power_switch_recovery)
-        
-        thread_ocp.start()
-        thread_sers.start()
-        thread_ocp.join()
-        thread_sers.join()
-        ocp_data = thread_ocp.result
-        v_data = ocp_data[0]
-        i_data = ocp_data[1]
-        lab.get_group().create_dataset(name = 'potentials_OCP_trace_Co-TAPP-SMe_MLAgg_%d', data = v_data)
-        lab.get_group().create_dataset(name = 'currents_OCP_trace_Co-TAPP-SMe_MLAgg_%d', data = i_data)
-        
-
-#%% SERS Powerswitch + 1 level CA
-
-def ca_powerswitch_track():
-    
-        potentials = [0.0, -0.1, -0.2, -0.2, -0.4, -0.5, -0.6, -0.7, -0.8, -0.9]
-    
-        particle_number = int(lab.wizard.current_particle)
-        index = int(np.mod(particle_number, len(potentials)))
-        potential = potentials[index]
-        levels_v = [potential, potential]
-    
-        ## Define threads
-        thread_ca = ReturnableThread(target = ivium.run_ca, kwargs = {'title': 'Co-TAPP-SMe_CA_PowerSwitch_x5_%d',
-                                                                      'levels_v' : levels_v,
-                                                                      'levels_t' : [630, 0],
-                                                                      'cycles' : 1,
-                                                                      'interval_time' : 0.1,
-                                                                      'save' : False})
-
-        thread_sers = threading.Thread(target = powerseries, kwargs = {'min_power' : 0.001,
-                                                                       'max_power' : 0.09,
-                                                                       'num_powers' : 2,
-                                                                       'iterations' : 5,
-                                                                       'back_to_min' : False,
-                                                                       'time_scale' : 0.1,
-                                                                       'wavelength' : 633,
-                                                                       'test' : False,
-                                                                       'SERS_name' : 'Co-TAPP-SMe_SERS_Powerswitch_CA_x5_%d',
-                                                                       'sample' : '2024-08-05_Co-TAPP-SMe_60nm_MLAgg_on_ITO_b'})
-        
-        thread_ca.start()
-        time.sleep(60)
-        thread_sers.start()
-        thread_ca.join()
-        thread_sers.join()
-        ca_data = thread_ca.result
-        lab.get_group().create_dataset(name = ca_data.attrs['Title'], data = ca_data, attrs = ca_data.attrs)
-    
-        time.sleep(5)
-        
-        
 #%%
 
 def map_df(parent_group, step_size = 7.5, rows = 200):
@@ -1230,3 +1021,488 @@ def dual_SERS_with_name_shutter(name, laser_power_633 = .2, laser_power_785 = 0.
     print('SERS Finish')
     
     return ArrayWithAttrs(data, attrs=attrs)
+
+#%% EChem Functions
+
+reverse_wavelengths = np.arange(450, 850 + 25, 25)[::-1]
+
+def power_calibration(start_wavelength = 400, end_wavelength = 850, step = 25, bandwidth = 15, group = None):
+    
+    if group is None:
+        group = data_file.create_group('power_calibration_%d')
+    
+    wavelengths = np.arange(start_wavelength, end_wavelength + step, step)
+    
+    for wavelength in tqdm.tqdm(wavelengths, leave = True):
+        
+        varia.set_wavelength(wavelength, bandwidth)
+        powermeter.wavelength = wavelength
+        putter.open_shutter()
+        power = powermeter.read_average(10)
+        
+        attrs = {'short_setpoint' : varia.short_setpoint,
+                 'long_setpoint': varia.long_setpoint,
+                 'bandwidth': varia.get_bandwidth(),
+                 'wavelength': varia.get_wavelength(),
+                 'powermeter_wavelength': powermeter.wavelength}
+        
+        group.create_dataset(name = str(wavelength) + 'nm' +'_%d',
+                             data = power, 
+                             attrs = attrs)
+        
+    putter.close_shutter()
+  
+    
+def putter_wait_toggle(toggle_time = 1):
+    
+    time.sleep(toggle_time)
+    putter.toggle()
+    
+    if ivium.get_device_status()[0] == 2:
+        putter_wait_toggle(toggle_time = toggle_time)
+        
+    putter.close_shutter()
+    
+    
+def pec_ocp_toggle(toggle_time = 50,
+                  scan_time = 500,
+                  delay_time = 0,
+                  bandwidths = [15],
+                  wavelengths = np.arange(450, 850 + 25, 25),
+                  name = 'PEC_OCP'):
+
+    for bandwidth in bandwidths:
+        
+        for wavelength in wavelengths:  
+            varia.set_wavelength(wavelength = wavelength, bandwidth = bandwidth)
+            title = name + '_' + str(int(wavelength)) + 'nm_' + str(bandwidth) + 'nmFWHM_toggle_' + str(toggle_time) + 's_delay' + str(delay_time) + 's_OCP_%d'                
+            thread_ocp = threading.Thread(target = ivium.run_ocp_trace, kwargs = {'title': title,
+                                                                          'run_time' : scan_time + delay_time,
+                                                                          'interval_time' : 0.1})
+                    
+            thread_putter = threading.Thread(target = putter_wait_toggle, kwargs = {'toggle_time' : toggle_time})  
+            
+            thread_ocp.start()
+            time.sleep(delay_time)
+            thread_putter.start()
+            thread_ocp.join()
+            thread_putter.join()
+            putter.close_shutter()
+
+#%% OCP + SERS
+
+def ocp_sers(OCP_name = 'OCP_%d',
+            run_time = 100,
+            interval_time = 0.1,
+            SERS_name = 'SERS_OCP_%d',
+            sample = '',
+            group = lab.get_group()):
+    
+            thread_ocp = threading.Thread(target = ivium.run_ocp_trace, kwargs = {'title': OCP_name,
+                                                                          'run_time' : run_time,
+                                                                          'interval_time' : interval_time})
+            
+            # Calculate and set exposure & number of kinetic scans for SERS
+            
+            ## Set SERS exposure
+            kandor.AcquisitionMode = 3
+            exposure = 0.2
+            exposure = exposure - (kandor.AcquisitionTimings[1] - kandor.AcquisitionTimings[0])
+            kandor.set_andor_parameter('Exposure', exposure)
+                        
+            ## Set number of kinetic scans to take (round up)
+            kandor.set_andor_parameter('NKin', int(np.ceil((run_time/kandor.AcquisitionTimings[1]))))
+            
+            thread_sers = ReturnableThread(target = SERS_with_name, kwargs = {'name': SERS_name,
+                                                                          'sample' : sample,
+                                                                          'group' : group})
+            wutter.open_shutter()
+            try:
+                print('autofocus')
+                lab.cwl.autofocus()
+            except:
+                pass
+            img = cwl.thumb_image()    
+            group.create_dataset(data = img, name = 'before_image_%d')
+            wutter.close_shutter()
+            lutter_785.open_shutter()
+            thread_ocp.start()
+            thread_sers.start()
+            thread_ocp.join()
+            thread_sers.join()
+            lutter_785.close_shutter()
+            wutter.open_shutter()
+            img = cwl.thumb_image()    
+            group.create_dataset(data = img, name = 'after_image_%d')
+            wutter.close_shutter()
+            # ocp = thread_cv.result
+            # group.create_dataset(name = cv.attrs['Title'], data = cv, attrs = cv.attrs)
+
+
+def pec_ocp_toggle_sers(toggle_time = 50,
+                  scan_time = 500,
+                  delay_time = 0,
+                  bandwidths = [15],
+                  wavelengths = np.arange(450, 850 + 25, 25),
+                  OCP_name = 'PEC_OCP',
+                  SERS_name = 'SERS_OCP',
+                  sample = '',
+                  group = lab.get_group()):
+
+    # Calculate and set exposure & number of kinetic scans for SERS
+    
+    ## Set SERS exposure
+    kandor.AcquisitionMode = 3
+    exposure = 0.2
+    exposure = exposure - (kandor.AcquisitionTimings[1] - kandor.AcquisitionTimings[0])
+    kandor.set_andor_parameter('Exposure', exposure)
+                
+    ## Set number of kinetic scans to take (round up)
+    run_time = scan_time + delay_time
+    kandor.set_andor_parameter('NKin', int(np.ceil((run_time/kandor.AcquisitionTimings[1]))))
+    
+    
+    for bandwidth in bandwidths:
+        
+        for wavelength in wavelengths:  
+            varia.set_wavelength(wavelength = wavelength, bandwidth = bandwidth)
+            title = OCP_name + '_' + str(int(wavelength)) + 'nm_' + str(bandwidth) + 'nmFWHM_toggle_' + str(toggle_time) + 's_delay' + str(delay_time) + 's_OCP_%d'                
+            name = SERS_name + '_' + str(int(wavelength)) + 'nm_' + str(bandwidth) + 'nmFWHM_toggle_' + str(toggle_time) + 's_delay' + str(delay_time) + 's_%d'
+            thread_ocp = threading.Thread(target = ivium.run_ocp_trace, kwargs = {'title': title,
+                                                                          'run_time' : scan_time + delay_time,
+                                                                          'interval_time' : 0.1})
+                    
+            thread_putter = threading.Thread(target = putter_wait_toggle, kwargs = {'toggle_time' : toggle_time})  
+            
+            thread_sers = ReturnableThread(target = SERS_with_name, kwargs = {'name': name,
+                                                                          'sample' : sample,
+                                                                          'group' : group})
+            
+            wutter.open_shutter()
+            try:
+                print('autofocus')
+                lab.cwl.autofocus()
+            except:
+                pass
+            img = cwl.thumb_image()    
+            group.create_dataset(data = img, name = 'before_image_%d')
+            wutter.close_shutter()
+            lutter_785.open_shutter()
+            
+            thread_ocp.start()
+            thread_sers.start()
+            time.sleep(delay_time)
+            thread_putter.start()
+            thread_ocp.join()
+            thread_putter.join()
+            thread_sers.join()
+            putter.close_shutter()
+            lutter_785.close_shutter()
+            wutter.open_shutter()
+            img = cwl.thumb_image()    
+            group.create_dataset(data = img, name = 'after_image_%d')
+            wutter.close_shutter()
+
+
+
+#%% CV + SERS
+
+def cv_sers(e_start = 0.0,
+            vertex_1 = 0.4,
+            vertex_2 = -0.4,
+            n_scans = 1,
+            scanrate = 0.1,
+            e_step = 0.001,
+            exposure = 1,
+            CV_name = 'CV_%d',
+            SERS_name = 'SERS_CV_%d',
+            sample = '',
+            group = lab.get_group()):
+    
+    ''' Measure CV + Kinetic SERS simultaneously - automatically set SERS kinetic length'''
+    
+    # Calculate and set exposure & number of kinetic scans for SERS
+    
+    ## Set SERS exposure
+    kandor.AcquisitionMode = 3
+    exposure = exposure - (kandor.AcquisitionTimings[1] - kandor.AcquisitionTimings[0])
+    kandor.set_andor_parameter('Exposure', exposure)
+    
+    ## Calculate total time of CV scan - may be off by ~0.5s of actual total scan time
+    total_time = ((np.abs(vertex_1 - e_start) + np.abs(vertex_2 - vertex_1) + np.abs(e_start - vertex_2)) * n_scans)/scanrate
+    
+    ## Set number of kinetic scans to take (round up)
+    kandor.set_andor_parameter('NKin', int(np.ceil((total_time/kandor.AcquisitionTimings[1]))))
+    
+    thread_cv = ReturnableThread(target = ivium.run_cv, kwargs = {'title': CV_name,
+                                                                  'e_start' : e_start,
+                                                                  'vertex_1' : vertex_1,
+                                                                  'vertex_2' : vertex_2,
+                                                                  'n_scans' : n_scans,
+                                                                  'scanrate' : scanrate,
+                                                                  'e_step' : e_step,
+                                                                  'save' : False})
+    
+    thread_sers = ReturnableThread(target = SERS_with_name_shutter, kwargs = {'name': SERS_name,
+                                                                  'sample' : sample,
+                                                                  'group' : group})
+    
+    thread_cv.start()
+    thread_sers.start()
+    thread_cv.join()
+    thread_sers.join()
+    cv = thread_cv.result
+    group.create_dataset(name = cv.attrs['Title'], data = cv, attrs = cv.attrs)
+
+
+#%% CA + SERS two level
+
+def ca_sers(levels_v = [0.0, 0.1],
+            levels_t = [60, 60],
+            cycles = 1,
+            interval_time = 0.1,
+            exposure = 1,
+            CA_name = 'CA_%d',
+            SERS_name = 'SERS_CA_%d',
+            sample = '',
+            group = lab.get_group()):
+    
+    ''' Measure CV + Kinetic SERS simultaneously - automatically set SERS kinetic length'''
+    
+    # Can only run two-level on default CA method file, assert two level
+    assert(len(levels_v) == 2), 'Must be two-level CA'
+    
+    # Calculate and set exposure & number of kinetic scans for SERS
+    
+    ## Set SERS exposure
+    kandor.AcquisitionMode = 3
+    exposure = exposure - (kandor.AcquisitionTimings[1] - kandor.AcquisitionTimings[0])
+    kandor.set_andor_parameter('Exposure', exposure)
+    
+    ## Calculate total time of CA scan - may be off by ~0.5s of actual total scan time
+    total_time = np.sum(levels_t) * cycles
+    
+    ## Set number of kinetic scans to take (round up)
+    kandor.set_andor_parameter('NKin', int(np.ceil((total_time/kandor.AcquisitionTimings[1]))))
+    
+    
+    ## Define threads
+    thread_ca = ReturnableThread(target = ivium.run_ca, kwargs = {'title': CA_name,
+                                                                  'levels_v' : levels_v,
+                                                                  'levels_t' : levels_t,
+                                                                  'cycles' : cycles,
+                                                                  'interval_time' : interval_time,
+                                                                  'save' : False})
+    
+    thread_sers = ReturnableThread(target = SERS_with_name_shutter, kwargs = {'name': SERS_name,
+                                                                  'sample' : sample,
+                                                                  'group' : group})
+    
+    thread_ca.start()
+    thread_sers.start()
+    thread_ca.join()
+    thread_sers.join()
+    ca = thread_ca.result
+    group.create_dataset(name = ca.attrs['Title'], data = ca, attrs = ca.attrs)
+
+
+
+#%% 10-level CA & SERS
+
+
+def ca_switch_sers_track(potentials = [-0.1, -0.2, -0.3, -0.4, -0.5, -0.6, -0.7, -0.8, -0.9],
+                         times = [60, 60],
+                         cycles = 5,
+                         exposure = 0.2,
+                         group = lab.get_group()):
+
+    ''' 2-level CA Switch back and forth between 0.0V and series of potentials while monitoring with kinetic SERS
+        Chooses potential based off particle number in track
+        Needs testing
+    '''
+
+    kandor.AcquisitionMode = 3
+    exposure = exposure - (kandor.AcquisitionTimings[1] - kandor.AcquisitionTimings[0])
+    kandor.set_andor_parameter('Exposure', exposure)
+    
+    ## Get CA potential based off particle number in scan
+    for i, potential in enumerate(potentials):
+        this_potential = potential
+        levels_v = [0.0, this_potential]
+        levels_t = times
+        
+        ## Define threads
+        thread_ca = ReturnableThread(target = ivium.run_ca, kwargs = {'title': 'Co-TAPP-SMe_CA_Switch_x5_%d',
+                                                                      'levels_v' : levels_v,
+                                                                      'levels_t' : levels_t,
+                                                                      'cycles' : cycles,
+                                                                      'interval_time' : 0.1,
+                                                                      'save' : False})
+        
+        
+        kandor.set_andor_parameter('NKin', int((cycles * np.sum(levels_t))/kandor.AcquisitionTimings[1]))
+        
+        thread_sers = ReturnableThread(target = SERS_with_name, kwargs = {'name': '785nm_SERS_CA_' + str(this_potential) + 'V_%d',
+                                                                     'sample' : '',
+                                                                     'group' : group})
+        
+        
+        wutter.open_shutter()
+        try:
+            print('autofocus')
+            lab.cwl.autofocus()
+        except:
+            pass
+        img = cwl.thumb_image()    
+        group.create_dataset(data = img, name = 'before_image_%d')
+        wutter.close_shutter()
+        lutter_785.open_shutter()
+        
+        thread_ca.start()
+        thread_sers.start()
+        thread_ca.join()
+        thread_sers.join()
+        ca_data = thread_ca.result
+        group.create_dataset(name = ca_data.attrs['Title'], data = ca_data, attrs = ca_data.attrs)
+    
+        lutter_785.close_shutter()
+        wutter.open_shutter()
+        img = cwl.thumb_image()    
+        group.create_dataset(data = img, name = 'after_image_%d')
+    wutter.close_shutter()
+
+    # time.sleep(10)
+
+
+
+
+#%% custom 9-level CA & SERS
+
+
+# def ca_sers_track():
+
+#     exposure = 1 - (kandor.AcquisitionTimings[1] - kandor.AcquisitionTimings[0])
+#     kandor.set_andor_parameter('Exposure', exposure)
+    
+#     thread_sers = threading.Thread(target = SERS_with_name_shutter, kwargs = {'name': 'Co-TAPP-SMe_633nm_SERS_CA_Sweep_%d',
+#                                                                  'sample' : '2024-07-22-a_Co-TAPP-SMe_60nm_MLAgg_on_ITO'})
+    
+#     levels_v = [-0.8, -0.7, -0.6, -0.5, -0.4, -0.3, -0.2, -0.1, 0.0]
+#     levels_t = [150, 150, 150, 150, 150, 150, 150, 150, 150]
+#     kandor.set_andor_parameter('NKin', np.sum(levels_t))
+    
+#     thread_ca = threading.Thread(target = ivium.run_ca, kwargs = {'title': 'Co-TAPP-SMe_CA_Sweep_0Vto-0.8V_%d',
+#                                                                   'levels_v' : levels_v,
+#                                                                   'levels_t' : levels_t,
+#                                                                   'cycles' : 1,
+#                                                                   'interval_time' : 0.1,
+#                                                                   'method_file_path' : r"C:\Users\HERA\Documents\GitHub\nplab\nplab\instrument\potentiostat\CA_nine_level.imf"})
+    
+#     thread_ca.start()
+#     thread_sers.start()
+
+#     time.sleep(np.sum(levels_t) + 30)
+
+
+#%% SERS Powerswitch + OCP & Current measurement
+
+def ocp_powerswitch_track():
+    
+        ## Get length of SERS for OCP
+        dark_times = np.geomspace(1, 1001, num = 10) - 1
+        num_particles = 5
+        particle_number = int(lab.wizard.current_particle)
+        index = int(np.floor(particle_number/num_particles))
+        dark_time = dark_times[index]
+
+        length = dark_time + 1012 + 30 
+    
+        ## Define threads
+        thread_ocp = ReturnableThread(target = ivium.ocp_trace, kwargs = {'title': 'OCP_trace_Co-TAPP-SMe_MLAgg_%d',
+                                                                      'length' : length,
+                                                                      'interval' : 0.1,
+                                                                      'save' : False})
+
+        thread_sers = threading.Thread(target = power_switch_recovery)
+        
+        thread_ocp.start()
+        thread_sers.start()
+        thread_ocp.join()
+        thread_sers.join()
+        ocp_data = thread_ocp.result
+        v_data = ocp_data[0]
+        i_data = ocp_data[1]
+        lab.get_group().create_dataset(name = 'potentials_OCP_trace_Co-TAPP-SMe_MLAgg_%d', data = v_data)
+        lab.get_group().create_dataset(name = 'currents_OCP_trace_Co-TAPP-SMe_MLAgg_%d', data = i_data)
+        
+
+#%% SERS Powerswitch + 1 level CA
+
+def ca_powerswitch_track():
+    
+        potentials = [0.0, -0.1, -0.2, -0.2, -0.4, -0.5, -0.6, -0.7, -0.8, -0.9]
+    
+        particle_number = int(lab.wizard.current_particle)
+        index = int(np.mod(particle_number, len(potentials)))
+        potential = potentials[index]
+        levels_v = [potential, potential]
+    
+        ## Define threads
+        thread_ca = ReturnableThread(target = ivium.run_ca, kwargs = {'title': 'Co-TAPP-SMe_CA_PowerSwitch_x5_%d',
+                                                                      'levels_v' : levels_v,
+                                                                      'levels_t' : [630, 0],
+                                                                      'cycles' : 1,
+                                                                      'interval_time' : 0.1,
+                                                                      'save' : False})
+
+        thread_sers = threading.Thread(target = powerseries, kwargs = {'min_power' : 0.001,
+                                                                       'max_power' : 0.09,
+                                                                       'num_powers' : 2,
+                                                                       'iterations' : 5,
+                                                                       'back_to_min' : False,
+                                                                       'time_scale' : 0.1,
+                                                                       'wavelength' : 633,
+                                                                       'test' : False,
+                                                                       'SERS_name' : 'Co-TAPP-SMe_SERS_Powerswitch_CA_x5_%d',
+                                                                       'sample' : '2024-08-05_Co-TAPP-SMe_60nm_MLAgg_on_ITO_b'})
+        
+        thread_ca.start()
+        time.sleep(60)
+        thread_sers.start()
+        thread_ca.join()
+        thread_sers.join()
+        ca_data = thread_ca.result
+        lab.get_group().create_dataset(name = ca_data.attrs['Title'], data = ca_data, attrs = ca_data.attrs)
+    
+        time.sleep(5)
+        
+#%%
+
+def main():
+    
+    reverse_wavelengths = np.arange(450, 750 + 25, 25)[::-1]
+    filter_slider_785.slot = 0
+    filter_wheel_785.move_absolute(215)
+    group = data_file.create_group('Co-TAPP-SMe_S57nm_MLAgg_%d')
+    ivium.data_file = group
+    # ocp_sers(OCP_name = 'OCP_no_toggle_%d', SERS_name = 'SERS_OCP_no_toggle_%d', run_time = 1500, sample = '2025-05-23_Co-TAPP-SMe_S57nm_MLAgg_on_ITO_c', group = group)
+    # pec_ocp_toggle_sers(wavelengths = reverse_wavelengths, toggle_time = 100, scan_time = 1000, delay_time = 500, group = group)  
+    ca_switch_sers_track(potentials = [-0.2, -0.3, -0.4, -0.5, -0.6, -0.7, -0.8, -0.9],
+                             times = [50, 50],
+                             cycles = 5,
+                             exposure = 0.2,
+                             group = group)
+
+thread_main = ReturnableThread(target = main)
+
+group = data_file.create_group('NKT_through_glass_slide_%d')
+for wavelength in reverse_wavelengths:
+    putter.close_shutter()
+    varia.set_wavelength(wavelength = wavelength, bandwidth = 15)
+    putter.open_shutter()
+    kandor.AcquisitionMode = 3
+    exposure = 0.2
+    exposure = exposure - (kandor.AcquisitionTimings[1] - kandor.AcquisitionTimings[0])
+    kandor.set_andor_parameter('Exposure', exposure)
+    kandor.set_andor_parameter('NKin', 10)
+    SERS_with_name('NKT_+700SP_' + str(wavelength) + 'nm_0.2s_x10_%d')

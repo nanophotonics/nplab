@@ -124,6 +124,13 @@ class Varia(Instrument, nkt_tools.varia.Varia):
         ## Warning if wavelength is out of recommended range
         if self.long_setpoint > 850 or self.short_setpoint < 390:
             print('Warning: Varia wavelength is outside of reliable range (400 - 840 nm)')
+            
+    def get_qt_ui(self):
+        '''
+        Get UI for stage
+        '''
+
+        return VariaControlUI(self)
 
 class VariaControlUI(QtWidgets.QWidget,UiTools):
     def __init__(self, varia, ui_file =os.path.join(os.path.dirname(__file__),'varia.ui'),  parent=None):
