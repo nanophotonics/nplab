@@ -139,5 +139,5 @@ def test_ui(stage):
 
 if __name__ == "__main__":
 
-    stage = Ell8("COM13", debug=False)
+    stage = Ell8("COM5", debug=False)
     test_ui(stage)

@@ -43,6 +43,7 @@ if __name__ == '__main__':
         # from nplab.instrument.stage.thorlabs_ello.ell20 import Ell20, Ell20BiPositional
         # from nplab.instrument.stage.Thorlabs_ELL8K import Thorlabs_ELL8K
         from nplab.instrument.stage.thorlabs_ello.ell8 import Ell8
+        from nplab.instrument.stage.thorlabs_ello.ell9 import Ell9
         # from nplab.instrument.stage.thorlabs_ello.ell14 import Ell14
         from nplab.utils.array_with_attrs import ArrayWithAttrs
         # from nplab.instrument.stage.Thorlabs_ELL18K import Thorlabs_ELL18K
@@ -53,8 +54,8 @@ if __name__ == '__main__':
 
 #%% Connect to and define device names
         
-        stage = Ell8("COM11") # rotation stage
-        putter = ThorLabsSC10('COM12')  # Plasma shutter
+        # stage = Ell8("COM5") # rotation stage
+        putter = ThorLabsSC10('COM4')  # Plasma shutter
         try:
             powermeter = ThorlabsPowermeter(visa.ResourceManager().list_resources()[0]) # Powermeter
         except:
@@ -65,6 +66,7 @@ if __name__ == '__main__':
         # bentham = Bentham_DTMc300()
         ivium = Ivium()
         varia = Varia()
+        filter_wheel = Ell8('COM5') # power wheel
     
     
 #%% Get data file
@@ -76,9 +78,10 @@ if __name__ == '__main__':
 #%% Add equipment to Lab and GUI
         
         equipment_dict = {
-            'powermeter': powermeter,
-            'putter': putter,
-            'stage':stage,
+            'powermeter' : powermeter,
+            'putter' : putter,
+            # 'stage' : stage,
+            'filter_wheel' : filter_wheel,
             # 'spec': spec
             }
         
@@ -86,10 +89,11 @@ if __name__ == '__main__':
         
         gui_equipment_dict = {
             # 'lab': lab,
-            'powermeter': powermeter,
-            'dgc': dgc,
+            'powermeter' : powermeter,
+            'dgc' : dgc,
             'putter' : putter,
-            'stage' : stage,
+            # 'stage' : stage,
+            'filter_wheel' : filter_wheel,
             # 'spec': spec
             }
         
@@ -122,12 +126,13 @@ def set_wavelength(wavelength, bandwidth = 10, varia = varia):
 #%% Power calibration over wavelength range
 
 
-def power_calibration(start_wavelength = 400, end_wavelength = 850, step = 25, bandwidth = 15, group = None):
+def power_calibration(start_wavelength = 400, end_wavelength = 850, step = 25, bandwidth = 15, group = None, name = 'power_caibration'):
     
     if group is None:
-        group = data_file.create_group('power_calibration_%d')
+        group = data_file
     
     wavelengths = np.arange(start_wavelength, end_wavelength + step, step)
+    powers = []
     
     for wavelength in tqdm.tqdm(wavelengths, leave = True):
         
@@ -135,19 +140,16 @@ def power_calibration(start_wavelength = 400, end_wavelength = 850, step = 25, b
         powermeter.wavelength = wavelength
         putter.open_shutter()
         power = powermeter.read_average(10)
+        powers.append(power)
         
         assert centre_setpoint() == wavelength, 'Error: wavelength incorrect \n' + 'set wavelength: ' + str(wavelength) +'\nactual wavelength: ' + str(centre_setpoint())
         assert get_bandwidth() == bandwidth, 'Error: bandwidth incorrect \n' + 'set bandwidth: ' + str(bandwidth) +'\nactual bandwidth: ' + str(get_bandwidth())        
         
-        attrs = {'short_setpoint' : varia.short_setpoint,
-                 'long_setpoint': varia.long_setpoint,
-                 'bandwidth': get_bandwidth(),
-                 'wavelength': centre_setpoint(),
-                 'powermeter_wavelength': powermeter.wavelength}
+    attrs = {'bandwidth': get_bandwidth()}
         
-        group.create_dataset(name = str(wavelength) + 'nm' +'_%d',
-                             data = power, 
-                             attrs = attrs)
+    group.create_dataset(name = str(name) + '_%d',
+                         data = [wavelengths, powers], 
+                         attrs = attrs)
         
     putter.close_shutter()
 
@@ -325,19 +327,38 @@ def pec_lsv_toggle(toggle_time = 10,
             putter.close_shutter()
 
 
-#%%
+#%% OCP Powerseries
 
-# group = data_file.create_group('Zn-TAPP-SMe_57nm_MLAgg_%d')
+# filter_wheel_pos = [115, 97, 85, 10]
+# group = data_file.create_group('Co-TAPP-SMe_57nm_MLAgg_%d')
+
+# for position in filter_wheel_pos:
+#     filter_wheel.move(position)    
+#     power_calibration(start_wavelength = 400, end_wavelength = 850, step = 25, bandwidth = 15, group = group.create_group('power_calibration_' + str(position) + 'FW_%d'))
+
 # ivium.data_file = group
-
-
-#%%
-
-# power_calibration(start_wavelength = 400, end_wavelength = 850, step = 25, bandwidth = 15, group = group.create_group('transmission_spectrum_%d'))
 
 # reverse_wavelengths = np.arange(450, 850 + 25, 25)[::-1]
 
-# pec_ocp_toggle(wavelengths = reverse_wavelengths, toggle_time = 100, scan_time = 1000, delay_time = 500)  
+# for position in filter_wheel_pos:
+#     group = data_file.create_group(str(position) + 'FW_%d')
+#     ivium.data_file = group
+#     filter_wheel.move(position) 
+#     pec_ocp_toggle(wavelengths = reverse_wavelengths, toggle_time = 100, scan_time = 1000, delay_time = 500, name = 'PEC_OCP_' + str(position) + 'FW')  
+ 
+
+#%%
+
+group = data_file.create_group('Co-TAPP-SMe_57nm_MLAgg_%d')
+power_calibration(start_wavelength = 400, end_wavelength = 850, step = 25, bandwidth = 15, group = data_file.create_group('power_calibration_%d'))
+ivium.data_file = group
+                  
+#%%
+
+
+reverse_wavelengths = np.arange(450, 850 + 25, 25)[::-1]
+
+pec_ocp_toggle(wavelengths = reverse_wavelengths, toggle_time = 100, scan_time = 1000, delay_time = 500, name = 'PEC_OCP')  
  
 
 # pec_ca_toggle(wavelengths = reverse_wavelengths, toggle_time = 100, scan_time = 1000, delay_time = 100, 
@@ -346,10 +367,11 @@ def pec_lsv_toggle(toggle_time = 10,
 # pec_lsv_toggle(wavelengths = reverse_wavelengths)
 # ivium.run_lsv(title = 'LSV_dark_%d', e_start = -0.4, e_end = 0.4, e_step = 0.002, scanrate = 0.025)
 # ivium.run_lsv(title = 'LSV_dark_%d', e_start = -0.4, e_end = 0.4, e_step = 0.002, scanrate = 0.025)
-# ivium.run_cv(title = 'CV_dark_25mVs_%d', e_start = 0.0, vertex_1 = 0.8, vertex_2 = -1, e_step = 0.002, scanrate = 0.025, n_scans = 2)
-# ivium.run_cv(title = 'CV_dark_50mVs_%d', e_start = 0.0, vertex_1 = 0.8, vertex_2 = -1, e_step = 0.002, scanrate = 0.050, n_scans = 2)
-# ivium.run_cv(title = 'CV_dark_100mVs_%d', e_start = 0.0, vertex_1 = 0.8, vertex_2 = -1, e_step = 0.002, scanrate = 0.100, n_scans = 2)
-# ivium.run_cv(title = 'CV_dark_200mVs_%d', e_start = 0.0, vertex_1 = 0.8, vertex_2 = -1, e_step = 0.002, scanrate = 0.200, n_scans = 2)
+
+ivium.run_cv(title = 'CV_dark_25mVs_%d', e_start = 0.0, vertex_1 = 0.8, vertex_2 = -1, e_step = 0.002, scanrate = 0.025, n_scans = 2)
+ivium.run_cv(title = 'CV_dark_50mVs_%d', e_start = 0.0, vertex_1 = 0.8, vertex_2 = -1, e_step = 0.002, scanrate = 0.050, n_scans = 2)
+ivium.run_cv(title = 'CV_dark_100mVs_%d', e_start = 0.0, vertex_1 = 0.8, vertex_2 = -1, e_step = 0.002, scanrate = 0.100, n_scans = 2)
+ivium.run_cv(title = 'CV_dark_200mVs_%d', e_start = 0.0, vertex_1 = 0.8, vertex_2 = -1, e_step = 0.002, scanrate = 0.200, n_scans = 2)
 
 
 #%% Angle- dependent measurements
