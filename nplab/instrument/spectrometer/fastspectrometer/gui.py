@@ -1,4 +1,4 @@
-from threading import Lock
+from threading import Lock, Semaphore
 
 import h5py
 import pyjisa.autoload
@@ -98,6 +98,7 @@ class FastSpectrometerGUI(QWidget, Generic[S]):
         self.pool         = QThreadPool()
         self.errorMessage = QErrorMessage()
         self.bufferLock   = Lock()
+        self.semaphore    = Semaphore(0)
 
         if preview:
             self.plot     = pg.plot(title="Spectrum", left="Counts", bottom="Wavelength [m]")
@@ -494,7 +495,7 @@ class FastSpectrometerGUI(QWidget, Generic[S]):
 
             self.spectrumSignal.emit(self.wlBuffer)
 
-        Util.sleep(20)
+        self.semaphore.acquire()
 
         
     def drawSpectrum(self, spec: Spectrum):
@@ -505,6 +506,8 @@ class FastSpectrometerGUI(QWidget, Generic[S]):
                 self.plotData.setData(spec.listWavelengths(), spec.listCounts())
             except:
                 print("Exception when drawing spectrum")
+            finally:
+                self.semaphore.release()
 
 
     def saveToH5(self, spectra):
@@ -643,7 +646,7 @@ class FastSpectrometerPreviewGUI(QWidget, Generic[S]):
         self.layout().addWidget(plot)
         
         self.data = plot.plotItem.plot([], [])
-
+        self.sem  = Semaphore(0)
 
         self.buffer: Spectrum = None
         self.bufferLock       = Lock()
@@ -663,10 +666,13 @@ class FastSpectrometerPreviewGUI(QWidget, Generic[S]):
 
             self.drawSignal.emit(self.buffer)
 
-        Util.sleep(20)
+        self.sem.acquire()
 
 
     def draw(self, spectrum: Spectrum):
-        with self.bufferLock:
-            self.data.setData(spectrum.listWavelengths(), spectrum.listCounts())
+        try:
+            with self.bufferLock:
+                self.data.setData(spectrum.listWavelengths(), spectrum.listCounts())
+        finally:
+            self.sem.release()
 

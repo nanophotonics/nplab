@@ -1,5 +1,5 @@
 import os
-from threading import Lock
+from threading import Lock, Semaphore
 
 from numpy import int32
 import pyjisa.autoload
@@ -68,6 +68,8 @@ class CSConfigGUI(QWidget, Generic[S, C]):
         self.cameraLock     = Lock()
         self.cameraDrawLock = Lock()
         self.spectrumLock   = Lock()
+        self.cameraSem      = Semaphore(0)
+        self.specSem        = Semaphore(0)
         self.configPanel    = JISAConfigPanel(self.camera)
         self.plot           = pg.plot(left="Counts")
         self.plotData       = self.plot.plotItem.plot([], [])
@@ -202,7 +204,7 @@ class CSConfigGUI(QWidget, Generic[S, C]):
         except:
             print("Exception when drawing frame")
         finally:
-            Util.sleep(100)
+            self.cameraSem.acquire()
     
 
     def drawFrame(self, pixmap: np.ndarray):
@@ -214,6 +216,8 @@ class CSConfigGUI(QWidget, Generic[S, C]):
                 self.image.setImage(pixmap, autoRange=False)
             except Exception as e:
                 print("Exception occurred when drawing frame. " + str(e))
+            finally:
+                self.cameraSem.release()
 
 
 
@@ -229,7 +233,7 @@ class CSConfigGUI(QWidget, Generic[S, C]):
 
             self.drawSpectrumSignal.emit(self.specBuffer)
 
-        Util.sleep(100)
+        self.specSem.acquire()
 
 
     def drawSpectrum(self, spec: Spectrum):
@@ -244,3 +248,5 @@ class CSConfigGUI(QWidget, Generic[S, C]):
 
             except:
                 print("Exception when drawing spectrum")
+            finally:
+                self.specSem.release()
