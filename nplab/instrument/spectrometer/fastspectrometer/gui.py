@@ -392,7 +392,7 @@ class FastSpectrometerGUI(QWidget, Generic[S]):
                     
                     spectra.append(self.spectrometer.getSpectrum())
                     self.progressSignal.emit(100.0)
-                    self.spectrumListener(spectra[0])
+                    self.spectrumListener(spectra[0], False)
                     self.fs.updateSpectrum(spectra[0])
 
                 else:
@@ -484,7 +484,7 @@ class FastSpectrometerGUI(QWidget, Generic[S]):
             self.liveViewButton.setText("Start Continuous Acquisition")
 
 
-    def spectrumListener(self, spec: Spectrum):
+    def spectrumListener(self, spec: Spectrum, wait = True):
 
         with self.bufferLock:
 
@@ -495,7 +495,8 @@ class FastSpectrometerGUI(QWidget, Generic[S]):
 
             self.spectrumSignal.emit(self.wlBuffer)
 
-        self.semaphore.acquire()
+        if wait:
+            self.semaphore.acquire()
 
         
     def drawSpectrum(self, spec: Spectrum):
