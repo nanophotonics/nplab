@@ -9,7 +9,7 @@ from typing import Callable, Dict, Generic, List, Tuple, TypeVar, Union
 
 from jisa.devices                import Instrument
 from jisa.devices.camera         import Camera as JCamera
-from jisa.devices.camera.frame   import Frame, FrameThread, RGBFrame, U16RGBFrame
+from jisa.devices.camera.frame   import Frame, FrameThread, IntFrame, LongFrame, RGBFrame, ShortFrame, U16RGBFrame
 from jisa.devices.camera.feature import KineticSeries
 from jisa.devices.features       import TemperatureControlled
 from jisa                        import Util
@@ -773,7 +773,7 @@ class FastCameraGUI(QWidget, Generic[C]):
             name     = pattern % counter
 
 
-        if isinstance(frame, (Frame.ShortFrame, Frame.IntFrame, Frame.LongFrame)):
+        if isinstance(frame, (ShortFrame, IntFrame, LongFrame)):
 
             ds = group.create_dataset(name, data=np.array(frame.data()).reshape(frame.getHeight(), frame.getWidth()))
 
