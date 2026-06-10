@@ -521,5 +521,5 @@ def test_ui():
 
 if __name__ == "__main__":
 
-    stage = Thorlabs_ELL8K("COM11", debug=False)
+    stage = Thorlabs_ELL8K("COM14", debug=False)
     stage.show_gui(False)

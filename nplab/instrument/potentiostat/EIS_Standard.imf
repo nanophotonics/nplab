@@ -1,21 +1,36 @@
 Version= 15
-Method=CyclicVoltammetry
-Technique=Standard
-Dconfig=0
-Mode=Standard
-Title=CV_%d
+Method=Impedance
+Technique=Constant E
+Dconfig=16384
+Title=PEC_OCP_280nm_11nmFWHM_toggle_100s_delay100s_OCP
 Redefine filename=false
 E start=0
-Vertex 1=1
-Vertex 2=-1
-E step=0.01
-N scans=1
-Scanrate=0.1
+Equilibration time=0
+Frequencies=5
+Frequencies.freq[1]=1000
+Frequencies.amp[1]=0.01
+Frequencies.freq[2]=562.341325190349
+Frequencies.amp[2]=0.01
+Frequencies.freq[3]=316.227766016838
+Frequencies.amp[3]=0.01
+Frequencies.freq[4]=177.827941003892
+Frequencies.amp[4]=0.01
+Frequencies.freq[5]=100
+Frequencies.amp[5]=0.01
 Current Range=10mA
+Noise Reduction=false
+Filter=automatic
+Stability=automatic
+Connect to=Cell-4EL
 AutoCR=true
 AutoCR.Max range=1A
 AutoCR.Min range=1nA
 AutoCR.Pre ranging=true
+DualCR=false
+Apply wrt OCP=false
+Cell after meas=false
+Pretreatment=0
+Pretreat each freq=false
 Data Options=
 Data Options.AnalogInputTitle=Peripheral Port
 Data Options.AnalogInputYlabel=Analog input
@@ -49,7 +64,12 @@ Data Options.CompFactor=0.85
 Data Options.AnalogInputYUnit=V
 Data Options.AnalogInputYUnit2=V
 Data Options.EISNonLinCorr=false
+AUX=false
+Anout2=false
+Modules=false
+MeasConfig=standard
+EISperipheral=none
 Report=
 Report.Remarks=
-Report.Process data=instrument  : V82730channel     : 0alias       : V82730software vs : 4.1148firmware vs : 2261 (2261)hw config   : Vertex+18-Bitstart time  : 22/05/2024 15:43:11end time    : 22/05/2024 15:43:51endcondition: Scan completedSpec Rev    : 11DbFileName  : DataServer_V82730_2024-05-22_15-43-11-135.idf.sqliteDbFileMeasId: 1Step        : 1.00000E-2Interval    : 1.00000E-1
+Report.Process data=instrument  : V82730channel     : 0alias       : V82730software vs : 4.1148firmware vs : 2261 (2261)hw config   : Vertex+FRA+18-Bitstart time  : 29/04/2026 11:52:48end time    : 29/04/2026 12:11:09endcondition: Scan completedSpec Rev    : 11DbFileName  : DataServer_V82730_2026-04-29_11-52-48-709.idf.sqliteDbFileMeasId: 1Step        : 1.00000E-2Interval    : 1.00000E-1
 Mconfig=0

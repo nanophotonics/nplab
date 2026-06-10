@@ -1,17 +1,15 @@
 Version= 15
-Method=CyclicVoltammetry
-Technique=Standard
+Method=Transients
+Technique=Electrochemical Noise
 Dconfig=0
-Mode=Standard
-Title=CV_%d
+Title=OCP_%d
 Redefine filename=false
-E start=0
-Vertex 1=1
-Vertex 2=-1
-E step=0.01
-N scans=1
-Scanrate=0.1
+Interval time=0.1
+Run time=10
 Current Range=10mA
+Potential range=1mV
+Remove DC initial=false
+Signal averaging=false
 AutoCR=true
 AutoCR.Max range=1A
 AutoCR.Min range=1nA
@@ -49,7 +47,8 @@ Data Options.CompFactor=0.85
 Data Options.AnalogInputYUnit=V
 Data Options.AnalogInputYUnit2=V
 Data Options.EISNonLinCorr=false
+Data reduction=false
 Report=
 Report.Remarks=
-Report.Process data=instrument  : V82730channel     : 0alias       : V82730software vs : 4.1148firmware vs : 2261 (2261)hw config   : Vertex+18-Bitstart time  : 22/05/2024 15:43:11end time    : 22/05/2024 15:43:51endcondition: Scan completedSpec Rev    : 11DbFileName  : DataServer_V82730_2024-05-22_15-43-11-135.idf.sqliteDbFileMeasId: 1Step        : 1.00000E-2Interval    : 1.00000E-1
+Report.Process data=instrument  : V82730channel     : 0alias       : V82730software vs : 4.1148firmware vs : 2261 (2261)hw config   : Vertex+18-Bitstart time  : 09/09/2024 15:26:44end time    : 09/09/2024 15:26:47endcondition: Scan AbortedSpec Rev    : 11DbFileName  : DataServer_V82730_2024-09-09_15-26-44-436.idf.sqliteDbFileMeasId: 1Step        : 2.50000E-4Interval    : 1.00000E-1
 Mconfig=0

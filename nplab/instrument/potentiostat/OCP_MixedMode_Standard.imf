@@ -1,0 +1,109 @@
+Version= 15
+Method=Transients
+Technique=Mixed Mode
+Dconfig=16384
+Title=OCP_%d
+Redefine filename=false
+Stages=1
+Stages.Mode[1]=Open cell
+Stages.Properties[1]= for 20s
+Stages.Properties[1].SequenceStart=false
+Stages.Properties[1].E applied=0
+Stages.Properties[1].E vs Eprev=false
+Stages.Properties[1].I applied=0
+Stages.Properties[1].I vs Iprev=false
+Stages.Properties[1].P maximum=false
+Stages.Properties[1].P applied=0
+Stages.Properties[1].Z applied=0
+Stages.Properties[1].EISscanE=false
+Stages.Properties[1].EISscanI=false
+Stages.Properties[1].SweepE=false
+Stages.Properties[1].SweepI=false
+Stages.Properties[1].SweepZ=false
+Stages.Properties[1].Duration=20
+Stages.Properties[1].Record ac=false
+Stages.Properties[1].Define Eac=false
+Stages.Properties[1].Define Iac=false
+Stages.Properties[1].Until Z<=false
+Stages.Properties[1].Until E>=false
+Stages.Properties[1].Until E<=false
+Stages.Properties[1].Until I>=false
+Stages.Properties[1].Until I<=false
+Stages.Properties[1].Until dE/dt>=false
+Stages.Properties[1].Until dE/dt<=false
+Stages.Properties[1].Until dI/dt>=false
+Stages.Properties[1].Until dI/dt<=false
+Stages.Properties[1].Until An1>=false
+Stages.Properties[1].Until An1<=false
+Stages.Properties[1].Until dAn1/dt>=false
+Stages.Properties[1].Until dAn1/dt<=false
+Stages.Properties[1].Until Ifraction<=false
+Stages.Properties[1].Until |Q|>=false
+Stages.Properties[1].ExitScanOnThres=false
+Stages.Properties[1].AnOut1=true
+Stages.Properties[1].AnOut1.value=3.5
+Stages.Properties[1].Digouts=false
+Stages.Properties[1].SequenceEnd=false
+Cycles=1
+Cycles separate=false
+Levels separate=false
+Interval time=1
+Equilibration time=0
+Amplitude=0.01
+Frequency=1000
+Continuous AC=false
+AC mean Current=false
+TresholdHoldoff=0
+Current Range=10mA
+Potential range=4V
+Filter=automatic
+Stability=automatic
+Analog inputs=none
+AutoCR=true
+AutoCR.Max range=1A
+AutoCR.Min range=1nA
+AutoCR.Pre ranging=true
+E at WE2=false
+AccumulateCharge=false
+Cell after meas=false
+Data Options=
+Data Options.AnalogInputTitle=Peripheral Port
+Data Options.AnalogInputYlabel=Analog input
+Data Options.AnalogInputTitle2=Peripheral Port
+Data Options.AnalogInputYlabel2=Analog input
+Data Options.AnalogInputData=0
+Data Options.A_Transform=none
+Data Options.A_Transform2=none
+Data Options.A_A=0
+Data Options.A_B=1
+Data Options.A_C=0
+Data Options.A_D=0
+Data Options.A_A2=0
+Data Options.A_B2=1
+Data Options.A_C2=0
+Data Options.A_D2=0
+Data Options.E_correction=0
+Data Options.Area=1
+Data Options.Cap0=1E-6
+Data Options.MaxScanpoints=200000
+Data Options.Equivalent Weight=27.9
+Data Options.Density=7.86
+Data Options.Ba=0.1
+Data Options.Bc=0.1
+Data Options.Permittivity=1
+Data Options.Temperature=298
+Data Options.NominalCharge=1
+Data Options.EISfreq=5000
+Data Options.EISamp=0.025
+Data Options.CompFactor=0.85
+Data Options.AnalogInputYUnit=V
+Data Options.AnalogInputYUnit2=V
+Data Options.EISNonLinCorr=false
+Data reduction=false
+AUX=false
+Anout2=false
+Modules=false
+Report=
+Report.Remarks=
+Report.Process data=instrument  : V82730channel     : 0alias       : V82730software vs : 4.1148firmware vs : 2261 (2261)hw config   : Vertex+18-Bitstart time  : 12/02/2026 17:30:30end time    : 12/02/2026 17:30:41endcondition: Scan completedSpec Rev    : 11DbFileName  : DataServer_V82730_2026-02-12_17-30-30-174.idf.sqliteDbFileMeasId: 1Step        : 2.00000E-3Interval    : 1.00000E+0
+Mconfig=0

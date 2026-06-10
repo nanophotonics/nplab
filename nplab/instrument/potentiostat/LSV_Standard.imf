@@ -1,15 +1,13 @@
 Version= 15
-Method=CyclicVoltammetry
+Method=LinearSweep
 Technique=Standard
 Dconfig=0
 Mode=Standard
-Title=CV_%d
+Title=LSV_%d
 Redefine filename=false
 E start=0
-Vertex 1=1
-Vertex 2=-1
+E end=1
 E step=0.01
-N scans=1
 Scanrate=0.1
 Current Range=10mA
 AutoCR=true
@@ -51,5 +49,5 @@ Data Options.AnalogInputYUnit2=V
 Data Options.EISNonLinCorr=false
 Report=
 Report.Remarks=
-Report.Process data=instrument  : V82730channel     : 0alias       : V82730software vs : 4.1148firmware vs : 2261 (2261)hw config   : Vertex+18-Bitstart time  : 22/05/2024 15:43:11end time    : 22/05/2024 15:43:51endcondition: Scan completedSpec Rev    : 11DbFileName  : DataServer_V82730_2024-05-22_15-43-11-135.idf.sqliteDbFileMeasId: 1Step        : 1.00000E-2Interval    : 1.00000E-1
+Report.Process data=instrument  : V82730channel     : 0alias       : V82730software vs : 4.1148firmware vs : 2261 (2261)hw config   : Vertex+18-Bitstart time  : 22/05/2024 16:27:03end time    : 22/05/2024 16:27:14endcondition: Scan completedSpec Rev    : 11DbFileName  : DataServer_V82730_2024-05-22_16-27-03-917.idf.sqliteDbFileMeasId: 1Step        : 1.00000E-2Interval    : 1.00000E-1
 Mconfig=0

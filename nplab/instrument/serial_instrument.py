@@ -139,10 +139,11 @@ class SerialInstrument(MessageBusInstrument):
                 c = self.ser.read(1)
                 if c:
                     line += c
-                    if line[-leneol:] == eol:
+                    if (line[-leneol:] == eol):
                         break
                 else:
                     break
+
             return line.decode().replace(self.termination_read, '\n')
 
     def test_communications(self):
