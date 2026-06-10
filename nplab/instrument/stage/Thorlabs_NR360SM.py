@@ -263,7 +263,7 @@ class Thorlabs_NR360SM_UI(QtWidgets.QWidget, UiTools):
 	def set_load_config_path(self):
 		rel_path = self.load_config_textbox.text()
 		self.load_path = os.path.abspath(rel_path)
- 		return
+		return
 		
 	#Updates GUI, in particular the angle - runs in self.angle_update_thread
 	def set_current_angle(self):

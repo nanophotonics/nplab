@@ -579,10 +579,10 @@ class DummyStage(Stage):
 
     def __init__(self):
         super(DummyStage, self).__init__()
-        self.axis_names = ('x1', 'y1', 'z1', 'x2', 'y2', 'z2')
+        self.axis_names = ('x','y','z')
         self.max_voltage_levels = [4095 for ch in range(len(self.axis_names))]
         self._position = np.zeros((len(self.axis_names)), dtype=np.float64)
-        self.piezo_levels = [50,50,50,50,50,50]
+        self.piezo_levels = [50,50,50]
 
     def move(self, position, axis=None, relative=False):
         def move_axis(position, axis):

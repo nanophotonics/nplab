@@ -102,7 +102,9 @@ if __name__ == '__main__':
 #    from nplab.utils.gui import *
 #    app = get_qt_app()
     
-    shutter = ThorLabsSC10('COM3')
+    # shutter = ThorLabsSC10('22d868e8-6908-11ee-a762-d08e791254b7')
+    shutter = ThorLabsSC10('COM7')
+
     # shutter.query('ens?', termination_line = "r")
 #     ui = shutter.get_qt_ui()
 #    ui.show()

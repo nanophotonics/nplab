@@ -1,3 +1,11 @@
+import datetime
+
+from nplab.instrument.camera.fastcamera import FastCamera
+from nplab.instrument.spectrometer.fastspectrometer import FastSpectrometer
+from nplab.measurement.action import Message
+from nplab.measurement.gui import QueueInstrument
+from nplab.measurement.actionqueue import H5ActionQueue
+from nplab.instrument.jinstrument import JInstrument
 from nplab.utils.gui import QtWidgets, uic, QtCore, get_qt_app
 from nplab.ui.ui_tools import UiTools
 import nplab.datafile as df
@@ -25,7 +33,7 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
 
     def __init__(self, instrument_dict, parent=None, dock_settings_path=None,
                  scripts_path=None, working_directory=None, file_path=None,
-                 terminal=False, dark=False):  
+                 terminal=False, dark=False, actions=[], logFile=None):  
         """Args:
             instrument_dict(dict) :     This is a dictionary containing the
                                         instruments objects where the key is the 
@@ -48,7 +56,28 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
                                 """
         super(GuiGenerator, self).__init__(parent)
         self._logger = LOGGER
+
+        keys = list(instrument_dict.keys())
+
+        for key in keys:
+
+            instrument = instrument_dict[key]
+
+            if str(type(instrument)).startswith("<java class"):
+
+                from jisa.devices.camera import Camera
+                from jisa.devices.spectrometer import Spectrometer
+
+                if isinstance(instrument, Camera):
+                    instrument_dict["fast_%s" % key] = FastCamera(instrument)
+                elif isinstance(instrument, Spectrometer):
+                    instrument_dict["fast_%s" % key] = FastSpectrometer(instrument)
+                else:
+                    instrument_dict["jisa_%s" % key] = JInstrument(instrument)
+
+
         self.instr_dict = instrument_dict
+
         if working_directory is None:
             self.working_directory = os.path.join(os.getcwd())
         else:
@@ -65,6 +94,37 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
         if dark:
             app = get_qt_app()
             app.setStyleSheet(qdarkstyle.load_stylesheet())
+
+
+        if len(actions) > 0:
+
+            queue = H5ActionQueue()
+            qinst = QueueInstrument(queue, actions, self.instr_dict.values(), self.data_file)
+            self.instr_dict["Action Queue"] = qinst
+
+            if logFile is None:
+                from pathlib import Path
+                home    = Path.home()
+                logFile = Path.joinpath(home, "nplab-queue.log")
+
+            f = open(logFile, "a")
+            f.write("### LOG BEGIN - %s ###\r\n" % str(datetime.datetime.now()))
+            f.write("Timestamp\tType\tSource\tMessage\r\n")
+            f.flush()
+
+            def _write(m: Message):
+                f.write("%s\t%s\t%s\t%s\r\n" % (str(datetime.datetime.fromtimestamp(m.timestamp)), m.type.name, m.pathString, m.message))
+                f.flush()
+
+            queue.addMessageListener(_write)
+
+            def _end():
+                f.write("### LOG END - %s ###\r\n" % str(datetime.datetime.now()))
+                f.close()
+
+            self.destroyed.connect(_end)
+
+
         self.instr_dict["HDF5"] = self.data_file
         self.setDockNestingEnabled(1)
 
@@ -131,17 +191,27 @@ class GuiGenerator(QtWidgets.QMainWindow, UiTools):
         if hasattr(self.instr_dict[instrument_name], 'get_control_widget') or hasattr(self.instr_dict[instrument_name],
                                                                                       'get_preview_widget'):
             if hasattr(self.instr_dict[instrument_name], 'get_control_widget'):
-                self.allWidgets[instrument_name + ' controls'] = self.instr_dict[instrument_name].get_control_widget()
-                self.allDocks[instrument_name + ' controls'] = pyqtgraph.dockarea.Dock(instrument_name + ' controls')
-                self.dockwidgetArea.addDock(self.allDocks[instrument_name + ' controls'], 'left')
-                self.allDocks[instrument_name + ' controls'].addWidget(self.allWidgets[instrument_name + ' controls'])
-                self._addActionViewMenu(instrument_name + ' controls')
+
+                widget = self.instr_dict[instrument_name].get_control_widget()
+
+                if widget is not None:
+                    self.allWidgets[instrument_name + ' controls'] = widget
+                    self.allDocks[instrument_name + ' controls'] = pyqtgraph.dockarea.Dock(instrument_name + ' controls')
+                    self.dockwidgetArea.addDock(self.allDocks[instrument_name + ' controls'], 'left')
+                    self.allDocks[instrument_name + ' controls'].addWidget(self.allWidgets[instrument_name + ' controls'])
+                    self._addActionViewMenu(instrument_name + ' controls')
+
             if hasattr(self.instr_dict[instrument_name], 'get_preview_widget'):
-                self.allWidgets[instrument_name + ' display'] = self.instr_dict[instrument_name].get_preview_widget()
-                self.allDocks[instrument_name + ' display'] = pyqtgraph.dockarea.Dock(instrument_name + ' display')
-                self.dockwidgetArea.addDock(self.allDocks[instrument_name + ' display'], 'left')
-                self.allDocks[instrument_name + ' display'].addWidget(self.allWidgets[instrument_name + ' display'])
-                self._addActionViewMenu(instrument_name + ' display')
+
+                widget = self.instr_dict[instrument_name].get_preview_widget()
+
+                if widget is not None:
+                    self.allWidgets[instrument_name + ' display'] = widget
+                    self.allDocks[instrument_name + ' display'] = pyqtgraph.dockarea.Dock(instrument_name + ' display')
+                    self.dockwidgetArea.addDock(self.allDocks[instrument_name + ' display'], 'left')
+                    self.allDocks[instrument_name + ' display'].addWidget(self.allWidgets[instrument_name + ' display'])
+                    self._addActionViewMenu(instrument_name + ' display')
+
         elif hasattr(self.instr_dict[instrument_name], 'get_qt_ui'):
             self.allWidgets[instrument_name] = self.instr_dict[instrument_name].get_qt_ui()
             self.allDocks[instrument_name] = pyqtgraph.dockarea.Dock(instrument_name)

@@ -12,7 +12,8 @@ bool is_value_command=false;
       // variables to hold the parsed data
 char messageFromPC[numChars] = {0};
 float floatFromPC = 0.0;
-boolean newData = false;
+bool newData = false;
+bool slope = 0; //0 = negative-slope, 1 = positive-sloap
 
 
 
@@ -37,6 +38,7 @@ int lock_time=1000;
 void setup(void) {
 
   Serial.begin(9600);
+  while(!Serial); // wait for serial port to connect. Needed for native USB
   /* MCP4725A0_address is 0x60 or 0x61
    * MCP4725A0_IIC_Address0 -->0x60
    * MCP4725A0_IIC_Address1 -->0x61
@@ -225,42 +227,43 @@ void start_locking(){
 void locking_action() {
   if (is_locking==true) {
     get_Vin();
-    //=================================
-    // for up-slope: decrease output if input is above target; 
-    // increase output if input is below target
-    
-//    if (Vin > target_voltage+input_tolerance) {
-//      float new_Vout=Vout-voltage_step;
-//      if (new_Vout>llim) {
-//        set_Vout(new_Vout);
-//      }
-//    }
-//    if (Vin < target_voltage-input_tolerance) {
-//      float new_Vout = Vout+voltage_step;
-//      if (new_Vout<ulim) {
-//        set_Vout(new_Vout);
-//      }
-//    }
-    
-    //=====================================
-    // for down-slope: increase output if input is above target;
-    // decrease output if input is below target
-
-    if (Vin > target_voltage+input_tolerance) {
-      float new_Vout=Vout+voltage_step;
-      if (new_Vout<ulim) {
-        set_Vout(new_Vout);
+    if(slope) {
+      //=================================
+      // for up-slope: decrease output if input is above target; 
+      // increase output if input is below target
+      if (Vin > target_voltage+input_tolerance) {
+        float new_Vout=Vout-voltage_step;
+        if (new_Vout>llim) {
+          set_Vout(new_Vout);
+        }
       }
-    }
-    if (Vin < target_voltage-input_tolerance) {
-      float new_Vout = Vout-voltage_step;
-      if (new_Vout>llim) {
-        set_Vout(new_Vout);
+      if (Vin < target_voltage-input_tolerance) {
+        float new_Vout = Vout+voltage_step;
+        if (new_Vout<ulim) {
+          set_Vout(new_Vout);
+        }
       }
-    }
+    } else {
+      //=====================================
+      // for down-slope: increase output if input is above target;
+      // decrease output if input is below target
 
-    //========================================
-    //delay(lock_time);
+      if (Vin > target_voltage+input_tolerance) {
+        float new_Vout=Vout+voltage_step;
+        if (new_Vout<ulim) {
+          set_Vout(new_Vout);
+        }
+      }
+      if (Vin < target_voltage-input_tolerance) {
+        float new_Vout = Vout-voltage_step;
+        if (new_Vout>llim) {
+          set_Vout(new_Vout);
+        }
+      }
+
+      //========================================
+      //delay(lock_time);
+    }
   }
   
 }
@@ -315,6 +318,7 @@ void commandAction(){
     is_locked();
   }
   if (strcmp(messageFromPC,"SL") == 0) {
+    slope = (bool)floatFromPC;
     start_locking();
   }
   if (strcmp(messageFromPC,"QL") == 0) {

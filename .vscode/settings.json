@@ -1,0 +1,11 @@
+{
+
+    "python.terminal.useEnvFile": true,
+
+    "jupyter.notebookFileRoot": "${workspaceFolder}",
+
+    "python.analysis.diagnosticSeverityOverrides": {
+        "reportMissingModuleSource": "none"
+    }
+    
+}

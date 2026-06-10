@@ -15,7 +15,7 @@ from nplab.ui.ui_tools import UiTools
 from nplab.instrument import Instrument
 import threading
 import os
-import winsound
+#import winsound
 
 class PowerMeter(Instrument):
     '''
@@ -92,7 +92,8 @@ class DisplayThread(QtCore.QThread):
             if self.parent.pm.beep:
                 beep_freq = 1500*(p/beep_power)
                 if 37<beep_freq<32767:
-                    winsound.Beep(int(beep_freq), 100)
+                    #winsound.Beep(int(beep_freq), 100)
+                    pass
                     
             self.ready.emit(p)
             if self.single_shot:

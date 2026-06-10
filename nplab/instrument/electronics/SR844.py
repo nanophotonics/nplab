@@ -310,6 +310,11 @@ class Lockin_SR844(vi.VisaInstrument):
         return sens, wide_res, close_res
        # else:
           #  print "Measurement within range"
+          
+          
+    def set_phase(self, phase=0):
+        self.write("PHAS"+str(phase))  
+
     
     
 

@@ -65,6 +65,8 @@ class Modulator(SerialInstrument):
                  'GVO', #get_Vout;  
                  'IL', #:is_locked; 
                  'SL', # start_locking();
+                 'SL0', # start_locking() down slope;
+                 'SL1', # start_locking() up slope;
                  'QL', # quit_locking;
                  'SS', #:set_step;
                  'GS', #:get_step
@@ -119,7 +121,7 @@ class Modulator(SerialInstrument):
             while data=='':
                 data = self.readline()
             data=data[0:data.find(termination)]
-            return int(data)
+            return float(data)
     
     def get_target(self):
         return self.get_property('GT')
@@ -127,10 +129,28 @@ class Modulator(SerialInstrument):
         self.set_property('ST')
         print('target set to value: ')
         return self.get_target()
+    
+    # def get_Vout(self):
+    #     output = self.get_property('GVO')
+    #     return float(output)
+    
     def get_Vout(self):
-        output = self.get_property('GVO')
-        return float(output)
-        
+        """
+        adapted from serial bus instrument / query 
+        because of an unexplained empty line in answer
+        """
+        termination = '\r\n'
+        with self.communications_lock:
+            self.flush_input_buffer()
+            self.write('<GVO>')
+            data=''
+            while data=='':
+                data = self.readline()
+            data=data[0:data.find(termination)]
+            return float(data)
+
+
+    
     def set_Vout(self,Vout):
         if Vout>=0 and Vout<=5000:
             self.set_property(command = 'SVO',value = Vout)
@@ -142,7 +162,16 @@ class Modulator(SerialInstrument):
         return self.get_property('IL') == 'True'
     
     def start_lock(self):
-        self.write(self.s_mark+'SL'+self.e_mark)
+         self.write(self.s_mark+'SL'+self.e_mark)
+         
+    def start_lock_0(self): #down slope
+          self.write(self.s_mark+'SL0'+self.e_mark)
+          
+    def start_lock_1(self): #up slope
+          self.write(self.s_mark+'SL1'+self.e_mark)
+    
+    # def start_lock(self, slope = 0):
+    #     self.write(self.s_mark+'SL'+f':{slope}'+self.e_mark)
     
     def stop_lock(self):
         self.write(self.s_mark+'QL'+self.e_mark)
@@ -163,7 +192,7 @@ class Modulator(SerialInstrument):
         if value>0 and value<100:
             self.set_property('SIT',value)
       
-    def sweep(self,start=100,stop=5000,num_of_steps=30,do_shuffle = True):
+    def sweep(self,start=100,stop=5000,num_of_steps=30,do_shuffle = True,prnt = False):
         Vout_vec=np.linspace(start,stop,num_of_steps)
         if do_shuffle:
             shuffle(Vout_vec)
@@ -172,32 +201,55 @@ class Modulator(SerialInstrument):
             self.set_Vout(v)
             #sleep(3)
             Vin.append(self.get_Vin())
-        plt.figure()
-        plt.scatter(Vout_vec,Vin)
+        if prnt:
+            plt.figure()
+            plt.scatter(Vout_vec,Vin)
         if do_shuffle:
            Vin = [a for junk,a in sorted(zip(Vout_vec,Vin))]
            Vout_vec=sorted(Vout_vec)
         return np.array(Vout_vec),np.array(Vin)
         
-    def sweep_and_setpoint(self):
-        x,y = self.sweep(start=100,stop=5000,num_of_steps=30,do_shuffle = True)
+    def sweep_and_setpoint(self,do_shuffle = True,prnt = False):
+        self.stop_lock()
+        x,y = self.sweep(start=100,stop=5000,num_of_steps=30,do_shuffle = do_shuffle,prnt = prnt)
         calc_params, yfit, Rsquared = my_curve_fit(fit_func, 
                                                    x,
                                                    y,
                                                    [40,1/5000,1000,20] # fit for Bessel
                                                    )
-        x_fake = np.linspace(np.min(x),np.max(x),1000)
+        x_fake = np.linspace(np.min(x),2*np.max(x),2000)
         y_fake = fit_func(x_fake,calc_params)
-        plt.figure()
-        plt.scatter(x,y)
-        plt.plot(x_fake,y_fake)
         ind1 = find_index(y_fake,np.max(y_fake))[0][0]
+        ind2 = find_index(y_fake,np.min(y_fake))[0][0]
         period = np.abs(calc_params[1])
         quarter_period = 3.1415/(2*period)
-        setpoint = np.round(x_fake[ind1]+quarter_period)
-        plt.scatter(setpoint,fit_func(setpoint,calc_params))
-        #setpoint = find_setpoint(x, y)
+        setpoint = np.round(x_fake[ind2]-quarter_period)
+        slope = 0
+        if setpoint > 5000 or setpoint < 0:
+            # for i in range(len(x)):
+            #     if y[i] > 0:
+            #         break
+            # setpoint = (x[-1] - x[i])/2 + x[i]
+            setpoint = np.round(x_fake[ind2]+quarter_period)
+            self.set_Vout(setpoint)
+            print(setpoint)
+            
+            self.start_lock_1() #up slope
+        else:
+            self.start_lock_0() #down slope
         self.set_Vout(setpoint)
+        
+        # self.start_lock(slope)
+        
+        if prnt:
+            plt.figure()
+            plt.scatter(x,y)
+            # plt.scatter(setpoint,1, linewidth = 10)
+            plt.plot(x_fake,y_fake)
+            plt.scatter(setpoint,fit_func(setpoint,calc_params))
+        
+        return x,y,setpoint,x_fake,y_fake, period
+        
     # def get_qt_ui(self):
     #     """Return a graphical interface for the lamp slider."""
     #     return MagnetUI(self)
@@ -213,7 +265,7 @@ class Modulator(SerialInstrument):
 
 #%%
 if __name__ == '__main__':
-    modulator = Modulator('COM3')
+    modulator = Modulator('COM10')
     
     # magnet._logger.setLevel('INFO')
     # ui = magnet.show_gui(False)

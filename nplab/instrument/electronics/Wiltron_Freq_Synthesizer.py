@@ -6,7 +6,7 @@
 """
 Created on Tue Jul 14 18:50:08 2015
 
-@author: wmd22
+@author: jb2444
 """
 from time import sleep
 import numpy as np
@@ -31,7 +31,7 @@ class freq_source(vi.VisaInstrument):
         super(freq_source, self).__init__(address)
         self.instr.read_termination = '\n'
         self.instr.write_termination = '\n'
-        self.instr.timeout = None
+        self.instr.timeout = 1
         print(self.query('OI'))
         #print(self.instr.read_termination)
         

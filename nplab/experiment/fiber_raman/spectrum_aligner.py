@@ -392,7 +392,7 @@ def main(debug=0):
 	signal_spectrum,_,_ = convex_smooth(signal_spectrum,1.0)
 
 	#rescale the reference and fit a line to the wavelength range [nm]
- 	ref_xs,ref_ys, gradient, offset = rescale_reference(xs=ref_xs,ys=ref_ys,max_size=np.nanmax(signal_spectrum),N=len(signal_spectrum),debug=1)
+	ref_xs,ref_ys, gradient, offset = rescale_reference(xs=ref_xs,ys=ref_ys,max_size=np.nanmax(signal_spectrum),N=len(signal_spectrum),debug=1)
 	
 
 	#Get peaks from the signal, with thresholding to eliminate low order maxima/minima

@@ -18,6 +18,7 @@ class ThorlabsPowermeter(PowerMeter, VisaInstrument):
      
         VisaInstrument.__init__(self, address=address, settings=settings)
         PowerMeter.__init__(self)
+        self.query("*IDN?") # Needed the initialise powermeter, apparently(?)
         self.address = address
         self.settings = settings
         self.num_averages = 10

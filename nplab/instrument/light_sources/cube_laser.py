@@ -11,7 +11,7 @@ from nplab.instrument.serial_instrument import SerialInstrument
 from nplab.instrument.light_sources import LightSource
 import serial
 import sys
-from PyQt5 import QtGui
+from PyQt5 import QtWidgets#QtGui
 
 class CubeLaser(SerialInstrument, LightSource):
     def __init__(self, port=None):
@@ -47,27 +47,27 @@ class CubeLaser(SerialInstrument, LightSource):
             mode = 'pulsed must be 0 (CW) or 1 (Pulsed)'           
         print(mode)
 
-class CubeLaserUI(QtGui.QWidget):
+class CubeLaserUI(QtWidgets.QWidget):#QtGui.QWidget):
     def __init__(self):
-        QtGui.QWidget.__init__(self)
+        QtWidgets.QWidget.__init__(self)#QtGui.QWidget.__init__(self)
         self.setWindowTitle("Cube Laser")
         self.resize(300,100)
         self.move(100,1500)
-        self.power_switch = QtGui.QCheckBox('Power ON',self)
+        self.power_switch = QtWidgets.QCheckBox('Power ON',self)
         self.power_switch.clicked.connect(self.handle_power_switch)
-        self.pulsed_switch = QtGui.QCheckBox('Pulsed Mode',self)
+        self.pulsed_switch = QtWidgets.QCheckBox('Pulsed Mode',self)
         self.pulsed_switch.clicked.connect(self.handle_pulsed_switch)
-        self.power_input_label = QtGui.QLabel('Input Power:')
-        self.power_input = QtGui.QDoubleSpinBox()
+        self.power_input_label = QtWidgets.QLabel('Input Power:')
+        self.power_input = QtWidgets.QDoubleSpinBox()
         self.power_input.valueChanged.connect(self.handle_power_input)
         self.power_input.setMinimum(0)
         self.power_input.setMaximum(40)
-        self.power_input_unit = QtGui.QLabel('mW')
-        self.power_readout_label = QtGui.QLabel('Readout Power:')
-        self.power_readout = QtGui.QLabel('0.0')
-        self.power_readout_unit = QtGui.QLabel('mW')
+        self.power_input_unit = QtWidgets.QLabel('mW')
+        self.power_readout_label = QtWidgets.QLabel('Readout Power:')
+        self.power_readout = QtWidgets.QLabel('0.0')
+        self.power_readout_unit = QtWidgets.QLabel('mW')
 
-        layout = QtGui.QGridLayout(self)
+        layout = QtWidgets.QGridLayout(self)
         
         layout.addWidget(self.power_switch, 1, 0)
         layout.addWidget(self.power_input_label, 2, 0)
@@ -110,10 +110,10 @@ class CubeLaserUI(QtGui.QWidget):
         laser.close()
 
 if __name__ == "__main__":
-    app = QtGui.QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
     win = CubeLaserUI()
     win.show()
     #sys.exit(app.exec_())
-    #laser = CubeLaser("COM7")
+    laser = CubeLaser("COM5")
     #laser.set_power(10)
     #laser.close()

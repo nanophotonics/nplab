@@ -311,7 +311,7 @@ class DataRenderer1DPG(FigureRendererPG):
                     assert np.any(np.array(dataset.shape) == 2)
         except:
             return -1
-        return 14
+        return 100
             
 add_renderer(DataRenderer1DPG)
 

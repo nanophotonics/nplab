@@ -31,26 +31,28 @@ class Uniblitz(ShutterWithEmulatedRead, SerialInstrument):
         elif state == 'Closed': 
             self.ser.write(str.encode('A'))
         # time.sleep(0.1)
-#
-#    def toggle(self):
-#        if self.shutter_state == 'Open':
-#            self.close_shutter()
-#        elif self.shutter_state == 'Closed':
-#            self.open_shutter()
 
-#    def open_shutter(self):
-#        # using write commands from the instrument class causes errors (at least on my computer...)
-#        # Error message: 'ser' does not have an attribute 'outWaiting'
-#        self.ser.write('@')
-#        self.shutter_state = 1
-#
-#    def close_shutter(self):
-#        self.ser.write('A')
-#        self.shutter_state = 0
+    def toggle(self):
+        if self.shutter_state == 'Open':
+            self.close_shutter()
+        elif self.shutter_state == 'Closed':
+            self.open_shutter()
+
+    def open_shutter(self):
+        # using write commands from the instrument class causes errors (at least on my computer...)
+        # Error message: 'ser' does not have an attribute 'outWaiting'
+        self.ser.write(str.encode('@'))
+        self.shutter_state = 1
+
+    def close_shutter(self):
+        self.ser.write(str.encode('A'))
+        self.shutter_state = 0
 
 
 if __name__ == '__main__':
 
-    shutter = Uniblitz('COM5')
+    shutter = Uniblitz('COM6')
     # shutter.show_gui()
-    # shutter.close()
+    shutter.set_state('Open')
+    time.sleep(1)
+    shutter.set_state('Closed')

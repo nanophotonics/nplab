@@ -79,7 +79,7 @@ class Camera(Instrument):
     
     parameters = None
     
-    filter_function = None 
+    filter_function = None  
     """This function is run on the image before it's displayed in live view.  
     It should accept, and return, an RGB image as its argument."""
     
@@ -602,7 +602,7 @@ class CameraPreviewWidget(pg.GraphicsView):
         super(CameraPreviewWidget, self).__init__()
         
         self.image_item = PreviewImageItem()
-        self.view_box = PreviewViewBox(lockAspect=1.0, invertY=True)
+        self.view_box   = PreviewViewBox(lockAspect=1.0, invertY=True)
         self.view_box.addItem(self.image_item)
         self.view_box.setBackgroundColor([128,128,128,255])
         self.setCentralWidget(self.view_box)

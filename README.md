@@ -11,3 +11,8 @@ When installing:
 
 install pyqtgraph before trying to open_browser_cmd.bat or open_browser_cmd.py
  
+You can run
+
+`pip install -r requirements.txt`
+
+to automatically install dependencies.

@@ -72,7 +72,7 @@ class ImageWithLocation(ArrayWithAttrs):
         l = np.dot(np.array([p[0], p[1], 0, 1]), self.pixel_to_sample_matrix)
         return l[:3]
 
-    def location_to_pixel(self, location, check_bounds=False, z_tolerance=np.infty):
+    def location_to_pixel(self, location, check_bounds=False, z_tolerance=np.inf):
         """Return the pixel coordinates of a given location in the sample.
 
         location : numpy.ndarray

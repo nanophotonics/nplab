@@ -1,0 +1,27 @@
+#######################################
+# Syntax Coloring BNO055
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+DFRobot_MCP4725	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+init	KEYWORD2
+setMode	KEYWORD2
+outputVoltage	KEYWORD2
+outputVoltageEEPROM	KEYWORD2
+outputTriangle	KEYWORD2
+outputSin	KEYWORD2
+MCP4725A0_IIC_Address0	KEYWORD2
+MCP4725A0_IIC_Address1	KEYWORD2
+MCP4725_NORMAL_MODE	KEYWORD2
+MCP4725_POWER_DOWN_1KRES	KEYWORD2
+MCP4725_POWER_DOWN_100KRES	KEYWORD2
+MCP4725_POWER_DOWN_500KRES	KEYWORD2
+

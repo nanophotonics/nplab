@@ -82,19 +82,19 @@ class Trandor(Andor):#Andor
         return self.triax.Slit()
 
     def Test_Notch_Alignment(self):
-        	Accepted=False
-        	while Accepted is False:
-        		Input=input('WARNING! A slight misalignment of the narrow band notch filters could be catastrophic! Has the laser thoughput been tested? [Yes/No]')
-        		if Input.upper() in ['Y','N','YES','NO']:
-        			Accepted=True
-        			if len(Input)>1:
-        				Input=Input.upper()[0]
-        	if Input.upper()=='Y':
-        		print ('You are now free to capture spectra')
-        		self.Notch_Filters_Tested=True
-        	else:
-        		print ('The next spectrum capture will be allowed for you to test this. Please LOWER the laser power and REDUCE the integration time.')
-        		self.Notch_Filters_Tested=None
+        Accepted=False
+        while Accepted is False:
+            Input=input('WARNING! A slight misalignment of the narrow band notch filters could be catastrophic! Has the laser thoughput been tested? [Yes/No]')
+            if Input.upper() in ['Y','N','YES','NO']:
+                Accepted=True
+                if len(Input)>1:
+                    Input=Input.upper()[0]
+        if Input.upper()=='Y':
+            print ('You are now free to capture spectra')
+            self.Notch_Filters_Tested=True
+        else:
+            print ('The next spectrum capture will be allowed for you to test this. Please LOWER the laser power and REDUCE the integration time.')
+            self.Notch_Filters_Tested=None
     def Set_Center_Wavelength(self, wavelength):
         ''' backwards compatability with lab codes that use trandor.Set_Center_Wavelength'''
         self.triax.Set_Center_Wavelength(wavelength)    
