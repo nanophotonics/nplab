@@ -1,0 +1,75 @@
+Version= 15
+Method=Impedance
+Technique=Constant E
+Dconfig=16384
+Title=PEC_OCP_280nm_11nmFWHM_toggle_100s_delay100s_OCP
+Redefine filename=false
+E start=0
+Equilibration time=0
+Frequencies=5
+Frequencies.freq[1]=1000
+Frequencies.amp[1]=0.01
+Frequencies.freq[2]=562.341325190349
+Frequencies.amp[2]=0.01
+Frequencies.freq[3]=316.227766016838
+Frequencies.amp[3]=0.01
+Frequencies.freq[4]=177.827941003892
+Frequencies.amp[4]=0.01
+Frequencies.freq[5]=100
+Frequencies.amp[5]=0.01
+Current Range=10mA
+Noise Reduction=false
+Filter=automatic
+Stability=automatic
+Connect to=Cell-4EL
+AutoCR=true
+AutoCR.Max range=1A
+AutoCR.Min range=1nA
+AutoCR.Pre ranging=true
+DualCR=false
+Apply wrt OCP=false
+Cell after meas=false
+Pretreatment=0
+Pretreat each freq=false
+Data Options=
+Data Options.AnalogInputTitle=Peripheral Port
+Data Options.AnalogInputYlabel=Analog input
+Data Options.AnalogInputTitle2=Peripheral Port
+Data Options.AnalogInputYlabel2=Analog input
+Data Options.AnalogInputData=0
+Data Options.A_Transform=none
+Data Options.A_Transform2=none
+Data Options.A_A=0
+Data Options.A_B=1
+Data Options.A_C=0
+Data Options.A_D=0
+Data Options.A_A2=0
+Data Options.A_B2=1
+Data Options.A_C2=0
+Data Options.A_D2=0
+Data Options.E_correction=0
+Data Options.Area=1
+Data Options.Cap0=1E-6
+Data Options.MaxScanpoints=200000
+Data Options.Equivalent Weight=27.9
+Data Options.Density=7.86
+Data Options.Ba=0.1
+Data Options.Bc=0.1
+Data Options.Permittivity=1
+Data Options.Temperature=298
+Data Options.NominalCharge=1
+Data Options.EISfreq=5000
+Data Options.EISamp=0.025
+Data Options.CompFactor=0.85
+Data Options.AnalogInputYUnit=V
+Data Options.AnalogInputYUnit2=V
+Data Options.EISNonLinCorr=false
+AUX=false
+Anout2=false
+Modules=false
+MeasConfig=standard
+EISperipheral=none
+Report=
+Report.Remarks=
+Report.Process data=instrument  : V82730channel     : 0alias       : V82730software vs : 4.1148firmware vs : 2261 (2261)hw config   : Vertex+FRA+18-Bitstart time  : 29/04/2026 11:52:48end time    : 29/04/2026 12:11:09endcondition: Scan completedSpec Rev    : 11DbFileName  : DataServer_V82730_2026-04-29_11-52-48-709.idf.sqliteDbFileMeasId: 1Step        : 1.00000E-2Interval    : 1.00000E-1
+Mconfig=0
